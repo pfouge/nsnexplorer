@@ -1,76 +1,8 @@
-at: 2026-09-07T17:12:27Z  sha: 4438674e480647304585b4c36a1521d4eff0b994
+at: 2026-09-26T23:47:26Z  sha: d9fef49ac3d0852e54d58867d9f74bb8614f2847
 == fetch log tail ==
-fetch.mjs: wrote /tmp/awd/awd-07-27-2026-p125.html
-fetch.mjs: wrote /tmp/awd/awd-07-27-2026-p126.html
-fetch.mjs: wrote /tmp/awd/awd-07-27-2026-p127.html
-fetch.mjs: wrote /tmp/awd/awd-07-27-2026-p128.html
-fetch.mjs: wrote /tmp/awd/awd-07-27-2026-p129.html
-fetch.mjs: wrote /tmp/awd/awd-07-27-2026-p130.html
-fetch.mjs: wrote /tmp/awd/awd-07-27-2026-p131.html
-fetch.mjs: wrote /tmp/awd/awd-07-27-2026-p132.html
-fetch.mjs: wrote /tmp/awd/awd-07-27-2026-p133.html
-fetch.mjs: wrote /tmp/awd/awd-07-27-2026-p134.html
-fetch.mjs: wrote /tmp/awd/awd-07-27-2026-p135.html
-fetch.mjs: wrote /tmp/awd/awd-07-27-2026-p136.html
-fetch.mjs: wrote /tmp/awd/awd-07-27-2026-p137.html
-fetch.mjs: wrote /tmp/awd/awd-07-27-2026-p138.html
-fetch.mjs: wrote /tmp/awd/awd-07-27-2026-p139.html
-fetch.mjs: wrote /tmp/awd/awd-07-27-2026-p140.html
-fetch.mjs: wrote /tmp/awd/awd-07-27-2026-p141.html
-fetch.mjs: wrote /tmp/awd/awd-07-27-2026-p142.html
-fetch.mjs: wrote /tmp/awd/awd-07-27-2026-p143.html
-fetch.mjs: wrote /tmp/awd/awd-07-27-2026-p144.html
+no fetch log
 == join log tail ==
-    at async loadPricePointsFromAwards (file:///home/runner/work/nsnexplorer.com/nsnexplorer.com/ingest/dibbs/load.mjs:712:7)
-    at async main (file:///home/runner/work/nsnexplorer.com/nsnexplorer.com/ingest/dibbs/price-join.mjs:56:18) {
-  length: 266,
-  severity: 'ERROR',
-  code: '23503',
-  detail: 'Key (cage)=(4QNY3) is not present in table "suppliers".',
-  hint: undefined,
-  position: undefined,
-  internalPosition: undefined,
-  internalQuery: undefined,
-  where: undefined,
-  schema: 'pub',
-  table: 'price_points',
-  column: undefined,
-  dataType: undefined,
-  constraint: 'price_points_cage_fkey',
-  file: 'ri_triggers.c',
-  line: '2599',
-  routine: 'ri_ReportViolation'
-}
+no join log
 == match/load summary ==
-    at async main (file:///home/runner/work/nsnexplorer.com/nsnexplorer.com/ingest/dibbs/price-join.mjs:56:18) {
+no summary line
 == fetched files ==
-total 1359336
-drwxr-xr-x  2 runner runner 143360 Sep  7 17:12 .
-drwxrwxrwt 16 root   root     4096 Sep  7 17:12 ..
--rw-r--r--  1 runner runner 401323 Sep  7 17:01 awd-07-27-2026-p1.html
--rw-r--r--  1 runner runner 480824 Sep  7 17:02 awd-07-27-2026-p10.html
--rw-r--r--  1 runner runner 481411 Sep  7 17:08 awd-07-27-2026-p100.html
--rw-r--r--  1 runner runner 481330 Sep  7 17:08 awd-07-27-2026-p101.html
--rw-r--r--  1 runner runner 481052 Sep  7 17:08 awd-07-27-2026-p102.html
--rw-r--r--  1 runner runner 478511 Sep  7 17:08 awd-07-27-2026-p103.html
--rw-r--r--  1 runner runner 480067 Sep  7 17:08 awd-07-27-2026-p104.html
--rw-r--r--  1 runner runner 417334 Sep  7 17:08 awd-07-27-2026-p105.html
--rw-r--r--  1 runner runner 422291 Sep  7 17:08 awd-07-27-2026-p106.html
--rw-r--r--  1 runner runner 431867 Sep  7 17:08 awd-07-27-2026-p107.html
--rw-r--r--  1 runner runner 411518 Sep  7 17:08 awd-07-27-2026-p108.html
--rw-r--r--  1 runner runner 399926 Sep  7 17:09 awd-07-27-2026-p109.html
--rw-r--r--  1 runner runner 479513 Sep  7 17:02 awd-07-27-2026-p11.html
--rw-r--r--  1 runner runner 396485 Sep  7 17:09 awd-07-27-2026-p110.html
--rw-r--r--  1 runner runner 390931 Sep  7 17:09 awd-07-27-2026-p111.html
--rw-r--r--  1 runner runner 391603 Sep  7 17:09 awd-07-27-2026-p112.html
--rw-r--r--  1 runner runner 416043 Sep  7 17:09 awd-07-27-2026-p113.html
--rw-r--r--  1 runner runner 396088 Sep  7 17:09 awd-07-27-2026-p114.html
--rw-r--r--  1 runner runner 480712 Sep  7 17:09 awd-07-27-2026-p115.html
--rw-r--r--  1 runner runner 406779 Sep  7 17:09 awd-07-27-2026-p116.html
--rw-r--r--  1 runner runner 396449 Sep  7 17:09 awd-07-27-2026-p117.html
--rw-r--r--  1 runner runner 396901 Sep  7 17:09 awd-07-27-2026-p118.html
--rw-r--r--  1 runner runner 397216 Sep  7 17:09 awd-07-27-2026-p119.html
--rw-r--r--  1 runner runner 481780 Sep  7 17:02 awd-07-27-2026-p12.html
--rw-r--r--  1 runner runner 397387 Sep  7 17:10 awd-07-27-2026-p120.html
--rw-r--r--  1 runner runner 397608 Sep  7 17:10 awd-07-27-2026-p121.html
--rw-r--r--  1 runner runner 397704 Sep  7 17:10 awd-07-27-2026-p122.html
