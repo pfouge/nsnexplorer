@@ -1,0 +1,359 @@
+{
+  "at": "2026-09-06T16:42:15.133Z",
+  "totals": {
+    "awards": 23997,
+    "rfqs": 35962,
+    "matched_ok": 2131,
+    "matched_implausible": 5,
+    "unmatched_award": 21861,
+    "rfq_unmatched": 33804
+  },
+  "match_rate": 0.08880276701254324,
+  "unmatchedSample": {
+    "awards": [
+      {
+        "solicitation": null,
+        "pr": null,
+        "nsn": "7030N00004722"
+      },
+      {
+        "solicitation": null,
+        "pr": "7017444824",
+        "nsn": "7030N00004722"
+      },
+      {
+        "solicitation": null,
+        "pr": null,
+        "nsn": "7540N00006310"
+      },
+      {
+        "solicitation": null,
+        "pr": "0089680147",
+        "nsn": "W074N0D0R0717"
+      },
+      {
+        "solicitation": null,
+        "pr": null,
+        "nsn": "W074N0D0R0717"
+      },
+      {
+        "solicitation": null,
+        "pr": null,
+        "nsn": "W074N0D0R0717"
+      },
+      {
+        "solicitation": null,
+        "pr": "0089742900",
+        "nsn": "W074N0D0R0717"
+      },
+      {
+        "solicitation": null,
+        "pr": null,
+        "nsn": "W074N0D0R0717"
+      },
+      {
+        "solicitation": null,
+        "pr": "0089595628",
+        "nsn": "W074N0D0R0717"
+      },
+      {
+        "solicitation": null,
+        "pr": "0069146449",
+        "nsn": "F999V20000210"
+      },
+      {
+        "solicitation": null,
+        "pr": "0069146449",
+        "nsn": "F999V20000218"
+      },
+      {
+        "solicitation": null,
+        "pr": null,
+        "nsn": "F999V20000308"
+      }
+    ],
+    "rfqs": [
+      {
+        "solicitation": "SPE1C1-26-Q-0320 --",
+        "pr": "7017142508",
+        "status": "Open uote"
+      },
+      {
+        "solicitation": "SPE1C1-26-Q-0320 --",
+        "pr": "7017142508",
+        "status": "Open uote"
+      },
+      {
+        "solicitation": "SPE1C1-26-Q-0320 --",
+        "pr": "7017142508",
+        "status": "Open uote"
+      },
+      {
+        "solicitation": "SPE1C1-26-Q-0320 --",
+        "pr": "7017142508",
+        "status": "Open uote"
+      },
+      {
+        "solicitation": "SPE1C1-26-Q-0320 --",
+        "pr": "7017142508",
+        "status": "Open uote"
+      },
+      {
+        "solicitation": "SPE1C1-26-Q-0351",
+        "pr": "7017322347",
+        "status": "Removed"
+      },
+      {
+        "solicitation": "SPE1C1-26-Q-0407",
+        "pr": "7017056417",
+        "status": "Open uote"
+      },
+      {
+        "solicitation": "SPE1C1-26-Q-0407",
+        "pr": "7017526902",
+        "status": "Open uote"
+      },
+      {
+        "solicitation": "SPE1C1-26-Q-0407",
+        "pr": "7017526901",
+        "status": "Open uote"
+      },
+      {
+        "solicitation": "SPE1C1-26-Q-0407",
+        "pr": "7017059028",
+        "status": "Open uote"
+      },
+      {
+        "solicitation": "SPE1C1-26-Q-0407",
+        "pr": "7017526900",
+        "status": "Open uote"
+      },
+      {
+        "solicitation": "SPE1C1-26-Q-0407",
+        "pr": "7017073450",
+        "status": "Open uote"
+      }
+    ]
+  },
+  "sample": {
+    "matched_ok": [
+      {
+        "nsn": "4240016109970",
+        "solicitation": "SPE8E626Q0650",
+        "pr": "7017509846",
+        "total": 345428.5,
+        "quantity": 50,
+        "unitPrice": 6908.57
+      },
+      {
+        "nsn": "5935013251374",
+        "solicitation": "SPE7M526T389M",
+        "pr": "7017780524",
+        "total": 9856.6,
+        "quantity": 26,
+        "unitPrice": 379.1
+      },
+      {
+        "nsn": "4820014381558",
+        "solicitation": "SPE7MC26T174E",
+        "pr": "7017776496",
+        "total": 66008.58,
+        "quantity": 33,
+        "unitPrice": 2000.26
+      },
+      {
+        "nsn": "5340014701708",
+        "solicitation": "SPE7M426T365X",
+        "pr": "7017987315",
+        "total": 2108.25,
+        "quantity": 4685,
+        "unitPrice": 0.45
+      },
+      {
+        "nsn": "4720016559238",
+        "solicitation": "SPE7M426T350K",
+        "pr": "7017868024",
+        "total": 90769,
+        "quantity": 10,
+        "unitPrice": 9076.9
+      },
+      {
+        "nsn": "4710016916572",
+        "solicitation": "SPE7M426T367H",
+        "pr": "7018020440",
+        "total": 140.64,
+        "quantity": 3,
+        "unitPrice": 46.879999999999995
+      },
+      {
+        "nsn": "4720016918441",
+        "solicitation": "SPE7M426T364P",
+        "pr": "7018020441",
+        "total": 136.5,
+        "quantity": 3,
+        "unitPrice": 45.5
+      },
+      {
+        "nsn": "4720016686226",
+        "solicitation": "SPE7M426T369N",
+        "pr": "7018037977",
+        "total": 147.3,
+        "quantity": 1,
+        "unitPrice": 147.3
+      },
+      {
+        "nsn": "2040171251365",
+        "solicitation": "SPE7M426T366U",
+        "pr": "7018038083",
+        "total": 1033.1,
+        "quantity": 2,
+        "unitPrice": 516.55
+      },
+      {
+        "nsn": "5998017312832",
+        "solicitation": "SPE7M126T280T",
+        "pr": "7017868416",
+        "total": 2071.45,
+        "quantity": 1,
+        "unitPrice": 2071.45
+      },
+      {
+        "nsn": "5950013714725",
+        "solicitation": "SPE7M526T350W",
+        "pr": "7009900439",
+        "total": 41106.1,
+        "quantity": 2,
+        "unitPrice": 20553.05
+      },
+      {
+        "nsn": "5920014348504",
+        "solicitation": "SPE7M526T414L",
+        "pr": "7017912439",
+        "total": 88339.5,
+        "quantity": 2637,
+        "unitPrice": 33.5
+      },
+      {
+        "nsn": "5999004134702",
+        "solicitation": "SPE7M526T406U",
+        "pr": "7013953119",
+        "total": 1085,
+        "quantity": 1,
+        "unitPrice": 1085
+      },
+      {
+        "nsn": "5999015999430",
+        "solicitation": "SPE7M526T362M",
+        "pr": "7017697113",
+        "total": 6900,
+        "quantity": 1,
+        "unitPrice": 6900
+      },
+      {
+        "nsn": "5965016515165",
+        "solicitation": "SPE7M526T438U",
+        "pr": "7017695924",
+        "total": 11346.48,
+        "quantity": 8,
+        "unitPrice": 1418.31
+      },
+      {
+        "nsn": "5935015203983",
+        "solicitation": "SPE7M526T439C",
+        "pr": "7017982484",
+        "total": 7140.56,
+        "quantity": 56,
+        "unitPrice": 127.51
+      },
+      {
+        "nsn": "5935010843534",
+        "solicitation": "SPE7M526T441H",
+        "pr": "7017986690",
+        "total": 10850,
+        "quantity": 62,
+        "unitPrice": 175
+      },
+      {
+        "nsn": "5999011997478",
+        "solicitation": "SPE7M526T442F",
+        "pr": "7016691884",
+        "total": 130,
+        "quantity": 2,
+        "unitPrice": 65
+      },
+      {
+        "nsn": "5963017215488",
+        "solicitation": "SPE7M526T442W",
+        "pr": "7017985853",
+        "total": 9828,
+        "quantity": 13,
+        "unitPrice": 756
+      },
+      {
+        "nsn": "5905017373414",
+        "solicitation": "SPE7M526T445E",
+        "pr": "7018020376",
+        "total": 173.12,
+        "quantity": 2,
+        "unitPrice": 86.56
+      }
+    ],
+    "matched_implausible": [
+      {
+        "nsn": "4710012135983",
+        "solicitation": "SPE7M426T331F",
+        "pr": "7017698133",
+        "total": 45424.26,
+        "quantity": null,
+        "unitPrice": null,
+        "reasons": [
+          "rfq quantity (null) is not a positive number"
+        ]
+      },
+      {
+        "nsn": "5330009468344",
+        "solicitation": "SPE7M226T6240",
+        "pr": "7017882246",
+        "total": null,
+        "quantity": 758,
+        "unitPrice": null,
+        "reasons": [
+          "award total (null) is not a positive number"
+        ]
+      },
+      {
+        "nsn": "4810004217507",
+        "solicitation": "SPE7MC26T237T",
+        "pr": "7017983604",
+        "total": null,
+        "quantity": 9,
+        "unitPrice": null,
+        "reasons": [
+          "award total (null) is not a positive number"
+        ]
+      },
+      {
+        "nsn": "4920015830130",
+        "solicitation": "SPE4A526T338S",
+        "pr": "7017577493",
+        "total": null,
+        "quantity": 13,
+        "unitPrice": null,
+        "reasons": [
+          "award total (null) is not a positive number"
+        ]
+      },
+      {
+        "nsn": "5930009994401",
+        "solicitation": "SPE7M226T5926",
+        "pr": "7017685311",
+        "total": null,
+        "quantity": 22,
+        "unitPrice": null,
+        "reasons": [
+          "award total (null) is not a positive number"
+        ]
+      }
+    ]
+  }
+}

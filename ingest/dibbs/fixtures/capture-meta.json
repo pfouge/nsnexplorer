@@ -1,0 +1,37 @@
+{
+  "capturedAt": "2026-09-06T15:30:44.075Z",
+  "pages": [
+    {
+      "file": "rfq-grid-p1.html",
+      "url": "https://www.dibbs.bsm.dla.mil/Rfq/RfqRecs.aspx?category=post&TypeSrch=dt&Value=09-04-2026",
+      "status": 200,
+      "bytes": 362931
+    }
+  ],
+  "probes": [
+    {
+      "url": "https://www.dibbs.bsm.dla.mil/Rfq/RfqRecs.aspx?category=post&TypeSrch=dt&Value=09-04-2026",
+      "status": 200,
+      "bytes": 362931,
+      "grid": true
+    }
+  ],
+  "rfqSpanIdSample": [
+    "bannerTitle",
+    "ctl00_SiteMapPath1",
+    "ctl00_cph1_lblDisplayNarr",
+    "ctl00_cph1_lblSort",
+    "ctl00_cph1_lblFilter",
+    "ctl00_cph1_lblRecCount",
+    "ctl00_cph1_lblCaption",
+    "ctl00_cph1_grdRfqSearch_N_lblRowNum",
+    "ctl00_cph1_grdRfqSearch_N_lblNsn",
+    "ctl00_cph1_grdRfqSearch_N_lblNomenclature",
+    "ctl00_cph1_grdRfqSearch_N_lblTechnicalDocuments",
+    "ctl00_cph1_grdRfqSearch_N_lblSolicitation",
+    "ctl00_cph1_grdRfqSearch_N_lblStatus",
+    "ctl00_cph1_grdRfqSearch_N_lblPr",
+    "ctl00_cph1_grdRfqSearch_N_lblIssued",
+    "ctl00_cph1_grdRfqSearch_N_lblReturnBy"
+  ]
+}

@@ -1,0 +1,168 @@
+---
+// terms.astro — Terms of Service (prerendered static).
+// Modeled on gratisglobal.com's legal pages; adapted for a B2B data site
+// with forward-looking account features and an attribution-based data
+// reuse policy.
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE_NAME, SITE_URL, CONTACT_EMAIL } from '../consts';
+
+const updated = 'July 12, 2026';
+---
+
+<BaseLayout
+  title="Terms of Service"
+  description="The terms that govern use of NSN Explorer, including accounts, acceptable use, data reuse with attribution, and disclaimers."
+>
+  <p class="eyebrow">Legal</p>
+  <h1>Terms of Service</h1>
+  <p class="lede">
+    These Terms of Service govern your use of the {SITE_NAME} website at nsnexplorer.com,
+    including any account features as they become available (together, the "Services"). By using
+    the Services, you agree to these terms.
+  </p>
+  <p class="mono updated">Last updated: {updated}</p>
+
+  <div class="note">
+    <b>The short version.</b> {SITE_NAME} is a free reference that shows what the U.S. government
+    paid for parts, built entirely from public official records, with a link to the source behind
+    every figure. Use it lawfully, don't hammer our servers, and feel free to reuse the data with
+    attribution. We sell nothing here and recommend nothing; the records speak for themselves.
+  </div>
+
+  <h2>1. What {SITE_NAME} is</h2>
+  <p>
+    The Services are a compiled, searchable presentation of public U.S. government procurement
+    records — award notices, contract actions, and related logistics data published by government
+    sources such as DIBBS and USAspending.gov. We organize those records by National Stock Number
+    and link every figure we display to the official record it came from. We do not create,
+    estimate, or model prices, and we do not control the underlying government sources, whose
+    content and availability can change at any time.
+  </p>
+
+  <h2>2. Eligibility and business use</h2>
+  <p>
+    The Services are intended for professional and business use. You must be old enough to form a
+    binding contract in your jurisdiction. If you use the Services on behalf of a company or other
+    organization, you represent that you are authorized to accept these terms for it, and "you"
+    includes that organization.
+  </p>
+
+  <h2>3. Accounts</h2>
+  <p>
+    Some features may require an account as they launch, such as saved searches, watchlists, or
+    alerts. When account features are available, you agree to provide accurate information, keep
+    your credentials secure, and take responsibility for activity under your account. You may
+    delete your account at any time. We may suspend or terminate accounts that violate these terms
+    or that we reasonably believe pose a risk to the Services or other users.
+  </p>
+
+  <h2>4. Acceptable use</h2>
+  <p>When using the Services, you agree not to:</p>
+  <ul>
+    <li>Use the Services for any unlawful purpose or in violation of any applicable law or third-party rights.</li>
+    <li>Attempt to gain unauthorized access to the Services, other users' accounts, or our systems.</li>
+    <li>Interfere with or disrupt the Services, including by introducing malware or overloading our infrastructure.</li>
+    <li>Crawl or bulk-download the Services with automated tools in a way that burdens our systems or circumvents technical limits. If you want the data at volume, email us — there is probably an easier way for both of us.</li>
+    <li>Misrepresent your identity or affiliation, or present {SITE_NAME} data in a way that misattributes it to us after altering it.</li>
+  </ul>
+
+  <h2>5. Data reuse and attribution</h2>
+  <p>
+    The procurement records we present are public information published by the U.S. government,
+    and we believe they should stay usable. You may reuse, quote, and republish the data we
+    display — including prices, dates, and source links — for any lawful purpose, commercial or
+    not, provided you attribute {SITE_NAME} with a link to the relevant page (or to
+    {SITE_URL}) where practical. This permission covers the data itself; it does not cover our
+    branding or original writing (see <a href="#ip">Intellectual property</a>), and it does not
+    replace the terms of the underlying government sources, which remain the authoritative
+    records.
+  </p>
+
+  <h2>6. Accuracy; no advice</h2>
+  <p>
+    We work hard to present records faithfully — our build refuses to publish a price without its
+    source link — but official records can contain errors, can lag actual events, and can be
+    revised by the government after we ingest them. The Services are provided for reference and
+    research. Nothing on the Services is procurement, pricing, legal, or investment advice, and no
+    figure here should be treated as a quote or an offer. Always verify against the linked source
+    record before relying on a figure.
+  </p>
+
+  <h2>7. Third-party sites and records</h2>
+  <p>
+    The Services link out to records and websites operated by third parties, including U.S.
+    government systems. We do not control those sites, and we are not responsible for their
+    content, accuracy, availability, or practices. Your use of third-party sites is governed by
+    their own terms and policies. If something you reach through the Services appears wrong or
+    unlawful, please tell us using the contact details below.
+  </p>
+
+  <h2>8. Advertising</h2>
+  <p>
+    The Services may include advertising, which helps keep them free. Advertising is subject to
+    our <a href="/privacy/">Privacy Policy</a>. Advertisements and any offers within them are the
+    responsibility of the advertiser, and we are not responsible for third-party products or
+    services promoted through advertising.
+  </p>
+
+  <h2 id="ip">9. Intellectual property</h2>
+  <p>
+    The {SITE_NAME} name, logo, site design, original text, and software are owned by
+    {SITE_NAME} and protected by intellectual property laws. Apart from the data reuse permission
+    in section 5, you may not copy, reproduce, or reuse our branding or original materials without
+    permission. The underlying government records are public information and remain subject to
+    the policies of the agencies that publish them.
+  </p>
+  <p>
+    If you believe content on the Services infringes your rights, contact us at
+    <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> with enough detail to identify the
+    material in question, and we will respond appropriately.
+  </p>
+
+  <h2>10. Disclaimers</h2>
+  <p>
+    The Services are provided "as is" and "as available," without warranties of any kind, whether
+    express or implied, including any warranties of merchantability, fitness for a particular
+    purpose, and non-infringement. We do not warrant that the Services will be uninterrupted,
+    error-free, or secure, or that any record displayed is complete, current, or free of errors
+    introduced by its government source.
+  </p>
+
+  <h2>11. Limitation of liability</h2>
+  <p>
+    To the fullest extent permitted by law, {SITE_NAME} and its operators will not be liable for
+    any indirect, incidental, special, consequential, or punitive damages, or any loss of profits,
+    data, use, or goodwill, arising out of or related to your use of the Services or any decision
+    made in reliance on data displayed by them. To the fullest extent permitted by law, our total
+    liability for any claim relating to the Services will not exceed one hundred US dollars.
+  </p>
+
+  <h2>12. Indemnification</h2>
+  <p>
+    You agree to indemnify and hold harmless {SITE_NAME} and its operators from any claims,
+    damages, and expenses, including reasonable legal fees, arising from your misuse of the
+    Services or violation of these terms.
+  </p>
+
+  <h2>13. Changes to the Services and these terms</h2>
+  <p>
+    We may change, suspend, or discontinue any part of the Services at any time. We may also
+    update these terms from time to time. When we make material changes, we will update the date
+    at the top of this page. Your continued use of the Services after an update means you accept
+    the revised terms.
+  </p>
+
+  <h2>14. Governing law</h2>
+  <p>
+    {SITE_NAME} is operated by a Wyoming limited liability company. These terms are governed by
+    the laws of the United States and the State of Wyoming, without regard to conflict-of-law
+    principles. Any disputes will be subject to the exclusive jurisdiction of the state and
+    federal courts located in Wyoming, unless applicable law requires otherwise.
+  </p>
+
+  <h2>15. Contact</h2>
+  <p>
+    Questions about these terms? Email us at
+    <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+  </p>
+</BaseLayout>

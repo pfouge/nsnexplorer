@@ -1,0 +1,54 @@
+name: seed-pilot
+
+# One-shot: insert the pilot drawing parts (bearing FSC 3120, plate nut
+# FSC 5310) into the production DB with their real FLIS characteristics
+# (from the committed candidates file) so their drawings render live.
+# Touch to dispatch; delete after the pilot decision.
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/seed-pilot.yml'
+
+env:
+  DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: seed-pilot
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: seed pilot parts
+        run: |
+          node --input-type=module --eval "
+            import pg from 'pg';
+            import { readFileSync } from 'node:fs';
+            const cand = JSON.parse(readFileSync('ingest/publog/candidates.json','utf8'));
+            const parts = [
+              { nsn: '3120012868030', fsc: '3120', fscName: 'Bearings, Plain, Unmounted', item: 'BEARING, SLEEVE' },
+              { nsn: '5310009640878', fsc: '5310', fscName: 'Nuts and Washers', item: 'NUT, SELF-LOCKING, PLATE' },
+            ];
+            const c = new pg.Client({ connectionString: process.env.DATABASE_URL });
+            await c.connect();
+            for (const p of parts) {
+              const row = cand.rows.find((r) => r.nsn === p.nsn);
+              if (!row) { console.log('skip (not in candidates):', p.nsn); continue; }
+              await c.query(\"INSERT INTO pub.fsc (fsc, name, render_depth) VALUES (\$1,\$2,'deep') ON CONFLICT (fsc) DO UPDATE SET render_depth='deep'\", [p.fsc, p.fscName]);
+              await c.query('INSERT INTO pub.nsns (nsn, fsc, item_name, characteristics) VALUES (\$1,\$2,\$3,\$4::jsonb) ON CONFLICT (nsn) DO UPDATE SET item_name=EXCLUDED.item_name, characteristics=EXCLUDED.characteristics, updated_at=now()', [p.nsn, p.fsc, p.item, JSON.stringify(row.characteristics)]);
+              console.log('seeded', p.nsn);
+            }
+            await c.end();
+          "

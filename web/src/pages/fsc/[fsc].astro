@@ -1,0 +1,324 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import SignupForm from '../../components/SignupForm.astro';
+import { SITE_URL } from '../../consts';
+import { loadSiteData, formatUsd, formatDate, type FscConfig } from '../../lib/data';
+import { buildProductCards, fsgName, isPlaceholderFscName, UNLISTED_FSC_NAME, type ProductCard } from '../../lib/browse';
+
+export async function getStaticPaths() {
+  const data = await loadSiteData();
+  return data.deepFscs.map((fsc: FscConfig) => ({
+    params: { fsc: fsc.fsc },
+    props: { fsc },
+  }));
+}
+
+const { fsc } = Astro.props as { fsc: FscConfig };
+const data = await loadSiteData();
+
+const cards: ProductCard[] = buildProductCards(data, fsc);
+const materials = [...new Set(cards.map((c) => c.material).filter((m): m is string => m !== null))].sort(
+  (a, b) => a.localeCompare(b)
+);
+
+// Category-level actions: real purchase records in this FSC whose public
+// description didn't identify a specific part.
+const fscActions = [...(data.contractActionsByFsc.get(fsc.fsc) ?? [])].sort((a, b) =>
+  (b.actionDate ?? '').localeCompare(a.actionDate ?? '')
+);
+const fscActionsObligated = fscActions.reduce((sum, a) => sum + (a.obligation ?? 0), 0);
+const recentActions = fscActions.slice(0, 25);
+
+const totalPurchases = cards.reduce((sum, c) => sum + c.purchaseRecords, 0) + fscActions.length;
+const totalDollars = cards.reduce((sum, c) => sum + c.totalDemand, 0) + fscActionsObligated;
+
+const departmentName = fsgName(fsc.fsg);
+
+// The catalog names most FSCs from real DIBBS/DLA data, but freshly-grown
+// ones (from RFQ ingest) start out with a 'FSC NNNN' placeholder (see
+// ingest/dibbs/load.mjs). Don't pair the placeholder with itself in
+// user-facing titles — show the code once instead of "FSC 7310 (FSC 7310)".
+const hasRealFscName = !isPlaceholderFscName(fsc.fsc, fsc.name);
+const fscDisplayName = hasRealFscName ? fsc.name : UNLISTED_FSC_NAME;
+
+const title = `${fscDisplayName} — FSC ${fsc.fsc}`;
+const description = hasRealFscName
+  ? `Federal Supply Class ${fsc.fsc} (${fsc.name}): ${cards.length.toLocaleString('en-US')} NSNs tracked with price history and competition status, so suppliers can quote with confidence and buyers can size the market. Every figure links to its source record.`
+  : `Federal Supply Class ${fsc.fsc}: ${cards.length.toLocaleString('en-US')} NSNs tracked with price history and competition status, so suppliers can quote with confidence and buyers can size the market. Every figure links to its source record.`;
+const canonicalUrl = `${SITE_URL}/fsc/${fsc.fsc}/`;
+
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
+    { '@type': 'ListItem', position: 2, name: 'Catalog', item: `${SITE_URL}/catalog/` },
+    { '@type': 'ListItem', position: 3, name: departmentName, item: `${SITE_URL}/group/${fsc.fsg}/` },
+    { '@type': 'ListItem', position: 4, name: fscDisplayName, item: canonicalUrl },
+  ],
+};
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  pageType="CollectionPage"
+  canonicalUrl={canonicalUrl}
+  extraSchema={[breadcrumbSchema]}
+>
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a> › <a href="/catalog/">Catalog</a> ›{' '}
+    <a href={`/group/${fsc.fsg}/`}>{departmentName}</a> › {fscDisplayName}
+  </nav>
+
+  <p class="eyebrow">Federal Supply Class <span class="x">×</span> FSC {fsc.fsc}</p>
+
+  <header class="hero">
+    <h1>{fscDisplayName} <span class="badge mono">FSC {fsc.fsc}</span></h1>
+    <p class="lede">
+      Every government purchase record we've indexed in Federal Supply Class {fsc.fsc}, with a
+      link back to the source record for each one.
+    </p>
+  </header>
+
+  <div class="stat-strip">
+    <div class="stat">
+      <div class="value">{cards.length.toLocaleString('en-US')}</div>
+      <div class="label">NSNs tracked</div>
+    </div>
+    <div class="stat">
+      <div class="value">{totalPurchases.toLocaleString('en-US')}</div>
+      <div class="label">Purchase records</div>
+    </div>
+    <div class="stat">
+      <div class="value up">{formatUsd(totalDollars)}</div>
+      <div class="label">Total $</div>
+    </div>
+  </div>
+
+  <section class="products-section">
+    <h2 class="section-title">Products</h2>
+    {cards.length === 0 ? (
+      <p class="gloss">No products indexed for this category yet.</p>
+    ) : (
+      <div class="products-layout">
+        <aside class="filter-rail" aria-label="Filter products">
+          <div class="filter-group" role="radiogroup" aria-labelledby="f-competition-label">
+            <span class="filter-label" id="f-competition-label">Competition</span>
+            <label><input type="radio" name="f-competition" value="all" checked /> All</label>
+            <label><input type="radio" name="f-competition" value="open" /> Open</label>
+            <label><input type="radio" name="f-competition" value="restricted" /> Restricted</label>
+          </div>
+
+          <div class="filter-group">
+            <label class="filter-label" for="f-lastpurchased">Last purchased</label>
+            <select id="f-lastpurchased">
+              <option value="any">Any time</option>
+              <option value="90">Within 90 days</option>
+              <option value="365">Within 1 year</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label><input type="checkbox" id="f-hasdrawing" /> Has drawing</label>
+          </div>
+
+          {materials.length > 0 && (
+            <div class="filter-group">
+              <span class="filter-label" id="f-material-label">Material</span>
+              <div class="filter-materials" role="group" aria-labelledby="f-material-label">
+                {materials.map((m) => (
+                  <label><input type="checkbox" class="f-material" value={m} /> {m}</label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div class="filter-group">
+            <label class="filter-label" for="f-sort">Sort</label>
+            <select id="f-sort">
+              <option value="recent">Most recent</option>
+              <option value="demand">Highest demand</option>
+              <option value="name">Item name</option>
+            </select>
+          </div>
+
+          <p class="filter-count" id="filter-count" aria-live="polite">{cards.length} of {cards.length} shown</p>
+        </aside>
+
+        <div class="product-grid" id="product-grid">
+          {cards.map((c) => (
+            <article
+              class="product-card"
+              data-competition={c.competition}
+              data-lastpurchased={c.lastPurchased ?? ''}
+              data-hasdrawing={c.hasDrawing ? '1' : '0'}
+              data-material={c.material ?? ''}
+              data-demand={c.totalDemand}
+              data-itemname={(c.itemName ?? '').toLowerCase()}
+            >
+              <a class="product-thumb" href={`/nsn/${c.dashed}/`} aria-label={`View ${c.itemName ?? c.dashed}`}>
+                {c.thumbnail ? (
+                  <div class="thumb-svg" set:html={c.thumbnail} />
+                ) : (
+                  <div class="thumb-placeholder" aria-hidden="true">∅</div>
+                )}
+              </a>
+              <div class="product-body">
+                <a class="product-nsn mono" href={`/nsn/${c.dashed}/`}>{c.dashed}</a>
+                <h3 class="product-name">{c.itemName ?? 'Unnamed item'}</h3>
+                <div class="product-signals">
+                  <span class="signal">{c.lastPurchased ? formatDate(c.lastPurchased) : 'No purchases'}</span>
+                  <span class="signal mono">{c.perYear.toFixed(1)}/yr</span>
+                  {c.competition !== 'unknown' && (
+                    <span class={`badge ${c.competition === 'open' ? 'green' : 'amber'}`}>
+                      {c.competition === 'open' ? 'Open' : 'Restricted'}
+                    </span>
+                  )}
+                  <span class="signal mono">{formatUsd(c.totalDemand)}</span>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    )}
+  </section>
+
+  <script>
+    const grid = document.getElementById('product-grid');
+    const countEl = document.getElementById('filter-count');
+    const lastPurchasedSelect = document.getElementById('f-lastpurchased');
+    const hasDrawingCheckbox = document.getElementById('f-hasdrawing');
+    const sortSelect = document.getElementById('f-sort');
+
+    if (grid && lastPurchasedSelect instanceof HTMLSelectElement &&
+        hasDrawingCheckbox instanceof HTMLInputElement && sortSelect instanceof HTMLSelectElement) {
+      const cards = Array.from(grid.querySelectorAll('.product-card'));
+      const total = cards.length;
+      const materialCheckboxes = Array.from(document.querySelectorAll('.f-material'));
+
+      const apply = () => {
+        const checkedCompetition = document.querySelector('input[name="f-competition"]:checked');
+        const competition = checkedCompetition instanceof HTMLInputElement ? checkedCompetition.value : 'all';
+        const maxAgeDays = lastPurchasedSelect.value === 'any' ? null : Number(lastPurchasedSelect.value);
+        const needsDrawing = hasDrawingCheckbox.checked;
+        const wantedMaterials = materialCheckboxes
+          .filter((c) => c instanceof HTMLInputElement && c.checked)
+          .map((c) => (c as HTMLInputElement).value);
+        const now = Date.now();
+
+        let visibleCount = 0;
+        for (const card of cards) {
+          const el = card as HTMLElement;
+          let visible = true;
+          if (competition !== 'all' && el.dataset.competition !== competition) visible = false;
+          if (visible && maxAgeDays !== null) {
+            const lp = el.dataset.lastpurchased;
+            if (!lp) {
+              visible = false;
+            } else {
+              const ageDays = (now - new Date(`${lp}T00:00:00Z`).getTime()) / 86400000;
+              if (ageDays > maxAgeDays) visible = false;
+            }
+          }
+          if (visible && needsDrawing && el.dataset.hasdrawing !== '1') visible = false;
+          if (visible && wantedMaterials.length > 0 && !wantedMaterials.includes(el.dataset.material ?? '')) {
+            visible = false;
+          }
+          el.style.display = visible ? '' : 'none';
+          if (visible) visibleCount++;
+        }
+        if (countEl) countEl.textContent = `${visibleCount} of ${total} shown`;
+      };
+
+      const sortCards = () => {
+        const mode = sortSelect.value;
+        const sorted = [...cards].sort((a, b) => {
+          const ael = a as HTMLElement;
+          const bel = b as HTMLElement;
+          if (mode === 'demand') {
+            return Number(bel.dataset.demand ?? 0) - Number(ael.dataset.demand ?? 0);
+          }
+          if (mode === 'name') {
+            return (ael.dataset.itemname ?? '').localeCompare(bel.dataset.itemname ?? '');
+          }
+          return (bel.dataset.lastpurchased ?? '').localeCompare(ael.dataset.lastpurchased ?? '');
+        });
+        for (const card of sorted) grid.appendChild(card);
+      };
+
+      document.querySelectorAll('input[name="f-competition"]').forEach((el) => el.addEventListener('change', apply));
+      lastPurchasedSelect.addEventListener('change', apply);
+      hasDrawingCheckbox.addEventListener('change', apply);
+      materialCheckboxes.forEach((el) => el.addEventListener('change', apply));
+      sortSelect.addEventListener('change', () => {
+        sortCards();
+        apply();
+      });
+
+      apply();
+    }
+  </script>
+
+  <section>
+    <h2 class="section-title">Contract awards in this category</h2>
+    <p class="gloss">
+      {fscActions.length.toLocaleString('en-US')} award {fscActions.length === 1 ? 'record' : 'records'} totaling{' '}
+      {formatUsd(fscActionsObligated)} where the public description doesn't identify a specific
+      part. Newest first; every row links to its official USAspending record.
+    </p>
+    {fscActions.length === 0 ? (
+      <p class="gloss">No category-level awards indexed yet.</p>
+    ) : (
+      <details>
+        <summary class="gloss" style="cursor:pointer; margin-bottom:0.75rem;">
+          Show the {recentActions.length} most recent
+        </summary>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Award #</th>
+              <th>Description</th>
+              <th>Recipient</th>
+              <th>Agency</th>
+              <th class="num">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {recentActions.map((a) => (
+              <tr>
+                <td class="mono">{a.actionDate ?? '—'}</td>
+                <td class="mono">
+                  <a href={a.sourceUrl} target="_blank" rel="nofollow noopener">{a.piid ?? 'record'} ↗</a>
+                </td>
+                <td>{(a.description ?? '—').slice(0, 80)}</td>
+                <td>{a.recipientName ?? '—'}</td>
+                <td>{a.agencyName ?? '—'}</td>
+                <td class="num mono">{a.obligation !== null ? formatUsd(a.obligation) : '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+        {fscActions.length > recentActions.length && (
+          <p class="gloss">
+            Showing the {recentActions.length} most recent of{' '}
+            {fscActions.length.toLocaleString('en-US')} records. Per-part pages list every record
+            tied to that NSN.
+          </p>
+        )}
+      </details>
+    )}
+  </section>
+
+  <SignupForm
+    hook="shop_alerts"
+    fscInterest={fsc.fsc}
+    title="Alert me when parts like this open to competition"
+    description={`Get an email when an AMSC changes from sole-source to open competition in ${fscDisplayName} (FSC ${fsc.fsc}).`}
+    cta="Sign up"
+  />
+</BaseLayout>

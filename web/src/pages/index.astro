@@ -1,0 +1,207 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import HomeSearch from '../components/HomeSearch.astro';
+import SignupForm from '../components/SignupForm.astro';
+import { loadSiteData } from '../lib/data';
+import { fscDisplayName } from '../lib/browse';
+
+const data = await loadSiteData();
+const { stats, deepFscs, nsnsByFsc } = data;
+
+const fmtInt = (n: number) => n.toLocaleString('en-US');
+const fmtUsd = (n: number) =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
+
+const N = data.openNsnByNsn.size;
+const hasN = N > 0;
+
+const title = hasN
+  ? `NSN Lookup: ${fmtInt(N)} National Stock Numbers, Free`
+  : 'NSN Lookup: National Stock Number Search, Free';
+const description = hasN
+  ? `Free NSN lookup across ${fmtInt(N)} national stock numbers: open DLA solicitations, price history and source links, built from DIBBS, SAM.gov and USAspending.`
+  : 'Free NSN lookup and national stock number search: open DLA solicitations, price history and source links, built from DIBBS, SAM.gov and USAspending records.';
+const h1 = hasN
+  ? `NSN lookup: search ${fmtInt(N)} national stock numbers, free`
+  : 'NSN lookup: national stock number search, free';
+
+const faq = [
+  {
+    question: 'What is a national stock number?',
+    answer:
+      'A national stock number, or NSN, is the 13-digit code the U.S. federal supply system assigns to one specific item. The first four digits are its federal supply class and the rest identify the exact part.',
+  },
+  {
+    question: 'Is this NSN lookup free?',
+    answer:
+      'Yes. Every search, solicitation, price and source link on NSN Explorer is free and needs no account. The site sells nothing and does not broker parts.',
+  },
+  {
+    question: 'Where does the data come from?',
+    answer:
+      "Solicitations and awards come from DLA's DIBBS bid board, contract notices from SAM.gov and contract actions from USAspending. Each figure on the site links to the government record it was taken from.",
+  },
+  {
+    question: 'How current is the index?',
+    answer:
+      "The site is rebuilt from the source systems every day, and open solicitations are refreshed more often than that. A solicitation's closing date is always shown next to it.",
+  },
+];
+
+const breadcrumbs = [{ name: 'Home', url: '/' }];
+const itemList = {
+  name: 'Federal supply classes with full price history',
+  items: deepFscs.map((f) => ({ name: `${f.fsc} ${f.name}`, url: `/fsc/${f.fsc}/` })),
+};
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  breadcrumbs={breadcrumbs}
+  itemList={itemList}
+  faq={faq}
+>
+  <section class="hero">
+    <div class="hero-bg" aria-hidden="true"><canvas></canvas></div>
+    <p class="eyebrow">Open demand <span class="x">×</span> Prices <span class="x">×</span> Receipts</p>
+    <h1>{h1}</h1>
+    <p class="lede">Find the federal parts demand you can fill.</p>
+    <p class="lede">
+      Every open U.S. government solicitation — searchable by NSN or category, linked straight to the
+      bid, with the demand history and price record to quote it right. For suppliers who want to win
+      the work, and anyone sizing up the market. Free.
+    </p>
+    <HomeSearch />
+    <div class="btns">
+      <a class="btn" href="/open/">Browse open demand →</a>
+      <a class="btn-ghost btn" href="/methodology/">How the data works</a>
+    </div>
+    <p class="gloss" style="margin-top:1rem">
+      New to government parts? <a href="/suppliers/">How suppliers use NSN Explorer →</a>
+    </p>
+  </section>
+
+  <section class="intro">
+    <h2 class="section-title">A free national stock number search built from official records</h2>
+    <p class="gloss">
+      NSN Explorer is a free NSN lookup for suppliers, buyers and researchers. Type any national
+      stock number to see its open DLA solicitations, past purchase prices and the
+      agencies that buy it. Every record comes from a public U.S. government source: DIBBS for
+      solicitations and awards, SAM.gov for contract notices and USAspending for contract actions.
+      The index is rebuilt every day and every figure links back to the official record. No account
+      is needed.
+    </p>
+  </section>
+
+  {stats.openSolicitationsCount > 0 && (
+    <div class="note open-callout">
+      <span>
+        <strong>{fmtInt(stats.openSolicitationsCount)} solicitations are open for bid right now.</strong>{' '}
+        See what's closing soon and where.
+      </span>
+      <a class="btn" href="/open/">View open demand →</a>
+    </div>
+  )}
+
+  <div class="datastrip">
+    <div class="cell">
+      <div class="k">Parts indexed</div>
+      <div class="v">{fmtInt(data.openNsnByNsn.size)}</div>
+    </div>
+    <div class="cell">
+      <div class="k">Open for bid now</div>
+      <div class="v up">{fmtInt(stats.openSolicitationsCount)}</div>
+    </div>
+    <div class="cell">
+      <div class="k">Categories</div>
+      <div class="v">{fmtInt(data.solicitationsByFsc.size)}</div>
+    </div>
+    <div class="cell">
+      <div class="k">Dollars indexed</div>
+      <div class="v">{fmtUsd(stats.totalDollars + stats.totalObligated)}</div>
+    </div>
+  </div>
+
+  <h2 class="section-title">Browse the catalog</h2>
+  <p class="gloss">
+    Open solicitations across {fmtInt(data.solicitationsByFsc.size)} federal supply classes — each one
+    linked to its official record — plus deepening price history where we've indexed it.
+  </p>
+  <div class="btns" style="margin-bottom:2.75rem">
+    <a class="btn" href="/open/">Browse all {fmtInt(data.solicitationsByFsc.size)} categories →</a>
+    <a class="btn-ghost btn" href="/catalog/">Priced catalog →</a>
+  </div>
+
+  <h3 class="section-title">Full price history so far</h3>
+  <p class="gloss">
+    The federal supply classes where we've indexed every priced purchase we can find, with a link
+    back to the underlying government record for each one.
+  </p>
+  <section class="index-list" aria-label="Priced categories">
+    {deepFscs.length === 0 ? (
+      <div class="index-row soon">
+        <div class="num"></div>
+        <div>
+          <h3>First categories indexing now</h3>
+          <p>O-Rings (FSC 5331) is being backfilled from five fiscal years of federal purchase records.</p>
+        </div>
+      </div>
+    ) : (
+      deepFscs.map((f) => {
+        const count = nsnsByFsc.get(f.fsc)?.length ?? 0;
+        return (
+          <a class="index-row" href={`/fsc/${f.fsc}/`}>
+            <div class="num">FSC {f.fsc}</div>
+            <div>
+              <h3>{fscDisplayName(f.fsc, f.name)} <span class="tag live">Live</span></h3>
+              <p>{fmtInt(count)} NSNs tracked</p>
+            </div>
+            <div class="go">→</div>
+          </a>
+        );
+      })
+    )}
+  </section>
+
+  <section class="manifesto">
+    <p class="eyebrow">Why we built this</p>
+    <h2>The demand is public. Finding what you can win never was.</h2>
+    <p>
+      Every open solicitation, award, and price on this site was already published by the U.S.
+      government — scattered across slow systems built for procurement officers, not for the
+      businesses that could fill the orders. NSN Explorer pulls it together: what's open right now,
+      who's buying, how often, and what it has paid — each figure linked to its official record.
+      Find the work, size the market, quote with confidence.
+    </p>
+  </section>
+
+  <div class="card-grid">
+    <SignupForm
+      hook="shop_alerts"
+      title="Get new RFQs in your categories, by email"
+      description="Tell us the NSNs or supply classes you can make or source. We'll email you when the government opens a solicitation you can bid — in time to quote it, before it closes."
+      cta="Send me open demand"
+    />
+    <SignupForm
+      hook="overpay_digest"
+      title="The monthly market signal"
+      description="Where federal demand is heating up, which parts pay the most, and the biggest price moves we spotted — a monthly read for suppliers, and for anyone tracking the market."
+      cta="Subscribe"
+    />
+  </div>
+
+  <section class="faq">
+    <h2 class="section-title">NSN lookup questions</h2>
+    {faq.map((f) => (
+      <>
+        <h3>{f.question}</h3>
+        <p class="gloss">{f.answer}</p>
+      </>
+    ))}
+  </section>
+<script>
+  import '../scripts/heroDeploy';
+</script>
+
+</BaseLayout>

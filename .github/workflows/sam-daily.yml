@@ -1,0 +1,140 @@
+name: sam-daily
+
+# SAM.gov open-solicitation lane: pulls active solicitations across every
+# agency (see ingest/sam/fetch.mjs — ptype=r,o,k) into pub.solicitations
+# (source='sam_gov'), alongside the DIBBS RFQ lane (rfq-fast.yml). SAM's
+# search API is a much lower-churn, all-agency board compared to DIBBS's
+# per-day grid, so a daily cadence is enough here.
+#
+# SAM_API_KEY (a free api.data.gov key) may not be configured yet. Rather
+# than fail the whole pipeline while onboarding, the "check SAM_API_KEY"
+# step below gates every following step on the key being present — an
+# empty/missing key logs a notice and the job succeeds as a no-op instead
+# of failing.
+
+on:
+  schedule:
+    - cron: '30 6 * * *'
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/sam-daily.yml'
+      - 'ingest/sam/**'
+
+concurrency:
+  group: sam-daily
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  deployments: write
+
+env:
+  DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+  SAM_API_KEY: ${{ secrets.SAM_API_KEY }}
+
+jobs:
+  sam:
+    runs-on: ubuntu-latest
+    steps:
+      - name: check SAM_API_KEY
+        id: check-key
+        run: |
+          if [ -z "$SAM_API_KEY" ]; then
+            echo "notice: SAM_API_KEY is not set — skipping this run (no-op) until the secret is configured."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.check-key.outputs.present == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.check-key.outputs.present == 'true'
+        with:
+          node-version: 22
+      - run: npm ci
+        if: steps.check-key.outputs.present == 'true'
+      - run: node db/migrate.mjs
+        if: steps.check-key.outputs.present == 'true'
+      - name: fetch sam opportunities
+        if: steps.check-key.outputs.present == 'true'
+        run: set -o pipefail; node ingest/sam/fetch.mjs --days 30 --out /tmp/sam 2>&1 | tee /tmp/sam-fetch.log
+      - name: load sam opportunities
+        if: steps.check-key.outputs.present == 'true'
+        run: set -o pipefail; node ingest/sam/load.mjs --dir /tmp/sam 2>&1 | tee /tmp/sam-load.log
+      - name: write run report
+        if: failure() && steps.check-key.outputs.present == 'true'
+        run: |
+          {
+            echo "at: $(date -u +%FT%TZ)  sha: $GITHUB_SHA"
+            echo '== fetch log tail =='
+            tail -20 /tmp/sam-fetch.log 2>/dev/null || echo 'no fetch log'
+            echo '== load log tail =='
+            tail -20 /tmp/sam-load.log 2>/dev/null || echo 'no load log'
+            echo '== fetched files =='
+            ls -la /tmp/sam 2>/dev/null | head -30 || echo 'no dir'
+          } > ingest/sam/sam-last-run.txt
+      - name: commit run report
+        if: failure() && steps.check-key.outputs.present == 'true'
+        run: |
+          git config user.name "sam-bot"
+          git config user.email "noreply@anthropic.com"
+          git add ingest/sam/sam-last-run.txt
+          if git diff --cached --quiet; then echo "no change"; else
+            git commit -m "sam-daily: run report [skip ci]"
+            git pull --rebase --autostash origin main
+            git push origin main
+          fi
+
+  sam-retry:
+    needs: [sam]
+    if: always() && needs.sam.result == 'failure'
+    # Fresh-runner retry: a rate-limited or transient API/network failure
+    # gets one more attempt on a new runner, same pattern as the DIBBS
+    # lanes (rfq-fast.yml).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: node db/migrate.mjs
+      - name: fetch sam opportunities
+        run: set -o pipefail; node ingest/sam/fetch.mjs --days 30 --out /tmp/sam 2>&1 | tee /tmp/sam-fetch.log
+      - name: load sam opportunities
+        run: set -o pipefail; node ingest/sam/load.mjs --dir /tmp/sam 2>&1 | tee /tmp/sam-load.log
+      - name: write run report
+        if: failure()
+        run: |
+          {
+            echo "at: $(date -u +%FT%TZ)  sha: $GITHUB_SHA"
+            echo '== fetch log tail =='
+            tail -20 /tmp/sam-fetch.log 2>/dev/null || echo 'no fetch log'
+            echo '== load log tail =='
+            tail -20 /tmp/sam-load.log 2>/dev/null || echo 'no load log'
+            echo '== fetched files =='
+            ls -la /tmp/sam 2>/dev/null | head -30 || echo 'no dir'
+          } > ingest/sam/sam-last-run.txt
+      - name: commit run report
+        if: failure()
+        run: |
+          git config user.name "sam-bot"
+          git config user.email "noreply@anthropic.com"
+          git add ingest/sam/sam-last-run.txt
+          if git diff --cached --quiet; then echo "no change"; else
+            git commit -m "sam-daily: run report [skip ci]"
+            git pull --rebase --autostash origin main
+            git push origin main
+          fi
+
+  deploy:
+    needs: [sam, sam-retry]
+    if: >-
+      always() && (needs.sam.result == 'success'
+      || needs.sam-retry.result == 'success')
+    uses: ./.github/workflows/deploy.yml
+    secrets: inherit
+    with:
+      commit_report: false

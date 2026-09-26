@@ -1,0 +1,139 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE_URL } from '../consts';
+import { loadSiteData } from '../lib/data';
+import { buildDepartments } from '../lib/browse';
+
+const data = await loadSiteData();
+const departments = buildDepartments(data);
+
+const totalFscs = departments.reduce((sum, d) => sum + d.fscs.length, 0);
+const totalNsns = departments.reduce((sum, d) => sum + d.nsnCount, 0);
+
+const fmtInt = (n: number) => n.toLocaleString('en-US');
+
+const F = totalFscs;
+const G = departments.length;
+const hasFG = F > 0;
+
+const title = hasFG
+  ? `Federal Supply Class List: ${fmtInt(F)} FSC Codes`
+  : 'Federal Supply Class List: FSC Codes by Group';
+const description = hasFG
+  ? `Federal supply class list: ${fmtInt(F)} FSC codes in ${fmtInt(G)} federal supply groups, each with NSN counts and price history from DIBBS and USAspending records. Free.`
+  : 'Federal supply class list: FSC codes grouped by federal supply group, each with NSN counts and price history from DIBBS and USAspending records. Free to browse.';
+const h1 = hasFG
+  ? `Federal supply class list: ${fmtInt(F)} FSC codes in ${fmtInt(G)} groups`
+  : 'Federal supply class list by federal supply group';
+const canonicalUrl = `${SITE_URL}/catalog/`;
+
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  { name: 'Catalog', url: canonicalUrl },
+];
+
+const itemList = {
+  name: 'Federal supply groups',
+  items: departments.map((d) => ({ name: `FSG ${d.fsg} ${d.name}`, url: `/group/${d.fsg}/` })),
+};
+
+const faq = [
+  {
+    question: 'What is a federal supply class?',
+    answer:
+      'A federal supply class, or FSC, is the four-digit code that groups similar items across the federal supply system, such as 5331 for o-rings. It is the first four digits of every NSN.',
+  },
+  {
+    question: 'What is the difference between an FSG and an FSC?',
+    answer:
+      'A federal supply group is the two-digit family a class belongs to, and each group holds several classes. Here groups are shown as departments and classes as categories.',
+  },
+  {
+    question: 'Why do some classes show more NSNs than others?',
+    answer:
+      'The count reflects how many NSNs in that class have an indexed government purchase or solicitation. Classes marked as fully indexed have every priced purchase we could find.',
+  },
+];
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  pageType="CollectionPage"
+  canonicalUrl={canonicalUrl}
+  breadcrumbs={breadcrumbs}
+  itemList={itemList}
+  faq={faq}
+>
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a> › Catalog
+  </nav>
+
+  <p class="eyebrow">Catalog</p>
+
+  <header class="hero">
+    <h1>{h1}</h1>
+    <p class="lede">Browse the catalog</p>
+    <p class="lede">
+      The federal supply catalog, organized so you can find the demand you can fill: a <strong>department</strong>{' '}
+      (Federal Supply Group) holds several <strong>categories</strong> (Federal Supply Classes), and each
+      category holds the individual <strong>parts</strong> (NSNs) we've indexed — every price linked back
+      to its official government source record.
+    </p>
+  </header>
+
+  <section class="intro">
+    <h2 class="section-title">How the federal supply class list is organized</h2>
+    <p class="gloss">
+      This federal supply class list covers every FSC code NSN Explorer has indexed, grouped under
+      its federal supply group. Pick a group to see its classes, then a class to see the NSNs
+      inside it with their purchase prices and open solicitations. The catalog is built from DLA
+      DIBBS awards and USAspending contract actions, rebuilt every day, and every price links to
+      the government record behind it. It is free to browse and needs no account.
+    </p>
+  </section>
+
+  <div class="stat-strip">
+    <div class="stat">
+      <div class="value">{departments.length.toLocaleString('en-US')}</div>
+      <div class="label">Departments</div>
+    </div>
+    <div class="stat">
+      <div class="value">{fmtInt(totalFscs)}</div>
+      <div class="label">Categories</div>
+    </div>
+    <div class="stat">
+      <div class="value up">{fmtInt(totalNsns)}</div>
+      <div class="label">NSNs tracked</div>
+    </div>
+  </div>
+
+  <section>
+    <h2 class="section-title">Departments</h2>
+    {departments.length === 0 ? (
+      <p class="gloss">No departments are indexed yet.</p>
+    ) : (
+      <div class="dept-grid">
+        {departments.map((d) => (
+          <a class="dept-card card" href={`/group/${d.fsg}/`}>
+            <div class="dept-code mono">FSG {d.fsg}</div>
+            <h3>{d.name}</h3>
+            <p>
+              {d.fscs.length} {d.fscs.length === 1 ? 'category' : 'categories'} · {fmtInt(d.nsnCount)} NSNs
+            </p>
+          </a>
+        ))}
+      </div>
+    )}
+  </section>
+
+  <section class="faq">
+    <h2 class="section-title">Federal supply class questions</h2>
+    {faq.map((f) => (
+      <>
+        <h3>{f.question}</h3>
+        <p class="gloss">{f.answer}</p>
+      </>
+    ))}
+  </section>
+</BaseLayout>

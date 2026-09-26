@@ -1,0 +1,47 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE_NAME, CONTACT_EMAIL, SITE_URL } from '../consts';
+
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  { name: 'About', url: `${SITE_URL}/about/` },
+];
+---
+
+<BaseLayout
+  title="About NSN Explorer: Free Government Parts Data"
+  description="NSN Explorer is a free, independent index of U.S. government parts solicitations and prices built from public DIBBS, SAM.gov and USAspending records."
+  pageType="AboutPage"
+  breadcrumbs={breadcrumbs}
+>
+  <p class="eyebrow">About</p>
+  <h1>About {SITE_NAME}</h1>
+  <p class="lede">
+    NSN Explorer is an independent project built for suppliers who want to find and win federal
+    parts work — it indexes public U.S. government procurement records — DIBBS solicitations and
+    awards, and USAspending contract data — into one searchable site.
+  </p>
+
+  <hr class="rule" />
+
+  <p class="gloss">
+    We built it because that data exists but is scattered across systems built for procurement
+    officers, not for the businesses that could fill the orders. NSN Explorer renders the same
+    public facts clearly: what's open now, per part, over time, with a link back to the source
+    record behind every figure — so a supplier can find work and quote it with confidence. The
+    same index also serves buyers sizing up a category, researchers and market-watchers tracking
+    federal demand, investors watching a sector, and journalists checking a number.
+  </p>
+  <p class="gloss">
+    We are not a government entity and we don't sell parts to the government ourselves on this
+    site, and we don't broker or submit bids on anyone's behalf. Every figure here links to the
+    public record it came from. Nothing on this site is estimated or modeled — if you find an
+    error, tell us and we'll fix it.
+  </p>
+
+  <hr class="rule" />
+
+  <p class="gloss">
+    Contact: <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+  </p>
+</BaseLayout>

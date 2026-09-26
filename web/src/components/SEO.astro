@@ -1,0 +1,165 @@
+---
+// SEO head block — canonical, robots, Open Graph, Twitter, and a linked
+// JSON-LD identity graph (Organization + WebSite + per-page WebPage node).
+// Pattern shared with pfouge.com. Page-specific schema (Dataset,
+// BreadcrumbList, FAQPage, …) is passed via `extraSchema`.
+import { SITE_NAME, SITE_URL, SITE_DESCRIPTION, CONTACT_EMAIL } from '../consts';
+
+interface Props {
+  title: string;
+  description?: string;
+  ogImage?: string;
+  ogType?: 'website' | 'article';
+  canonicalUrl?: string;
+  noindex?: boolean;
+  /* schema.org @type for this page's WebPage node
+     (e.g. CollectionPage, AboutPage, ItemPage). Defaults to WebPage. */
+  pageType?: string;
+  /* Additional JSON-LD objects emitted as separate scripts. */
+  extraSchema?: object[];
+  /* Breadcrumb trail for a BreadcrumbList JSON-LD script. */
+  breadcrumbs?: { name: string; url: string }[];
+  /* Named list of items for an ItemList JSON-LD script. */
+  itemList?: { name: string; items: { name: string; url: string }[] };
+  /* Question/answer pairs for an FAQPage JSON-LD script. */
+  faq?: { question: string; answer: string }[];
+}
+
+const {
+  title,
+  description = SITE_DESCRIPTION,
+  ogImage,
+  ogType = 'website',
+  canonicalUrl,
+  noindex = false,
+  pageType = 'WebPage',
+  extraSchema = [],
+  breadcrumbs,
+  itemList,
+  faq,
+} = Astro.props;
+
+const resolvedCanonical = canonicalUrl ?? new URL(Astro.url.pathname, SITE_URL).href;
+const resolvedOgImage = ogImage ? new URL(ogImage, SITE_URL).href : `${SITE_URL}/og-default.png`;
+
+const fullTitle = title.includes(SITE_NAME) ? title : `${title} · ${SITE_NAME}`;
+
+// Site-wide identity graph. Every fact here is public and self-descriptive.
+const identityGraph = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': `${SITE_URL}/#org`,
+      name: SITE_NAME,
+      url: SITE_URL,
+      email: CONTACT_EMAIL,
+      logo: `${SITE_URL}/favicon.svg`,
+      description:
+        'NSN Explorer is a free tool for suppliers to find and win federal parts work, and for buyers and researchers to track the market — source-linked open solicitations and price history built entirely from public official records (DIBBS awards and USAspending contract actions).',
+    },
+    {
+      '@type': 'WebSite',
+      '@id': `${SITE_URL}/#website`,
+      url: SITE_URL,
+      name: SITE_NAME,
+      description: SITE_DESCRIPTION,
+      publisher: { '@id': `${SITE_URL}/#org` },
+    },
+    {
+      '@type': pageType,
+      '@id': `${resolvedCanonical}#webpage`,
+      url: resolvedCanonical,
+      name: fullTitle,
+      description,
+      isPartOf: { '@id': `${SITE_URL}/#website` },
+      inLanguage: 'en-US',
+    },
+  ],
+};
+
+const breadcrumbSchema =
+  breadcrumbs && breadcrumbs.length > 0
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: breadcrumbs.map((b, i) => ({
+          '@type': 'ListItem',
+          position: i + 1,
+          name: b.name,
+          item: new URL(b.url, SITE_URL).href,
+        })),
+      }
+    : null;
+
+const itemListSchema =
+  itemList && itemList.items.length > 0
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'ItemList',
+        name: itemList.name,
+        numberOfItems: itemList.items.length,
+        itemListElement: itemList.items.slice(0, 200).map((item, i) => ({
+          '@type': 'ListItem',
+          position: i + 1,
+          name: item.name,
+          url: new URL(item.url, SITE_URL).href,
+        })),
+      }
+    : null;
+
+const faqSchema =
+  faq && faq.length > 0
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: faq.map((f) => ({
+          '@type': 'Question',
+          name: f.question,
+          acceptedAnswer: { '@type': 'Answer', text: f.answer },
+        })),
+      }
+    : null;
+---
+
+<title>{fullTitle}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={resolvedCanonical} />
+<meta
+  name="robots"
+  content={noindex
+    ? 'noindex, nofollow'
+    : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'}
+/>
+
+<!-- Open Graph -->
+<meta property="og:type" content={ogType} />
+<meta property="og:url" content={resolvedCanonical} />
+<meta property="og:title" content={fullTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:image" content={resolvedOgImage} />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:locale" content="en_US" />
+<meta property="og:site_name" content={SITE_NAME} />
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={fullTitle} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={resolvedOgImage} />
+
+<!-- Structured data: site-wide identity graph -->
+<script type="application/ld+json" set:html={JSON.stringify(identityGraph)} is:inline />
+{breadcrumbSchema && (
+  <script type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} is:inline />
+)}
+{itemListSchema && (
+  <script type="application/ld+json" set:html={JSON.stringify(itemListSchema)} is:inline />
+)}
+{faqSchema && (
+  <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} is:inline />
+)}
+{extraSchema.map((s) => (
+  <script type="application/ld+json" set:html={JSON.stringify(s)} is:inline />
+))}

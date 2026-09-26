@@ -1,0 +1,121 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { loadSiteData } from '../lib/data';
+import { SITE_URL } from '../consts';
+import { fscDisplayName } from '../lib/browse';
+
+const data = await loadSiteData();
+const rows = data.deepFscs.map((f) => ({
+  fsc: f,
+  count: data.nsnsByFsc.get(f.fsc)?.length ?? 0,
+}));
+
+const fmtInt = (n: number) => n.toLocaleString('en-US');
+
+const D = rows.length;
+const M = rows.reduce((s, r) => s + r.count, 0);
+const hasDM = D > 0;
+
+const title = hasDM
+  ? `NSN Price History: ${fmtInt(D)} Federal Supply Classes, Free`
+  : 'NSN Price History by Federal Supply Class, Free';
+const description = hasDM
+  ? `NSN price history for ${fmtInt(D)} federal supply classes and ${fmtInt(M)} NSNs, every government purchase price linked to its DIBBS or USAspending record. Free to use.`
+  : 'NSN price history by federal supply class, every government purchase price linked to its DIBBS or USAspending source record. Free to use, no account needed.';
+const h1 = hasDM
+  ? `NSN price history: ${fmtInt(D)} federal supply classes, ${fmtInt(M)} NSNs`
+  : 'NSN price history by federal supply class';
+const canonicalUrl = `${SITE_URL}/browse/`;
+
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  { name: 'Price history', url: '/browse/' },
+];
+
+const itemList = {
+  name: 'Federal supply classes with full price history',
+  items: rows.map((r) => ({ name: `FSC ${r.fsc.fsc} ${r.fsc.name}`, url: `/fsc/${r.fsc.fsc}/` })),
+};
+
+const faq = [
+  {
+    question: 'Where do the prices come from?',
+    answer:
+      'Unit prices come from DIBBS award records and USAspending contract actions. NSN Explorer will not publish a price that lacks a link to its government source.',
+  },
+  {
+    question: 'Why are only some federal supply classes listed here?',
+    answer:
+      'These are the classes where every priced purchase has been indexed. Other classes appear in the catalog with partial history and open solicitations.',
+  },
+  {
+    question: 'Can I use this to price a quote?',
+    answer:
+      'Yes, that is what it is for. Look at the recent unit prices and quantities for an NSN, then check the linked records before you bid.',
+  },
+];
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  pageType="CollectionPage"
+  canonicalUrl={canonicalUrl}
+  breadcrumbs={breadcrumbs}
+  itemList={itemList}
+  faq={faq}
+>
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a> › Price history
+  </nav>
+
+  <p class="eyebrow">Catalog</p>
+  <h1>{h1}</h1>
+  <p class="lede">Browse deep categories</p>
+  <p class="lede">
+    Looking for the storefront view — departments, categories, and product cards with filters?
+    Head to <a href="/catalog/"><strong>the full catalog →</strong></a>. This page is the flat,
+    no-frills list of every Federal Supply Class we've indexed every priced purchase for.
+  </p>
+  <p class="btns">
+    <a class="btn" href="/catalog/">Browse the catalog →</a>
+  </p>
+
+  <section class="intro">
+    <h2 class="section-title">Free NSN price history from official award records</h2>
+    <p class="gloss">
+      Each class below has full NSN price history: every priced government purchase NSN Explorer
+      could find for every NSN in the class, drawn from DLA DIBBS award records and USAspending
+      contract actions. Prices are shown per unit with the date, quantity and buying agency, and
+      each one links to its source record. The index is rebuilt every day. It is free and needs no
+      account, and it exists so suppliers can quote against what the government has actually paid.
+    </p>
+  </section>
+
+  {rows.length === 0 ? (
+    <p class="gloss">No categories are fully indexed yet.</p>
+  ) : (
+    <section class="index-list" aria-label="Deep categories">
+      {rows.map((r) => (
+        <a class="index-row" href={`/fsc/${r.fsc.fsc}/`}>
+          <div class="num">FSC {r.fsc.fsc}</div>
+          <div>
+            <h3>{fscDisplayName(r.fsc.fsc, r.fsc.name)} <span class="tag live">Live</span></h3>
+            <p>{fmtInt(r.count)} NSNs tracked</p>
+          </div>
+          <div class="go">→</div>
+        </a>
+      ))}
+    </section>
+  )}
+
+  <section class="faq">
+    <h2 class="section-title">NSN price history questions</h2>
+    {faq.map((f) => (
+      <>
+        <h3>{f.question}</h3>
+        <p class="gloss">{f.answer}</p>
+      </>
+    ))}
+  </section>
+</BaseLayout>

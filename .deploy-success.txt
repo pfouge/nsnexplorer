@@ -1,0 +1,8 @@
+sha: affaf34a3840755566c34a4daad0aa15ffba8c7f
+run: 29695735960 at 2026-07-19T16:54:15Z
+deployment-url: https://4e9121c7.nsnexplorer.pages.dev
+alias-url: 
+deployment-url serves: NEW build
+pages.dev serves: NEW build
+production serves: NEW build
+cache purge: {"result":null,"success":false,"errors":[{"code":7003,"message":"Could not route to /client/v4/zones/purge_cache, perhaps your object identifier is invalid?"}],"messages":[]}

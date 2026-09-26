@@ -1,0 +1,52 @@
+name: db-copy-from-neon
+
+# Manual, one-time tooling for the Neon -> Supabase migration (Sept 2026).
+# Runs on a GitHub runner because the runners have direct Postgres access and
+# the secrets never leave GitHub. Steps:
+#   migrate  - apply db/migrations to Supabase (SUPABASE_DB_URL, Session pooler)
+#   copy     - truncate-and-reload every pub.* / ops.* table from Neon, then
+#              compare row counts (fails on any mismatch)
+#   verify   - compare row counts only
+
+on:
+  workflow_dispatch:
+    inputs:
+      step:
+        description: 'migrate | copy | verify'
+        required: true
+        default: verify
+        type: choice
+        options: [migrate, copy, verify]
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+      NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: migrate
+        if: inputs.step == 'migrate'
+        run: |
+          node db/migrate.mjs
+          node -e "
+            import('pg').then(async ({default: pg}) => {
+              const { sslFor } = await import('./shared/db.mjs');
+              const c = new pg.Client({ connectionString: process.env.DATABASE_URL, ssl: sslFor(process.env.DATABASE_URL) });
+              await c.connect();
+              console.log('schema_migrations:', (await c.query('select filename from public.schema_migrations order by 1')).rows.map(r => r.filename));
+              console.log('schemas:', (await c.query(\"select nspname from pg_namespace where nspname in ('pub','ops') order by 1\")).rows.map(r => r.nspname));
+              console.log('tables:', (await c.query(\"select count(*) from information_schema.tables where table_schema in ('pub','ops')\")).rows[0].count);
+              await c.end();
+            })"
+      - name: copy
+        if: inputs.step == 'copy'
+        run: node db/copy-from-neon.mjs
+      - name: verify
+        if: inputs.step == 'verify'
+        run: node db/copy-from-neon.mjs --verify-only

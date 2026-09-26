@@ -1,0 +1,33 @@
+at: 2026-09-06T16:44:45Z  sha: 3ad2c22766a89d3038edfcadb395bba8990103c8
+== fetch log tail ==
+fetch.mjs: fetching SAM opportunities postedFrom=08/07/2026 postedTo=09/06/2026 ptype=r,o,k
+fetch.mjs: wrote /tmp/sam/sam-page-1.json (offset=0, totalRecords=18167, records=1000)
+fetch.mjs: wrote /tmp/sam/sam-page-2.json (offset=1000, totalRecords=18167, records=0)
+fetch.mjs: done, 2 page(s) written to /tmp/sam
+== load log tail ==
+    at async loadSamSolicitations (file:///home/runner/work/nsnexplorer.com/nsnexplorer.com/ingest/sam/load.mjs:108:7)
+    at async main (file:///home/runner/work/nsnexplorer.com/nsnexplorer.com/ingest/sam/load.mjs:213:18) {
+  length: 146,
+  severity: 'ERROR',
+  code: '42P08',
+  detail: 'text versus character',
+  hint: undefined,
+  position: '50',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_param.c',
+  line: '219',
+  routine: 'variable_coerce_param_hook'
+}
+== fetched files ==
+total 1820
+drwxr-xr-x  2 runner runner    4096 Sep  6 16:44 .
+drwxrwxrwt 16 root   root      4096 Sep  6 16:44 ..
+-rw-r--r--  1 runner runner 1849252 Sep  6 16:44 sam-page-1.json
+-rw-r--r--  1 runner runner     244 Sep  6 16:44 sam-page-2.json

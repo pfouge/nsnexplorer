@@ -1,0 +1,13 @@
+{
+  "name": "@parts-explorer/shared",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "db.mjs",
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "pg": "^8.11.5"
+  }
+}

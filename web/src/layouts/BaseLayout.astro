@@ -1,0 +1,164 @@
+---
+import '../styles/global.css';
+import SEO from '../components/SEO.astro';
+import { SITE_NAME } from '../consts';
+
+interface Props {
+  title: string;
+  description?: string;
+  ogImage?: string;
+  ogType?: 'website' | 'article';
+  canonicalUrl?: string;
+  noindex?: boolean;
+  pageType?: string;
+  extraSchema?: object[];
+  breadcrumbs?: { name: string; url: string }[];
+  itemList?: { name: string; items: { name: string; url: string }[] };
+  faq?: { question: string; answer: string }[];
+}
+
+const seoProps = Astro.props;
+const year = new Date().getFullYear();
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="theme-color" content="#FAF8F3" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0E0F10" media="(prefers-color-scheme: dark)" />
+    <script is:inline>
+      // Set theme before first paint: explicit choice wins, else follow OS.
+      (() => {
+        const saved = localStorage.getItem('theme');
+        const dark = saved ? saved === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+        if (dark) document.documentElement.dataset.theme = 'dark';
+      })();
+    </script>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+    />
+
+    <SEO {...seoProps} />
+
+    <!-- Google Analytics 4 (gtag.js). Loads for all visitors; a cookie
+         consent banner / consent mode can be layered on later. -->
+    <script is:inline async src="https://www.googletagmanager.com/gtag/js?id=G-V0L6VYP0B4"></script>
+    <script is:inline>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-V0L6VYP0B4');
+    </script>
+  </head>
+  <body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <header class="site">
+      <div class="container">
+        <a class="brand" href="/" aria-label={`${SITE_NAME} home`}>
+          <svg class="mark" width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <polygon points="16,5.5 25.1,10.75 25.1,21.25 16,26.5 6.9,21.25 6.9,10.75" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></polygon>
+            <line x1="16" y1="0.5" x2="16" y2="4" stroke="currentColor" stroke-width="2"></line>
+            <line x1="16" y1="28" x2="16" y2="31.5" stroke="currentColor" stroke-width="2"></line>
+            <line x1="1" y1="16" x2="4.5" y2="16" stroke="currentColor" stroke-width="2"></line>
+            <line x1="27.5" y1="16" x2="31" y2="16" stroke="currentColor" stroke-width="2"></line>
+            <circle cx="16" cy="16" r="3.2" fill="var(--green)"></circle>
+          </svg>
+          <span class="word">NSN <em>Explorer</em></span>
+        </a>
+        <nav class="site" aria-label="Site">
+          <a href="/open/">Open Demand</a>
+          <a href="/suppliers/">For Suppliers</a>
+          <a href="/catalog/">Catalog</a>
+          <a href="/browse/">Browse</a>
+          <a href="/agencies/">Agencies</a>
+          <a href="/methodology/">Methodology</a>
+          <a href="/about/">About</a>
+          <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch color theme">
+            Dark
+          </button>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main-content" tabindex="-1">
+      <div class="container">
+        <slot />
+      </div>
+    </main>
+
+    <footer class="site">
+      <div class="container">
+        <div class="foot-top">
+          <svg class="mark" width="24" height="24" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <polygon points="16,5.5 25.1,10.75 25.1,21.25 16,26.5 6.9,21.25 6.9,10.75" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></polygon>
+            <line x1="16" y1="0.5" x2="16" y2="4" stroke="currentColor" stroke-width="2"></line>
+            <line x1="16" y1="28" x2="16" y2="31.5" stroke="currentColor" stroke-width="2"></line>
+            <line x1="1" y1="16" x2="4.5" y2="16" stroke="currentColor" stroke-width="2"></line>
+            <line x1="27.5" y1="16" x2="31" y2="16" stroke="currentColor" stroke-width="2"></line>
+            <circle cx="16" cy="16" r="3.2" fill="#1FB866"></circle>
+          </svg>
+          <span class="word">NSN <em>Explorer</em></span>
+        </div>
+        <p class="data-honesty">
+          Every price on this site comes from a public U.S. government record, and every figure
+          links to its source.
+        </p>
+        <p class="disclaimer">
+          NSN Explorer publishes public procurement data for suppliers, buyers, and researchers. It
+          sells nothing and offers no recommendations. Figures reflect official records, which may
+          lag actual events.
+        </p>
+        <nav aria-label="Footer">
+          <a href="/open/">Open Demand</a>
+          <a href="/suppliers/">For Suppliers</a>
+          <a href="/browse/">Browse deep categories</a>
+          <a href="/agencies/">Agencies</a>
+          <a href="/methodology/">Methodology</a>
+          <a href="/about/">About</a>
+          <a href="/terms/">Terms</a>
+          <a href="/privacy/">Privacy</a>
+        </nav>
+        <p style="margin-top:1.25rem">© {year} nsnexplorer.com</p>
+      </div>
+    </footer>
+    <script is:inline>
+      // Theme switching, ported from the followthemoney heatmap: the button
+      // shows the theme you'd switch to; an explicit choice persists and
+      // stops OS-preference tracking.
+      (() => {
+        const root = document.documentElement;
+        const btn = document.getElementById('theme-toggle');
+        if (!btn) return;
+        const sync = () => {
+          const dark = root.dataset.theme === 'dark';
+          btn.textContent = dark ? 'Light' : 'Dark';
+          btn.setAttribute('aria-label', `Switch to ${dark ? 'light' : 'dark'} theme`);
+        };
+        sync();
+        btn.addEventListener('click', () => {
+          const dark = root.dataset.theme !== 'dark';
+          if (dark) root.dataset.theme = 'dark';
+          else delete root.dataset.theme;
+          localStorage.setItem('theme', dark ? 'dark' : 'light');
+          sync();
+        });
+        const mq = matchMedia('(prefers-color-scheme: dark)');
+        mq.addEventListener('change', (e) => {
+          if (localStorage.getItem('theme')) return;
+          if (e.matches) root.dataset.theme = 'dark';
+          else delete root.dataset.theme;
+          sync();
+        });
+      })();
+    </script>
+  </body>
+</html>

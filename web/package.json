@@ -1,0 +1,22 @@
+{
+  "name": "web",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@astrojs/cloudflare": "^12.6.13",
+    "@astrojs/sitemap": "^3.7.3",
+    "astro": "^5.18.2",
+    "pg": "^8.22.0",
+    "postgres": "^3.4.7"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.20.0",
+    "typescript": "^7.0.2"
+  }
+}

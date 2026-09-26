@@ -1,0 +1,44 @@
+name: fsc-names-backfill
+
+# Applies the curated Federal Supply Class titles in
+# ingest/reference/fsc-names.json to pub.fsc, replacing any placeholder
+# 'FSC NNNN' names already sitting in the database (rows written before this
+# file existed, or by an ingest run since the loaders' own placeholder->real
+# upsert). Idempotent (db/backfill-fsc-names.mjs only ever touches rows still
+# carrying a placeholder), so re-running is always safe. Then rebuilds and
+# deploys the site so the real names go live.
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - 'ingest/reference/fsc-names.json'
+      - 'db/backfill-fsc-names.mjs'
+      - '.github/workflows/fsc-names-backfill.yml'
+
+permissions:
+  contents: write
+  deployments: write
+
+env:
+  DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: node db/migrate.mjs
+      - run: node db/backfill-fsc-names.mjs
+
+  deploy:
+    needs: [backfill]
+    uses: ./.github/workflows/deploy.yml
+    secrets: inherit
+    with:
+      commit_report: false

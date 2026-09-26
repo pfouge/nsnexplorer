@@ -1,0 +1,85 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { SITE_URL } from '../../consts';
+import { loadSiteData } from '../../lib/data';
+import { buildDepartments, fscDisplayName, type DepartmentGroup } from '../../lib/browse';
+
+export async function getStaticPaths() {
+  const data = await loadSiteData();
+  const departments = buildDepartments(data);
+  return departments.map((department) => ({
+    params: { fsg: department.fsg },
+    props: { department },
+  }));
+}
+
+const { department } = Astro.props as { department: DepartmentGroup };
+const data = await loadSiteData();
+
+const fmtInt = (n: number) => n.toLocaleString('en-US');
+const categoryCount = (fsc: string) => data.nsnsByFsc.get(fsc)?.length ?? 0;
+
+const title = `${department.name} — FSG ${department.fsg}`;
+const description = `${department.name} (Federal Supply Group ${department.fsg}): ${department.fscs.length} categories, ${fmtInt(department.nsnCount)} NSNs tracked, every price linked to its source record.`;
+const canonicalUrl = `${SITE_URL}/group/${department.fsg}/`;
+
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
+    { '@type': 'ListItem', position: 2, name: 'Catalog', item: `${SITE_URL}/catalog/` },
+    { '@type': 'ListItem', position: 3, name: department.name, item: canonicalUrl },
+  ],
+};
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  pageType="CollectionPage"
+  canonicalUrl={canonicalUrl}
+  extraSchema={[breadcrumbSchema]}
+>
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a> › <a href="/catalog/">Catalog</a> › {department.name}
+  </nav>
+
+  <p class="eyebrow">Department <span class="x">×</span> FSG {department.fsg}</p>
+
+  <header class="hero">
+    <h1>{department.name}</h1>
+    <p class="lede">
+      {department.fscs.length} {department.fscs.length === 1 ? 'category' : 'categories'} in this
+      department, {fmtInt(department.nsnCount)} NSNs tracked in total.
+    </p>
+  </header>
+
+  <div class="stat-strip">
+    <div class="stat">
+      <div class="value">{department.fscs.length.toLocaleString('en-US')}</div>
+      <div class="label">Categories</div>
+    </div>
+    <div class="stat">
+      <div class="value up">{fmtInt(department.nsnCount)}</div>
+      <div class="label">NSNs tracked</div>
+    </div>
+  </div>
+
+  <section>
+    <h2 class="section-title">Categories</h2>
+    {department.fscs.length === 0 ? (
+      <p class="gloss">No categories are indexed yet in this department.</p>
+    ) : (
+      <div class="dept-grid">
+        {department.fscs.map((fsc) => (
+          <a class="dept-card card" href={`/fsc/${fsc.fsc}/`}>
+            <div class="dept-code mono">FSC {fsc.fsc}</div>
+            <h3>{fscDisplayName(fsc.fsc, fsc.name)}</h3>
+            <p>{fmtInt(categoryCount(fsc.fsc))} NSNs tracked</p>
+          </a>
+        ))}
+      </div>
+    )}
+  </section>
+</BaseLayout>

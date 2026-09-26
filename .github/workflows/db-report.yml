@@ -1,0 +1,74 @@
+name: db-report
+
+# Lightweight database row-count report, committed back to the repo.
+# Exists because the dev container cannot reach Neon or GitHub's API;
+# touching this file is the dispatch (check-3). Much cheaper than re-running the
+# full publog load just to read counts.
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/db-report.yml'
+
+env:
+  DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: db-report
+  cancel-in-progress: false
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: query counts
+        run: |
+          node --input-type=module --eval "
+            import pg from 'pg';
+            import { writeFileSync } from 'node:fs';
+            const c = new pg.Client({ connectionString: process.env.DATABASE_URL });
+            await c.connect();
+            const counts = {};
+            for (const t of ['pub.nsns','pub.contract_actions','pub.price_points','pub.part_numbers','pub.suppliers','pub.solicitations']) {
+              const r = await c.query('SELECT count(*) FROM ' + t);
+              counts[t] = Number(r.rows[0].count);
+            }
+            const src = await c.query(\"SELECT left(award_uid, 5) AS src, count(*) FROM pub.contract_actions GROUP BY 1 ORDER BY 2 DESC LIMIT 5\");
+            counts.actionsByPrefix = src.rows;
+            // Drawing coverage: dimensioned drawings are generated from
+            // pub.nsns.characteristics (PUB LOG enrichment), so count how many
+            // open-solicitation NSNs carry any characteristics, overall and by FSC.
+            const cov = await c.query(\"SELECT n.fsc, count(DISTINCT n.nsn) AS open_nsns, count(DISTINCT n.nsn) FILTER (WHERE n.characteristics IS NOT NULL AND jsonb_array_length(n.characteristics) > 0) AS with_chars FROM pub.solicitations s JOIN pub.nsns n ON n.nsn = s.nsn WHERE s.status = 'open' GROUP BY 1 ORDER BY 2 DESC LIMIT 20\");
+            counts.openNsnCharacteristicsByFsc = cov.rows.map(r => ({ fsc: r.fsc, open_nsns: Number(r.open_nsns), with_chars: Number(r.with_chars) }));
+            const tot = await c.query(\"SELECT count(*) AS total, count(*) FILTER (WHERE characteristics IS NOT NULL AND jsonb_array_length(characteristics) > 0) AS with_chars FROM pub.nsns\");
+            // Dollars-indexed inputs: contract_actions.obligation and price_points.
+            const ob = await c.query(\"SELECT count(*) AS n, count(obligation) AS with_obligation, coalesce(sum(obligation),0) AS sum_obligation, count(*) FILTER (WHERE raw ? 'nsn') AS with_raw_nsn, count(*) FILTER (WHERE psc IN (SELECT fsc FROM pub.fsc)) AS psc_in_fsc, count(*) FILTER (WHERE (raw->>'nsn') IN (SELECT nsn FROM pub.nsns)) AS nsn_in_nsns FROM pub.contract_actions\");
+            counts.contractActions = Object.fromEntries(Object.entries(ob.rows[0]).map(([k,v]) => [k, Number(v)]));
+            const rawKeys = await c.query(\"SELECT k, count(*) AS n FROM pub.contract_actions, jsonb_object_keys(raw) k GROUP BY 1 ORDER BY 2 DESC LIMIT 25\");
+            counts.contractActionRawKeys = rawKeys.rows.map(r => r.k + ':' + r.n);
+            const sample = await c.query(\"SELECT award_uid, psc, obligation, raw->>'nsn' AS nsn, left(raw::text, 300) AS raw FROM pub.contract_actions ORDER BY id DESC LIMIT 2\");
+            counts.contractActionSample = sample.rows;
+            counts.nsnsWithCharacteristics = { total: Number(tot.rows[0].total), with_chars: Number(tot.rows[0].with_chars) };
+            await c.end();
+            writeFileSync('db-report.json', JSON.stringify({ at: new Date().toISOString(), counts }, null, 2) + '\n');
+          "
+      - name: commit report
+        run: |
+          git config user.name "db-report-bot"
+          git config user.email "noreply@anthropic.com"
+          git add db-report.json
+          if git diff --cached --quiet; then echo "no change"; else
+            git commit -m "db: row-count report [skip ci]"
+            git pull --rebase --autostash origin main
+            git push origin main
+          fi

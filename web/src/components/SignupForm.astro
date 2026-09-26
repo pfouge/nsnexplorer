@@ -1,0 +1,22 @@
+---
+interface Props {
+  hook: 'shop_alerts' | 'overpay_digest';
+  fscInterest?: string | null;
+  title: string;
+  description: string;
+  cta: string;
+}
+
+const { hook, fscInterest = null, title, description, cta } = Astro.props;
+---
+
+<form class="signup-form" action="/api/signup" method="post">
+  <h3>{title}</h3>
+  <p>{description}</p>
+  <input type="hidden" name="hook" value={hook} />
+  {fscInterest && <input type="hidden" name="fsc_interest" value={fscInterest} />}
+  <div class="row">
+    <input type="email" name="email" placeholder="you@example.com" required aria-label="Email address" />
+    <button type="submit">{cta}</button>
+  </div>
+</form>

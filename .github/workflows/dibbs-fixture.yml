@@ -1,0 +1,45 @@
+name: dibbs-fixture-capture
+
+# One-shot: capture DIBBS award-grid HTML fixtures from a US runner and
+# commit them back to the repo (the dev container cannot reach GitHub's
+# API or DIBBS directly, so results travel via git). Triggered by pushes
+# touching the capture script or this file; delete together with
+# probe.mjs / dibbs-probe.yml once the grid scraper ships.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ingest/dibbs/capture-fixture.mjs'
+      - '.github/workflows/dibbs-fixture.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dibbs-fixture
+  cancel-in-progress: false
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: capture fixtures
+        run: node ingest/dibbs/capture-fixture.mjs
+      - name: commit fixtures
+        run: |
+          git config user.name "dibbs-fixture-bot"
+          git config user.email "noreply@anthropic.com"
+          git add ingest/dibbs/fixtures/
+          if git diff --cached --quiet; then
+            echo "no fixture changes"
+          else
+            git commit -m "dibbs: captured award-grid fixtures [skip ci]"
+            git pull --rebase origin main
+            git push origin main
+          fi

@@ -1,0 +1,220 @@
+---
+// privacy.astro — Privacy Policy (prerendered static).
+// Modeled on gratisglobal.com's legal pages. Forward-looking: covers
+// analytics, advertising, cookies, and user accounts ahead of launch so
+// the policy does not need updating as those features arrive.
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE_NAME, CONTACT_EMAIL } from '../consts';
+
+const updated = 'July 12, 2026';
+---
+
+<BaseLayout
+  title="Privacy Policy"
+  description="How NSN Explorer collects, uses, and protects your information, including analytics, advertising, cookies, and accounts."
+>
+  <p class="eyebrow">Legal</p>
+  <h1>Privacy Policy</h1>
+  <p class="lede">
+    This policy explains what information {SITE_NAME} collects, why we collect it, and the choices
+    you have. It applies to our website at nsnexplorer.com, including any account features as they
+    become available (together, the "Services").
+  </p>
+  <p class="mono updated">Last updated: {updated}</p>
+
+  <div class="note">
+    <b>Plain-language summary.</b> You can browse {SITE_NAME} anonymously. We use analytics to
+    understand how the Services are used, and we may show advertising to help keep them free. If
+    you give us your email, we use it for the updates you asked for. If you create an account (a
+    feature we are building), we store what is needed to run it, like your email and your saved
+    items. We do not sell your personal information. You can contact us any time to access or
+    delete your data.
+  </div>
+
+  <h2>Information we collect</h2>
+
+  <h3>Information you give us</h3>
+  <ul>
+    <li>
+      <strong>Email signups.</strong> If you sign up for updates, we store your email address and
+      the time you signed up. We use it to send you what you signed up for, and you can
+      unsubscribe or ask us to delete it at any time.
+    </li>
+    <li>
+      <strong>Account information.</strong> When account features launch, creating an account may
+      require an email address and a password, and optionally a name and company. Passwords will
+      be handled by our authentication provider and stored in hashed form; we will not see your
+      plain-text password.
+    </li>
+    <li>
+      <strong>Saved items.</strong> If you use personal features such as saved searches,
+      watchlists, or alerts once they exist, we store those choices so they work for you across
+      devices.
+    </li>
+    <li>
+      <strong>Messages.</strong> If you email us, we keep your message and contact details to
+      respond and to improve the Services.
+    </li>
+  </ul>
+
+  <h3>Information we collect automatically</h3>
+  <ul>
+    <li>
+      <strong>Usage and device data.</strong> Like most websites, we automatically receive
+      information such as your IP address, browser or device type, operating system, referring
+      pages, the pages and records you view, and the dates and times of your visits.
+    </li>
+    <li>
+      <strong>Cookies and similar technologies.</strong> We and our partners may use cookies and
+      similar technologies. See <a href="#cookies">Cookies and similar technologies</a> below.
+    </li>
+  </ul>
+
+  <h2>How we use information</h2>
+  <p>We use the information we collect to:</p>
+  <ul>
+    <li>Operate, maintain, and improve the Services, including understanding which parts and records are most useful.</li>
+    <li>Send you updates you signed up for.</li>
+    <li>Provide account features you choose to use, once they exist.</li>
+    <li>Measure and analyze traffic and usage so we can make the Services more useful.</li>
+    <li>Show and measure advertising that helps keep the Services free.</li>
+    <li>Respond to your messages and requests.</li>
+    <li>Protect the Services against fraud, abuse, and security threats, and comply with legal obligations.</li>
+  </ul>
+
+  <h2 id="cookies">Cookies and similar technologies</h2>
+  <p>
+    Cookies are small files stored on your device. We use these technologies for a few distinct
+    purposes:
+  </p>
+  <ul>
+    <li><strong>Essential.</strong> Needed for the Services to function, for example to keep you signed in once account features exist.</li>
+    <li><strong>Analytics.</strong> To understand how the Services are used so we can improve them. See <a href="#analytics">Analytics</a>.</li>
+    <li><strong>Advertising.</strong> To show advertising and measure its performance. See <a href="#advertising">Advertising</a>.</li>
+  </ul>
+  <p>
+    You can control cookies through your browser settings. Blocking some cookies may affect how
+    parts of the Services work. Where required by law, we ask for your consent before setting
+    non-essential cookies.
+  </p>
+
+  <h2 id="analytics">Analytics</h2>
+  <p>
+    We may use analytics services, including Google Analytics, to understand usage patterns such
+    as which pages are visited and how long visits last. These services set their own cookies or
+    identifiers and process data under their own privacy policies. You can opt out of Google
+    Analytics using the
+    <a href="https://tools.google.com/dlpage/gaoptout" rel="nofollow noopener" target="_blank">Google Analytics Opt-out Browser Add-on</a>.
+  </p>
+
+  <h2 id="advertising">Advertising</h2>
+  <p>
+    To help keep the Services free, they may display advertising. We work with third-party
+    advertising partners, which may include Google and its advertising products. These partners
+    may use cookies and similar identifiers to serve and measure ads, including personalized ads
+    based on your activity over time and across sites.
+  </p>
+  <p>You have choices about personalized advertising:</p>
+  <ul>
+    <li>Manage Google ad personalization at <a href="https://adssettings.google.com" rel="nofollow noopener" target="_blank">Google Ad Settings</a>.</li>
+    <li>Opt out of personalized advertising from participating companies at the <a href="https://optout.aboutads.info" rel="nofollow noopener" target="_blank">Digital Advertising Alliance</a> and the <a href="https://optout.networkadvertising.org" rel="nofollow noopener" target="_blank">Network Advertising Initiative</a>.</li>
+  </ul>
+
+  <h2>How we share information</h2>
+  <p>We do not sell your personal information. We share information only as described here:</p>
+  <ul>
+    <li>
+      <strong>Service providers.</strong> Companies that help us run the Services process
+      information on our behalf: our hosting and content delivery provider, our database
+      provider, our analytics providers, our advertising partners, and, once accounts exist, our
+      authentication and email providers.
+    </li>
+    <li>
+      <strong>Legal and safety.</strong> We may disclose information if required by law, or to
+      protect the rights, property, or safety of {SITE_NAME}, our users, or others.
+    </li>
+    <li>
+      <strong>Business transfers.</strong> If {SITE_NAME} is involved in a merger, acquisition, or
+      sale of assets, information may be transferred as part of that transaction, subject to this
+      policy.
+    </li>
+  </ul>
+  <p>
+    Some advertising and analytics partners act as independent controllers of the data they
+    collect through the Services. Depending on where you live, certain ad-related data sharing may
+    be considered a "sale" or "sharing" of personal information under laws such as the California
+    Consumer Privacy Act. You can exercise the choices described in
+    <a href="#advertising">Advertising</a> and <a href="#your-rights">Your rights</a>.
+  </p>
+
+  <h2>Outbound links</h2>
+  <p>
+    Every figure on the Services links to its official government source record, and we link to
+    other third-party sites as well. Those sites can set their own cookies and collect information
+    about you under their own privacy policies, which we do not control. We are not responsible
+    for the practices of third-party sites.
+  </p>
+
+  <h2 id="your-rights">Your rights and choices</h2>
+  <p>
+    Depending on where you live, you may have the right to access, correct, delete, or receive a
+    copy of your personal information, to object to or restrict certain processing, and to opt out
+    of targeted advertising or the "sale" or "sharing" of your information. To exercise any of
+    these rights, email us at <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>. We will
+    respond as required by applicable law and will not discriminate against you for exercising
+    your rights. Once accounts exist, you will be able to review and update much of your
+    information directly, and you can ask us to delete your account and associated data at any
+    time.
+  </p>
+
+  <h2>Do Not Track and Global Privacy Control</h2>
+  <p>
+    Some browsers offer "Do Not Track" or Global Privacy Control signals. Where required by law,
+    we treat a recognized opt-out preference signal as a valid request to opt out of targeted
+    advertising and the sale or sharing of personal information for that browser or device.
+  </p>
+
+  <h2>Data retention</h2>
+  <p>
+    We keep personal information only as long as needed for the purposes described in this policy,
+    to comply with our legal obligations, resolve disputes, and enforce our agreements. Email
+    signups are kept until you unsubscribe or ask us to delete them. Analytics and advertising
+    data are retained according to the settings and policies of the relevant providers.
+  </p>
+
+  <h2>Security</h2>
+  <p>
+    We use reasonable technical and organizational measures to protect information, including
+    access controls, least-privilege database credentials, and encryption in transit. No method of
+    transmission or storage is completely secure, so we cannot guarantee absolute security.
+  </p>
+
+  <h2>Children's privacy</h2>
+  <p>
+    The Services are intended for professional and business use and are not directed to children.
+    We do not knowingly collect personal information from children under 13 (or the minimum age
+    required in your country). If you believe a child has provided us personal information,
+    contact us and we will delete it.
+  </p>
+
+  <h2>International users</h2>
+  <p>
+    We operate from the United States, and information we collect may be processed in the United
+    States and other countries where we or our providers operate. These countries may have
+    different data protection laws than your own. Where required, we rely on appropriate
+    safeguards for such transfers.
+  </p>
+
+  <h2>Changes to this policy</h2>
+  <p>
+    We may update this policy from time to time. When we make material changes, we will update the
+    date at the top of this page and, where appropriate, provide additional notice. Your continued
+    use of the Services after an update means you accept the revised policy.
+  </p>
+
+  <h2>Contact us</h2>
+  <p>
+    Questions about this policy or your information? Email us at
+    <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+  </p>
+</BaseLayout>

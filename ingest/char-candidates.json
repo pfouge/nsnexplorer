@@ -1,0 +1,1170 @@
+{
+  "at": "2026-07-19T13:24:53.129Z",
+  "rows": [
+    {
+      "nsn": "5331016090754",
+      "fsc": "5331",
+      "item_name": "O-RING",
+      "n": 11,
+      "characteristics": [
+        {
+          "mrc": "FEAT",
+          "reply": "TEMP RATING IS NEGATIVE 30 CELSIUS TO POSITIVE 125 CELSIU",
+          "requirement": "SPECIAL FEATURES"
+        },
+        {
+          "mrc": "MDCL",
+          "reply": "ASTM-D-2000 ASSN STD SINGLE MATERIAL RESPONSE",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION"
+        },
+        {
+          "mrc": "ADVN",
+          "reply": "43.85 MILLIMETERS MINIMUM AND 44.95 MILLIMETERS MAXIMUM",
+          "requirement": "CROSS-SECTIONAL HEIGHT"
+        },
+        {
+          "mrc": "ADYT",
+          "reply": "38.23 MILLIMETERS MINIMUM AND 38.97 MILLIMETERS MAXIMUM",
+          "requirement": "CENTER HOLE DIAMETER"
+        },
+        {
+          "mrc": "AGAV",
+          "reply": "EXPENDABLE",
+          "requirement": "END ITEM IDENTIFICATION"
+        },
+        {
+          "mrc": "CXCY",
+          "reply": "SEAL, O-RING",
+          "requirement": "PART NAME ASSIGNED BY CONTROLLING AGENCY"
+        },
+        {
+          "mrc": "CQFM",
+          "reply": "90.0 SHORE DUROMETER A NOMINAL",
+          "requirement": "HARDNESS RATING"
+        },
+        {
+          "mrc": "ZZZK",
+          "reply": "SAEJ515CH290X0386H PROFESSIONAL/INDUSTRIAL ASSOCIATION STANDARD",
+          "requirement": "SPECIFICATION/STANDARD DATA"
+        },
+        {
+          "mrc": "ANYN",
+          "reply": "100 MINIMUM",
+          "requirement": "ELONGATION PERCENTAGE"
+        },
+        {
+          "mrc": "MATT",
+          "reply": "RUBBER BUTADIENE-ACRYLONITRILE CLASS NBR",
+          "requirement": "MATERIAL"
+        },
+        {
+          "mrc": "ABHE",
+          "reply": "43.85 MILLIMETERS MINIMUM AND 44.95 MILLIMETERS MAXIMUM",
+          "requirement": "OUTSIDE DIAMETER"
+        }
+      ]
+    },
+    {
+      "nsn": "5331010494102",
+      "fsc": "5331",
+      "item_name": "O-RING",
+      "n": 9,
+      "characteristics": [
+        {
+          "mrc": "ANYN",
+          "reply": "331 MAXIMUM",
+          "requirement": "ELONGATION PERCENTAGE"
+        },
+        {
+          "mrc": "ADYT",
+          "reply": "0.419 INCHES MINIMUM AND 0.429 INCHES MAXIMUM",
+          "requirement": "CENTER HOLE DIAMETER"
+        },
+        {
+          "mrc": "CQFM",
+          "reply": "70.0 SHORE DUROMETER A NOMINAL",
+          "requirement": "HARDNESS RATING"
+        },
+        {
+          "mrc": "ABJH",
+          "reply": "-40.0 FAHRENHEIT AND 250.0 FAHRENHEIT",
+          "requirement": "TEMP RATING"
+        },
+        {
+          "mrc": "FEAT",
+          "reply": "ITEM MUST COMPLY WITH REQUIREMETSN OF DEFENSE SUPPLY CENTER COLUMBUS PRODUCTION STANDARD LO1530",
+          "requirement": "SPECIAL FEATURES"
+        },
+        {
+          "mrc": "TEST",
+          "reply": "81349-MIL-P-23199 SPECIFICATION (INCLUDES ENGINEERING TYPE BULLETINS, BROCHURES,ETC., THAT REFLECT SPECIFICATION TYPE DATA IN SPECIFICATION FORMAT; EXCLUDES COMMERCIAL CATALOGS, INDUSTRY DIRECTORIES, AND SIMILAR TRADE PUBLICATIONS, REFLECTING GENERAL TYPE DATA ON CERTAIN ENVIRONMENTAL AND PERFORMANCE REQUIREMENTS AND TEST CONDITIONS THAT ARE SHOWN AS \"TYPICAL\", \"AVERAGE\", \"NOMINAL\", ETC.).",
+          "requirement": "TEST DATA DOCUMENT"
+        },
+        {
+          "mrc": "MATT",
+          "reply": "RUBBER BUTADIENE-ACRYLONITRILE CLASS NBR",
+          "requirement": "MATERIAL"
+        },
+        {
+          "mrc": "ADVN",
+          "reply": "0.100 INCHES MINIMUM AND 0.106 INCHES MAXIMUM",
+          "requirement": "CROSS-SECTIONAL HEIGHT"
+        },
+        {
+          "mrc": "ABHE",
+          "reply": "0.619 INCHES MINIMUM AND 0.641 INCHES MAXIMUM",
+          "requirement": "OUTSIDE DIAMETER"
+        }
+      ]
+    },
+    {
+      "nsn": "5331009225956",
+      "fsc": "5331",
+      "item_name": "O-RING",
+      "n": 9,
+      "characteristics": [
+        {
+          "mrc": "CXCY",
+          "reply": "PACKING,PREFORMED",
+          "requirement": "PART NAME ASSIGNED BY CONTROLLING AGENCY"
+        },
+        {
+          "mrc": "MATT",
+          "reply": "RUBBER FLUOROCARBON CLASS FPM",
+          "requirement": "MATERIAL"
+        },
+        {
+          "mrc": "FEAT",
+          "reply": "CROSS-SECTIONAL SHAPE STYLE:116 IRREGULAR SHAPE FROM OLD FIIG A03200",
+          "requirement": "SPECIAL FEATURES"
+        },
+        {
+          "mrc": "CQFM",
+          "reply": "75.0 SHORE DUROMETER A NOMINAL",
+          "requirement": "HARDNESS RATING"
+        },
+        {
+          "mrc": "ABJH",
+          "reply": "-20.0 FAHRENHEIT AND 400.0 FAHRENHEIT",
+          "requirement": "TEMP RATING"
+        },
+        {
+          "mrc": "ADYU",
+          "reply": "0.691 INCHES NOMINAL",
+          "requirement": "PERIPHERAL DIAMETER"
+        },
+        {
+          "mrc": "ANYN",
+          "reply": "125 MAXIMUM",
+          "requirement": "ELONGATION PERCENTAGE"
+        },
+        {
+          "mrc": "ADVN",
+          "reply": "0.067 INCHES MINIMUM AND 0.073 INCHES MAXIMUM",
+          "requirement": "CROSS-SECTIONAL HEIGHT"
+        },
+        {
+          "mrc": "ADYT",
+          "reply": "0.544 INCHES MINIMUM AND 0.558 INCHES MAXIMUM",
+          "requirement": "CENTER HOLE DIAMETER"
+        }
+      ]
+    },
+    {
+      "nsn": "5331002202518",
+      "fsc": "5331",
+      "item_name": "O-RING",
+      "n": 8,
+      "characteristics": [
+        {
+          "mrc": "ABJH",
+          "reply": "-85.0 FAHRENHEIT AND 500.0 FAHRENHEIT",
+          "requirement": "TEMP RATING"
+        },
+        {
+          "mrc": "AGAV",
+          "reply": "LOGISTICS SUPPORT VESSEL",
+          "requirement": "END ITEM IDENTIFICATION"
+        },
+        {
+          "mrc": "MATT",
+          "reply": "RUBBER SILICONE CLASS Q",
+          "requirement": "MATERIAL"
+        },
+        {
+          "mrc": "CQFM",
+          "reply": "75.0 SHORE DUROMETER A NOMINAL",
+          "requirement": "HARDNESS RATING"
+        },
+        {
+          "mrc": "ANYN",
+          "reply": "125 MAXIMUM",
+          "requirement": "ELONGATION PERCENTAGE"
+        },
+        {
+          "mrc": "ADVN",
+          "reply": "0.067 INCHES MINIMUM AND 0.073 INCHES MAXIMUM",
+          "requirement": "CROSS-SECTIONAL HEIGHT"
+        },
+        {
+          "mrc": "ADYT",
+          "reply": "0.546 INCHES MINIMUM AND 0.556 INCHES MAXIMUM",
+          "requirement": "CENTER HOLE DIAMETER"
+        },
+        {
+          "mrc": "ABHE",
+          "reply": "0.691 INCHES NOMINAL",
+          "requirement": "OUTSIDE DIAMETER"
+        }
+      ]
+    },
+    {
+      "nsn": "5331004253247",
+      "fsc": "5331",
+      "item_name": "O-RING",
+      "n": 8,
+      "characteristics": [
+        {
+          "mrc": "ABJH",
+          "reply": "-30.0 FAHRENHEIT AND 250.0 FAHRENHEIT",
+          "requirement": "TEMP RATING"
+        },
+        {
+          "mrc": "AGAV",
+          "reply": "2320-01-097-0248,2320-01-097-0249,2320-01-100-7672,2320-01-097-0260,2320-01-195-7641, HEMTT FAMILY (HEAVY EXPANDED MOBILITY TACTICAL TRUCKS);2320-01-097-0260 HIAB CRANE (HEMTT)",
+          "requirement": "END ITEM IDENTIFICATION"
+        },
+        {
+          "mrc": "ADVN",
+          "reply": "0.100 INCHES MINIMUM AND 0.106 INCHES MAXIMUM",
+          "requirement": "CROSS-SECTIONAL HEIGHT"
+        },
+        {
+          "mrc": "ABHE",
+          "reply": "8.887 INCHES MINIMUM AND 8.999 INCHES MAXIMUM",
+          "requirement": "OUTSIDE DIAMETER"
+        },
+        {
+          "mrc": "CQFM",
+          "reply": "70.0 SHORE DUROMETER A NOMINAL",
+          "requirement": "HARDNESS RATING"
+        },
+        {
+          "mrc": "ADYT",
+          "reply": "8.707 INCHES MINIMUM AND 8.767 INCHES MAXIMUM",
+          "requirement": "CENTER HOLE DIAMETER"
+        },
+        {
+          "mrc": "MATT",
+          "reply": "RUBBER BUTADIENE-ACRYLONITRILE CLASS NBR",
+          "requirement": "MATERIAL"
+        },
+        {
+          "mrc": "ANYN",
+          "reply": "331 MAXIMUM",
+          "requirement": "ELONGATION PERCENTAGE"
+        }
+      ]
+    },
+    {
+      "nsn": "5331004359355",
+      "fsc": "5331",
+      "item_name": "O-RING",
+      "n": 8,
+      "characteristics": [
+        {
+          "mrc": "ABJH",
+          "reply": "-70.0 FAHRENHEIT AND 180.0 FAHRENHEIT",
+          "requirement": "TEMP RATING"
+        },
+        {
+          "mrc": "MATT",
+          "reply": "RUBBER BUTADIENE-ACRYLONITRILE CLASS NBR",
+          "requirement": "MATERIAL"
+        },
+        {
+          "mrc": "ADYT",
+          "reply": "2.107 INCHES MINIMUM AND 2.143 INCHES MAXIMUM",
+          "requirement": "CENTER HOLE DIAMETER"
+        },
+        {
+          "mrc": "CQFM",
+          "reply": "70.0 SHORE DUROMETER A NOMINAL",
+          "requirement": "HARDNESS RATING"
+        },
+        {
+          "mrc": "CXCY",
+          "reply": "O-RING",
+          "requirement": "PART NAME ASSIGNED BY CONTROLLING AGENCY"
+        },
+        {
+          "mrc": "HUES",
+          "reply": "BLACK",
+          "requirement": "COLOR"
+        },
+        {
+          "mrc": "ADVN",
+          "reply": "0.067 INCHES MINIMUM AND 0.073 INCHES MAXIMUM",
+          "requirement": "CROSS-SECTIONAL HEIGHT"
+        },
+        {
+          "mrc": "ABHE",
+          "reply": "2.250 INCHES NOMINAL",
+          "requirement": "OUTSIDE DIAMETER"
+        }
+      ]
+    },
+    {
+      "nsn": "5331010476305",
+      "fsc": "5331",
+      "item_name": "O-RING",
+      "n": 8,
+      "characteristics": [
+        {
+          "mrc": "ADYT",
+          "reply": "0.296 INCHES MINIMUM AND 0.306 INCHES MAXIMUM",
+          "requirement": "CENTER HOLE DIAMETER"
+        },
+        {
+          "mrc": "CQFM",
+          "reply": "90.0 SHORE DUROMETER A NOMINAL",
+          "requirement": "HARDNESS RATING"
+        },
+        {
+          "mrc": "MATT",
+          "reply": "RUBBER BUTADIENE-ACRYLONITRILE CLASS NBR",
+          "requirement": "MATERIAL"
+        },
+        {
+          "mrc": "ANYN",
+          "reply": "160 MAXIMUM",
+          "requirement": "ELONGATION PERCENTAGE"
+        },
+        {
+          "mrc": "AGAV",
+          "reply": "4210-01-622-0440; 2320-01-652-5218 JOINT LIGHT TACTICAL VEHICLE (JLTV)",
+          "requirement": "END ITEM IDENTIFICATION"
+        },
+        {
+          "mrc": "ABJH",
+          "reply": "-30.0 FAHRENHEIT AND 250.0 FAHRENHEIT",
+          "requirement": "TEMP RATING"
+        },
+        {
+          "mrc": "ABHE",
+          "reply": "0.430 INCHES MINIMUM AND 0.452 INCHES MAXIMUM",
+          "requirement": "OUTSIDE DIAMETER"
+        },
+        {
+          "mrc": "ADVN",
+          "reply": "0.067 INCHES MINIMUM AND 0.073 INCHES MAXIMUM",
+          "requirement": "CROSS-SECTIONAL HEIGHT"
+        }
+      ]
+    },
+    {
+      "nsn": "5331008276886",
+      "fsc": "5331",
+      "item_name": "O-RING",
+      "n": 8,
+      "characteristics": [
+        {
+          "mrc": "ABHE",
+          "reply": "1.380 INCHES NOMINAL",
+          "requirement": "OUTSIDE DIAMETER"
+        },
+        {
+          "mrc": "ZZZW",
+          "reply": "CLEANING, PACKAGING, AND MARKING IAW MIL-STD-1330D",
+          "requirement": "DEPARTURE FROM CITED DOCUMENT"
+        },
+        {
+          "mrc": "CRTL",
+          "reply": "ZZZW",
+          "requirement": "CRITICALITY CODE JUSTIFICATION"
+        },
+        {
+          "mrc": "ANYN",
+          "reply": "200 MAXIMUM",
+          "requirement": "ELONGATION PERCENTAGE"
+        },
+        {
+          "mrc": "MATT",
+          "reply": "RUBBER SYNTHETIC",
+          "requirement": "MATERIAL"
+        },
+        {
+          "mrc": "ADVN",
+          "reply": "0.100 INCHES MINIMUM AND 0.106 INCHES MAXIMUM",
+          "requirement": "CROSS-SECTIONAL HEIGHT"
+        },
+        {
+          "mrc": "ADYT",
+          "reply": "1.168 INCHES MINIMUM AND 1.180 INCHES MAXIMUM",
+          "requirement": "CENTER HOLE DIAMETER"
+        },
+        {
+          "mrc": "CQFM",
+          "reply": "60.0 SHORE DUROMETER A MINIMUM AND 70.0 SHORE DUROMETER A MAXIMUM",
+          "requirement": "HARDNESS RATING"
+        }
+      ]
+    },
+    {
+      "nsn": "5331012226593",
+      "fsc": "5331",
+      "item_name": "O-RING",
+      "n": 8,
+      "characteristics": [
+        {
+          "mrc": "ANYN",
+          "reply": "160 MAXIMUM",
+          "requirement": "ELONGATION PERCENTAGE"
+        },
+        {
+          "mrc": "MATT",
+          "reply": "RUBBER BUTADIENE-ACRYLONITRILE CLASS NBR",
+          "requirement": "MATERIAL"
+        },
+        {
+          "mrc": "CRTL",
+          "reply": "ZZZW",
+          "requirement": "CRITICALITY CODE JUSTIFICATION"
+        },
+        {
+          "mrc": "ZZZW",
+          "reply": "MATERIAL WILL BE IN ACCORDANCE WITH SHIPS PARTS CONTROL CENTER ACTIVITY HX QUALITY CONTROL,MANUFACTURING AND TESTING SPECIFICATIONS",
+          "requirement": "DEPARTURE FROM CITED DOCUMENT"
+        },
+        {
+          "mrc": "ADYT",
+          "reply": "8.454 INCHES MINIMUM AND 8.514 INCHES MAXIMUM",
+          "requirement": "CENTER HOLE DIAMETER"
+        },
+        {
+          "mrc": "ADVN",
+          "reply": "0.135 INCHES MINIMUM AND 0.143 INCHES MAXIMUM",
+          "requirement": "CROSS-SECTIONAL HEIGHT"
+        },
+        {
+          "mrc": "ADYU",
+          "reply": "8.762 INCHES NOMINAL",
+          "requirement": "PERIPHERAL DIAMETER"
+        },
+        {
+          "mrc": "ABJH",
+          "reply": "-65.0 FAHRENHEIT AND 275.0 FAHRENHEIT",
+          "requirement": "TEMP RATING"
+        }
+      ]
+    },
+    {
+      "nsn": "5331002221680",
+      "fsc": "5331",
+      "item_name": "O-RING",
+      "n": 8,
+      "characteristics": [
+        {
+          "mrc": "ABJH",
+          "reply": "-85.0 FAHRENHEIT AND 500.0 FAHRENHEIT",
+          "requirement": "TEMP RATING"
+        },
+        {
+          "mrc": "ADYT",
+          "reply": "0.346 INCHES MINIMUM AND 0.356 INCHES MAXIMUM",
+          "requirement": "CENTER HOLE DIAMETER"
+        },
+        {
+          "mrc": "MATT",
+          "reply": "RUBBER SILICONE CLASS Q",
+          "requirement": "MATERIAL"
+        },
+        {
+          "mrc": "CQFM",
+          "reply": "80.0 SHORE DUROMETER A MINIMUM AND 70.0 SHORE DUROMETER A MAXIMUM",
+          "requirement": "HARDNESS RATING"
+        },
+        {
+          "mrc": "ABHE",
+          "reply": "0.495 INCHES NOMINAL",
+          "requirement": "OUTSIDE DIAMETER"
+        },
+        {
+          "mrc": "ANYN",
+          "reply": "125 MAXIMUM",
+          "requirement": "ELONGATION PERCENTAGE"
+        },
+        {
+          "mrc": "ADVN",
+          "reply": "0.069 INCHES MINIMUM AND 0.075 INCHES MAXIMUM",
+          "requirement": "CROSS-SECTIONAL HEIGHT"
+        },
+        {
+          "mrc": "FEAT",
+          "reply": "COLOR IS RUST",
+          "requirement": "SPECIAL FEATURES"
+        }
+      ]
+    },
+    {
+      "nsn": "5331001651960",
+      "fsc": "5331",
+      "item_name": "O-RING",
+      "n": 8,
+      "characteristics": [
+        {
+          "mrc": "AGAV",
+          "reply": "MRAP RG-33 AUV",
+          "requirement": "END ITEM IDENTIFICATION"
+        },
+        {
+          "mrc": "MATT",
+          "reply": "RUBBER FLUOROCARBON CLASS FPM",
+          "requirement": "MATERIAL"
+        },
+        {
+          "mrc": "CQFM",
+          "reply": "75.0 SHORE DUROMETER A NOMINAL",
+          "requirement": "HARDNESS RATING"
+        },
+        {
+          "mrc": "ANYN",
+          "reply": "125 MAXIMUM",
+          "requirement": "ELONGATION PERCENTAGE"
+        },
+        {
+          "mrc": "ABHE",
+          "reply": "4.226 INCHES MINIMUM AND 4.298 INCHES MAXIMUM",
+          "requirement": "OUTSIDE DIAMETER"
+        },
+        {
+          "mrc": "ADYT",
+          "reply": "3.956 INCHES MINIMUM AND 4.012 INCHES MAXIMUM",
+          "requirement": "CENTER HOLE DIAMETER"
+        },
+        {
+          "mrc": "ABJH",
+          "reply": "-15.0 FAHRENHEIT AND 400.0 FAHRENHEIT",
+          "requirement": "TEMP RATING"
+        },
+        {
+          "mrc": "ADVN",
+          "reply": "0.135 INCHES MINIMUM AND 0.143 INCHES MAXIMUM",
+          "requirement": "CROSS-SECTIONAL HEIGHT"
+        }
+      ]
+    },
+    {
+      "nsn": "5331015211727",
+      "fsc": "5331",
+      "item_name": "O-RING",
+      "n": 8,
+      "characteristics": [
+        {
+          "mrc": "MATT",
+          "reply": "RUBBER SILICONE CLASS Q",
+          "requirement": "MATERIAL"
+        },
+        {
+          "mrc": "CQFM",
+          "reply": "45.0 SHORE DUROMETER A MINIMUM AND 55.0 SHORE DUROMETER A MAXIMUM",
+          "requirement": "HARDNESS RATING"
+        },
+        {
+          "mrc": "ADYT",
+          "reply": "1.104 INCHES MINIMUM AND 1.124 INCHES MAXIMUM",
+          "requirement": "CENTER HOLE DIAMETER"
+        },
+        {
+          "mrc": "MDCL",
+          "reply": "ASTM D2000 ASSN STD SINGLE MATERIAL RESPONSE",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION"
+        },
+        {
+          "mrc": "CXCY",
+          "reply": "GASKET, BATTERY COVE",
+          "requirement": "PART NAME ASSIGNED BY CONTROLLING AGENCY"
+        },
+        {
+          "mrc": "ADVN",
+          "reply": "0.067 INCHES MINIMUM AND 0.073 INCHES MAXIMUM",
+          "requirement": "CROSS-SECTIONAL HEIGHT"
+        },
+        {
+          "mrc": "ABJH",
+          "reply": "-32.0 FAHRENHEIT AND 70.0 FAHRENHEIT",
+          "requirement": "TEMP RATING"
+        },
+        {
+          "mrc": "AGAV",
+          "reply": "GPS RECEIVER",
+          "requirement": "END ITEM IDENTIFICATION"
+        }
+      ]
+    },
+    {
+      "nsn": "5331005933465",
+      "fsc": "5331",
+      "item_name": "O-RING",
+      "n": 8,
+      "characteristics": [
+        {
+          "mrc": "ADVN",
+          "reply": "0.067 INCHES MINIMUM AND 0.073 INCHES MAXIMUM",
+          "requirement": "CROSS-SECTIONAL HEIGHT"
+        },
+        {
+          "mrc": "MATT",
+          "reply": "RUBBER BUTADIENE-ACRYLONITRILE CLASS NBR",
+          "requirement": "MATERIAL"
+        },
+        {
+          "mrc": "AGAV",
+          "reply": "ARLEIGH BURKE CLASS DDG;KIDD CLASS DDG;WASP CLASS LHD;SPRUANCE CLASS DD(963);AUSTIN SHIP CLASS LPD-4 AMPHIBIOUS TRANSPORT DOCKS",
+          "requirement": "END ITEM IDENTIFICATION"
+        },
+        {
+          "mrc": "ABJH",
+          "reply": "-30.0 FAHRENHEIT AND 250.0 FAHRENHEIT",
+          "requirement": "TEMP RATING"
+        },
+        {
+          "mrc": "ABHE",
+          "reply": "2.853 INCHES MINIMUM AND 2.905 INCHES MAXIMUM",
+          "requirement": "OUTSIDE DIAMETER"
+        },
+        {
+          "mrc": "ADYT",
+          "reply": "2.724 INCHES MINIMUM AND 2.754 INCHES MAXIMUM",
+          "requirement": "CENTER HOLE DIAMETER"
+        },
+        {
+          "mrc": "ANYN",
+          "reply": "331 MAXIMUM",
+          "requirement": "ELONGATION PERCENTAGE"
+        },
+        {
+          "mrc": "CQFM",
+          "reply": "70.0 SHORE DUROMETER A NOMINAL",
+          "requirement": "HARDNESS RATING"
+        }
+      ]
+    },
+    {
+      "nsn": "5331001675157",
+      "fsc": "5331",
+      "item_name": "O-RING",
+      "n": 7,
+      "characteristics": [
+        {
+          "mrc": "CQFM",
+          "reply": "75.0 SHORE DUROMETER A NOMINAL",
+          "requirement": "HARDNESS RATING"
+        },
+        {
+          "mrc": "ADYT",
+          "reply": "2.207 INCHES MINIMUM AND 2.243 INCHES MAXIMUM",
+          "requirement": "CENTER HOLE DIAMETER"
+        },
+        {
+          "mrc": "ANYN",
+          "reply": "125 MAXIMUM",
+          "requirement": "ELONGATION PERCENTAGE"
+        },
+        {
+          "mrc": "ADVN",
+          "reply": "0.205 INCHES MINIMUM AND 0.215 INCHES MAXIMUM",
+          "requirement": "CROSS-SECTIONAL HEIGHT"
+        },
+        {
+          "mrc": "MATT",
+          "reply": "RUBBER FLUOROCARBON CLASS FPM",
+          "requirement": "MATERIAL"
+        },
+        {
+          "mrc": "ABHE",
+          "reply": "2.645 INCHES NOMINAL",
+          "requirement": "OUTSIDE DIAMETER"
+        },
+        {
+          "mrc": "ABJH",
+          "reply": "-20.0 FAHRENHEIT AND 400.0 FAHRENHEIT",
+          "requirement": "TEMP RATING"
+        }
+      ]
+    },
+    {
+      "nsn": "5331010052313",
+      "fsc": "5331",
+      "item_name": "O-RING",
+      "n": 7,
+      "characteristics": [
+        {
+          "mrc": "MATT",
+          "reply": "RUBBER FLUOROCARBON CLASS FPM",
+          "requirement": "MATERIAL"
+        },
+        {
+          "mrc": "ADVN",
+          "reply": "0.269 INCHES MINIMUM AND 0.281 INCHES MAXIMUM",
+          "requirement": "CROSS-SECTIONAL HEIGHT"
+        },
+        {
+          "mrc": "CQFM",
+          "reply": "75.0 SHORE DUROMETER A NOMINAL",
+          "requirement": "HARDNESS RATING"
+        },
+        {
+          "mrc": "ABJH",
+          "reply": "-20.0 FAHRENHEIT AND 400.0 FAHRENHEIT",
+          "requirement": "TEMP RATING"
+        },
+        {
+          "mrc": "ANYN",
+          "reply": "125 MAXIMUM",
+          "requirement": "ELONGATION PERCENTAGE"
+        },
+        {
+          "mrc": "ADYT",
+          "reply": "13.405 INCHES MINIMUM AND 13.545 INCHES MAXIMUM",
+          "requirement": "CENTER HOLE DIAMETER"
+        },
+        {
+          "mrc": "ABHE",
+          "reply": "14.025 INCHES NOMINAL",
+          "requirement": "OUTSIDE DIAMETER"
+        }
+      ]
+    },
+    {
+      "nsn": "5331001651940",
+      "fsc": "5331",
+      "item_name": "O-RING",
+      "n": 7,
+      "characteristics": [
+        {
+          "mrc": "ABHE",
+          "reply": "1.181 INCHES MINIMUM AND 1.217 INCHES MAXIMUM",
+          "requirement": "OUTSIDE DIAMETER"
+        },
+        {
+          "mrc": "MATT",
+          "reply": "RUBBER FLUOROCARBON CLASS FPM",
+          "requirement": "MATERIAL"
+        },
+        {
+          "mrc": "ANYN",
+          "reply": "125 MAXIMUM",
+          "requirement": "ELONGATION PERCENTAGE"
+        },
+        {
+          "mrc": "ABJH",
+          "reply": "-15.0 FAHRENHEIT AND 400.0 FAHRENHEIT",
+          "requirement": "TEMP RATING"
+        },
+        {
+          "mrc": "ADVN",
+          "reply": "0.135 INCHES MINIMUM AND 0.143 INCHES MAXIMUM",
+          "requirement": "CROSS-SECTIONAL HEIGHT"
+        },
+        {
+          "mrc": "CQFM",
+          "reply": "75.0 SHORE DUROMETER A NOMINAL",
+          "requirement": "HARDNESS RATING"
+        },
+        {
+          "mrc": "ADYT",
+          "reply": "0.911 INCHES MINIMUM AND 0.931 INCHES MAXIMUM",
+          "requirement": "CENTER HOLE DIAMETER"
+        }
+      ]
+    },
+    {
+      "nsn": "5331012344763",
+      "fsc": "5331",
+      "item_name": "O-RING",
+      "n": 7,
+      "characteristics": [
+        {
+          "mrc": "CRTL",
+          "reply": "ZZZY",
+          "requirement": "CRITICALITY CODE JUSTIFICATION"
+        },
+        {
+          "mrc": "ZZZY",
+          "reply": "CLEANING, PACKAGING, AND MARKING IAW MIL-STD-1330D",
+          "requirement": "REFERENCE NUMBER DIFFERENTIATING CHARACTERISTICS"
+        },
+        {
+          "mrc": "MATT",
+          "reply": "RUBBER BUTADIENE-ACRYLONITRILE CLASS NBR",
+          "requirement": "MATERIAL"
+        },
+        {
+          "mrc": "ANYN",
+          "reply": "200 MAXIMUM",
+          "requirement": "ELONGATION PERCENTAGE"
+        },
+        {
+          "mrc": "ADYU",
+          "reply": "4.693 INCHES NOMINAL",
+          "requirement": "PERIPHERAL DIAMETER"
+        },
+        {
+          "mrc": "ADVN",
+          "reply": "0.100 INCHES MINIMUM AND 0.106 INCHES MAXIMUM",
+          "requirement": "CROSS-SECTIONAL HEIGHT"
+        },
+        {
+          "mrc": "CQFM",
+          "reply": "65.0 SHORE DUROMETER A NOMINAL",
+          "requirement": "HARDNESS RATING"
+        }
+      ]
+    },
+    {
+      "nsn": "5331011742675",
+      "fsc": "5331",
+      "item_name": "O-RING",
+      "n": 7,
+      "characteristics": [
+        {
+          "mrc": "ADVN",
+          "reply": "0.135 INCHES MINIMUM AND 0.143 INCHES MAXIMUM",
+          "requirement": "CROSS-SECTIONAL HEIGHT"
+        },
+        {
+          "mrc": "ABHE",
+          "reply": "6.219 INCHES MINIMUM AND 6.305 INCHES MAXIMUM",
+          "requirement": "OUTSIDE DIAMETER"
+        },
+        {
+          "mrc": "MDCL",
+          "reply": "MIL-P-83461 MIL SPEC SINGLE MATERIAL RESPONSE",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION"
+        },
+        {
+          "mrc": "CQFM",
+          "reply": "75.0 SHORE DUROMETER A NOMINAL",
+          "requirement": "HARDNESS RATING"
+        },
+        {
+          "mrc": "ADYT",
+          "reply": "5.949 INCHES MINIMUM AND 6.019 INCHES MAXIMUM",
+          "requirement": "CENTER HOLE DIAMETER"
+        },
+        {
+          "mrc": "MATT",
+          "reply": "RUBBER SYNTHETIC",
+          "requirement": "MATERIAL"
+        },
+        {
+          "mrc": "ABJH",
+          "reply": "-65.0 FAHRENHEIT AND 250.0 FAHRENHEIT",
+          "requirement": "TEMP RATING"
+        }
+      ]
+    },
+    {
+      "nsn": "5331012874828",
+      "fsc": "5331",
+      "item_name": "O-RING",
+      "n": 7,
+      "characteristics": [
+        {
+          "mrc": "CQFM",
+          "reply": "88.0 SHORE DUROMETER D NOMINAL",
+          "requirement": "HARDNESS RATING"
+        },
+        {
+          "mrc": "ABJH",
+          "reply": "-65.0 FAHRENHEIT AND 160.0 FAHRENHEIT",
+          "requirement": "TEMP RATING"
+        },
+        {
+          "mrc": "ADVN",
+          "reply": "0.116 INCHES NOMINAL",
+          "requirement": "CROSS-SECTIONAL HEIGHT"
+        },
+        {
+          "mrc": "MDCL",
+          "reply": "NAS 1613 ASSN STD SINGLE MATERIAL RESPONSE",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION"
+        },
+        {
+          "mrc": "MATT",
+          "reply": "RUBBER ETHYLENE-PROPYLENE CLASS EPM",
+          "requirement": "MATERIAL"
+        },
+        {
+          "mrc": "FEAT",
+          "reply": "WHITE STRIPE AND WHITE DOT",
+          "requirement": "SPECIAL FEATURES"
+        },
+        {
+          "mrc": "ADYT",
+          "reply": "0.924 INCHES NOMINAL",
+          "requirement": "CENTER HOLE DIAMETER"
+        }
+      ]
+    },
+    {
+      "nsn": "5331010075144",
+      "fsc": "5331",
+      "item_name": "O-RING",
+      "n": 7,
+      "characteristics": [
+        {
+          "mrc": "MATT",
+          "reply": "RUBBER FLUOROCARBON CLASS FPM",
+          "requirement": "MATERIAL"
+        },
+        {
+          "mrc": "ABJH",
+          "reply": "-15.0 FAHRENHEIT AND 400.0 FAHRENHEIT",
+          "requirement": "TEMP RATING"
+        },
+        {
+          "mrc": "ANYN",
+          "reply": "125 MAXIMUM",
+          "requirement": "ELONGATION PERCENTAGE"
+        },
+        {
+          "mrc": "ABHE",
+          "reply": "2.245 INCHES MINIMUM AND 2.295 INCHES MAXIMUM",
+          "requirement": "OUTSIDE DIAMETER"
+        },
+        {
+          "mrc": "ADVN",
+          "reply": "0.205 INCHES MINIMUM AND 0.215 INCHES MAXIMUM",
+          "requirement": "CROSS-SECTIONAL HEIGHT"
+        },
+        {
+          "mrc": "ADYT",
+          "reply": "1.835 INCHES MINIMUM AND 1.865 INCHES MAXIMUM",
+          "requirement": "CENTER HOLE DIAMETER"
+        },
+        {
+          "mrc": "CQFM",
+          "reply": "75.0 SHORE DUROMETER A NOMINAL",
+          "requirement": "HARDNESS RATING"
+        }
+      ]
+    },
+    {
+      "nsn": "5331015014300",
+      "fsc": "5331",
+      "item_name": "O-RING",
+      "n": 7,
+      "characteristics": [
+        {
+          "mrc": "ABJH",
+          "reply": "-40.0 FAHRENHEIT AND 400.0 FAHRENHEIT",
+          "requirement": "TEMP RATING"
+        },
+        {
+          "mrc": "ADYT",
+          "reply": "1.908 INCHES MINIMUM AND 1.942 INCHES MAXIMUM",
+          "requirement": "CENTER HOLE DIAMETER"
+        },
+        {
+          "mrc": "ADVN",
+          "reply": "0.100 INCHES MINIMUM AND 0.106 INCHES MAXIMUM",
+          "requirement": "CROSS-SECTIONAL HEIGHT"
+        },
+        {
+          "mrc": "AGAV",
+          "reply": "ENGINE,AIRCRAFT F100-PW-229",
+          "requirement": "END ITEM IDENTIFICATION"
+        },
+        {
+          "mrc": "MDCL",
+          "reply": "AMS-R-83485 ASSN STD SINGLE MATERIAL RESPONSE",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION"
+        },
+        {
+          "mrc": "MATT",
+          "reply": "RUBBER FLUOROCARBON CLASS FPM",
+          "requirement": "MATERIAL"
+        },
+        {
+          "mrc": "CQFM",
+          "reply": "70.0 SHORE DUROMETER A MINIMUM AND 80.0 SHORE DUROMETER A MAXIMUM",
+          "requirement": "HARDNESS RATING"
+        }
+      ]
+    },
+    {
+      "nsn": "5331012326990",
+      "fsc": "5331",
+      "item_name": "O-RING",
+      "n": 7,
+      "characteristics": [
+        {
+          "mrc": "MATT",
+          "reply": "RUBBER BUTADIENE-ACRYLONITRILE CLASS NBR",
+          "requirement": "MATERIAL"
+        },
+        {
+          "mrc": "ABJH",
+          "reply": "-30.0 FAHRENHEIT AND 250.0 FAHRENHEIT",
+          "requirement": "TEMP RATING"
+        },
+        {
+          "mrc": "ANYN",
+          "reply": "331 MAXIMUM",
+          "requirement": "ELONGATION PERCENTAGE"
+        },
+        {
+          "mrc": "ADVN",
+          "reply": "0.135 INCHES MINIMUM AND 0.143 INCHES MAXIMUM",
+          "requirement": "CROSS-SECTIONAL HEIGHT"
+        },
+        {
+          "mrc": "ABHE",
+          "reply": "4.101 INCHES MINIMUM AND 4.173 INCHES MAXIMUM",
+          "requirement": "OUTSIDE DIAMETER"
+        },
+        {
+          "mrc": "CQFM",
+          "reply": "70.0 SHORE DUROMETER A NOMINAL",
+          "requirement": "HARDNESS RATING"
+        },
+        {
+          "mrc": "ADYT",
+          "reply": "3.831 INCHES MINIMUM AND 3.887 INCHES MAXIMUM",
+          "requirement": "CENTER HOLE DIAMETER"
+        }
+      ]
+    },
+    {
+      "nsn": "5331015063769",
+      "fsc": "5331",
+      "item_name": "O-RING",
+      "n": 7,
+      "characteristics": [
+        {
+          "mrc": "MATT",
+          "reply": "RUBBER FLUOROCARBON CLASS FPM",
+          "requirement": "MATERIAL"
+        },
+        {
+          "mrc": "CQFM",
+          "reply": "90.0 SHORE DUROMETER A NOMINAL",
+          "requirement": "HARDNESS RATING"
+        },
+        {
+          "mrc": "ZZZK",
+          "reply": "81349-MIL-R-83248C, TYPE 1, CLASS 2/CANCELLED/ GOVERNMENT SPECIFICATION",
+          "requirement": "SPECIFICATION/STANDARD DATA"
+        },
+        {
+          "mrc": "ADYT",
+          "reply": "7.440 INCHES MINIMUM AND 7.529 INCHES MAXIMUM",
+          "requirement": "CENTER HOLE DIAMETER"
+        },
+        {
+          "mrc": "ADVN",
+          "reply": "0.135 INCHES MINIMUM AND 0.143 INCHES MAXIMUM",
+          "requirement": "CROSS-SECTIONAL HEIGHT"
+        },
+        {
+          "mrc": "ABJH",
+          "reply": "-15.0 FAHRENHEIT AND 400.0 FAHRENHEIT",
+          "requirement": "TEMP RATING"
+        },
+        {
+          "mrc": "MDCL",
+          "reply": "SAE AMS7259 ASSN STD SINGLE MATERIAL RESPONSE",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION"
+        }
+      ]
+    },
+    {
+      "nsn": "5331011074952",
+      "fsc": "5331",
+      "item_name": "O-RING",
+      "n": 7,
+      "characteristics": [
+        {
+          "mrc": "ANYN",
+          "reply": "125 MAXIMUM",
+          "requirement": "ELONGATION PERCENTAGE"
+        },
+        {
+          "mrc": "ADVN",
+          "reply": "0.067 INCHES MINIMUM AND 0.073 INCHES MAXIMUM",
+          "requirement": "CROSS-SECTIONAL HEIGHT"
+        },
+        {
+          "mrc": "ABHE",
+          "reply": "1.504 INCHES NOMINAL",
+          "requirement": "OUTSIDE DIAMETER"
+        },
+        {
+          "mrc": "MATT",
+          "reply": "RUBBER SYNTHETIC",
+          "requirement": "MATERIAL"
+        },
+        {
+          "mrc": "ADYT",
+          "reply": "1.351 INCHES MINIMUM AND 1.377 INCHES MAXIMUM",
+          "requirement": "CENTER HOLE DIAMETER"
+        },
+        {
+          "mrc": "CQFM",
+          "reply": "75.0 SHORE DUROMETER A NOMINAL",
+          "requirement": "HARDNESS RATING"
+        },
+        {
+          "mrc": "ABJH",
+          "reply": "-65.0 FAHRENHEIT AND 275.0 FAHRENHEIT",
+          "requirement": "TEMP RATING"
+        }
+      ]
+    },
+    {
+      "nsn": "5331010069035",
+      "fsc": "5331",
+      "item_name": "O-RING",
+      "n": 7,
+      "characteristics": [
+        {
+          "mrc": "ABJH",
+          "reply": "-20.0 FAHRENHEIT AND 400.0 FAHRENHEIT",
+          "requirement": "TEMP RATING"
+        },
+        {
+          "mrc": "ABHE",
+          "reply": "5.525 INCHES NOMINAL",
+          "requirement": "OUTSIDE DIAMETER"
+        },
+        {
+          "mrc": "CQFM",
+          "reply": "75.0 SHORE DUROMETER A NOMINAL",
+          "requirement": "HARDNESS RATING"
+        },
+        {
+          "mrc": "MATT",
+          "reply": "RUBBER FLUOROCARBON CLASS FPM",
+          "requirement": "MATERIAL"
+        },
+        {
+          "mrc": "ADYT",
+          "reply": "4.938 INCHES MINIMUM AND 5.012 INCHES MAXIMUM",
+          "requirement": "CENTER HOLE DIAMETER"
+        },
+        {
+          "mrc": "ANYN",
+          "reply": "125 MAXIMUM",
+          "requirement": "ELONGATION PERCENTAGE"
+        },
+        {
+          "mrc": "ADVN",
+          "reply": "0.269 INCHES MINIMUM AND 0.281 INCHES MAXIMUM",
+          "requirement": "CROSS-SECTIONAL HEIGHT"
+        }
+      ]
+    }
+  ]
+}

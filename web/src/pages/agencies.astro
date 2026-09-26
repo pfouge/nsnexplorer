@@ -1,0 +1,121 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { loadSiteData } from '../lib/data';
+import { SITE_URL } from '../consts';
+
+const data = await loadSiteData();
+const rows = data.agencies.map((a) => ({
+  agency: a,
+  count: data.purchasesByAgency.get(a.agencyId)?.length ?? 0,
+}));
+
+const fmtInt = (n: number) => n.toLocaleString('en-US');
+
+const A = rows.length;
+const P = rows.reduce((s, r) => s + r.count, 0);
+const hasA = A > 0;
+
+const title = hasA
+  ? `Federal Parts Spending by Agency: ${fmtInt(A)} Agencies`
+  : 'Federal Parts Spending by Agency';
+const description = hasA
+  ? `Federal parts spending by agency: ${fmtInt(A)} government agencies ranked by indexed parts purchases, from USAspending and DIBBS records. Free, updated daily.`
+  : 'Federal parts spending by agency: which government agencies buy parts, ranked by indexed purchases from USAspending and DIBBS records. Free, updated daily.';
+const h1 = hasA
+  ? `Federal parts spending by agency: ${fmtInt(A)} agencies, ${fmtInt(P)} purchases`
+  : 'Federal parts spending by agency';
+const canonicalUrl = `${SITE_URL}/agencies/`;
+
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  { name: 'Agencies', url: canonicalUrl },
+];
+
+const itemList = {
+  name: 'Government agencies with indexed parts purchases',
+  items: rows.map((r) => ({ name: r.agency.name, url: `/agency/${r.agency.slug}/` })),
+};
+
+const faq = [
+  {
+    question: 'Which government agencies buy the most parts?',
+    answer:
+      'In these records the Defense Logistics Agency and the military services account for most parts purchases. The table ranks every indexed agency by purchase count.',
+  },
+  {
+    question: 'Why is an agency missing?',
+    answer:
+      'Only agencies named as the buyer on an indexed price point appear. As more federal supply classes are fully indexed, more agencies will show up.',
+  },
+  {
+    question: 'Is this total federal spending?',
+    answer:
+      "No. It covers indexed parts purchases with a unit price, not an agency's whole budget. Contract action totals are shown separately on NSN pages.",
+  },
+];
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  pageType="CollectionPage"
+  canonicalUrl={canonicalUrl}
+  breadcrumbs={breadcrumbs}
+  itemList={itemList}
+  faq={faq}
+>
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a> › Agencies
+  </nav>
+
+  <p class="eyebrow">Buyers</p>
+  <h1>{h1}</h1>
+  <p class="lede">Agencies</p>
+  <p class="lede">
+    Every agency that appears in an indexed price point, with a link to its purchase history.
+  </p>
+
+  <section class="intro">
+    <h2 class="section-title">Which government agencies buy parts</h2>
+    <p class="gloss">
+      This page shows federal parts spending by agency: every government agency that appears as
+      the buyer on an indexed purchase, ranked by how many purchases NSN Explorer has on record for
+      it. Open an agency to see the NSNs it buys, the prices it has paid and the source record for
+      each. Purchases come from USAspending contract actions and DLA DIBBS awards, the index is
+      rebuilt every day, and it is free to use.
+    </p>
+  </section>
+
+  {rows.length === 0 ? (
+    <p class="gloss">No agencies indexed yet.</p>
+  ) : (
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Agency</th>
+            <th class="num">Purchases</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr>
+              <td><a href={`/agency/${r.agency.slug}/`}>{r.agency.name}</a></td>
+              <td class="num mono">{fmtInt(r.count)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+
+  <section class="faq">
+    <h2 class="section-title">Agency spending questions</h2>
+    {faq.map((f) => (
+      <>
+        <h3>{f.question}</h3>
+        <p class="gloss">{f.answer}</p>
+      </>
+    ))}
+  </section>
+</BaseLayout>

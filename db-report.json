@@ -1,0 +1,161 @@
+{
+  "at": "2026-09-06T20:54:31.068Z",
+  "counts": {
+    "pub.nsns": 35577,
+    "pub.contract_actions": 95059,
+    "pub.price_points": 0,
+    "pub.part_numbers": 128837,
+    "pub.suppliers": 13523,
+    "pub.solicitations": 41499,
+    "actionsByPrefix": [
+      {
+        "src": "CONT_",
+        "count": "95059"
+      }
+    ],
+    "openNsnCharacteristicsByFsc": [
+      {
+        "fsc": "4820",
+        "open_nsns": 594,
+        "with_chars": 549
+      },
+      {
+        "fsc": "5340",
+        "open_nsns": 577,
+        "with_chars": 498
+      },
+      {
+        "fsc": "5330",
+        "open_nsns": 420,
+        "with_chars": 324
+      },
+      {
+        "fsc": "6515",
+        "open_nsns": 388,
+        "with_chars": 388
+      },
+      {
+        "fsc": "5320",
+        "open_nsns": 367,
+        "with_chars": 351
+      },
+      {
+        "fsc": "4730",
+        "open_nsns": 307,
+        "with_chars": 284
+      },
+      {
+        "fsc": "5305",
+        "open_nsns": 296,
+        "with_chars": 270
+      },
+      {
+        "fsc": "5935",
+        "open_nsns": 280,
+        "with_chars": 271
+      },
+      {
+        "fsc": "5306",
+        "open_nsns": 277,
+        "with_chars": 258
+      },
+      {
+        "fsc": "5310",
+        "open_nsns": 252,
+        "with_chars": 217
+      },
+      {
+        "fsc": "5930",
+        "open_nsns": 233,
+        "with_chars": 200
+      },
+      {
+        "fsc": "4720",
+        "open_nsns": 211,
+        "with_chars": 199
+      },
+      {
+        "fsc": "5325",
+        "open_nsns": 199,
+        "with_chars": 175
+      },
+      {
+        "fsc": "5315",
+        "open_nsns": 168,
+        "with_chars": 151
+      },
+      {
+        "fsc": "5331",
+        "open_nsns": 148,
+        "with_chars": 124
+      },
+      {
+        "fsc": "3040",
+        "open_nsns": 140,
+        "with_chars": 130
+      },
+      {
+        "fsc": "4810",
+        "open_nsns": 130,
+        "with_chars": 121
+      },
+      {
+        "fsc": "1560",
+        "open_nsns": 125,
+        "with_chars": 116
+      },
+      {
+        "fsc": "2540",
+        "open_nsns": 118,
+        "with_chars": 109
+      },
+      {
+        "fsc": "5360",
+        "open_nsns": 117,
+        "with_chars": 88
+      }
+    ],
+    "contractActions": {
+      "n": 95059,
+      "with_obligation": 95059,
+      "sum_obligation": 309445613.51,
+      "with_raw_nsn": 7,
+      "psc_in_fsc": 95059,
+      "nsn_in_nsns": 7
+    },
+    "contractActionRawKeys": [
+      "Start Date:95059",
+      "Award Amount:95059",
+      "Award ID:95059",
+      "Awarding Agency:95059",
+      "Awarding Sub Agency:95059",
+      "awarding_agency_id:95059",
+      "Description:95059",
+      "generated_internal_id:95059",
+      "internal_id:95059",
+      "agency_slug:95059",
+      "Recipient Name:95059",
+      "nsn:7"
+    ],
+    "contractActionSample": [
+      {
+        "award_uid": "CONT_AWD_SPE7L126V7236_9700_-NONE-_-NONE-",
+        "psc": "5330",
+        "obligation": "375",
+        "nsn": null,
+        "raw": "{\"Award ID\": \"SPE7L126V7236\", \"Start Date\": \"2026-03-27\", \"Description\": \"8512007949!GASKET\", \"agency_slug\": \"department-of-defense\", \"internal_id\": 359725270, \"Award Amount\": 375, \"Recipient Name\": \"PIONEER INDUSTRIES, LLC\", \"Awarding Agency\": \"Department of Defense\", \"awarding_agency_id\": 1173, \"A"
+      },
+      {
+        "award_uid": "CONT_AWD_SPE7L126V7237_9700_-NONE-_-NONE-",
+        "psc": "5330",
+        "obligation": "81.45",
+        "nsn": null,
+        "raw": "{\"Award ID\": \"SPE7L126V7237\", \"Start Date\": \"2026-03-27\", \"Description\": \"8512008048!GASKET\", \"agency_slug\": \"department-of-defense\", \"internal_id\": 359725271, \"Award Amount\": 81.45, \"Recipient Name\": \"HOOSIER INDUSTRIAL SUPPLY, INC\", \"Awarding Agency\": \"Department of Defense\", \"awarding_agency_id\":"
+      }
+    ],
+    "nsnsWithCharacteristics": {
+      "total": 35577,
+      "with_chars": 31764
+    }
+  }
+}

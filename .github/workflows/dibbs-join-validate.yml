@@ -1,0 +1,48 @@
+name: dibbs-join-validate
+
+# One-shot validation of the award<->RFQ unit-price join against live
+# data: fetch 4 days of award grids + 21 days of RFQ grids (awards lag
+# their solicitations, so the RFQ window is wider), run join-validate,
+# commit the report (v3: pagination fixed). NO database writes — the unit-price path stays off
+# until a human reviews the report. Touch this file to dispatch.
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/dibbs-join-validate.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dibbs-join-validate
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: fetch award grids (4 days)
+        run: node ingest/dibbs/fetch.mjs --type awd --days 4 --out /tmp/v-awd
+      - name: fetch RFQ grids (21 days)
+        run: node ingest/dibbs/fetch.mjs --type rfq --days 21 --out /tmp/v-rfq
+      - name: join + validate
+        run: node ingest/dibbs/join-validate.mjs --awd-dir /tmp/v-awd --rfq-dir /tmp/v-rfq --out ingest/dibbs/join-validation-report.json
+      - name: commit report
+        if: always()
+        run: |
+          git config user.name "dibbs-bot"
+          git config user.email "noreply@anthropic.com"
+          git add ingest/dibbs/join-validation-report.json || true
+          if git diff --cached --quiet; then echo "no report"; else
+            git commit -m "dibbs: join validation report [skip ci]"
+            git pull --rebase --autostash origin main
+            git push origin main
+          fi

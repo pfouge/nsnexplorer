@@ -1,0 +1,85 @@
+name: backfill-usaspending
+
+# One-shot historical backfill: five fiscal years of USAspending contract
+# actions per PSC, run from US-hosted GitHub runners (compliance fence:
+# docs/architecture.md #3). Loads are idempotent (upserts), so re-running
+# a year is safe. Dispatch manually; delete or ignore once the catalog is
+# seeded — the nightly ingest-daily keeps it current from there.
+
+on:
+  workflow_dispatch:
+    inputs:
+      pscs:
+        description: 'PSC codes to backfill (JSON array)'
+        required: false
+        default: '["5331","5330"]'
+      fys:
+        description: 'Fiscal years to backfill (JSON array)'
+        required: false
+        default: '["2022","2023","2024","2025","2026"]'
+
+env:
+  DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: node db/migrate.mjs
+
+  backfill:
+    needs: migrate
+    runs-on: ubuntu-latest
+    strategy:
+      # Be polite to the API: two year-jobs at a time, keep going if one
+      # year fails so a single bad range doesn't kill the whole seed.
+      max-parallel: 2
+      fail-fast: false
+      matrix:
+        psc: ${{ fromJSON(inputs.pscs) }}
+        fy: ${{ fromJSON(inputs.fys) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: compute fiscal-year window
+        id: window
+        run: |
+          FY=${{ matrix.fy }}
+          START="$((FY - 1))-10-01"
+          END="${FY}-09-30"
+          TODAY=$(date -u +%F)
+          if [[ "$END" > "$TODAY" ]]; then END="$TODAY"; fi
+          echo "start=$START" >> "$GITHUB_OUTPUT"
+          echo "end=$END" >> "$GITHUB_OUTPUT"
+      - name: fetch FY${{ matrix.fy }} PSC ${{ matrix.psc }}
+        run: >
+          node ingest/usaspending/fetch.mjs
+          --psc ${{ matrix.psc }}
+          --start-date ${{ steps.window.outputs.start }}
+          --end-date ${{ steps.window.outputs.end }}
+          --out /tmp/usaspending-${{ matrix.psc }}-fy${{ matrix.fy }}.jsonl
+      - name: load
+        run: >
+          node ingest/usaspending/load.mjs
+          --file /tmp/usaspending-${{ matrix.psc }}-fy${{ matrix.fy }}.jsonl
+          --psc ${{ matrix.psc }}
+      - name: row counts
+        run: |
+          node --input-type=module --eval "
+            import pg from 'pg';
+            const c = new pg.Client({ connectionString: process.env.DATABASE_URL });
+            await c.connect();
+            for (const t of ['pub.nsns', 'pub.contract_actions', 'pub.price_points']) {
+              const r = await c.query('SELECT count(*) FROM ' + t);
+              console.log(t, r.rows[0].count);
+            }
+            await c.end();
+          "

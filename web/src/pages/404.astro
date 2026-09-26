@@ -1,0 +1,17 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Page not found" description="This page doesn't exist." noindex={true}>
+  <p class="eyebrow">404</p>
+  <h1>This part isn't in the catalog.</h1>
+  <p class="gloss">
+    The page you're looking for doesn't exist, or the NSN you searched isn't in one of our
+    fully-indexed categories yet. Try searching from the homepage or browse what we've built out
+    so far.
+  </p>
+  <div class="btns">
+    <a class="btn" href="/">Back to the homepage</a>
+    <a class="btn-ghost btn" href="/browse/">Browse deep categories</a>
+  </div>
+</BaseLayout>

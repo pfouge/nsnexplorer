@@ -1,0 +1,125 @@
+name: publog-nightly
+
+# Nightly PUB LOG (DLA FLIS public export) enrichment: attaches item names,
+# part-number cross-references, CAGE data, and — crucially — dimensional
+# CHARACTERISTICS to every NSN already in pub.nsns, INCLUDING the open-
+# solicitation NSNs the RFQ lanes add continuously. This is what lets open
+# parts show specs and schematic drawings. Enrich-only (never inserts NSNs).
+#
+# Runs nightly so newly-issued open RFQ NSNs get their specs within a day,
+# then chains a deploy so the drawings/specs go live. The heavy FLIS bulk
+# files change ~monthly, so they're cached by year-month: the first run of a
+# month downloads them, the rest of the month reuses the cache and only
+# re-scans to enrich new NSNs.
+#
+# The push trigger on this file / the ingest scripts exists because the dev
+# container cannot reach GitHub's API to dispatch workflows; editing is the
+# dispatch. (touch: nightly enrichment automation)
+
+on:
+  schedule:
+    - cron: '0 7 * * *'
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publog-monthly.yml'
+      - 'ingest/publog/fetch.mjs'
+      - 'ingest/publog/load.mjs'
+
+env:
+  DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+
+permissions:
+  contents: write
+  deployments: write
+
+concurrency:
+  group: publog-monthly
+  cancel-in-progress: false
+
+jobs:
+  publog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: node db/migrate.mjs
+
+      # FLIS bulk exports change ~monthly. Cache the unzipped files by
+      # year-month so only the first nightly run of the month downloads them;
+      # the rest reuse the cache and just re-scan to enrich new NSNs.
+      - name: cache key (year-month)
+        id: ym
+        run: echo "ym=$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
+      - name: restore PUB LOG bulk exports
+        id: publog-cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/publog
+          key: publog-flis-${{ steps.ym.outputs.ym }}
+      - name: fetch + unzip PUB LOG bulk exports
+        if: steps.publog-cache.outputs.cache-hit != 'true'
+        run: node ingest/publog/fetch.mjs --out /tmp/publog
+
+      - name: load (enrich existing NSNs, incl. open-solicitation set)
+        run: set -o pipefail; node ingest/publog/load.mjs --dir /tmp/publog 2>&1 | tee /tmp/load-output.txt
+      - name: collect diagnostics
+        run: |
+          {
+            echo '== files =='
+            ls -la /tmp/publog
+            echo '== per-file head (first 2 lines, 400 chars each) =='
+            for f in /tmp/publog/*; do
+              if [ -f "$f" ]; then
+                echo "--- $f"
+                head -c 800 "$f" | head -2 | cut -c1-400 || true
+                echo
+              fi
+            done
+            echo '== load output (tail) =='
+            tail -40 /tmp/load-output.txt
+          } > ingest/publog/last-run-diagnostics.txt
+      - name: run report
+        run: |
+          node --input-type=module --eval "
+            import pg from 'pg';
+            import { writeFileSync } from 'node:fs';
+            const c = new pg.Client({ connectionString: process.env.DATABASE_URL });
+            await c.connect();
+            const counts = {};
+            for (const t of ['pub.nsns', 'pub.part_numbers', 'pub.suppliers']) {
+              const r = await c.query('SELECT count(*) FROM ' + t);
+              counts[t] = Number(r.rows[0].count);
+            }
+            const named = await c.query(\"SELECT count(*) FROM pub.nsns WHERE item_name IS NOT NULL\");
+            counts['pub.nsns with item_name'] = Number(named.rows[0].count);
+            const chars = await c.query(\"SELECT count(*) FROM pub.nsns WHERE characteristics IS NOT NULL\");
+            counts['pub.nsns with characteristics'] = Number(chars.rows[0].count);
+            await c.end();
+            writeFileSync('ingest/publog/last-run.json', JSON.stringify({ at: new Date().toISOString(), counts }, null, 2) + '\n');
+          "
+      - name: commit run report
+        run: |
+          git config user.name "publog-bot"
+          git config user.email "noreply@anthropic.com"
+          git add ingest/publog/last-run.json ingest/publog/last-run-diagnostics.txt
+          if git diff --cached --quiet; then
+            echo "no report changes"
+          else
+            git commit -m "publog: run report [skip ci]"
+            git pull --rebase origin main
+            git push origin main
+          fi
+
+  # Rebuild + deploy so the freshly-enriched specs and drawings go live.
+  deploy:
+    needs: [publog]
+    if: always() && needs.publog.result == 'success'
+    uses: ./.github/workflows/deploy.yml
+    secrets: inherit
+    with:
+      commit_report: false

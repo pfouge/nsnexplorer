@@ -1,0 +1,131 @@
+---
+// solicitation/[sol].astro — per-solicitation detail page. Deep-link/SEO
+// target for one open government solicitation: a public procurement notice,
+// not a sale, so no Offer/Product commerce schema — consistent with the
+// site's "not commerce" stance.
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { SITE_URL } from '../../consts';
+import { toDashedNsn, formatDate, type SolicitationRecord } from '../../lib/data';
+
+export async function getStaticPaths() {
+  // Bounded out under Cloudflare's 20k-file limit. Restore as on-demand SSR
+  // (prerender=false) in the edge-render pivot — see HANDOFF.
+  return [];
+}
+
+const { sol } = Astro.props as { sol: SolicitationRecord };
+
+const dashed = sol.nsn ? toDashedNsn(sol.nsn) : null;
+const itemLabel = sol.nomenclature ?? sol.itemName ?? sol.solNumber;
+
+// Build-date baseline for the countdown badge — this page is static, so the
+// countdown is accurate as of the last build.
+const now = new Date();
+const todayMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+const daysUntilClose = sol.returnBy
+  ? Math.ceil((new Date(`${sol.returnBy}T00:00:00Z`).getTime() - todayMs) / 86400000)
+  : null;
+const countdown =
+  daysUntilClose === null
+    ? { text: 'Close date unknown', cls: '' as const }
+    : daysUntilClose <= 0
+      ? { text: 'Closes today', cls: 'amber' as const }
+      : daysUntilClose <= 2
+        ? { text: `Closes in ${daysUntilClose} day${daysUntilClose === 1 ? '' : 's'}`, cls: 'amber' as const }
+        : { text: `Closes in ${daysUntilClose} days`, cls: 'green' as const };
+
+const title = `${itemLabel} — Open solicitation ${sol.solNumber}`;
+const description = `Open government solicitation ${sol.solNumber}${
+  sol.nomenclature ? ` for ${sol.nomenclature}` : ''
+}${sol.quantity !== null ? `, quantity ${sol.quantity.toLocaleString('en-US')}` : ''}${
+  sol.returnBy ? `, closes ${formatDate(sol.returnBy)}` : ''
+} — bid via the official DIBBS record.`;
+const canonicalUrl = `${SITE_URL}/solicitation/${sol.solNumber}/`;
+
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
+    { '@type': 'ListItem', position: 2, name: 'Open demand', item: `${SITE_URL}/open/` },
+    { '@type': 'ListItem', position: 3, name: sol.solNumber, item: canonicalUrl },
+  ],
+};
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  pageType="WebPage"
+  canonicalUrl={canonicalUrl}
+  extraSchema={[breadcrumbSchema]}
+>
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a> › <a href="/open/">Open demand</a> › {sol.solNumber}
+  </nav>
+
+  <p class="eyebrow">Open solicitation <span class="x">×</span> {sol.solNumber}</p>
+
+  <header class="hero">
+    <h1>{itemLabel}</h1>
+    <p style="margin-top:0.5rem;">
+      <span class:list={['badge', countdown.cls]} style="font-size:0.95rem; padding:0.3rem 0.7rem;">
+        {countdown.text}
+      </span>
+    </p>
+  </header>
+
+  <div class="stat-strip">
+    <div class="stat">
+      <div class="value">
+        {sol.quantity !== null ? sol.quantity.toLocaleString('en-US') : '—'}
+        {sol.unitOfIssue && <span class="gloss" style="font-size:0.9rem;"> {sol.unitOfIssue}</span>}
+      </div>
+      <div class="label">Quantity</div>
+    </div>
+    <div class="stat">
+      <div class="value">{sol.issuedOn ? formatDate(sol.issuedOn) : '—'}</div>
+      <div class="label">Issued</div>
+    </div>
+    <div class="stat">
+      <div class="value">{sol.returnBy ? formatDate(sol.returnBy) : '—'}</div>
+      <div class="label">Closes</div>
+    </div>
+    <div class="stat">
+      <div class="value">
+        {dashed ? <a class="mono" href={`/nsn/${dashed}/`}>{dashed}</a> : '—'}
+      </div>
+      <div class="label">NSN</div>
+    </div>
+  </div>
+
+  {(sol.buyerOffice || sol.setaside) && (
+    <p class="gloss" style="margin-top:0.9rem;">
+      {sol.buyerOffice && <>Buying office: {sol.buyerOffice}</>}
+      {sol.buyerOffice && sol.setaside && ' · '}
+      {sol.setaside && <>Set-aside: {sol.setaside}</>}
+    </p>
+  )}
+
+  <p style="margin:1.25rem 0 0; display:flex; gap:0.75rem; flex-wrap:wrap;">
+    <a class="btn" href={sol.sourceUrl} target="_blank" rel="nofollow noopener">
+      View &amp; bid on this RFQ at DIBBS →
+    </a>
+    {dashed && (
+      <a class="btn btn-ghost" href={`/nsn/${dashed}/`}>
+        See price history &amp; specs for this part →
+      </a>
+    )}
+  </p>
+
+  <section class="card" style="margin-top:2rem;">
+    <h2>About this data / source</h2>
+    <ul class="gloss">
+      <li>
+        Solicitation record: <a href={sol.sourceUrl} target="_blank" rel="nofollow noopener">{sol.source}</a>.
+      </li>
+      <li>Status and close date reflect the last time our crawler observed this record — always confirm current status on DIBBS before bidding.</li>
+      <li><a href="/methodology/">Full methodology →</a></li>
+    </ul>
+  </section>
+</BaseLayout>

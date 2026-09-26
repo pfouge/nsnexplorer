@@ -1,0 +1,159 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SignupForm from '../components/SignupForm.astro';
+import { loadSiteData, formatUsd } from '../lib/data';
+import { SITE_URL } from '../consts';
+
+const data = await loadSiteData();
+
+const canonicalUrl = `${SITE_URL}/methodology/`;
+
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  { name: 'Methodology', url: canonicalUrl },
+];
+
+const faq = [
+  {
+    question: 'What government procurement data sources does NSN Explorer use?',
+    answer:
+      'Three: DLA DIBBS for solicitations and awards, SAM.gov for contract notices and USAspending for contract actions. All three are public and free.',
+  },
+  {
+    question: 'Is any figure estimated?',
+    answer:
+      'No. Every price, quantity and total is copied from a government record and links to it. The site build rejects any price point without a source URL.',
+  },
+  {
+    question: 'How often is the data refreshed?',
+    answer:
+      'The site is rebuilt every day from the source systems, and open solicitations are re-crawled more often. Records may still lag the underlying events.',
+  },
+  {
+    question: 'What does a price spike mean?',
+    answer:
+      "A purchase is flagged when its unit price is at least three times the NSN's trailing median. It is a mechanical threshold to prompt a closer look, not a finding.",
+  },
+];
+---
+
+<BaseLayout
+  title="Methodology: DIBBS, SAM.gov and USAspending Data"
+  description="How NSN Explorer builds parts prices and open solicitations from DIBBS, SAM.gov and USAspending records, what each figure means, and how to check any of them."
+  canonicalUrl={canonicalUrl}
+  breadcrumbs={breadcrumbs}
+  faq={faq}
+>
+  <p class="eyebrow">Methodology</p>
+  <h1>Government procurement data sources and methodology</h1>
+  <p class="lede">Methodology</p>
+  <p class="lede">
+    This page lists the government procurement data sources behind every figure on NSN Explorer
+    and explains how each one is used. Prices, solicitations and contract totals come from three
+    public systems: DLA's DIBBS bid board, SAM.gov contract notices and USAspending contract
+    actions. The index is rebuilt every day, nothing is estimated or modeled, and every number
+    links to the record it came from so a supplier, buyer or reporter can check it. The site is
+    free.
+  </p>
+
+  <hr class="rule" />
+
+  <section>
+    <h2>Unit prices — <code class="mono">pub.price_points</code></h2>
+    <p class="gloss">
+      Every dot on a price chart and every row in a purchase table is one government purchase at
+      one unit price, sourced from either a DIBBS award record or a USAspending award record.
+      Each price point stores the underlying source URL, and the build refuses to publish a price
+      point without one — that check runs in the data-load step of the site build, not just as a
+      database constraint.
+    </p>
+  </section>
+
+  <hr class="rule" />
+
+  <section>
+    <h2>Contract action totals — <code class="mono">pub.contract_actions</code></h2>
+    <p class="gloss">
+      USAspending publishes agency-wide contract actions with obligation totals — the amount
+      obligated on a contract action, not a per-unit price. We show these on NSN pages, clearly
+      labeled as "contract action totals, not unit prices," and they never appear on a price
+      chart, which is unit-price data only.
+    </p>
+  </section>
+
+  <hr class="rule" />
+
+  <section>
+    <h2>AMSC / AMC — <code class="mono">pub.amsc_observations</code></h2>
+    <p class="gloss">
+      The Acquisition Method Suffix Code tells you whether a part is open to competition (AMSC G)
+      or sole-source because the government says it lacks the technical data package (AMSC C, D,
+      H, Z). We show the most recently observed value with the date and source solicitation it
+      was observed on.
+    </p>
+  </section>
+
+  <hr class="rule" />
+
+  <section>
+    <h2>DIBBS data explained</h2>
+    <p class="gloss">
+      DIBBS is the DLA Internet Bid Board System, where the Defense Logistics Agency posts requests
+      for quote and records awards. NSN Explorer reads each open solicitation's NSN, item name,
+      quantity, return-by date and set-aside or competition code, and each award's unit price,
+      quantity and winning supplier. Solicitations are kept after they close so the demand record
+      grows over time. Every DIBBS row on the site links to its record at dibbs.bsm.dla.mil.
+    </p>
+  </section>
+
+  <hr class="rule" />
+
+  <section>
+    <h2>Price spikes and "overcharges"</h2>
+    <p class="gloss">
+      A purchase is flagged as a spike when its unit price is at least 3× the NSN's trailing
+      median price at that point in time. On category pages, a row is highlighted when the most
+      recent purchase is at least 3× the NSN's historical median. This is a mechanical threshold,
+      not an accusation — it's a starting point for a supplier sanity-checking a quote, or for a
+      buyer's, researcher's, or reporter's own follow-up questions, and every flagged purchase
+      links to its source record.
+    </p>
+  </section>
+
+  <hr class="rule" />
+
+  <section>
+    <h2>Coverage</h2>
+    <p class="gloss">
+      We currently fully index {data.deepFscs.length.toLocaleString('en-US')} Federal Supply
+      Class{data.deepFscs.length === 1 ? '' : 'es'} ("deep" categories) covering{' '}
+      {data.stats.totalNsns.toLocaleString('en-US')} NSNs,{' '}
+      {data.stats.totalPurchases.toLocaleString('en-US')} priced purchases, and{' '}
+      {data.stats.totalActions.toLocaleString('en-US')} contract actions totaling{' '}
+      {formatUsd(data.stats.totalDollars + data.stats.totalObligated)} in indexed spend.
+      Government-wide long-tail coverage (millions of NSNs) is on the roadmap; see
+      <a href="/browse/">/browse/</a> for the current list.
+    </p>
+  </section>
+
+  <hr class="rule" />
+
+  <section class="faq">
+    <h2 class="section-title">Methodology questions</h2>
+    {faq.map((f) => (
+      <>
+        <h3>{f.question}</h3>
+        <p class="gloss">{f.answer}</p>
+      </>
+    ))}
+  </section>
+
+  <hr class="rule" />
+
+  <SignupForm
+    hook="overpay_digest"
+    title="Monthly overpay digest"
+    description="A monthly email of the biggest government price spikes we found — a market signal for suppliers, and a lead sheet for researchers and reporters."
+    cta="Subscribe"
+  />
+</BaseLayout>

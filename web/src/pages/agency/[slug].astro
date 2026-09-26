@@ -1,0 +1,105 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { SITE_NAME, SITE_URL } from '../../consts';
+import { loadSiteData, toDashedNsn, formatDate, formatUsdPrecise, formatUsd, type AgencyRecord } from '../../lib/data';
+
+export async function getStaticPaths() {
+  const data = await loadSiteData();
+  return data.agencies.map((agency: AgencyRecord) => ({
+    params: { slug: agency.slug },
+    props: { agency },
+  }));
+}
+
+const { agency } = Astro.props as { agency: AgencyRecord };
+const data = await loadSiteData();
+
+const purchases = (data.purchasesByAgency.get(agency.agencyId) ?? [])
+  .slice()
+  .sort((a, b) => b.awardedOn.localeCompare(a.awardedOn));
+
+const totalDollars = purchases.reduce(
+  (sum, p) => sum + (p.totalValue ?? p.unitPrice * (p.quantity ?? 1)),
+  0
+);
+
+const title = agency.name;
+const description = `${purchases.length.toLocaleString('en-US')} purchases by ${agency.name} indexed on ${SITE_NAME}, every price linked to its official source record.`;
+const canonicalUrl = `${SITE_URL}/agency/${agency.slug}/`;
+
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
+    { '@type': 'ListItem', position: 2, name: 'Agencies', item: `${SITE_URL}/agencies/` },
+    { '@type': 'ListItem', position: 3, name: agency.name, item: canonicalUrl },
+  ],
+};
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  pageType="CollectionPage"
+  canonicalUrl={canonicalUrl}
+  extraSchema={[breadcrumbSchema]}
+>
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a> › <a href="/agencies/">Agencies</a> › {agency.name}
+  </nav>
+
+  <p class="eyebrow">Buying agency</p>
+
+  <header class="hero">
+    <h1>{agency.name}{agency.abbreviation && <span class="gloss"> ({agency.abbreviation})</span>}</h1>
+    <p class="lede">Purchases by this agency indexed from public price-point records.</p>
+  </header>
+
+  <div class="stat-strip">
+    <div class="stat">
+      <div class="value">{purchases.length.toLocaleString('en-US')}</div>
+      <div class="label">Purchases</div>
+    </div>
+    <div class="stat">
+      <div class="value up">{formatUsd(totalDollars)}</div>
+      <div class="label">Total $</div>
+    </div>
+  </div>
+
+  <section>
+    <h2 class="section-title">Purchases</h2>
+    {purchases.length === 0 ? (
+      <p class="gloss">No purchases on record for this agency yet.</p>
+    ) : (
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Awarded</th>
+              <th>NSN</th>
+              <th>Item</th>
+              <th class="num">Qty</th>
+              <th class="num">Unit price</th>
+              <th>Supplier</th>
+              <th>Source</th>
+            </tr>
+          </thead>
+          <tbody>
+            {purchases.map((p) => (
+              <tr>
+                <td class="mono">{formatDate(p.awardedOn)}</td>
+                <td class="nsn"><a href={`/nsn/${toDashedNsn(p.nsn)}/`}>{toDashedNsn(p.nsn)}</a></td>
+                <td>{p.itemName ?? '—'}</td>
+                <td class="num mono">{p.quantity !== null ? p.quantity.toLocaleString('en-US') : '—'}</td>
+                <td class="num price">{formatUsdPrecise(p.unitPrice)}</td>
+                <td>{p.supplierName ?? 'Unknown'} {p.cage && <span class="cage">({p.cage})</span>}</td>
+                <td><a href={p.sourceUrl} target="_blank" rel="noopener noreferrer">Source ↗</a></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </section>
+</BaseLayout>

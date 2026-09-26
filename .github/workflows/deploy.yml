@@ -1,0 +1,167 @@
+name: Deploy web
+
+on:
+  push:
+    branches: [main]
+  # Nightly rebuild: the site is built FROM the database, so new ingest
+  # rows only appear after a deploy. Runs after the nightly ingest.
+  schedule:
+    - cron: '30 10 * * *'
+  # Manual run. Defaults deploy main to production; set `ref` + `pages_branch`
+  # to build any branch into a Cloudflare Pages PREVIEW deployment
+  # (https://<pages_branch>.nsnexplorer.pages.dev) without touching production.
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Git ref to build (default: main)'
+        type: string
+        default: main
+      pages_branch:
+        description: 'Cloudflare Pages branch to deploy to; anything but main is a preview'
+        type: string
+        default: main
+  # Reusable by other workflows (e.g. rfq-fast.yml, rfq-reconcile.yml) so
+  # they can trigger a rebuild+deploy right after a fresh ingest, without
+  # duplicating the build/deploy/verify steps below.
+  workflow_call:
+    inputs:
+      commit_report:
+        description: 'Commit .deploy-success.txt/.deploy-failure.txt back to the repo'
+        type: boolean
+        default: true
+
+concurrency:
+  group: deploy-web-${{ inputs.pages_branch || 'main' }}
+  cancel-in-progress: true
+
+env:
+  BUILD_REF: ${{ inputs.ref || 'main' }}
+  PAGES_BRANCH: ${{ inputs.pages_branch || 'main' }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      deployments: write
+    steps:
+      # Always build main's HEAD, even when called from a long-running lane:
+      # workflow_call would otherwise check out the caller's (older) sha and
+      # roll production back to it.
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BUILD_REF }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # `set -o pipefail`: without it, `| tee` hides a failed npm/astro exit
+      # code and a broken build gets deployed (this happened for weeks when
+      # Neon's data-transfer quota was exhausted — the site served 404s).
+      - name: Install dependencies
+        id: install
+        run: set -o pipefail; npm ci 2>&1 | tee /tmp/step-install.log
+
+      # The build reads pub.* from Supabase; the schema it queries must exist first.
+      # Idempotent — skips migrations already recorded.
+      - name: Apply migrations
+        id: migrate
+        run: set -o pipefail; node db/migrate.mjs 2>&1 | tee /tmp/step-migrate.log
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+
+      - name: Build web
+        id: build
+        run: set -o pipefail; npm run build --workspace=web 2>&1 | tee /tmp/step-build.log
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+
+      - name: Deploy to Cloudflare Pages
+        id: deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: web
+          # --branch=main forces a PRODUCTION deployment; checkout@v4's
+          # detached HEAD can otherwise make wrangler infer a preview branch.
+          # Any other value deploys a preview (see workflow_dispatch inputs).
+          command: pages deploy dist --project-name=${{ vars.CLOUDFLARE_PROJECT }} --branch=${{ env.PAGES_BRANCH }}
+
+      # The zone edge-caches HTML, so a deploy alone leaves stale pages in
+      # already-filled colos. Purge after every deploy. Requires the API
+      # token to carry Zone -> Cache Purge; the report below shows the API
+      # answer either way.
+      - name: Purge Cloudflare cache
+        id: purge
+        if: success() && env.PAGES_BRANCH == 'main'
+        continue-on-error: true
+        run: |
+          ZONE=$(curl -s "https://api.cloudflare.com/client/v4/zones?name=nsnexplorer.com" \
+            -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" | \
+            node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{const j=JSON.parse(d);console.log(j.result?.[0]?.id||'')})")
+          echo "zone=$ZONE"
+          RESP=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE/purge_cache" \
+            -H "Authorization: Bearer ${{ secrets.CLOUDFLARE_API_TOKEN }}" \
+            -H "Content-Type: application/json" --data '{"purge_everything":true}')
+          echo "$RESP" > /tmp/purge-response.json
+          echo "purge response: $RESP"
+
+      # TEMPORARY success reporter (see failure reporter below for why).
+      # Callers that deploy frequently (e.g. the 20-minute RFQ fast lane)
+      # pass commit_report: false to avoid spamming the repo with commits.
+      - name: Report success over git
+        if: success() && inputs.commit_report != false && env.PAGES_BRANCH == 'main'
+        run: |
+          sleep 20  # let the deployment propagate before probing
+          MARKER='Contract awards in this category'
+          probe() {
+            local body
+            body=$(curl -sL --max-time 20 -H 'Cache-Control: no-cache' "$1/fsc/5331/?ci=$GITHUB_RUN_ID" || echo CURL_FAILED)
+            if echo "$body" | grep -q "$MARKER"; then echo "NEW build"; else echo "OLD build"; fi
+          }
+          {
+            echo "sha: $GITHUB_SHA"
+            echo "run: $GITHUB_RUN_ID at $(date -u +%FT%TZ)"
+            echo "deployment-url: ${{ steps.deploy.outputs.deployment-url }}"
+            echo "alias-url: ${{ steps.deploy.outputs.pages-deployment-alias-url }}"
+            echo "deployment-url serves: $(probe '${{ steps.deploy.outputs.deployment-url }}')"
+            echo "pages.dev serves: $(probe 'https://nsnexplorer.pages.dev')"
+            echo "production serves: $(probe 'https://nsnexplorer.com')"
+            echo "cache purge: $(cat /tmp/purge-response.json 2>/dev/null || echo 'no response')"
+          } > .deploy-success.txt
+          git config user.name "deploy-bot"
+          git config user.email "noreply@anthropic.com"
+          git add .deploy-success.txt
+          git commit -m "deploy: success report [skip ci]"
+          git pull --rebase --autostash origin main
+          git push origin main
+
+      # TEMPORARY failure reporter: the dev container cannot reach GitHub's
+      # API or the Actions UI, so on failure we commit the failing step's
+      # log tail back to the repo where it is readable over git. Remove
+      # once dashboard access is reliable again.
+      - name: Report failure over git
+        if: failure() && inputs.commit_report != false && env.PAGES_BRANCH == 'main'
+        run: |
+          {
+            echo "sha: $GITHUB_SHA"
+            echo "run: $GITHUB_RUN_ID attempt $GITHUB_RUN_ATTEMPT"
+            echo "install: ${{ steps.install.outcome }}"
+            echo "build: ${{ steps.build.outcome }}"
+            echo "deploy: ${{ steps.deploy.outcome }}"
+            echo '== install log tail =='
+            tail -30 /tmp/step-install.log 2>/dev/null || true
+            echo '== build log tail =='
+            tail -60 /tmp/step-build.log 2>/dev/null || true
+          } > .deploy-failure.txt
+          git config user.name "deploy-bot"
+          git config user.email "noreply@anthropic.com"
+          git add .deploy-failure.txt
+          git commit -m "deploy: failure report [skip ci]"
+          git pull --rebase --autostash origin main
+          git push origin main

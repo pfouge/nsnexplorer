@@ -1,0 +1,611 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PriceChart from '../../components/PriceChart.astro';
+import SignupForm from '../../components/SignupForm.astro';
+import { SITE_URL } from '../../consts';
+import { buildDiagram } from '../../lib/diagram';
+import {
+  toDashedNsn,
+  undashNsn,
+  withSpikeRatios,
+  computeNsnPriceStats,
+  formatDate,
+  formatUsd,
+  formatUsdPrecise,
+  amscGloss,
+  parseCharacteristics,
+} from '../../lib/shared';
+import { loadNsnPage, openSql } from '../../lib/nsn-page';
+import { databaseUrlFrom } from '../../lib/runtime-env';
+
+// Rendered ON REQUEST by the Cloudflare Pages Function, not at build time.
+// Cloudflare Pages caps a deployment at 20,000 files and the catalog is far
+// larger, so every /nsn/ URL is served from one server route that reads the
+// single NSN from Postgres (through the Hyperdrive binding) and is cached at
+// the edge for an hour. Same URLs and HTML as the old static pages.
+export const prerender = false;
+
+const dashedParam = Astro.params.nsn ?? '';
+const nsnCode = undashNsn(dashedParam);
+// Canonical form is dashed; redirect bare 13-digit URLs so there is one URL.
+if (/^\d{13}$/.test(dashedParam)) {
+  return Astro.redirect(`/nsn/${toDashedNsn(dashedParam)}/`, 301);
+}
+
+const databaseUrl = databaseUrlFrom(Astro);
+if (!databaseUrl) {
+  return new Response('Database is not configured for this environment.', { status: 503 });
+}
+const sql = openSql(databaseUrl);
+let page;
+try {
+  page = await loadNsnPage(sql, nsnCode);
+} finally {
+  await sql.end({ timeout: 1 }).catch(() => {});
+}
+if (!page) {
+  Astro.response.headers.set('Cache-Control', 'public, s-maxage=300');
+  return new Response(null, { status: 404 });
+}
+Astro.response.headers.set('Cache-Control', 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400');
+
+const { nsn, fsc, partNumbers, contractActions } = page;
+const rawPoints = page.pricePoints;
+const agencySlugById = new Map(page.agencies.map((a) => [a.agencyId, a.slug]));
+const allSols = page.solicitations;
+
+const dashed = toDashedNsn(nsn.nsn);
+const points = withSpikeRatios(rawPoints);
+const sortedPoints = [...points].sort((a, b) => b.awardedOn.localeCompare(a.awardedOn));
+const stats = computeNsnPriceStats(rawPoints);
+
+// Verdict strip: the five numbers a supplier needs first. Combines priced
+// purchases (unit prices) and contract actions (award totals).
+const allDates = [
+  ...rawPoints.map((p) => p.awardedOn),
+  ...contractActions.map((c) => c.actionDate).filter((d): d is string => d !== null),
+].sort();
+const lastPurchased = allDates.at(-1) ?? null;
+const firstPurchased = allDates[0] ?? null;
+const recordCount = rawPoints.length + contractActions.length;
+const spanYears =
+  firstPurchased && lastPurchased
+    ? Math.max(1, (new Date(lastPurchased).getTime() - new Date(firstPurchased).getTime()) / 31557600000)
+    : 1;
+const perYear = recordCount / spanYears;
+const totalDemandDollars =
+  rawPoints.reduce((s, p) => s + (p.totalValue ?? p.unitPrice * (p.quantity ?? 1)), 0) +
+  contractActions.reduce((s, c) => s + (c.obligation ?? 0), 0);
+const latestPoint = [...rawPoints].sort((a, b) => a.awardedOn.localeCompare(b.awardedOn)).at(-1);
+const latestAction = [...contractActions]
+  .filter((c) => c.actionDate !== null)
+  .sort((a, b) => a.actionDate!.localeCompare(b.actionDate!))
+  .at(-1);
+// AMSC G/Z and AMC 1/2 indicate competitive acquisition; others lean
+// restricted. Unknown stays neutral.
+const competitionOpen =
+  nsn.amsc === 'G' || nsn.amsc === 'Z' || nsn.amc === '1' || nsn.amc === '2';
+const dibbsRfqUrl = `https://www.dibbs.bsm.dla.mil/RFQ/RFQNsn.aspx?value=${nsn.nsn}&category=nsn`;
+const dibbsAwardUrl = `https://www.dibbs.bsm.dla.mil/Awards/AwdRecs.aspx?category=awdnsn&TypeSrch=cq&Value=${nsn.nsn}`;
+
+// Solicitation history for this NSN: EVERY solicitation on record (open or
+// closed), newest first — every solicitation on record for this NSN
+// and is never pruned, so this is the NSN's growing demand record.
+// Open-demand read: just the currently-open subset, closing soonest first.
+const openSols = allSols
+  .filter((s) => s.status === 'open')
+  .sort((a, b) => {
+    if (a.returnBy === b.returnBy) return 0;
+    if (a.returnBy === null) return 1;
+    if (b.returnBy === null) return -1;
+    return a.returnBy.localeCompare(b.returnBy);
+  });
+// Set-aside(s) declared on any currently-open solicitation — surfaced in the
+// "Can you win it?" eligibility block alongside AMSC/AMC.
+const openSetAsides = [...new Set(openSols.map((s) => s.setaside).filter((v): v is string => !!v))];
+const openNow = new Date();
+const openTodayMs = Date.UTC(openNow.getUTCFullYear(), openNow.getUTCMonth(), openNow.getUTCDate());
+interface OpenSolBadge {
+  text: string;
+  cls: 'green' | 'amber';
+}
+const openSolBadge = (returnBy: string | null): OpenSolBadge => {
+  if (!returnBy) return { text: 'Open', cls: 'green' };
+  const days = Math.ceil((new Date(`${returnBy}T00:00:00Z`).getTime() - openTodayMs) / 86400000);
+  if (days <= 2) return { text: days <= 0 ? 'Closes today' : `Closes in ${days}d`, cls: 'amber' };
+  return { text: `Closes in ${days}d`, cls: 'green' };
+};
+
+// Status badge for the full solicitation history table below — 'open' reads
+// green (like the rest of the site's open-competition badges), every closed
+// status (expired/cancelled/awarded/unknown) reads muted/neutral.
+interface HistoryStatusBadge {
+  text: string;
+  cls: 'green' | '';
+}
+const historyStatusBadge = (status: string): HistoryStatusBadge => {
+  if (status === 'open') return { text: 'Open', cls: 'green' };
+  return { text: status.charAt(0).toUpperCase() + status.slice(1), cls: '' };
+};
+
+// Product identity: FLIS characteristics + manufacturer part numbers.
+const characteristics = parseCharacteristics(nsn.characteristics);
+// Dimensioned drawing: generated at build time from catalog dimensions for
+// every NSN whose specs support a known archetype (dispatched by FSC in
+// buildDiagram). Returns null — section omitted — when there's no archetype
+// for the FSC or the specs lack the needed geometry.
+const diagram = buildDiagram(characteristics, nsn.fsc, { nsnDashed: dashed, itemName: nsn.itemName });
+// Spec documents cited in characteristic replies (e.g. MIL-DTL-25988,
+// AMS7276, SAE-AMS-P-83461). ASSIST Quick Search (DoD's public spec
+// repository) has no public deep-link format — documents resolve only by
+// an internal ident_number — so we surface the detected document id as a
+// highlighted, copyable token beside a link to the search page itself.
+const SPEC_DOC_RE =
+  /\b((?:MIL|SAE|A-A|ASTM|QQ|ZZ|FF)[A-Z]*[- ][A-Z]*-?\d[\dA-Z./-]*|(?:AMS|NAS|MS|AN)\s?-?\d\d[\dA-Z./-]*)\b/;
+const ASSIST_URL = 'https://quicksearch.dla.mil/';
+const specDoc = (text: string): string | null => {
+  const m = text.match(SPEC_DOC_RE);
+  return m ? m[1].trim() : null;
+};
+
+const lastUpdated = [...rawPoints.map((p) => p.ingestedAt), ...contractActions.map((c) => c.ingestedAt)]
+  .sort()
+  .at(-1);
+
+const itemLabel = nsn.itemName ?? dashed;
+const title = `NSN ${dashed} — ${itemLabel} price history`;
+const description = `Price history for NSN ${dashed}${nsn.itemName ? ` (${nsn.itemName})` : ''}: ${
+  stats ? stats.count.toLocaleString('en-US') : 'no'
+} purchase${stats && stats.count === 1 ? '' : 's'} on record, sourced from official U.S. government award records.`;
+
+const canonicalUrl = `${SITE_URL}/nsn/${dashed}/`;
+
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
+    ...(fsc
+      ? [{ '@type': 'ListItem', position: 2, name: `FSC ${fsc.fsc}`, item: `${SITE_URL}/fsc/${fsc.fsc}/` }]
+      : []),
+    { '@type': 'ListItem', position: fsc ? 3 : 2, name: `NSN ${dashed}`, item: canonicalUrl },
+  ],
+};
+
+const datasetSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Dataset',
+  name: `Price history for NSN ${dashed}`,
+  description,
+  url: canonicalUrl,
+  publisher: { '@id': `${SITE_URL}/#org` },
+  isAccessibleForFree: true,
+  license: 'https://www.usa.gov/government-works',
+};
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  pageType="ItemPage"
+  canonicalUrl={canonicalUrl}
+  extraSchema={[breadcrumbSchema, datasetSchema]}
+>
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a> ›
+    {fsc ? <a href={`/fsc/${fsc.fsc}/`}>FSC {fsc.fsc}</a> : <span>FSC {nsn.fsc}</span>} ›
+    NSN {dashed}
+  </nav>
+
+  <p class="eyebrow">FSC {fsc?.fsc ?? nsn.fsc} <span class="x">×</span> {nsn.itemName ?? 'NSN'}</p>
+
+  <header class="hero">
+    <h1>{itemLabel}</h1>
+    <p class="nsn mono" style="font-size:1.15rem; display:flex; align-items:center; gap:0.6rem;">
+      {dashed}
+      <button
+        type="button"
+        class="btn-ghost btn"
+        style="padding:0.25rem 0.6rem; font-size:0.78rem;"
+        onclick={`navigator.clipboard && navigator.clipboard.writeText('${dashed}')`}
+        aria-label="Copy NSN"
+      >
+        Copy
+      </button>
+    </p>
+  </header>
+
+  <!-- 1. Open for bid — the first question a supplier asks: is there a live RFQ to bid on? -->
+  {openSols.length > 0 ? (
+    <section class="panel open-panel" style="margin-top:1.5rem;">
+      <h2 class="section-title" style="margin-top:0;">Open for bid</h2>
+      <p class="gloss">
+        {openSols.length} open solicitation{openSols.length === 1 ? '' : 's'} on record right now —
+        quantity, close date, and where to submit.
+      </p>
+      <div class="table-wrap" style="border:0;">
+        <table>
+          <thead>
+            <tr>
+              <th>Solicitation</th>
+              <th class="num">Qty</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {openSols.map((s) => {
+              const badge = openSolBadge(s.returnBy);
+              return (
+                <tr>
+                  <td class="mono"><a href={s.sourceUrl} target="_blank" rel="nofollow noopener">{s.solNumber}</a></td>
+                  <td class="num mono">{s.quantity !== null ? s.quantity.toLocaleString('en-US') : '—'}</td>
+                  <td><span class={`badge ${badge.cls}`}>{badge.text}</span></td>
+                  <td><a href={s.sourceUrl} target="_blank" rel="nofollow noopener">Bid →</a></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  ) : (
+    <section class="panel" style="margin-top:1.5rem;">
+      <h2 class="section-title" style="margin-top:0;">Open for bid</h2>
+      <p class="gloss">No open solicitations on record for this NSN right now.</p>
+      <p style="margin-top:1rem;">
+        <a class="btn" href={dibbsRfqUrl} target="_blank" rel="nofollow noopener">
+          Search open RFQs on DIBBS →
+        </a>
+      </p>
+    </section>
+  )}
+
+  <!-- 2. Can you win it? — the eligibility signal: open competition or approved sources only. -->
+  <section class="card" style="margin-top:1.5rem;">
+    <h2 class="section-title" style="margin-top:0;">Can you win it?</h2>
+    <p class="gloss">
+      {competitionOpen
+        ? 'Open to any qualified supplier — DLA has this NSN flagged for competitive acquisition.'
+        : 'Restricted — approved sources only, based on the latest AMSC/AMC on record.'}
+    </p>
+    <div class="datastrip" style="margin-top:0.9rem;">
+      <div class="cell">
+        <div class="k">AMSC / AMC</div>
+        <div class="v">
+          {nsn.amsc ? (
+            <span class={`badge ${nsn.amsc === 'G' ? 'green' : 'amber'}`} title={amscGloss(nsn.amsc) ?? ''}>
+              {nsn.amsc}
+            </span>
+          ) : (
+            '—'
+          )}
+          {nsn.amc && <span class="mono gloss" style="font-size:0.85rem; margin-left:0.5rem;">AMC {nsn.amc}</span>}
+        </div>
+      </div>
+      <div class="cell">
+        <div class="k">Competition</div>
+        <div class="v">
+          {nsn.amsc || nsn.amc ? (
+            <span class={`badge ${competitionOpen ? 'green' : 'amber'}`}>
+              {competitionOpen ? 'Open competition' : 'Restricted'}
+            </span>
+          ) : (
+            '—'
+          )}
+        </div>
+      </div>
+    </div>
+    {nsn.amsc && <p class="gloss" style="margin-top:0.9rem;">{amscGloss(nsn.amsc)}</p>}
+    {openSetAsides.length > 0 && (
+      <p class="gloss" style="margin-top:0.6rem;">
+        Set-aside on open solicitation{openSetAsides.length === 1 ? '' : 's'}: {openSetAsides.join(', ')}
+      </p>
+    )}
+  </section>
+
+  <!-- 3. What it is / can you make it — drawing, specs, and qualified part numbers together. -->
+  {(diagram || characteristics.length > 0 || partNumbers.length > 0) && (
+    <section style="margin-top:2.5rem;">
+      <h2 class="section-title" style="margin-top:0;">What it is — can you make it?</h2>
+      <p class="gloss">
+        Dimensions, the FLIS specification requirements, and the manufacturer part numbers already
+        qualified against this NSN.
+      </p>
+    </section>
+  )}
+
+  {diagram && (
+    <section>
+      <h3 class="section-title">Dimensioned drawing</h3>
+      <p class="gloss">
+        Generated from the federal catalog's dimensional data for this NSN — reference only,
+        not a manufacturing drawing.
+      </p>
+      <div class="card" style="padding:1rem;" set:html={diagram} />
+    </section>
+  )}
+
+  {characteristics.length > 0 && (
+    <section>
+      <h3 class="section-title">Specifications</h3>
+      <p class="gloss">
+        From the federal catalog (DLA FLIS / PUB LOG) — what your part has to meet. Cited
+        specification documents can be looked up in <a href={ASSIST_URL} target="_blank" rel="nofollow noopener">ASSIST Quick
+        Search ↗</a>, DoD's public spec repository — copy the document number in.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Requirement</th>
+              <th>Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            {characteristics.map((c) => {
+              const doc = c.reply ? specDoc(c.reply) : null;
+              return (
+                <tr>
+                  <td>
+                    {c.requirement ?? c.mrc ?? '—'}
+                    {c.requirement && c.mrc && (
+                      <span class="mono gloss" style="font-size:0.75rem; margin-left:0.4rem;">{c.mrc}</span>
+                    )}
+                  </td>
+                  <td>
+                    {c.reply ?? '—'}
+                    {doc && (
+                      <span class="badge mono" style="margin-left:0.5rem; font-size:0.75rem;" title="Specification document — look up in ASSIST">{doc}</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )}
+
+  {partNumbers.length > 0 && (
+    <section>
+      <h3 class="section-title">Manufacturer part numbers</h3>
+      <p class="gloss">
+        Commercial part numbers cross-referenced to this NSN in the federal catalog — the parts
+        that have been accepted as satisfying this stock number, and who makes them.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Part number</th>
+              <th>CAGE</th>
+              <th>Manufacturer</th>
+            </tr>
+          </thead>
+          <tbody>
+            {partNumbers.map((pn) => (
+              <tr>
+                <td class="mono">{pn.partNumber}</td>
+                <td class="mono">{pn.cage ?? '—'}</td>
+                <td>{pn.supplierName ?? '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )}
+
+  <!-- 4. What it pays — so you can quote: the price/demand record, reframed as quoting intel. -->
+  <section style="margin-top:2.5rem;">
+    <h2 class="section-title" style="margin-top:0;">What it pays — so you can quote</h2>
+    <p class="gloss">
+      The government's own price and demand record for this NSN — what past awards cleared at,
+      so you know where to land your quote.
+    </p>
+  </section>
+
+  <div class="datastrip" style="margin-top:0.5rem;">
+    <div class="cell">
+      <div class="k">Latest unit price</div>
+      <div class="v up">{stats ? formatUsdPrecise(stats.latest) : '—'}</div>
+    </div>
+    <div class="cell">
+      <div class="k">Purchases</div>
+      <div class="v">{stats ? stats.count.toLocaleString('en-US') : '0'}</div>
+    </div>
+    <div class="cell">
+      <div class="k">Total spend</div>
+      <div class="v">{stats ? formatUsd(stats.totalSpend) : '—'}</div>
+    </div>
+  </div>
+
+  <div class="stat-strip">
+    <div class="stat">
+      <div class="value">{lastPurchased ? formatDate(lastPurchased) : '—'}</div>
+      <div class="label">Last purchased</div>
+    </div>
+    <div class="stat">
+      <div class="value">{recordCount > 0 ? `${recordCount} · ${perYear.toFixed(1)}/yr` : '—'}</div>
+      <div class="label">Purchase records</div>
+    </div>
+    <div class="stat">
+      <div class="value up">{recordCount > 0 ? formatUsd(totalDemandDollars) : '—'}</div>
+      <div class="label">Total demand</div>
+    </div>
+    <div class="stat">
+      <div class="value">
+        {latestPoint
+          ? formatUsdPrecise(latestPoint.unitPrice)
+          : latestAction?.obligation != null
+            ? formatUsd(latestAction.obligation)
+            : '—'}
+      </div>
+      <div class="label">{latestPoint ? 'Latest unit price' : 'Latest award total'}</div>
+    </div>
+  </div>
+
+  <section style="margin-top:2rem;">
+    <h3 class="section-title">Price history</h3>
+    <PriceChart points={points} chartId={nsn.nsn} />
+  </section>
+
+  <section>
+    <h3 class="section-title">Purchase history</h3>
+    {sortedPoints.length === 0 ? (
+      <p class="gloss">No priced purchases on record for this NSN yet.</p>
+    ) : (
+      <div class="table-wrap">
+        <table>
+          <caption>{sortedPoints.length} purchase{sortedPoints.length === 1 ? '' : 's'} on record</caption>
+          <thead>
+            <tr>
+              <th>Awarded</th>
+              <th class="num">Qty</th>
+              <th class="num">Unit price</th>
+              <th class="num">Total</th>
+              <th>Supplier</th>
+              <th>Agency</th>
+              <th>Source</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sortedPoints.map((p) => (
+              <tr class:list={{ overcharge: p.spikeRatio !== null }}>
+                <td class="mono">{formatDate(p.awardedOn)}</td>
+                <td class="num mono">{p.quantity !== null ? p.quantity.toLocaleString('en-US') : '—'}</td>
+                <td class="num price">
+                  {formatUsdPrecise(p.unitPrice)}
+                  {p.spikeRatio !== null && (
+                    <span class="badge amber" style="margin-left:0.4rem;">{p.spikeRatio.toFixed(1)}× median</span>
+                  )}
+                </td>
+                <td class="num mono">{p.totalValue !== null ? formatUsd(p.totalValue) : '—'}</td>
+                <td>
+                  {p.supplierName ?? 'Unknown'} {p.cage && <span class="cage">({p.cage})</span>}
+                </td>
+                <td>
+                  {p.agencyId !== null && agencySlugById.has(p.agencyId) ? (
+                    <a href={`/agency/${agencySlugById.get(p.agencyId)}/`}>{p.agencyName ?? 'Unknown'}</a>
+                  ) : (
+                    p.agencyName ?? 'Unknown'
+                  )}
+                </td>
+                <td><a href={p.sourceUrl} target="_blank" rel="noopener noreferrer">Source ↗</a></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </section>
+
+  <section>
+    <h3 class="section-title">Related contract actions</h3>
+    <p class="gloss">
+      Contract action totals, not unit prices — obligation amounts from USAspending for related
+      awards, shown for context only. These do not appear on the price chart above.
+    </p>
+    {contractActions.length === 0 ? (
+      <p class="gloss">No related contract actions on record.</p>
+    ) : (
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Action date</th>
+              <th>Award #</th>
+              <th>Recipient</th>
+              <th>Agency</th>
+              <th class="num">Obligation</th>
+            </tr>
+          </thead>
+          <tbody>
+            {contractActions.map((c) => (
+              <tr>
+                <td class="mono">{c.actionDate ? formatDate(c.actionDate) : '—'}</td>
+                <td class="mono">
+                  <a href={c.sourceUrl} target="_blank" rel="noopener noreferrer">{c.piid ?? 'record'} ↗</a>
+                </td>
+                <td>{c.recipientName ?? '—'}</td>
+                <td>{c.agencyName ?? '—'}</td>
+                <td class="num mono">{c.obligation !== null ? formatUsd(c.obligation) : '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </section>
+
+  <!-- 5. Demand history — every solicitation on record, open and closed. -->
+  {allSols.length > 0 && (
+    <section style="margin-top:2.5rem;">
+      <h2 class="section-title" style="margin-top:0;">Demand history</h2>
+      <p class="gloss">
+        Every solicitation we've indexed for this NSN, open and closed — {allSols.length} on record.
+        Closed RFQs (expired, cancelled, or awarded) stay here as a record of past demand; they
+        never get removed.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Solicitation</th>
+              <th>Issued</th>
+              <th>Closes / closed</th>
+              <th class="num">Qty</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {allSols.map((s) => {
+              const badge = historyStatusBadge(s.status);
+              return (
+                <tr>
+                  <td class="mono">{s.solNumber}</td>
+                  <td class="mono">{s.issuedOn ? formatDate(s.issuedOn) : '—'}</td>
+                  <td class="mono">{s.returnBy ? formatDate(s.returnBy) : '—'}</td>
+                  <td class="num mono">{s.quantity !== null ? s.quantity.toLocaleString('en-US') : '—'}</td>
+                  <td><span class={`badge ${badge.cls}`}>{badge.text}</span></td>
+                  <td><a href={s.sourceUrl} target="_blank" rel="nofollow noopener">View at DIBBS →</a></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )}
+
+  <p style="margin:1rem 0 0; display:flex; gap:0.75rem; flex-wrap:wrap;">
+    <a class="btn" href={dibbsRfqUrl} target="_blank" rel="nofollow noopener">
+      Open RFQs on DIBBS →
+    </a>
+    <a class="btn btn-ghost" href={dibbsAwardUrl} target="_blank" rel="nofollow noopener">
+      DIBBS award history ↗
+    </a>
+  </p>
+
+  <SignupForm
+    hook="shop_alerts"
+    fscInterest={nsn.fsc}
+    title="Alert me when parts like this open to competition"
+    description="Get an email when an AMSC changes from sole-source to open competition in this category."
+    cta="Sign up"
+  />
+
+  <section class="card">
+    <h2>About this data</h2>
+    <ul class="gloss">
+      <li>Unit prices: DLA DIBBS award records — every row links to its government record.</li>
+      <li>AMSC: latest observed value from {nsn.amscSourceUrl ? <a href={nsn.amscSourceUrl} target="_blank" rel="noopener noreferrer">DIBBS solicitation history</a> : 'DIBBS solicitation history'}{nsn.amscObservedOn && <> as of {formatDate(nsn.amscObservedOn)}</>}.</li>
+      <li>Contract action totals: USAspending, context only.</li>
+      {lastUpdated && <li>Data last refreshed: {new Date(lastUpdated).toISOString().slice(0, 10)}.</li>}
+      <li><a href="/methodology/">Full methodology →</a></li>
+    </ul>
+  </section>
+</BaseLayout>

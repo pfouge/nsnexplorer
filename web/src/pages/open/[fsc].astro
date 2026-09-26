@@ -1,0 +1,369 @@
+---
+// open/[fsc].astro — open-demand browse for one Federal Supply Class. Mirrors
+// fsc/[fsc].astro's product-grid + filter-rail pattern, but the filters are
+// tuned for buying decisions on OPEN solicitations (closing window, quantity,
+// competition, drawing) rather than historic purchase cadence.
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import SignupForm from '../../components/SignupForm.astro';
+import { SITE_URL } from '../../consts';
+import { loadSiteData, formatDate } from '../../lib/data';
+import { buildSolicitationCards, fsgName, isPlaceholderFscName, UNLISTED_FSC_NAME, type ProductCard } from '../../lib/browse';
+
+export async function getStaticPaths() {
+  const data = await loadSiteData();
+  // Every FSC with ANY solicitation on record (open or closed) — the
+  // history browse, not just the currently-open board.
+  return [...data.solicitationsByFsc.entries()].map(([fsc, entry]) => ({
+    params: { fsc },
+    props: { fscCode: fsc, fscName: entry.name },
+  }));
+}
+
+const { fscCode, fscName } = Astro.props as { fscCode: string; fscName: string | null };
+const data = await loadSiteData();
+// entry = OPEN-only solicitations in this FSC (for the "open now" stat
+// strip); allEntry = every status (for the history signal line + filters).
+const entry = data.openByFsc.get(fscCode);
+const allEntry = data.solicitationsByFsc.get(fscCode);
+
+const rawDisplayName = fscName ?? data.deepFscs.find((f) => f.fsc === fscCode)?.name ?? `FSC ${fscCode}`;
+// Freshly-grown FSCs (from RFQ ingest) start out with a 'FSC NNNN'
+// placeholder name (see ingest/dibbs/load.mjs) — don't pair it with itself
+// in user-facing titles, e.g. "Open demand — FSC 7310 (FSC 7310)".
+const hasRealFscName = !isPlaceholderFscName(fscCode, rawDisplayName);
+const displayName = hasRealFscName ? rawDisplayName : UNLISTED_FSC_NAME;
+const fsg = fscCode.slice(0, 2);
+const departmentName = fsgName(fsg);
+
+const allCards: ProductCard[] = buildSolicitationCards(data, fscCode);
+// Cap the grid: Cloudflare Pages caps a deployment at 20k static files, so
+// per-solicitation/per-open-NSN pages are gone (browse-only now) — but a
+// single category page rendering tens of thousands of cards is still a
+// liability for build time and page weight. Cards are already sorted
+// open-first / closing-soonest (see buildSolicitationCards), so the cap
+// keeps the most actionable items even before the status filter is applied.
+const OPEN_CARDS_CAP = 1000;
+const cards: ProductCard[] = allCards.slice(0, OPEN_CARDS_CAP);
+const cardsTruncated = allCards.length > OPEN_CARDS_CAP;
+
+const fmtInt = (n: number) => n.toLocaleString('en-US');
+
+// Category-level open stats, independent of the priced-catalog gate.
+const solicitations = entry?.solicitations ?? [];
+const closingSoonCutoff = new Date();
+closingSoonCutoff.setUTCDate(closingSoonCutoff.getUTCDate() + 7);
+const closingSoonHere = solicitations.filter(
+  (s) => s.returnBy !== null && new Date(s.returnBy) <= closingSoonCutoff
+).length;
+const totalQtyHere = solicitations.reduce((sum, s) => sum + (s.quantity ?? 0), 0);
+
+// Whole-history stats for this category (every status) — the "record" view.
+const allSolicitationsHere = allEntry?.solicitations ?? [];
+const closedCountHere = allSolicitationsHere.length - solicitations.length;
+
+// Build-date baseline for the per-card "Open · closes in Nd" badge.
+const now = new Date();
+const todayMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+interface StatusBadge {
+  text: string;
+  cls: 'green' | 'amber' | '';
+}
+const openBadge = (nextCloseDate: string | null): StatusBadge => {
+  if (!nextCloseDate) return { text: 'Open', cls: 'green' };
+  const days = Math.ceil((new Date(`${nextCloseDate}T00:00:00Z`).getTime() - todayMs) / 86400000);
+  if (days <= 2) return { text: days <= 0 ? 'Open · closes today' : `Open · closes in ${days}d`, cls: 'amber' };
+  return { text: `Open · closes in ${days}d`, cls: 'green' };
+};
+
+// Neutral badge for closed cards — reuses the existing muted-badge look
+// (empty color class, same as the "date unknown" badge on /open/) rather
+// than introducing a new one.
+const closedBadge = (lastSolicited: string | null): StatusBadge => ({
+  text: lastSolicited ? `Closed · last ${formatDate(lastSolicited)}` : 'Closed',
+  cls: '',
+});
+
+const title = hasRealFscName
+  ? `Open demand — ${displayName} (FSC ${fscCode})`
+  : `Open demand — ${displayName} (FSC ${fscCode})`;
+const description = hasRealFscName
+  ? `${fmtInt(solicitations.length)} open government solicitation${
+      solicitations.length === 1 ? '' : 's'
+    } in Federal Supply Class ${fscCode} (${displayName}) that suppliers can bid on today, plus a
+      growing history of closed ones — each linked to its official DIBBS record.`
+  : `${fmtInt(solicitations.length)} open government solicitation${
+      solicitations.length === 1 ? '' : 's'
+    } in Federal Supply Class ${fscCode} that suppliers can bid on today, plus a growing history
+      of closed ones — each linked to its official DIBBS record.`;
+const canonicalUrl = `${SITE_URL}/open/${fscCode}/`;
+
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
+    { '@type': 'ListItem', position: 2, name: 'Open demand', item: `${SITE_URL}/open/` },
+    { '@type': 'ListItem', position: 3, name: displayName, item: canonicalUrl },
+  ],
+};
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  pageType="CollectionPage"
+  canonicalUrl={canonicalUrl}
+  extraSchema={[breadcrumbSchema]}
+>
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a> › <a href="/open/">Open demand</a> › {displayName}
+  </nav>
+
+  <p class="eyebrow">Open demand <span class="x">×</span> {departmentName}</p>
+
+  <header class="hero">
+    <h1>{displayName} <span class="badge mono">FSC {fscCode}</span></h1>
+    <p class="lede">
+      Open solicitations in Federal Supply Class {fscCode} — real requests for quote a supplier can
+      bid on today, linked to the official DIBBS record for each one — plus the ones we've already
+      recorded as they closed. Nothing here gets deleted when it expires: this category's demand
+      history grows every time an RFQ closes.
+    </p>
+  </header>
+
+  <div class="stat-strip">
+    <div class="stat">
+      <div class="value up">{fmtInt(solicitations.length)}</div>
+      <div class="label">Open solicitations</div>
+    </div>
+    <div class="stat">
+      <div class="value">{fmtInt(closingSoonHere)}</div>
+      <div class="label">Closing within 7 days</div>
+    </div>
+    <div class="stat">
+      <div class="value">{fmtInt(totalQtyHere)}</div>
+      <div class="label">Total open quantity</div>
+    </div>
+    <div class="stat">
+      <div class="value">{fmtInt(allSolicitationsHere.length)}</div>
+      <div class="label">Tracked all-time ({fmtInt(closedCountHere)} closed)</div>
+    </div>
+  </div>
+
+  <section class="products-section">
+    <h2 class="section-title">Open parts</h2>
+    {cardsTruncated && (
+      <p class="note">
+        Showing the {fmtInt(OPEN_CARDS_CAP)} solicitations in this category ranked open-first,
+        closing-soonest — use the filters to narrow.
+      </p>
+    )}
+    {cards.length === 0 ? (
+      <p class="gloss">No solicitations indexed for this category yet.</p>
+    ) : (
+      <div class="products-layout">
+        <aside class="filter-rail" aria-label="Filter open demand">
+          <div class="filter-group">
+            <label class="filter-label" for="f-status">Status</label>
+            <select id="f-status">
+              <option value="open" selected>Open now</option>
+              <option value="closed">Closed</option>
+              <option value="all">All</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label class="filter-label" for="f-closes">Closing within</label>
+            <select id="f-closes">
+              <option value="any">Any time</option>
+              <option value="3">3 days</option>
+              <option value="7">7 days</option>
+              <option value="30">30 days</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label class="filter-label" for="f-minqty">Min quantity</label>
+            <select id="f-minqty">
+              <option value="any">Any</option>
+              <option value="100">100+</option>
+              <option value="1000">1,000+</option>
+              <option value="10000">10,000+</option>
+            </select>
+          </div>
+
+          <div class="filter-group" role="radiogroup" aria-labelledby="f-competition-label">
+            <span class="filter-label" id="f-competition-label">Competition</span>
+            <label><input type="radio" name="f-competition" value="all" checked /> All</label>
+            <label><input type="radio" name="f-competition" value="open" /> Open</label>
+            <label><input type="radio" name="f-competition" value="restricted" /> Restricted</label>
+          </div>
+
+          <div class="filter-group">
+            <label><input type="checkbox" id="f-hasdrawing" /> Has drawing</label>
+          </div>
+
+          <div class="filter-group">
+            <label class="filter-label" for="f-sort">Sort</label>
+            <select id="f-sort">
+              <option value="closes">Closing soonest</option>
+              <option value="qty">Highest quantity</option>
+              <option value="name">Item name</option>
+            </select>
+          </div>
+
+          <p class="filter-count" id="filter-count" aria-live="polite">{cards.length} of {cards.length} shown</p>
+        </aside>
+
+        <div class="product-grid" id="product-grid">
+          {cards.map((c) => {
+            const badge = c.openCount > 0 ? openBadge(c.nextCloseDate) : closedBadge(c.lastSolicited);
+            const externalAttrs = c.hasCatalogPage
+              ? {}
+              : { target: '_blank', rel: 'nofollow noopener' };
+            return (
+              <article
+                class="product-card"
+                data-closes={c.nextCloseDate ?? ''}
+                data-qty={c.openQuantity ?? 0}
+                data-competition={c.competition}
+                data-hasdrawing={c.hasDrawing ? '1' : '0'}
+                data-material={c.material ?? ''}
+                data-itemname={(c.itemName ?? '').toLowerCase()}
+                data-openct={c.openCount}
+                data-closedct={c.closedCount}
+                data-laststatus={c.lastStatus}
+                data-lastsolicited={c.lastSolicited ?? ''}
+              >
+                <a class="product-thumb" href={c.href} aria-label={`View ${c.itemName ?? c.dashed}`} {...externalAttrs}>
+                  {c.thumbnail ? (
+                    <div class="thumb-svg" set:html={c.thumbnail} />
+                  ) : (
+                    <div class="thumb-placeholder" aria-hidden="true">∅</div>
+                  )}
+                </a>
+                <div class="product-body">
+                  <a class="product-nsn mono" href={c.href} {...externalAttrs}>{c.dashed}</a>
+                  <h3 class="product-name">{c.itemName ?? 'Unnamed item'}</h3>
+                  <div class="product-signals">
+                    <span class={`badge ${badge.cls}`}>{badge.text}</span>
+                    <span class="signal mono">{c.openQuantity !== null ? c.openQuantity.toLocaleString('en-US') : '—'} units</span>
+                    {c.competition !== 'unknown' && (
+                      <span class={`badge ${c.competition === 'open' ? 'green' : 'amber'}`}>
+                        {c.competition === 'open' ? 'Open' : 'Restricted'}
+                      </span>
+                    )}
+                  </div>
+                  <p class="gloss" style="margin:0.35rem 0 0; font-size:0.78rem;">
+                    {fmtInt(c.solicitationCount)} solicitation{c.solicitationCount === 1 ? '' : 's'}
+                    {' '}({fmtInt(c.openCount)} open · {fmtInt(c.closedCount)} closed)
+                  </p>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </div>
+    )}
+  </section>
+
+  <script>
+    const grid = document.getElementById('product-grid');
+    const countEl = document.getElementById('filter-count');
+    const statusSelect = document.getElementById('f-status');
+    const closesSelect = document.getElementById('f-closes');
+    const minQtySelect = document.getElementById('f-minqty');
+    const hasDrawingCheckbox = document.getElementById('f-hasdrawing');
+    const sortSelect = document.getElementById('f-sort');
+
+    if (
+      grid &&
+      statusSelect instanceof HTMLSelectElement &&
+      closesSelect instanceof HTMLSelectElement &&
+      minQtySelect instanceof HTMLSelectElement &&
+      hasDrawingCheckbox instanceof HTMLInputElement &&
+      sortSelect instanceof HTMLSelectElement
+    ) {
+      const cards = Array.from(grid.querySelectorAll('.product-card'));
+      const total = cards.length;
+
+      const apply = () => {
+        const status = statusSelect.value; // 'open' | 'closed' | 'all'
+        const checkedCompetition = document.querySelector('input[name="f-competition"]:checked');
+        const competition = checkedCompetition instanceof HTMLInputElement ? checkedCompetition.value : 'all';
+        const maxCloseDays = closesSelect.value === 'any' ? null : Number(closesSelect.value);
+        const minQty = minQtySelect.value === 'any' ? null : Number(minQtySelect.value);
+        const needsDrawing = hasDrawingCheckbox.checked;
+        const now = Date.now();
+
+        let visibleCount = 0;
+        for (const card of cards) {
+          const el = card as HTMLElement;
+          let visible = true;
+          const openCt = Number(el.dataset.openct ?? 0);
+          const closedCt = Number(el.dataset.closedct ?? 0);
+          if (status === 'open' && openCt <= 0) visible = false;
+          if (status === 'closed' && !(openCt <= 0 && closedCt > 0)) visible = false;
+          // 'all' imposes no status condition.
+          if (visible && competition !== 'all' && el.dataset.competition !== competition) visible = false;
+          if (visible && maxCloseDays !== null) {
+            const closes = el.dataset.closes;
+            if (!closes) {
+              visible = false;
+            } else {
+              const daysUntil = (new Date(`${closes}T00:00:00Z`).getTime() - now) / 86400000;
+              if (daysUntil > maxCloseDays) visible = false;
+            }
+          }
+          if (visible && minQty !== null && Number(el.dataset.qty ?? 0) < minQty) visible = false;
+          if (visible && needsDrawing && el.dataset.hasdrawing !== '1') visible = false;
+          el.style.display = visible ? '' : 'none';
+          if (visible) visibleCount++;
+        }
+        if (countEl) countEl.textContent = `${visibleCount} of ${total} shown`;
+      };
+
+      const sortCards = () => {
+        const mode = sortSelect.value;
+        const sorted = [...cards].sort((a, b) => {
+          const ael = a as HTMLElement;
+          const bel = b as HTMLElement;
+          if (mode === 'qty') {
+            return Number(bel.dataset.qty ?? 0) - Number(ael.dataset.qty ?? 0);
+          }
+          if (mode === 'name') {
+            return (ael.dataset.itemname ?? '').localeCompare(bel.dataset.itemname ?? '');
+          }
+          // 'closes': soonest first, unknown close dates sort last.
+          const ac = ael.dataset.closes ?? '';
+          const bc = bel.dataset.closes ?? '';
+          if (ac === '' && bc === '') return 0;
+          if (ac === '') return 1;
+          if (bc === '') return -1;
+          return ac.localeCompare(bc);
+        });
+        for (const card of sorted) grid.appendChild(card);
+      };
+
+      statusSelect.addEventListener('change', apply);
+      document.querySelectorAll('input[name="f-competition"]').forEach((el) => el.addEventListener('change', apply));
+      closesSelect.addEventListener('change', apply);
+      minQtySelect.addEventListener('change', apply);
+      hasDrawingCheckbox.addEventListener('change', apply);
+      sortSelect.addEventListener('change', () => {
+        sortCards();
+        apply();
+      });
+
+      apply();
+    }
+  </script>
+
+  <SignupForm
+    hook="shop_alerts"
+    fscInterest={fscCode}
+    title="Alert me when new solicitations open in this category"
+    description={`Get an email when a new RFQ opens for competition in ${displayName}.`}
+    cta="Sign up"
+  />
+</BaseLayout>

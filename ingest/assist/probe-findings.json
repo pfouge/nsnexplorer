@@ -1,0 +1,126 @@
+{
+  "at": "2026-09-06T15:30:39.986Z",
+  "steps": [
+    {
+      "step": "landing",
+      "status": 200,
+      "bytes": 32888
+    },
+    {
+      "step": "hidden-fields",
+      "names": [
+        "__VIEWSTATE",
+        "__VIEWSTATEGENERATOR",
+        "__VIEWSTATEENCRYPTED",
+        "__EVENTVALIDATION",
+        "FromSession_HFS",
+        "DocumentIDTextBox_HFS",
+        "IDNumberTextBox_HFS",
+        "DropDownListStatus_HFS",
+        "DocumentTitleKeyWords_HFS",
+        "DropDownListContains_HFS",
+        "DropDownListTitleOrKeywords_HFS",
+        "ExListBoxFSCHF"
+      ]
+    },
+    {
+      "step": "inputs",
+      "textInputs": [],
+      "all": [
+        "__VIEWSTATE",
+        "__VIEWSTATEGENERATOR",
+        "__VIEWSTATEENCRYPTED",
+        "__EVENTVALIDATION",
+        "DocumentIDTextBox",
+        "IDNumberTextBox",
+        "DocumentTitleKeyWords",
+        "UseTransDateCheckBox",
+        "TextBoxBegin_Date",
+        "TextBoxEnd_Date",
+        "FromSession_HFS",
+        "DocumentIDTextBox_HFS",
+        "IDNumberTextBox_HFS",
+        "DropDownListStatus_HFS",
+        "DocumentTitleKeyWords_HFS",
+        "DropDownListContains_HFS",
+        "DropDownListTitleOrKeywords_HFS",
+        "ExListBoxFSCHF",
+        "ExListBoxFSCHFN",
+        "ExListBoxFSCHFN_HFS"
+      ]
+    },
+    {
+      "step": "search-post",
+      "status": 200,
+      "bytes": 77420,
+      "submitName": "GetFilteredButton",
+      "identNumbers": [
+        "2",
+        "81504",
+        "3",
+        "4",
+        "5"
+      ]
+    },
+    {
+      "step": "pinned-ident",
+      "ident": "36064",
+      "doc": "MIL-STD-962"
+    },
+    {
+      "step": "details",
+      "status": 200,
+      "bytes": 61202,
+      "title": "\r\n\tASSIST-QuickSearch Document Details\r\n",
+      "tokenCount": 8,
+      "tokenSample": "5794274.36064",
+      "pdfAnchors": [
+        "javascript:spawnPDFWindow('./ImageRedirector.aspx?token=5794274.36064',5794274);",
+        "javascript:spawnPDFWindow('./ImageRedirector.aspx?token=5754610.36064',5754610);",
+        "javascript:spawnPDFWindow('./ImageRedirector.aspx?token=5727650.36064',5727650);",
+        "javascript:spawnPDFWindow('./ImageRedirector.aspx?token=608578.36064',608578);",
+        "javascript:spawnPDFWindow('./ImageRedirector.aspx?token=417149.36064',417149);",
+        "javascript:spawnPDFWindow('./ImageRedirector.aspx?token=40733.36064',40733);"
+      ],
+      "spawnCalls": [
+        "./ImageRedirector.aspx?token=5794274.36064",
+        "./ImageRedirector.aspx?token=5754610.36064",
+        "./ImageRedirector.aspx?token=5727650.36064",
+        "./ImageRedirector.aspx?token=608578.36064",
+        "./ImageRedirector.aspx?token=417149.36064",
+        "./ImageRedirector.aspx?token=40733.36064"
+      ]
+    },
+    {
+      "step": "pdf-fetch",
+      "status": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 1587,
+      "isPdf": false,
+      "magic": "\r\n\r\n<",
+      "bodySnippet": "\r\n\r\n<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\r\n\r\n<html lang=\"en\" xmlns=\"http://www.w3.org/1999/xhtml\">\r\n<head><title>\r\n\r\n</title>\r\n    <script type=\"text/javascript\">\r\n        function fireLink() { \r\n        try {\r\n            document.getElementById(\"LinkButton\").click();\r\n        }\r\n        catch(e)\r\n        {\r\n        \r\n        }\r\n        \r\n        }\r\n    \r\n    </script>\r\n<link href=\"App_Themes/Theme/Site.css\" type=\"text/css\" rel=\"stylesheet\" /></head>\r\n<body onload=\"javascript:fireLink();\">\r\n    <form name=\"form1\" method=\"post\" action=\"./ImageRedirector.aspx?token=5794274.36064\" id=\"form1\">\r\n<input type=\"hidden\" name=\"__VIEWSTATE\" id=\"__VIEWSTATE\" value=\"n5ucXPxbfdhTBGJQ1CZ5RtgFzeSl5dc2k8ZHZ31WRAIPplYlQcMx34LppoiPhjxOLCI6DNlXPFMhZnaecZOFcpXlQQh0uoZkLNstkjWvXo5FHj1sqvNc1FeILV379Ph8ZJ2yUo+vhYefMVf1XoHjAuQSq"
+    },
+    {
+      "step": "pdf-postback",
+      "action": "./ImageRedirector.aspx?token=5794274.36064",
+      "chain": [
+        {
+          "url": "https://quicksearch.dla.mil/ImageRedirector.aspx?token=5794274.36064",
+          "status": 302,
+          "location": "https://quicksearch.dla.mil/../UnknownError.htm"
+        },
+        {
+          "url": "https://quicksearch.dla.mil/UnknownError.htm",
+          "status": 404,
+          "location": ""
+        }
+      ],
+      "evTarget": "LinkButton",
+      "status": 404,
+      "contentType": "text/html",
+      "bytes": 1245,
+      "isPdf": false,
+      "bodySnippet": "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\r\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\r\n<head>\r\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=iso-8859-1\"/>\r\n<title>404 - File or directory not found.</title>\r\n<style type=\"text/css\">\r\n<!--\r\nbody{margin:0;font-size:.7em;font-family:Verdana, Arial, Helvetica, sans-serif;background:#EEEEEE;}\r\nfieldset{padding:0 15px 10px 15px;} \r\nh1{font-size:2.4em;margin:0;color:#FFF;}"
+    }
+  ]
+}

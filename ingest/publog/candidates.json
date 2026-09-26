@@ -1,0 +1,2886 @@
+{
+  "at": "2026-09-06T15:33:21.052Z",
+  "count": 15,
+  "rows": [
+    {
+      "nsn": "4730005247021",
+      "fsc": "4730",
+      "itemName": "BOLT,FLUID PASSAGE",
+      "n": 45,
+      "characteristics": [
+        {
+          "mrc": "BBKY",
+          "requirement": "FIRST RADIAL FLUID HOLE DIAMETER",
+          "reply": "INCHES  NOMINAL  0.189"
+        },
+        {
+          "mrc": "ATKZ",
+          "requirement": "FIRST END THREAD LENGTH",
+          "reply": "INCHES  NOMINAL  0.956"
+        },
+        {
+          "mrc": "ATLF",
+          "requirement": "SECOND END THREAD LENGTH",
+          "reply": "INCHES  NOMINAL  0.378"
+        },
+        {
+          "mrc": "BBDF",
+          "requirement": "WRENCHING FEATURE STYLE",
+          "reply": null
+        },
+        {
+          "mrc": "BBKZ",
+          "requirement": "SECOND RADIAL FLUID HOLE DIAMETER",
+          "reply": "INCHES  NOMINAL  0.189"
+        },
+        {
+          "mrc": "BBLB",
+          "requirement": "DISTANCE FROM FIRST RADIAL HOLE CENTER TO END OF BOLT",
+          "reply": "INCHES  NOMINAL  2.622"
+        },
+        {
+          "mrc": "CRNB",
+          "requirement": "SECOND END NOMINAL THREAD SIZE",
+          "reply": "INCHES  0.438"
+        },
+        {
+          "mrc": "CRPF",
+          "requirement": "SECOND END THREAD SERIES DESIGNATOR",
+          "reply": "UNIFIED NATIONAL JOINT FINE (UNJF)"
+        },
+        {
+          "mrc": "BBKX",
+          "requirement": "LENGTH FROM BEARING SURFACE OF WRENCHING FEATURE TO END OF FIFTH DIAMETER",
+          "reply": "INCHES  NOMINAL  2.034"
+        },
+        {
+          "mrc": "CQYM",
+          "requirement": "FIRST END NOMINAL THREAD SIZE",
+          "reply": "INCHES  0.438"
+        },
+        {
+          "mrc": "CRCN",
+          "requirement": "SECOND END SEAT ANGLE",
+          "reply": "DEGREES  NOMINAL  12.0"
+        },
+        {
+          "mrc": "ACKN",
+          "requirement": "FIRST END STYLE DESIGNATOR",
+          "reply": null
+        },
+        {
+          "mrc": "BBKS",
+          "requirement": "LENGTH FROM BEARING SURFACE OF WRENCHING FEATURE TO END OF SECOND DIAMETER",
+          "reply": "INCHES  NOMINAL  0.726"
+        },
+        {
+          "mrc": "BBKT",
+          "requirement": "LENGTH FROM BEARING SURFACE OF WRENCHING FEATURE TO END OF THIRD DIAMETER",
+          "reply": "INCHES  NOMINAL  1.354"
+        },
+        {
+          "mrc": "ACLS",
+          "requirement": "SECOND END CONNECTION TYPE",
+          "reply": "THREADED EXTERNAL TUBE"
+        },
+        {
+          "mrc": "ACLT",
+          "requirement": "SECOND END STYLE DESIGNATOR",
+          "reply": null
+        },
+        {
+          "mrc": "ACMR",
+          "requirement": "SECOND END THREAD CLASS",
+          "reply": "3A"
+        },
+        {
+          "mrc": "ACMS",
+          "requirement": "SECOND END THREAD DIRECTION",
+          "reply": "RIGHT-HAND"
+        },
+        {
+          "mrc": "ASDB",
+          "requirement": "WIDTH ACROSS FLATS",
+          "reply": "INCHES  MINIMUM  0.684 AND INCHES  MAXIMUM  0.691"
+        },
+        {
+          "mrc": "BBLC",
+          "requirement": "DISTANCE FROM SECOND RADIAL HOLE CENTER TO END OF BOLT",
+          "reply": "INCHES  NOMINAL  1.622"
+        },
+        {
+          "mrc": "BBLD",
+          "requirement": "LENGTH FROM BEARING SURFACE OF WRENCHING FEATURE TO BOLT END",
+          "reply": "INCHES  NOMINAL  3.162"
+        },
+        {
+          "mrc": "BBLF",
+          "requirement": "WRENCHING FEATURE HEIGHT",
+          "reply": "INCHES  NOMINAL  0.344"
+        },
+        {
+          "mrc": "BGST",
+          "requirement": "PRESSURE RATING",
+          "reply": "POUNDS PER SQUARE INCH (PSI)  NOMINAL  3000.000"
+        },
+        {
+          "mrc": "CPHT",
+          "requirement": "SIXTH DIAMETER FROM WRENCHING FEATURE",
+          "reply": "INCHES  NOMINAL  0.363"
+        },
+        {
+          "mrc": "CPHW",
+          "requirement": "LENGTH FROM BEARING SURFACE OF WRENCHING FEATURE TO END OF SIXTH DIAMETER",
+          "reply": "INCHES  NOMINAL  2.206"
+        },
+        {
+          "mrc": "BBKW",
+          "requirement": "LENGTH FROM BEARING SURFACE OF WRENCHING FEATURE TO END OF FOURTH DIAMETER",
+          "reply": "INCHES  NOMINAL  1.666"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "ALUMINUM ALLOY 2024"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "FED SPEC  SINGLE MATERIAL RESPONSE  QQ-A-225 TO 6,T6,T62 OR T851"
+        },
+        {
+          "mrc": "SFTT",
+          "requirement": "SURFACE TREATMENT",
+          "reply": "ANODIZE"
+        },
+        {
+          "mrc": "STDC",
+          "requirement": "SURFACE TREATMENT DOCUMENT AND CLASSIFICATION",
+          "reply": "MIL SPEC  SINGLE TREATMENT RESPONSE  -IL-A-8625,TYE 2,CLASS 1"
+        },
+        {
+          "mrc": "ZZZK",
+          "requirement": "SPECIFICATION/STANDARD DATA",
+          "reply": "GOVERNMENT STANDARD  96906--S21941"
+        },
+        {
+          "mrc": "ACLK",
+          "requirement": "FIRST END THREAD CLASS",
+          "reply": "3A"
+        },
+        {
+          "mrc": "ACLL",
+          "requirement": "FIRST END THREAD DIRECTION",
+          "reply": "RIGHT-HAND"
+        },
+        {
+          "mrc": "AAXC",
+          "requirement": "CONCENTRIC HOLE DIAMETER",
+          "reply": "INCHES  NOMINAL  0.187"
+        },
+        {
+          "mrc": "ABHP",
+          "requirement": "OVERALL LENGTH",
+          "reply": "INCHES  NOMINAL  3.959"
+        },
+        {
+          "mrc": "ACKM",
+          "requirement": "FIRST END CONNECTION TYPE",
+          "reply": "THREADED EXTERNAL TUBE"
+        },
+        {
+          "mrc": "BBKR",
+          "requirement": "LENGTH FROM BEARING SURFACE OF WRENCHING FEATURE TO END OF FIRST DIAMETER",
+          "reply": "INCHES  NOMINAL  0.425"
+        },
+        {
+          "mrc": "CQMM",
+          "requirement": "FIRST END THREAD SERIES DESIGNATOR",
+          "reply": "UNIFIED NATIONAL JOINT FINE (UNJF)"
+        },
+        {
+          "mrc": "CQPR",
+          "requirement": "FIRST END SEAT ANGLE",
+          "reply": "DEGREES  NOMINAL  12.0"
+        },
+        {
+          "mrc": "BBKP",
+          "requirement": "FOURTH DIAMETER FROM WRENCHING FEATURE",
+          "reply": "INCHES  NOMINAL  0.433"
+        },
+        {
+          "mrc": "BBKQ",
+          "requirement": "FIFTH DIAMETER FROM WRENCHING FEATURE",
+          "reply": "INCHES  NOMINAL  0.499"
+        },
+        {
+          "mrc": "BBKM",
+          "requirement": "SECOND DIAMETER FROM WRENCHING FEATURE",
+          "reply": "INCHES  NOMINAL  0.433"
+        },
+        {
+          "mrc": "BBKN",
+          "requirement": "THIRD DIAMETER FROM WRENCHING FEATURE",
+          "reply": "INCHES  NOMINAL  0.499"
+        },
+        {
+          "mrc": "AAQL",
+          "requirement": "BODY STYLE",
+          "reply": null
+        },
+        {
+          "mrc": "BBKL",
+          "requirement": "FIRST DIAMETER FROM WRENCHING FEATURE",
+          "reply": "INCHES  NOMINAL  0.499"
+        }
+      ]
+    },
+    {
+      "nsn": "4730005247022",
+      "fsc": "4730",
+      "itemName": "BOLT,FLUID PASSAGE",
+      "n": 45,
+      "characteristics": [
+        {
+          "mrc": "CPHW",
+          "requirement": "LENGTH FROM BEARING SURFACE OF WRENCHING FEATURE TO END OF SIXTH DIAMETER",
+          "reply": "INCHES  NOMINAL  2.206"
+        },
+        {
+          "mrc": "AAQL",
+          "requirement": "BODY STYLE",
+          "reply": null
+        },
+        {
+          "mrc": "BGST",
+          "requirement": "PRESSURE RATING",
+          "reply": "POUNDS PER SQUARE INCH (PSI)  NOMINAL  3000.0"
+        },
+        {
+          "mrc": "CPHT",
+          "requirement": "SIXTH DIAMETER FROM WRENCHING FEATURE",
+          "reply": "INCHES  NOMINAL  0.363"
+        },
+        {
+          "mrc": "ATLF",
+          "requirement": "SECOND END THREAD LENGTH",
+          "reply": "INCHES  NOMINAL  0.386"
+        },
+        {
+          "mrc": "BBDF",
+          "requirement": "WRENCHING FEATURE STYLE",
+          "reply": null
+        },
+        {
+          "mrc": "BBLB",
+          "requirement": "DISTANCE FROM FIRST RADIAL HOLE CENTER TO END OF BOLT",
+          "reply": "INCHES  NOMINAL  2.622"
+        },
+        {
+          "mrc": "BBLC",
+          "requirement": "DISTANCE FROM SECOND RADIAL HOLE CENTER TO END OF BOLT",
+          "reply": "INCHES  NOMINAL  1.622"
+        },
+        {
+          "mrc": "BBLD",
+          "requirement": "LENGTH FROM BEARING SURFACE OF WRENCHING FEATURE TO BOLT END",
+          "reply": "INCHES  NOMINAL  3.162"
+        },
+        {
+          "mrc": "BBLF",
+          "requirement": "WRENCHING FEATURE HEIGHT",
+          "reply": "INCHES  NOMINAL  0.437"
+        },
+        {
+          "mrc": "BBKZ",
+          "requirement": "SECOND RADIAL FLUID HOLE DIAMETER",
+          "reply": "INCHES  NOMINAL  0.189"
+        },
+        {
+          "mrc": "BBKM",
+          "requirement": "SECOND DIAMETER FROM WRENCHING FEATURE",
+          "reply": "INCHES  NOMINAL  0.433"
+        },
+        {
+          "mrc": "BBKN",
+          "requirement": "THIRD DIAMETER FROM WRENCHING FEATURE",
+          "reply": "INCHES  NOMINAL  0.499"
+        },
+        {
+          "mrc": "ACLK",
+          "requirement": "FIRST END THREAD CLASS",
+          "reply": "3A"
+        },
+        {
+          "mrc": "ACLL",
+          "requirement": "FIRST END THREAD DIRECTION",
+          "reply": "RIGHT-HAND"
+        },
+        {
+          "mrc": "ACLS",
+          "requirement": "SECOND END CONNECTION TYPE",
+          "reply": "THREADED EXTERNAL TUBE"
+        },
+        {
+          "mrc": "ABHP",
+          "requirement": "OVERALL LENGTH",
+          "reply": "INCHES  NOMINAL  4.068"
+        },
+        {
+          "mrc": "ACKM",
+          "requirement": "FIRST END CONNECTION TYPE",
+          "reply": "THREADED EXTERNAL TUBE"
+        },
+        {
+          "mrc": "ACKN",
+          "requirement": "FIRST END STYLE DESIGNATOR",
+          "reply": null
+        },
+        {
+          "mrc": "BBKS",
+          "requirement": "LENGTH FROM BEARING SURFACE OF WRENCHING FEATURE TO END OF SECOND DIAMETER",
+          "reply": "INCHES  NOMINAL  0.726"
+        },
+        {
+          "mrc": "BBKT",
+          "requirement": "LENGTH FROM BEARING SURFACE OF WRENCHING FEATURE TO END OF THIRD DIAMETER",
+          "reply": "INCHES  NOMINAL  1.354"
+        },
+        {
+          "mrc": "BBKW",
+          "requirement": "LENGTH FROM BEARING SURFACE OF WRENCHING FEATURE TO END OF FOURTH DIAMETER",
+          "reply": "INCHES  NOMINAL  1.666"
+        },
+        {
+          "mrc": "BBKX",
+          "requirement": "LENGTH FROM BEARING SURFACE OF WRENCHING FEATURE TO END OF FIFTH DIAMETER",
+          "reply": "INCHES  NOMINAL  2.034"
+        },
+        {
+          "mrc": "BBKY",
+          "requirement": "FIRST RADIAL FLUID HOLE DIAMETER",
+          "reply": "INCHES  NOMINAL  0.189"
+        },
+        {
+          "mrc": "BBKL",
+          "requirement": "FIRST DIAMETER FROM WRENCHING FEATURE",
+          "reply": "INCHES  NOMINAL  0.499"
+        },
+        {
+          "mrc": "CRNB",
+          "requirement": "SECOND END NOMINAL THREAD SIZE",
+          "reply": "INCHES  0.562"
+        },
+        {
+          "mrc": "CRPF",
+          "requirement": "SECOND END THREAD SERIES DESIGNATOR",
+          "reply": "UNIFIED NATIONAL JOINT FINE (UNJF)"
+        },
+        {
+          "mrc": "BBKP",
+          "requirement": "FOURTH DIAMETER FROM WRENCHING FEATURE",
+          "reply": "INCHES  NOMINAL  0.433"
+        },
+        {
+          "mrc": "BBKQ",
+          "requirement": "FIFTH DIAMETER FROM WRENCHING FEATURE",
+          "reply": "INCHES  NOMINAL  0.499"
+        },
+        {
+          "mrc": "BBKR",
+          "requirement": "LENGTH FROM BEARING SURFACE OF WRENCHING FEATURE TO END OF FIRST DIAMETER",
+          "reply": "INCHES  NOMINAL  0.425"
+        },
+        {
+          "mrc": "CRCN",
+          "requirement": "SECOND END SEAT ANGLE",
+          "reply": "DEGREES  NOMINAL  12.0"
+        },
+        {
+          "mrc": "ACLT",
+          "requirement": "SECOND END STYLE DESIGNATOR",
+          "reply": null
+        },
+        {
+          "mrc": "ACMR",
+          "requirement": "SECOND END THREAD CLASS",
+          "reply": "3A"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "ALUMINUM ALLOY 2024"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "FED SPEC  SINGLE MATERIAL RESPONSE  QQ-A-225 TO 6,T6,T62 OR T851"
+        },
+        {
+          "mrc": "SFTT",
+          "requirement": "SURFACE TREATMENT",
+          "reply": "ANODIZE"
+        },
+        {
+          "mrc": "STDC",
+          "requirement": "SURFACE TREATMENT DOCUMENT AND CLASSIFICATION",
+          "reply": "MIL SPEC  SINGLE TREATMENT RESPONSE  -IL-A-8625,TYE 2,CLASS 1"
+        },
+        {
+          "mrc": "ZZZK",
+          "requirement": "SPECIFICATION/STANDARD DATA",
+          "reply": "GOVERNMENT STANDARD  96906--S21941"
+        },
+        {
+          "mrc": "ASDB",
+          "requirement": "WIDTH ACROSS FLATS",
+          "reply": "INCHES  MINIMUM  0.871 AND INCHES  MAXIMUM  0.878"
+        },
+        {
+          "mrc": "ATKZ",
+          "requirement": "FIRST END THREAD LENGTH",
+          "reply": "INCHES  NOMINAL  0.956"
+        },
+        {
+          "mrc": "CQPR",
+          "requirement": "FIRST END SEAT ANGLE",
+          "reply": "DEGREES  NOMINAL  12.0"
+        },
+        {
+          "mrc": "AAXC",
+          "requirement": "CONCENTRIC HOLE DIAMETER",
+          "reply": "INCHES  NOMINAL  0.234"
+        },
+        {
+          "mrc": "ACMS",
+          "requirement": "SECOND END THREAD DIRECTION",
+          "reply": "RIGHT-HAND"
+        },
+        {
+          "mrc": "CQYM",
+          "requirement": "FIRST END NOMINAL THREAD SIZE",
+          "reply": "INCHES  0.438"
+        },
+        {
+          "mrc": "CQMM",
+          "requirement": "FIRST END THREAD SERIES DESIGNATOR",
+          "reply": "UNIFIED NATIONAL JOINT FINE (UNJF)"
+        }
+      ]
+    },
+    {
+      "nsn": "4730009452546",
+      "fsc": "4730",
+      "itemName": "BOLT,FLUID PASSAGE",
+      "n": 45,
+      "characteristics": [
+        {
+          "mrc": "ACMS",
+          "requirement": "SECOND END THREAD DIRECTION",
+          "reply": "RIGHT-HAND"
+        },
+        {
+          "mrc": "ACLL",
+          "requirement": "FIRST END THREAD DIRECTION",
+          "reply": "RIGHT-HAND"
+        },
+        {
+          "mrc": "ASDB",
+          "requirement": "WIDTH ACROSS FLATS",
+          "reply": "INCHES  MINIMUM  1.121 AND INCHES  MAXIMUM  1.128"
+        },
+        {
+          "mrc": "CQKK",
+          "requirement": "FIRST END THREAD QUANTITY PER INCH",
+          "reply": "18"
+        },
+        {
+          "mrc": "ACMR",
+          "requirement": "SECOND END THREAD CLASS",
+          "reply": "3A"
+        },
+        {
+          "mrc": "BBKT",
+          "requirement": "LENGTH FROM BEARING SURFACE OF WRENCHING FEATURE TO END OF THIRD DIAMETER",
+          "reply": "INCHES  NOMINAL  1.563"
+        },
+        {
+          "mrc": "BBKW",
+          "requirement": "LENGTH FROM BEARING SURFACE OF WRENCHING FEATURE TO END OF FOURTH DIAMETER",
+          "reply": "INCHES  NOMINAL  2.012"
+        },
+        {
+          "mrc": "BBKX",
+          "requirement": "LENGTH FROM BEARING SURFACE OF WRENCHING FEATURE TO END OF FIFTH DIAMETER",
+          "reply": "INCHES  NOMINAL  2.404"
+        },
+        {
+          "mrc": "BBKY",
+          "requirement": "FIRST RADIAL FLUID HOLE DIAMETER",
+          "reply": "INCHES  NOMINAL  0.300"
+        },
+        {
+          "mrc": "BBKZ",
+          "requirement": "SECOND RADIAL FLUID HOLE DIAMETER",
+          "reply": "INCHES  NOMINAL  0.300"
+        },
+        {
+          "mrc": "BBLB",
+          "requirement": "DISTANCE FROM FIRST RADIAL HOLE CENTER TO END OF BOLT",
+          "reply": "INCHES  NOMINAL  3.103"
+        },
+        {
+          "mrc": "BBLC",
+          "requirement": "DISTANCE FROM SECOND RADIAL HOLE CENTER TO END OF BOLT",
+          "reply": "INCHES  NOMINAL  1.917"
+        },
+        {
+          "mrc": "BBLD",
+          "requirement": "LENGTH FROM BEARING SURFACE OF WRENCHING FEATURE TO BOLT END",
+          "reply": "INCHES  NOMINAL  3.737"
+        },
+        {
+          "mrc": "BBLF",
+          "requirement": "WRENCHING FEATURE HEIGHT",
+          "reply": "INCHES  NOMINAL  0.437"
+        },
+        {
+          "mrc": "BGST",
+          "requirement": "PRESSURE RATING",
+          "reply": "POUNDS PER SQUARE INCH (PSI)  NOMINAL  3000.000"
+        },
+        {
+          "mrc": "CPHT",
+          "requirement": "SIXTH DIAMETER FROM WRENCHING FEATURE",
+          "reply": "INCHES  NOMINAL  0.480"
+        },
+        {
+          "mrc": "ACLS",
+          "requirement": "SECOND END CONNECTION TYPE",
+          "reply": "THREADED EXTERNAL TUBE"
+        },
+        {
+          "mrc": "ACLT",
+          "requirement": "SECOND END STYLE DESIGNATOR",
+          "reply": null
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "FED SPEC  SINGLE MATERIAL RESPONSE  QQ-A-225 TO 6,T4"
+        },
+        {
+          "mrc": "SFTT",
+          "requirement": "SURFACE TREATMENT",
+          "reply": "ANODIZE"
+        },
+        {
+          "mrc": "ABHP",
+          "requirement": "OVERALL LENGTH",
+          "reply": "INCHES  NOMINAL  4.799"
+        },
+        {
+          "mrc": "ATKZ",
+          "requirement": "FIRST END THREAD LENGTH",
+          "reply": "INCHES  NOMINAL  1.156"
+        },
+        {
+          "mrc": "ATLF",
+          "requirement": "SECOND END THREAD LENGTH",
+          "reply": "INCHES  NOMINAL  0.625"
+        },
+        {
+          "mrc": "BBDF",
+          "requirement": "WRENCHING FEATURE STYLE",
+          "reply": null
+        },
+        {
+          "mrc": "CPHW",
+          "requirement": "LENGTH FROM BEARING SURFACE OF WRENCHING FEATURE TO END OF SIXTH DIAMETER",
+          "reply": "INCHES  NOMINAL  2.581"
+        },
+        {
+          "mrc": "ACLK",
+          "requirement": "FIRST END THREAD CLASS",
+          "reply": "3A"
+        },
+        {
+          "mrc": "CRMX",
+          "requirement": "SECOND END THREAD QUANTITY PER INCH",
+          "reply": "14"
+        },
+        {
+          "mrc": "CRNB",
+          "requirement": "SECOND END NOMINAL THREAD SIZE",
+          "reply": "INCHES  0.875"
+        },
+        {
+          "mrc": "CRPF",
+          "requirement": "SECOND END THREAD SERIES DESIGNATOR",
+          "reply": "UNIFIED NATIONAL JOINT FINE (UNJF)"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "ALUMINUM ALLOY 2024"
+        },
+        {
+          "mrc": "AAQL",
+          "requirement": "BODY STYLE",
+          "reply": null
+        },
+        {
+          "mrc": "AAXC",
+          "requirement": "CONCENTRIC HOLE DIAMETER",
+          "reply": "INCHES  NOMINAL  0.422"
+        },
+        {
+          "mrc": "BBKS",
+          "requirement": "LENGTH FROM BEARING SURFACE OF WRENCHING FEATURE TO END OF SECOND DIAMETER",
+          "reply": "INCHES  NOMINAL  0.891"
+        },
+        {
+          "mrc": "ACKM",
+          "requirement": "FIRST END CONNECTION TYPE",
+          "reply": "THREADED EXTERNAL TUBE"
+        },
+        {
+          "mrc": "ACKN",
+          "requirement": "FIRST END STYLE DESIGNATOR",
+          "reply": null
+        },
+        {
+          "mrc": "CQMM",
+          "requirement": "FIRST END THREAD SERIES DESIGNATOR",
+          "reply": "UNIFIED NATIONAL JOINT FINE (UNJF)"
+        },
+        {
+          "mrc": "CQPR",
+          "requirement": "FIRST END SEAT ANGLE",
+          "reply": "DEGREES  NOMINAL  12.0"
+        },
+        {
+          "mrc": "BBKL",
+          "requirement": "FIRST DIAMETER FROM WRENCHING FEATURE",
+          "reply": "INCHES  NOMINAL  0.811"
+        },
+        {
+          "mrc": "BBKM",
+          "requirement": "SECOND DIAMETER FROM WRENCHING FEATURE",
+          "reply": "INCHES  NOMINAL  0.740"
+        },
+        {
+          "mrc": "BBKN",
+          "requirement": "THIRD DIAMETER FROM WRENCHING FEATURE",
+          "reply": "INCHES  NOMINAL  0.811"
+        },
+        {
+          "mrc": "BBKP",
+          "requirement": "FOURTH DIAMETER FROM WRENCHING FEATURE",
+          "reply": "INCHES  NOMINAL  0.740"
+        },
+        {
+          "mrc": "BBKQ",
+          "requirement": "FIFTH DIAMETER FROM WRENCHING FEATURE",
+          "reply": "INCHES  NOMINAL  0.811"
+        },
+        {
+          "mrc": "BBKR",
+          "requirement": "LENGTH FROM BEARING SURFACE OF WRENCHING FEATURE TO END OF FIRST DIAMETER",
+          "reply": "INCHES  NOMINAL  0.377"
+        },
+        {
+          "mrc": "CQYM",
+          "requirement": "FIRST END NOMINAL THREAD SIZE",
+          "reply": "INCHES  0.562"
+        },
+        {
+          "mrc": "CRCN",
+          "requirement": "SECOND END SEAT ANGLE",
+          "reply": "DEGREES  NOMINAL  12.0"
+        }
+      ]
+    },
+    {
+      "nsn": "3120013484937",
+      "fsc": "3120",
+      "itemName": "BEARING,SLEEVE",
+      "n": 42,
+      "characteristics": [
+        {
+          "mrc": "ABHP",
+          "requirement": "OVERALL LENGTH",
+          "reply": "INCHES  NOMINAL  0.3095"
+        },
+        {
+          "mrc": "ADAR",
+          "requirement": "BODY OUTSIDE DIAMETER",
+          "reply": "INCHES  MINIMUM  0.5007 AND INCHES  MAXIMUM  0.5013"
+        },
+        {
+          "mrc": "ADAS",
+          "requirement": "BODY INSIDE DIAMETER",
+          "reply": "INCHES  MINIMUM  0.3640 AND INCHES  MAXIMUM  0.3660"
+        },
+        {
+          "mrc": "AEPR",
+          "requirement": "FLANGE OUTSIDE DIAMETER",
+          "reply": "INCHES  MINIMUM  0.7800 AND INCHES  MAXIMUM  0.8000"
+        },
+        {
+          "mrc": "AGFF",
+          "requirement": "FLANGE WIDTH",
+          "reply": "INCHES  MINIMUM  0.0570 AND INCHES  MAXIMUM  0.0620"
+        },
+        {
+          "mrc": "BZLX",
+          "requirement": "CORNER SHAPE",
+          "reply": "OUTSIDE LEFT CORNER  SQUARE"
+        },
+        {
+          "mrc": "BZLX",
+          "requirement": "CORNER SHAPE",
+          "reply": "INSIDE LEFT CORNER  SQUARE"
+        },
+        {
+          "mrc": "BZLX",
+          "requirement": "CORNER SHAPE",
+          "reply": "LEFT FLANGE BODY CORNER  UNDERCUT"
+        },
+        {
+          "mrc": "BZLX",
+          "requirement": "CORNER SHAPE",
+          "reply": "OUTSIDE RIGHT CORNER  SQUARE"
+        },
+        {
+          "mrc": "BZLX",
+          "requirement": "CORNER SHAPE",
+          "reply": "INSIDE RIGHT CORNER  CHAMFERED"
+        },
+        {
+          "mrc": "BZLX",
+          "requirement": "CORNER SHAPE",
+          "reply": "LEFT FLANGE OUTSIDE RIGHT CORNER  SQUARE"
+        },
+        {
+          "mrc": "CQFM",
+          "requirement": "HARDNESS RATING",
+          "reply": "LEFT END SURFACE OF BODY AND FLANGE  ROCKWELL C  MINIMUM  28.0 AND ROCKWELL C  MAXIMUM  37.0"
+        },
+        {
+          "mrc": "CQFM",
+          "requirement": "HARDNESS RATING",
+          "reply": "RIGHT END SURFACE OF LEFT FLANGE  ROCKWELL C  MINIMUM  28.0 AND ROCKWELL C  MAXIMUM  37.0"
+        },
+        {
+          "mrc": "CQFM",
+          "requirement": "HARDNESS RATING",
+          "reply": "OUTSIDE DIAMETER SURFACE OF BODY  ROCKWELL C  MINIMUM  28.0 AND ROCKWELL C  MAXIMUM  37.0"
+        },
+        {
+          "mrc": "CQFM",
+          "requirement": "HARDNESS RATING",
+          "reply": "RIGHT END SURFACE OF BODY  ROCKWELL C  MINIMUM  28.0 AND ROCKWELL C  MAXIMUM  37.0"
+        },
+        {
+          "mrc": "CQFM",
+          "requirement": "HARDNESS RATING",
+          "reply": "OUTSIDE DIAMETER SURFACE OF FLANGE  ROCKWELL C  MINIMUM  28.0 AND ROCKWELL C  MAXIMUM  37.0"
+        },
+        {
+          "mrc": "CSYM",
+          "requirement": "SURFACE FINISH",
+          "reply": "LEFT END SURFACE OF BODY AND FLANGE  MICROINCHES  16.0"
+        },
+        {
+          "mrc": "CSYM",
+          "requirement": "SURFACE FINISH",
+          "reply": "OUTSIDE DIAMETER SURFACE OF BODY  MICROINCHES  63.0"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "OUTSIDE DIAMETER SURFACE OF BODY  STEEL COMP 630"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "INSIDE DIAMETER SURFACE OF BODY  PLASTIC POLYTETRAFLUOROETHYLENE AND PLASTIC POLYAMIDE NYLON AND PLASTIC PHENOLIC"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "LEFT END SURFACE OF BODY AND FLANGE  STEEL COMP 630"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "OUTSIDE DIAMETER SURFACE OF FLANGE  STEEL COMP 630"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "RIGHT END SURFACE OF LEFT FLANGE  STEEL COMP 630"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "RIGHT END SURFACE OF BODY  STEEL COMP 630"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "OUTSIDE DIAMETER SURFACE OF FLANGE  ASSN STD  SINGLE MATERIAL RESPONSE  A-S 5643"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "LEFT END SURFACE OF BODY AND FLANGE  ASSN STD  SINGLE MATERIAL RESPONSE  A-S 5643"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "RIGHT END SURFACE OF BODY  ASSN STD  SINGLE MATERIAL RESPONSE  A-S 5643"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "RIGHT END SURFACE OF LEFT FLANGE  ASSN STD  SINGLE MATERIAL RESPONSE  A-S 5643"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "INSIDE DIAMETER SURFACE OF BODY  MIL SPEC  SINGLE MATERIAL RESPONSE  -IL-B-81934"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "OUTSIDE DIAMETER SURFACE OF BODY  ASSN STD  SINGLE MATERIAL RESPONSE  A-S 5643"
+        },
+        {
+          "mrc": "SFTT",
+          "requirement": "SURFACE TREATMENT",
+          "reply": "RIGHT END SURFACE OF BODY  CADMIUM AND CHROMATE"
+        },
+        {
+          "mrc": "SFTT",
+          "requirement": "SURFACE TREATMENT",
+          "reply": "INSIDE DIAMETER SURFACE OF BODY  CADMIUM AND CHROMATE"
+        },
+        {
+          "mrc": "SFTT",
+          "requirement": "SURFACE TREATMENT",
+          "reply": "OUTSIDE DIAMETER SURFACE OF FLANGE  CADMIUM AND CHROMATE"
+        },
+        {
+          "mrc": "SFTT",
+          "requirement": "SURFACE TREATMENT",
+          "reply": "RIGHT END SURFACE OF LEFT FLANGE  CADMIUM AND CHROMATE"
+        },
+        {
+          "mrc": "SFTT",
+          "requirement": "SURFACE TREATMENT",
+          "reply": "OUTSIDE DIAMETER SURFACE OF BODY  CADMIUM AND CHROMATE"
+        },
+        {
+          "mrc": "STDC",
+          "requirement": "SURFACE TREATMENT DOCUMENT AND CLASSIFICATION",
+          "reply": "INSIDE DIAMETER SURFACE OF BODY  FED SPEC  SINGLE TREATMENT RESPONSE  QQ--416,TYE 2,CLASS 2"
+        },
+        {
+          "mrc": "STDC",
+          "requirement": "SURFACE TREATMENT DOCUMENT AND CLASSIFICATION",
+          "reply": "OUTSIDE DIAMETER SURFACE OF BODY  FED SPEC  SINGLE TREATMENT RESPONSE  QQ--416,TYE 2,CLASS 2"
+        },
+        {
+          "mrc": "STDC",
+          "requirement": "SURFACE TREATMENT DOCUMENT AND CLASSIFICATION",
+          "reply": "OUTSIDE DIAMETER SURFACE OF FLANGE  FED SPEC  SINGLE TREATMENT RESPONSE  QQ--416,TYE 2,CLASS 2"
+        },
+        {
+          "mrc": "STDC",
+          "requirement": "SURFACE TREATMENT DOCUMENT AND CLASSIFICATION",
+          "reply": "RIGHT END SURFACE OF LEFT FLANGE  FED SPEC  SINGLE TREATMENT RESPONSE  QQ--416,TYE 2,CLASS 2"
+        },
+        {
+          "mrc": "STDC",
+          "requirement": "SURFACE TREATMENT DOCUMENT AND CLASSIFICATION",
+          "reply": "RIGHT END SURFACE OF BODY  FED SPEC  SINGLE TREATMENT RESPONSE  QQ--416,TYE 2,CLASS 2"
+        },
+        {
+          "mrc": "STYL",
+          "requirement": "STYLE DESIGNATOR",
+          "reply": null
+        },
+        {
+          "mrc": "ZZZK",
+          "requirement": "SPECIFICATION/STANDARD DATA",
+          "reply": "MANUFACTURERS STANDARD  76823-04A061"
+        }
+      ]
+    },
+    {
+      "nsn": "3120013484938",
+      "fsc": "3120",
+      "itemName": "BEARING,SLEEVE",
+      "n": 42,
+      "characteristics": [
+        {
+          "mrc": "ABHP",
+          "requirement": "OVERALL LENGTH",
+          "reply": "INCHES  NOMINAL  0.4595"
+        },
+        {
+          "mrc": "ADAR",
+          "requirement": "BODY OUTSIDE DIAMETER",
+          "reply": "INCHES  MINIMUM  0.5633 AND INCHES  MAXIMUM  0.5639"
+        },
+        {
+          "mrc": "ADAS",
+          "requirement": "BODY INSIDE DIAMETER",
+          "reply": "INCHES  MINIMUM  0.4270 AND INCHES  MAXIMUM  0.4290"
+        },
+        {
+          "mrc": "AEPR",
+          "requirement": "FLANGE OUTSIDE DIAMETER",
+          "reply": "INCHES  MINIMUM  0.8450 AND INCHES  MAXIMUM  0.8650"
+        },
+        {
+          "mrc": "AGFF",
+          "requirement": "FLANGE WIDTH",
+          "reply": "INCHES  MINIMUM  0.0570 AND INCHES  MAXIMUM  0.0620"
+        },
+        {
+          "mrc": "BZLX",
+          "requirement": "CORNER SHAPE",
+          "reply": "LEFT FLANGE OUTSIDE RIGHT CORNER  SQUARE"
+        },
+        {
+          "mrc": "BZLX",
+          "requirement": "CORNER SHAPE",
+          "reply": "OUTSIDE RIGHT CORNER  SQUARE"
+        },
+        {
+          "mrc": "BZLX",
+          "requirement": "CORNER SHAPE",
+          "reply": "INSIDE RIGHT CORNER  CHAMFERED"
+        },
+        {
+          "mrc": "BZLX",
+          "requirement": "CORNER SHAPE",
+          "reply": "LEFT FLANGE BODY CORNER  UNDERCUT"
+        },
+        {
+          "mrc": "BZLX",
+          "requirement": "CORNER SHAPE",
+          "reply": "INSIDE LEFT CORNER  SQUARE"
+        },
+        {
+          "mrc": "BZLX",
+          "requirement": "CORNER SHAPE",
+          "reply": "OUTSIDE LEFT CORNER  SQUARE"
+        },
+        {
+          "mrc": "CQFM",
+          "requirement": "HARDNESS RATING",
+          "reply": "LEFT END SURFACE OF BODY AND FLANGE  ROCKWELL C  MINIMUM  28.0 AND ROCKWELL C  MAXIMUM  37.0"
+        },
+        {
+          "mrc": "CQFM",
+          "requirement": "HARDNESS RATING",
+          "reply": "RIGHT END SURFACE OF BODY  ROCKWELL C  MINIMUM  28.0 AND ROCKWELL C  MAXIMUM  37.0"
+        },
+        {
+          "mrc": "CQFM",
+          "requirement": "HARDNESS RATING",
+          "reply": "OUTSIDE DIAMETER SURFACE OF BODY  ROCKWELL C  MINIMUM  8.0 AND ROCKWELL C  MAXIMUM  37.0"
+        },
+        {
+          "mrc": "CQFM",
+          "requirement": "HARDNESS RATING",
+          "reply": "OUTSIDE DIAMETER SURFACE OF FLANGE  ROCKWELL C  MINIMUM  28.0 AND ROCKWELL C  MAXIMUM  37.0"
+        },
+        {
+          "mrc": "CQFM",
+          "requirement": "HARDNESS RATING",
+          "reply": "RIGHT END SURFACE OF LEFT FLANGE  ROCKWELL C  MINIMUM  28.0 AND ROCKWELL C  MAXIMUM  37.0"
+        },
+        {
+          "mrc": "CSYM",
+          "requirement": "SURFACE FINISH",
+          "reply": "OUTSIDE DIAMETER SURFACE OF BODY  MICROINCHES  63.0"
+        },
+        {
+          "mrc": "CSYM",
+          "requirement": "SURFACE FINISH",
+          "reply": "LEFT END SURFACE OF BODY AND FLANGE  MICROINCHES  16.0"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "OUTSIDE DIAMETER SURFACE OF FLANGE  STEEL COMP 630"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "LEFT END SURFACE OF BODY AND FLANGE  STEEL COMP 630"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "RIGHT END SURFACE OF BODY  STEEL COMP 630"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "INSIDE DIAMETER SURFACE OF BODY  PLASTIC POLYTETRAFLUOROETHYLENE AND PLASTIC POLYAMIDE NYLON AND PLASTIC PHENOLIC"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "RIGHT END SURFACE OF LEFT FLANGE  STEEL COMP 630"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "OUTSIDE DIAMETER SURFACE OF BODY  STEEL COMP 630"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "OUTSIDE DIAMETER SURFACE OF FLANGE  ASSN STD  SINGLE MATERIAL RESPONSE  A-S 5643"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "RIGHT END SURFACE OF LEFT FLANGE  ASSN STD  SINGLE MATERIAL RESPONSE  A-S 5643"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "OUTSIDE DIAMETER SURFACE OF BODY  ASSN STD  SINGLE MATERIAL RESPONSE  A-S 5643"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "INSIDE DIAMETER SURFACE OF BODY  MIL SPEC  SINGLE MATERIAL RESPONSE  -IL-B-81934"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "RIGHT END SURFACE OF BODY  ASSN STD  SINGLE MATERIAL RESPONSE  A-S 5643"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "LEFT END SURFACE OF BODY AND FLANGE  ASSN STD  SINGLE MATERIAL RESPONSE  A-S 5643"
+        },
+        {
+          "mrc": "SFTT",
+          "requirement": "SURFACE TREATMENT",
+          "reply": "INSIDE DIAMETER SURFACE OF BODY  CADMIUM AND CHROMATE"
+        },
+        {
+          "mrc": "SFTT",
+          "requirement": "SURFACE TREATMENT",
+          "reply": "OUTSIDE DIAMETER SURFACE OF BODY  CADMIUM AND CHROMATE"
+        },
+        {
+          "mrc": "SFTT",
+          "requirement": "SURFACE TREATMENT",
+          "reply": "RIGHT END SURFACE OF BODY  CADMIUM AND CHROMATE"
+        },
+        {
+          "mrc": "SFTT",
+          "requirement": "SURFACE TREATMENT",
+          "reply": "RIGHT END SURFACE OF LEFT FLANGE  CADMIUM AND CHROMATE"
+        },
+        {
+          "mrc": "SFTT",
+          "requirement": "SURFACE TREATMENT",
+          "reply": "OUTSIDE DIAMETER SURFACE OF FLANGE  CADMIUM AND CHROMATE"
+        },
+        {
+          "mrc": "STDC",
+          "requirement": "SURFACE TREATMENT DOCUMENT AND CLASSIFICATION",
+          "reply": "INSIDE DIAMETER SURFACE OF BODY  FED SPEC  SINGLE TREATMENT RESPONSE  QQ--416,TYE 2,CLASS 2"
+        },
+        {
+          "mrc": "STDC",
+          "requirement": "SURFACE TREATMENT DOCUMENT AND CLASSIFICATION",
+          "reply": "OUTSIDE DIAMETER SURFACE OF FLANGE  FED SPEC  SINGLE TREATMENT RESPONSE  QQ--416,TYE 2,CLASS 2"
+        },
+        {
+          "mrc": "STDC",
+          "requirement": "SURFACE TREATMENT DOCUMENT AND CLASSIFICATION",
+          "reply": "RIGHT END SURFACE OF LEFT FLANGE  FED SPEC  SINGLE TREATMENT RESPONSE  QQ--416,TYE 2,CLASS 2"
+        },
+        {
+          "mrc": "STDC",
+          "requirement": "SURFACE TREATMENT DOCUMENT AND CLASSIFICATION",
+          "reply": "OUTSIDE DIAMETER SURFACE OF BODY  FED SPEC  SINGLE TREATMENT RESPONSE  QQ--416,TYE 2,CLASS 2"
+        },
+        {
+          "mrc": "STDC",
+          "requirement": "SURFACE TREATMENT DOCUMENT AND CLASSIFICATION",
+          "reply": "RIGHT END SURFACE OF BODY  FED SPEC  SINGLE TREATMENT RESPONSE  QQ--416,TYE 2,CLASS 2"
+        },
+        {
+          "mrc": "STYL",
+          "requirement": "STYLE DESIGNATOR",
+          "reply": null
+        },
+        {
+          "mrc": "ZZZK",
+          "requirement": "SPECIFICATION/STANDARD DATA",
+          "reply": "MANUFACTURERS STANDARD  76823-04A061"
+        }
+      ]
+    },
+    {
+      "nsn": "3120012868029",
+      "fsc": "3120",
+      "itemName": "BEARING,SLEEVE",
+      "n": 41,
+      "characteristics": [
+        {
+          "mrc": "ABHP",
+          "requirement": "OVERALL LENGTH",
+          "reply": "INCHES  NOMINAL  1.0915"
+        },
+        {
+          "mrc": "ADAR",
+          "requirement": "BODY OUTSIDE DIAMETER",
+          "reply": "INCHES  MINIMUM  1.3268 AND INCHES  MAXIMUM  1.3271"
+        },
+        {
+          "mrc": "ADAS",
+          "requirement": "BODY INSIDE DIAMETER",
+          "reply": "INCHES  MINIMUM  1.1255 AND INCHES  MAXIMUM  1.1260"
+        },
+        {
+          "mrc": "AEPR",
+          "requirement": "FLANGE OUTSIDE DIAMETER",
+          "reply": "INCHES  MINIMUM  1.8550 AND INCHES  MAXIMUM  1.8750"
+        },
+        {
+          "mrc": "AGFF",
+          "requirement": "FLANGE WIDTH",
+          "reply": "INCHES  MINIMUM  0.0890 AND INCHES  MAXIMUM  0.0940"
+        },
+        {
+          "mrc": "BZLX",
+          "requirement": "CORNER SHAPE",
+          "reply": "INSIDE LEFT CORNER  SQUARE"
+        },
+        {
+          "mrc": "BZLX",
+          "requirement": "CORNER SHAPE",
+          "reply": "LEFT FLANGE OUTSIDE RIGHT CORNER  SQUARE"
+        },
+        {
+          "mrc": "BZLX",
+          "requirement": "CORNER SHAPE",
+          "reply": "OUTSIDE RIGHT CORNER  SQUARE"
+        },
+        {
+          "mrc": "BZLX",
+          "requirement": "CORNER SHAPE",
+          "reply": "OUTSIDE LEFT CORNER  SQUARE"
+        },
+        {
+          "mrc": "BZLX",
+          "requirement": "CORNER SHAPE",
+          "reply": "INSIDE RIGHT CORNER  SQUARE"
+        },
+        {
+          "mrc": "BZLX",
+          "requirement": "CORNER SHAPE",
+          "reply": "LEFT FLANGE BODY CORNER  UNDERCUT"
+        },
+        {
+          "mrc": "CQFM",
+          "requirement": "HARDNESS RATING",
+          "reply": "LEFT END SURFACE OF BODY AND FLANGE  ROCKWELL C  NOMINAL  27.0"
+        },
+        {
+          "mrc": "CQFM",
+          "requirement": "HARDNESS RATING",
+          "reply": "RIGHT END SURFACE OF LEFT FLANGE  ROCKWELL C  NOMINAL  27.0"
+        },
+        {
+          "mrc": "CQFM",
+          "requirement": "HARDNESS RATING",
+          "reply": "OUTSIDE DIAMETER SURFACE OF BODY  ROCKWELL C  NOMINAL  27.0"
+        },
+        {
+          "mrc": "CQFM",
+          "requirement": "HARDNESS RATING",
+          "reply": "RIGHT END SURFACE OF BODY  ROCKWELL C  NOMINAL  27.0"
+        },
+        {
+          "mrc": "CQFM",
+          "requirement": "HARDNESS RATING",
+          "reply": "OUTSIDE DIAMETER SURFACE OF FLANGE  ROCKWELL C  NOMINAL  27.0"
+        },
+        {
+          "mrc": "FEAT",
+          "requirement": "SPECIAL FEATURES",
+          "reply": "MAGNETIC PARTICLE INSPECTION PER HP6-5,CAGEC 02731"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "OUTSIDE DIAMETER SURFACE OF FLANGE  STEEL COMP 630"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "RIGHT END SURFACE OF BODY  STEEL COMP 630"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "OUTSIDE DIAMETER SURFACE OF BODY  STEEL COMP 630"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "INSIDE DIAMETER SURFACE OF BODY  PLASTIC POLYTETRAFLUOROETHYLENE OR PLASTIC POLYAMIDE NYLON OR PLASTIC PHENOLIC"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "LEFT END SURFACE OF BODY AND FLANGE  STEEL COMP 630"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "RIGHT END SURFACE OF LEFT FLANGE  STEEL COMP 630"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "INSIDE DIAMETER SURFACE OF BODY  MIL SPEC  ALL MATERIAL RESPONSES  -IL-B-81820"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "OUTSIDE DIAMETER SURFACE OF FLANGE  ASSN STD  SINGLE MATERIAL RESPONSE  A-S5643"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "RIGHT END SURFACE OF LEFT FLANGE  ASSN STD  SINGLE MATERIAL RESPONSE  A-S5643"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "RIGHT END SURFACE OF BODY  ASSN STD  SINGLE MATERIAL RESPONSE  A-S5643"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "LEFT END SURFACE OF BODY AND FLANGE  ASSN STD  SINGLE MATERIAL RESPONSE  A-S5643"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "OUTSIDE DIAMETER SURFACE OF BODY  ASSN STD  SINGLE MATERIAL RESPONSE  A-S5643"
+        },
+        {
+          "mrc": "SFTT",
+          "requirement": "SURFACE TREATMENT",
+          "reply": "RIGHT END SURFACE OF LEFT FLANGE  PASSIVATE"
+        },
+        {
+          "mrc": "SFTT",
+          "requirement": "SURFACE TREATMENT",
+          "reply": "LEFT END SURFACE OF BODY AND FLANGE  PASSIVATE"
+        },
+        {
+          "mrc": "SFTT",
+          "requirement": "SURFACE TREATMENT",
+          "reply": "OUTSIDE DIAMETER SURFACE OF BODY  PASSIVATE"
+        },
+        {
+          "mrc": "SFTT",
+          "requirement": "SURFACE TREATMENT",
+          "reply": "RIGHT END SURFACE OF BODY  PASSIVATE"
+        },
+        {
+          "mrc": "SFTT",
+          "requirement": "SURFACE TREATMENT",
+          "reply": "OUTSIDE DIAMETER SURFACE OF FLANGE  PASSIVATE"
+        },
+        {
+          "mrc": "STDC",
+          "requirement": "SURFACE TREATMENT DOCUMENT AND CLASSIFICATION",
+          "reply": "OUTSIDE DIAMETER SURFACE OF BODY  FED SPEC  SINGLE TREATMENT RESPONSE  QQ--35"
+        },
+        {
+          "mrc": "STDC",
+          "requirement": "SURFACE TREATMENT DOCUMENT AND CLASSIFICATION",
+          "reply": "OUTSIDE DIAMETER SURFACE OF FLANGE  FED SPEC  SINGLE TREATMENT RESPONSE  QQ--35"
+        },
+        {
+          "mrc": "STDC",
+          "requirement": "SURFACE TREATMENT DOCUMENT AND CLASSIFICATION",
+          "reply": "LEFT END SURFACE OF BODY AND FLANGE  FED SPEC  SINGLE TREATMENT RESPONSE  QQ--35"
+        },
+        {
+          "mrc": "STDC",
+          "requirement": "SURFACE TREATMENT DOCUMENT AND CLASSIFICATION",
+          "reply": "RIGHT END SURFACE OF BODY  FED SPEC  SINGLE TREATMENT RESPONSE  QQ--35"
+        },
+        {
+          "mrc": "STDC",
+          "requirement": "SURFACE TREATMENT DOCUMENT AND CLASSIFICATION",
+          "reply": "RIGHT END SURFACE OF LEFT FLANGE  FED SPEC  SINGLE TREATMENT RESPONSE  QQ--35"
+        },
+        {
+          "mrc": "STYL",
+          "requirement": "STYLE DESIGNATOR",
+          "reply": null
+        },
+        {
+          "mrc": "ZZZK",
+          "requirement": "SPECIFICATION/STANDARD DATA",
+          "reply": "MANUFACTURERS STANDARD  02731-HS5445"
+        }
+      ]
+    },
+    {
+      "nsn": "5310009640878",
+      "fsc": "5310",
+      "itemName": "NUT,SELF-LOCKING,PLATE",
+      "n": 39,
+      "characteristics": [
+        {
+          "mrc": "ADFU",
+          "requirement": "MOUNTING HOLE ARRANGEMENT STYLE",
+          "reply": null
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "WASHER  ALUMINUM ALLOY OR STEEL"
+        },
+        {
+          "mrc": "ADFK",
+          "requirement": "NUT COUNTERBORE DEPTH",
+          "reply": "BASE  INCHES  MINIMUM  0.125"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "SEAL  MIL SPEC  SINGLE MATERIAL RESPONSE  -IL-R-6855,CLASS 1,GRADE 60"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "SHELL  MIL SPEC  SINGLE MATERIAL RESPONSE  -IL-N-25027"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "WASHER  MIL SPEC  SINGLE MATERIAL RESPONSE  -IL-N-25027"
+        },
+        {
+          "mrc": "ADEA",
+          "requirement": "NUT HEIGHT",
+          "reply": "INCHES  MAXIMUM  0.313"
+        },
+        {
+          "mrc": "ADFP",
+          "requirement": "NUT MOUNTING PROVISION",
+          "reply": "STRAIGHT HOLES"
+        },
+        {
+          "mrc": "ACVN",
+          "requirement": "NUT LENGTH",
+          "reply": "INCHES  MAXIMUM  0.989"
+        },
+        {
+          "mrc": "TEST",
+          "requirement": "TEST DATA DOCUMENT",
+          "reply": "STANDARD (INCLUDES INDUSTRY OR ASSOCIATION STANDARDS, INDIVIDUAL MANUFACTUREER STANDARDS, ETC.).  80205-NAS 1473 AND SPECIFICATION (INCLUDES ENGINEERING TYPE BULLETINS, BROCHURES,ETC., THAT REFLECT SPECIFICATION TYPE DATA IN SPECIFICATION FORMAT; EXCLUDES COMMERCIAL CATALOGS, INDUSTRY DIRECTORIES, AND SIMILAR TRADE PUBLICATIONS, REFLECTING GENERAL TYPE DATA ON CERTAIN ENVIRONMENTAL AND PERFORMANCE REQUIREMENTS AND TEST CONDITIONS THAT ARE SHOWN AS \"TYPICAL\", \"AVERAGE\", \"NOMINAL\", ETC.).  81349--IL-N-25027"
+        },
+        {
+          "mrc": "ADEB",
+          "requirement": "PLATE THICKNESS",
+          "reply": "INCHES  MAXIMUM  0.085"
+        },
+        {
+          "mrc": "AAJD",
+          "requirement": "THREAD CLASS",
+          "reply": "3B"
+        },
+        {
+          "mrc": "AAJF",
+          "requirement": "THREAD DIRECTION",
+          "reply": "RIGHT-HAND"
+        },
+        {
+          "mrc": "AAUM",
+          "requirement": "LOCKING FEATURE",
+          "reply": "PREVAILING TORQUE ALL METAL DESIGN"
+        },
+        {
+          "mrc": "AAWY",
+          "requirement": "COUNTERBORE DIAMETER",
+          "reply": "BASE  INCHES  MINIMUM  0.229"
+        },
+        {
+          "mrc": "ABAJ",
+          "requirement": "LUBRICATION",
+          "reply": "DRY FILM LUBRICANT"
+        },
+        {
+          "mrc": "ABFF",
+          "requirement": "FURNISHED ITEMS",
+          "reply": "PREFORMED PACKING"
+        },
+        {
+          "mrc": "ABKW",
+          "requirement": "OVERALL HEIGHT",
+          "reply": "INCHES  MAXIMUM  0.640"
+        },
+        {
+          "mrc": "ABTB",
+          "requirement": "MOUNTING HOLE DIAMETER",
+          "reply": "INCHES  MINIMUM  0.098 AND INCHES  MAXIMUM  0.103"
+        },
+        {
+          "mrc": "ACTA",
+          "requirement": "NUT STYLE",
+          "reply": null
+        },
+        {
+          "mrc": "SFTT",
+          "requirement": "SURFACE TREATMENT",
+          "reply": "NUT  CADMIUM AND CHROMATE"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "NUT  MIL SPEC  SINGLE MATERIAL RESPONSE  -IL-N-25027"
+        },
+        {
+          "mrc": "ADEC",
+          "requirement": "PLATE WIDTH",
+          "reply": "INCHES  MAXIMUM  0.568"
+        },
+        {
+          "mrc": "AZKQ",
+          "requirement": "TEMP RATING",
+          "reply": "FAHRENHEIT  MAXIMUM  225.0"
+        },
+        {
+          "mrc": "ZZZK",
+          "requirement": "SPECIFICATION/STANDARD DATA",
+          "reply": "PROFESSIONAL/INDUSTRIAL ASSOCIATION STANDARD  80205-NAS1473"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "NUT  STEEL"
+        },
+        {
+          "mrc": "SPCL",
+          "requirement": "SPECIAL TEST FEATURES",
+          "reply": "MAXMINUM LOCKING TORQUE 3 TIMES THE VALUE STATED IN MIL-N-25027"
+        },
+        {
+          "mrc": "ADFW",
+          "requirement": "DISTANCE FROM APERTURE CENTER TO MOUNTING HOLE CENTER",
+          "reply": "INCHES  MINIMUM  0.344 AND INCHES  MAXIMUM  0.349"
+        },
+        {
+          "mrc": "ADFY",
+          "requirement": "CENTER TO CENTER DISTANCE BETWEEN MOUNTING HOLES ALONG LENGTH",
+          "reply": "INCHES  MINIMUM  0.686 AND INCHES  MAXIMUM  0.690"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "SEAL  RUBBER BUTADIENE-ACRYLONITRILE CLASS NBR"
+        },
+        {
+          "mrc": "SFTT",
+          "requirement": "SURFACE TREATMENT",
+          "reply": "SHELL  CADMIUM AND CHROMATE"
+        },
+        {
+          "mrc": "SFTT",
+          "requirement": "SURFACE TREATMENT",
+          "reply": "WASHER  ANODIZE OR CADMIUM OR CHROMATE"
+        },
+        {
+          "mrc": "CBBL",
+          "requirement": "FEATURES PROVIDED",
+          "reply": "FLOATING NUT"
+        },
+        {
+          "mrc": "CMLP",
+          "requirement": "THREAD QUANTITY PER INCH",
+          "reply": "32"
+        },
+        {
+          "mrc": "CQJX",
+          "requirement": "NOMINAL THREAD SIZE",
+          "reply": "INCHES  0.190"
+        },
+        {
+          "mrc": "FEAT",
+          "requirement": "SPECIAL FEATURES",
+          "reply": "0.020 IN. MIN RADIAL FLOAT,0.030 IN. MAX AXIAL FLOAT; 50.0 PSIG MAX RATED PRESSURE,BLACK SEAL"
+        },
+        {
+          "mrc": "BZRR",
+          "requirement": "THREAD SERIES",
+          "reply": "UNIFIED NATIONAL JOINT FINE (UNJF)"
+        },
+        {
+          "mrc": "SUPP",
+          "requirement": "SUPPLEMENTARY FEATURES",
+          "reply": "NO QPL SHALL BE ESTABLSIHED"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "SHELL  STEEL"
+        }
+      ]
+    },
+    {
+      "nsn": "5310013427248",
+      "fsc": "5310",
+      "itemName": "NUT,SELF-LOCKING,PLATE",
+      "n": 39,
+      "characteristics": [
+        {
+          "mrc": "AAJD",
+          "requirement": "THREAD CLASS",
+          "reply": "3B"
+        },
+        {
+          "mrc": "AAJF",
+          "requirement": "THREAD DIRECTION",
+          "reply": "RIGHT-HAND"
+        },
+        {
+          "mrc": "AAUM",
+          "requirement": "LOCKING FEATURE",
+          "reply": "PREVAILING TORQUE ALL METAL DESIGN"
+        },
+        {
+          "mrc": "ABAJ",
+          "requirement": "LUBRICATION",
+          "reply": "DRY FILM LUBRICANT"
+        },
+        {
+          "mrc": "ABKW",
+          "requirement": "OVERALL HEIGHT",
+          "reply": "INCHES  MAXIMUM  0.798"
+        },
+        {
+          "mrc": "ABTB",
+          "requirement": "MOUNTING HOLE DIAMETER",
+          "reply": "INCHES  MAXIMUM  0.103"
+        },
+        {
+          "mrc": "ACTA",
+          "requirement": "NUT STYLE",
+          "reply": null
+        },
+        {
+          "mrc": "ACVN",
+          "requirement": "NUT LENGTH",
+          "reply": "INCHES  NOMINAL  1.406"
+        },
+        {
+          "mrc": "ADEA",
+          "requirement": "NUT HEIGHT",
+          "reply": "INCHES  MAXIMUM  0.732"
+        },
+        {
+          "mrc": "ADEB",
+          "requirement": "PLATE THICKNESS",
+          "reply": "INCHES  NOMINAL  0.040"
+        },
+        {
+          "mrc": "ADEC",
+          "requirement": "PLATE WIDTH",
+          "reply": "INCHES  MAXIMUM  0.840"
+        },
+        {
+          "mrc": "ADFD",
+          "requirement": "REMOVABLE NUT MANUFACTURER CODE",
+          "reply": "88277"
+        },
+        {
+          "mrc": "ADFP",
+          "requirement": "NUT MOUNTING PROVISION",
+          "reply": "STRAIGHT HOLES"
+        },
+        {
+          "mrc": "ADFU",
+          "requirement": "MOUNTING HOLE ARRANGEMENT STYLE",
+          "reply": null
+        },
+        {
+          "mrc": "ADFW",
+          "requirement": "DISTANCE FROM APERTURE CENTER TO MOUNTING HOLE CENTER",
+          "reply": "INCHES  MAXIMUM  0.567"
+        },
+        {
+          "mrc": "ADFY",
+          "requirement": "CENTER TO CENTER DISTANCE BETWEEN MOUNTING HOLES ALONG LENGTH",
+          "reply": "INCHES  MAXIMUM  1.127"
+        },
+        {
+          "mrc": "ADNC",
+          "requirement": "REMOVABLE NUT MANUFACTURER PART NUMBER",
+          "reply": "3D0133-4"
+        },
+        {
+          "mrc": "BZRR",
+          "requirement": "THREAD SERIES",
+          "reply": "UNIFIED NATIONAL JOINT FINE (UNJF)"
+        },
+        {
+          "mrc": "CBBL",
+          "requirement": "FEATURES PROVIDED",
+          "reply": "FLOATING NUT"
+        },
+        {
+          "mrc": "CMLP",
+          "requirement": "THREAD QUANTITY PER INCH",
+          "reply": "28"
+        },
+        {
+          "mrc": "CQJX",
+          "requirement": "NOMINAL THREAD SIZE",
+          "reply": "INCHES  0.250"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "NUT  STEEL COMP 1050"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "BRACKET  STEEL COMP 1050"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "SEAL  RUBBER BUTADIENE-ACRYLONITRILE CLASS NBR"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "BASE  ALUMINUM ALLOY 7075"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "CLIP  STEEL COMP 302"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "BASE  FED SPEC  SINGLE MATERIAL RESPONSE  QQ-A-250 TO 12"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "SEAL  MIL SPEC  SINGLE MATERIAL RESPONSE  -IL-R-6855,CL 1,GR 60 OR 70"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "CLIP  ASSN STD  SINGLE MATERIAL RESPONSE  A-S 5688"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "BRACKET  ASSN STD  SINGLE MATERIAL RESPONSE  A-S 5085"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "NUT  ASSN STD  SINGLE MATERIAL RESPONSE  A-S 5085"
+        },
+        {
+          "mrc": "SFTT",
+          "requirement": "SURFACE TREATMENT",
+          "reply": "BRACKET  CADMIUM AND CHROMATE"
+        },
+        {
+          "mrc": "SFTT",
+          "requirement": "SURFACE TREATMENT",
+          "reply": "CLIP  ANODIZE"
+        },
+        {
+          "mrc": "SFTT",
+          "requirement": "SURFACE TREATMENT",
+          "reply": "BASE  ANODIZE"
+        },
+        {
+          "mrc": "SFTT",
+          "requirement": "SURFACE TREATMENT",
+          "reply": "NUT  CADMIUM AND CHROMATE"
+        },
+        {
+          "mrc": "STDC",
+          "requirement": "SURFACE TREATMENT DOCUMENT AND CLASSIFICATION",
+          "reply": "NUT  FED SPEC  SINGLE TREATMENT RESPONSE  QQ--416,TY 2,CL 2"
+        },
+        {
+          "mrc": "STDC",
+          "requirement": "SURFACE TREATMENT DOCUMENT AND CLASSIFICATION",
+          "reply": "BRACKET  FED SPEC  SINGLE TREATMENT RESPONSE  QQ--416,TY 2,CL 3"
+        },
+        {
+          "mrc": "STDC",
+          "requirement": "SURFACE TREATMENT DOCUMENT AND CLASSIFICATION",
+          "reply": "BASE  MIL SPEC  SINGLE TREATMENT RESPONSE  -IL-A-8625"
+        },
+        {
+          "mrc": "STDC",
+          "requirement": "SURFACE TREATMENT DOCUMENT AND CLASSIFICATION",
+          "reply": "CLIP  MIL SPEC  SINGLE TREATMENT RESPONSE  -IL-A-8625"
+        }
+      ]
+    },
+    {
+      "nsn": "5310012442258",
+      "fsc": "5310",
+      "itemName": "NUT,SELF-LOCKING,PLATE",
+      "n": 38,
+      "characteristics": [
+        {
+          "mrc": "AAJD",
+          "requirement": "THREAD CLASS",
+          "reply": "3B"
+        },
+        {
+          "mrc": "AAJF",
+          "requirement": "THREAD DIRECTION",
+          "reply": "RIGHT-HAND"
+        },
+        {
+          "mrc": "AAUM",
+          "requirement": "LOCKING FEATURE",
+          "reply": "PREVAILING TORQUE ALL METAL DESIGN"
+        },
+        {
+          "mrc": "AAWY",
+          "requirement": "COUNTERBORE DIAMETER",
+          "reply": "NUT  INCHES  MINIMUM  0.220"
+        },
+        {
+          "mrc": "ABAJ",
+          "requirement": "LUBRICATION",
+          "reply": "DRY FILM LUBRICANT"
+        },
+        {
+          "mrc": "ABKW",
+          "requirement": "OVERALL HEIGHT",
+          "reply": "INCHES  MAXIMUM  0.405"
+        },
+        {
+          "mrc": "ABTB",
+          "requirement": "MOUNTING HOLE DIAMETER",
+          "reply": "INCHES  NOMINAL  0.098"
+        },
+        {
+          "mrc": "ACTA",
+          "requirement": "NUT STYLE",
+          "reply": null
+        },
+        {
+          "mrc": "ACVN",
+          "requirement": "NUT LENGTH",
+          "reply": "INCHES  MAXIMUM  0.840"
+        },
+        {
+          "mrc": "ADEA",
+          "requirement": "NUT HEIGHT",
+          "reply": "INCHES  MAXIMUM  0.268"
+        },
+        {
+          "mrc": "ADEB",
+          "requirement": "PLATE THICKNESS",
+          "reply": "INCHES  MAXIMUM  0.030"
+        },
+        {
+          "mrc": "ADEC",
+          "requirement": "PLATE WIDTH",
+          "reply": "INCHES  MAXIMUM  0.443"
+        },
+        {
+          "mrc": "ADFK",
+          "requirement": "NUT COUNTERBORE DEPTH",
+          "reply": "NUT  INCHES  MINIMUM  0.070"
+        },
+        {
+          "mrc": "ADFP",
+          "requirement": "NUT MOUNTING PROVISION",
+          "reply": "STRAIGHT HOLES"
+        },
+        {
+          "mrc": "ADFU",
+          "requirement": "MOUNTING HOLE ARRANGEMENT STYLE",
+          "reply": null
+        },
+        {
+          "mrc": "ADFW",
+          "requirement": "DISTANCE FROM APERTURE CENTER TO MOUNTING HOLE CENTER",
+          "reply": "INCHES  MINIMUM  0.290 AND INCHES  MAXIMUM  0.300"
+        },
+        {
+          "mrc": "ADFY",
+          "requirement": "CENTER TO CENTER DISTANCE BETWEEN MOUNTING HOLES ALONG LENGTH",
+          "reply": "INCHES  MINIMUM  0.588 AND INCHES  MAXIMUM  0.592"
+        },
+        {
+          "mrc": "AZKQ",
+          "requirement": "TEMP RATING",
+          "reply": "FAHRENHEIT  MINIMUM  65.0 AND FAHRENHEIT  MAXIMUM  225.0"
+        },
+        {
+          "mrc": "BZRR",
+          "requirement": "THREAD SERIES",
+          "reply": "UNIFIED NATIONAL JOINT FINE (UNJF)"
+        },
+        {
+          "mrc": "CBBL",
+          "requirement": "FEATURES PROVIDED",
+          "reply": "FLOATING NUT"
+        },
+        {
+          "mrc": "CMLP",
+          "requirement": "THREAD QUANTITY PER INCH",
+          "reply": "32"
+        },
+        {
+          "mrc": "CQFM",
+          "requirement": "HARDNESS RATING",
+          "reply": "SHORE DUROMETER A  NOMINAL  60.0"
+        },
+        {
+          "mrc": "CQJX",
+          "requirement": "NOMINAL THREAD SIZE",
+          "reply": "INCHES  0.190"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "SEAL  RUBBER BUTADIENE-ACRYLONITRILE CLASS NBR"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "SHELL  IRON ALLOY 660"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "WASHER  IRON ALLOY 660"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "NUT  IRON ALLOY 660"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "NUT  ASSN STD  SINGLE MATERIAL RESPONSE  A-S 5525 OR ASSN STD  SINGLE MATERIAL RESPONSE  A-S 5732"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "SHELL  ASSN STD  SINGLE MATERIAL RESPONSE  A-S 5525"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "WASHER  ASSN STD  SINGLE MATERIAL RESPONSE  A-S 5525 OR ASSN STD  SINGLE MATERIAL RESPONSE  A-S 5732"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "SEAL  MIL SPEC  SINGLE MATERIAL RESPONSE  -IL-R-6855,CLASS 1,GRADE 60"
+        },
+        {
+          "mrc": "SFTT",
+          "requirement": "SURFACE TREATMENT",
+          "reply": "SHELL  PASSIVATE"
+        },
+        {
+          "mrc": "SFTT",
+          "requirement": "SURFACE TREATMENT",
+          "reply": "WASHER  PASSIVATE"
+        },
+        {
+          "mrc": "SFTT",
+          "requirement": "SURFACE TREATMENT",
+          "reply": "NUT  PASSIVATE"
+        },
+        {
+          "mrc": "STDC",
+          "requirement": "SURFACE TREATMENT DOCUMENT AND CLASSIFICATION",
+          "reply": "NUT  FED SPEC  SINGLE TREATMENT RESPONSE  QQ--35"
+        },
+        {
+          "mrc": "STDC",
+          "requirement": "SURFACE TREATMENT DOCUMENT AND CLASSIFICATION",
+          "reply": "WASHER  FED SPEC  SINGLE TREATMENT RESPONSE  QQ--35"
+        },
+        {
+          "mrc": "STDC",
+          "requirement": "SURFACE TREATMENT DOCUMENT AND CLASSIFICATION",
+          "reply": "SHELL  FED SPEC  SINGLE TREATMENT RESPONSE  QQ--35"
+        },
+        {
+          "mrc": "ZZZK",
+          "requirement": "SPECIFICATION/STANDARD DATA",
+          "reply": "PROFESSIONAL/INDUSTRIAL ASSOCIATION STANDARD  80205-NAS1774"
+        }
+      ]
+    },
+    {
+      "nsn": "5330000039185",
+      "fsc": "5330",
+      "itemName": "SEAL,NONMETALLIC CHANNEL",
+      "n": 32,
+      "characteristics": [
+        {
+          "mrc": "TEST",
+          "requirement": "TEST DATA DOCUMENT",
+          "reply": "SPECIFICATION (INCLUDES ENGINEERING TYPE BULLETINS, BROCHURES,ETC., THAT REFLECT SPECIFICATION TYPE DATA IN SPECIFICATION FORMAT; EXCLUDES COMMERCIAL CATALOGS, INDUSTRY DIRECTORIES, AND SIMILAR TRADE PUBLICATIONS, REFLECTING GENERAL TYPE DATA ON CERTAIN ENVIRONMENTAL AND PERFORMANCE REQUIREMENTS AND TEST CONDITIONS THAT ARE SHOWN AS \"TYPICAL\", \"AVERAGE\", \"NOMINAL\", ETC.).  81349--IL--23199"
+        },
+        {
+          "mrc": "CTTX",
+          "requirement": "LEFT TIP RADIUS",
+          "reply": "INCHES  NOMINAL  0.060"
+        },
+        {
+          "mrc": "STYL",
+          "requirement": "STYLE DESIGNATOR",
+          "reply": null
+        },
+        {
+          "mrc": "AAGR",
+          "requirement": "CROSS-SECTIONAL SHAPE STYLE",
+          "reply": null
+        },
+        {
+          "mrc": "ABSX",
+          "requirement": "ATTACHMENT METHOD",
+          "reply": "ROUND HOLE"
+        },
+        {
+          "mrc": "ABVL",
+          "requirement": "APERTURE DIAMETER",
+          "reply": "INCHES  NOMINAL  42.969"
+        },
+        {
+          "mrc": "ADTL",
+          "requirement": "ATTACHMENT FEATURE QUANTITY",
+          "reply": "16"
+        },
+        {
+          "mrc": "ADTM",
+          "requirement": "ATTACHMENT HOLE DIAMETER",
+          "reply": "INCHES  MINIMUM  0.344 AND INCHES  MAXIMUM  0.406"
+        },
+        {
+          "mrc": "ADTQ",
+          "requirement": "ATTACHMENT FEATURE CIRCLE DIAMETER",
+          "reply": "SINGLE CIRCLE  INCHES  NOMINAL  44.000"
+        },
+        {
+          "mrc": "ADXH",
+          "requirement": "WEB WIDTH",
+          "reply": "INCHES  MINIMUM  1.000 AND INCHES  MAXIMUM  1.060"
+        },
+        {
+          "mrc": "CTTY",
+          "requirement": "RIGHT TIP RADIUS",
+          "reply": "INCHES  NOMINAL  0.060"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "OVERALL  RUBBER SYNTHETIC"
+        },
+        {
+          "mrc": "ADXP",
+          "requirement": "LEFT SIDE FLANGE THICKNESS AT WEB",
+          "reply": "INCHES  MINIMUM  0.130 AND INCHES  MAXIMUM  0.160"
+        },
+        {
+          "mrc": "ADXQ",
+          "requirement": "RIGHT SIDE FLANGE THICKNESS AT WEB",
+          "reply": "INCHES  MINIMUM  0.130 AND INCHES  MAXIMUM  0.160"
+        },
+        {
+          "mrc": "ADXV",
+          "requirement": "LEFT FLANGE FILLET RADIUS AT WEB",
+          "reply": "INCHES  NOMINAL  0.031"
+        },
+        {
+          "mrc": "ADXW",
+          "requirement": "LEFT FLANGE OUTER RADIUS AT WEB",
+          "reply": "INCHES  NOMINAL  0.031"
+        },
+        {
+          "mrc": "CSQD",
+          "requirement": "RIGHT INSIDE ANGLE",
+          "reply": "DEGREES  NOMINAL  90.0"
+        },
+        {
+          "mrc": "CTCG",
+          "requirement": "RIGHT OUTSIDE ANGLE",
+          "reply": "DEGREES  NOMINAL  90.0"
+        },
+        {
+          "mrc": "CTNK",
+          "requirement": "LEFT TIP STYLE",
+          "reply": null
+        },
+        {
+          "mrc": "CTNL",
+          "requirement": "RIGHT TIP RELATIONSHIP WITH LEFT TIP",
+          "reply": "IDENTICAL"
+        },
+        {
+          "mrc": "CQCF",
+          "requirement": "CONSTRUCTION",
+          "reply": "SOLID"
+        },
+        {
+          "mrc": "CQHP",
+          "requirement": "LEFT INSIDE ANGLE",
+          "reply": "DEGREES  NOMINAL  90.0"
+        },
+        {
+          "mrc": "CRSB",
+          "requirement": "LEFT OUTSIDE ANGLE",
+          "reply": "DEGREES  NOMINAL  90.0"
+        },
+        {
+          "mrc": "ADXN",
+          "requirement": "WEB THICKNESS",
+          "reply": "INCHES  MINIMUM  0.060 AND INCHES  MAXIMUM  0.100"
+        },
+        {
+          "mrc": "ADXX",
+          "requirement": "RIGHT FLANGE FILLET RADIUS AT WEB",
+          "reply": "INCHES  NOMINAL  0.031"
+        },
+        {
+          "mrc": "ADXJ",
+          "requirement": "LEFT SIDE FLANGE HEIGHT",
+          "reply": "INCHES  MINIMUM  0.600 AND INCHES  MAXIMUM  0.653"
+        },
+        {
+          "mrc": "ADXK",
+          "requirement": "RIGHT SIDE FLANGE HEIGHT",
+          "reply": "INCHES  MINIMUM  0.600 AND INCHES  MAXIMUM  0.653"
+        },
+        {
+          "mrc": "ADXL",
+          "requirement": "LEFT SIDE FLANGE THICKNESS",
+          "reply": "INCHES  MINIMUM  0.130 AND INCHES  MAXIMUM  0.160"
+        },
+        {
+          "mrc": "ADXM",
+          "requirement": "RIGHT SIDE FLANGE THICKNESS",
+          "reply": "INCHES  MINIMUM  0.130 AND INCHES  MAXIMUM  0.160"
+        },
+        {
+          "mrc": "ZZZY",
+          "requirement": "REFERENCE NUMBER DIFFERENTIATING CHARACTERISTICS",
+          "reply": "CERTIFIED FREE FROM MERCURY CONTAMINATION"
+        },
+        {
+          "mrc": "SPCL",
+          "requirement": "SPECIAL TEST FEATURES",
+          "reply": "SPECIAL QUALITY CONTROL TESTING"
+        },
+        {
+          "mrc": "ADXY",
+          "requirement": "RIGHT FLANGE OUTER RADIUS AT WEB",
+          "reply": "INCHES  NOMINAL  0.031"
+        }
+      ]
+    },
+    {
+      "nsn": "5365016941180",
+      "fsc": "5365",
+      "itemName": "PLUG,MACHINE THREAD",
+      "n": 31,
+      "characteristics": [
+        {
+          "mrc": "THSD",
+          "requirement": "THREAD SERIES DESIGNATOR",
+          "reply": "INTERNAL  UNIFIED NATIONAL COARSE (UNC)"
+        },
+        {
+          "mrc": "AASA",
+          "requirement": "THREAD LENGTH",
+          "reply": "INTERNAL  INCHES  MINIMUM  0.521 AND INCHES  MAXIMUM  0.541"
+        },
+        {
+          "mrc": "AASL",
+          "requirement": "HEAD DIAMETER",
+          "reply": "INCHES  NOMINAL  1.125"
+        },
+        {
+          "mrc": "AASU",
+          "requirement": "HEAD HEIGHT",
+          "reply": "INCHES  MINIMUM  0.05 AND INCHES  MAXIMUM  0.06"
+        },
+        {
+          "mrc": "ABHP",
+          "requirement": "OVERALL LENGTH",
+          "reply": "INCHES  NOMINAL  0.844"
+        },
+        {
+          "mrc": "AGAV",
+          "requirement": "END ITEM IDENTIFICATION",
+          "reply": "6675-01-067-0687"
+        },
+        {
+          "mrc": "AHNC",
+          "requirement": "CONNECTION STYLE",
+          "reply": null
+        },
+        {
+          "mrc": "AJFH",
+          "requirement": "BLEEDER HOLE DIAMETER",
+          "reply": "INCHES  NOMINAL  0.094"
+        },
+        {
+          "mrc": "AJGD",
+          "requirement": "HEAD TYPE",
+          "reply": "INTERNALLY THREADED"
+        },
+        {
+          "mrc": "THSD",
+          "requirement": "THREAD SERIES DESIGNATOR",
+          "reply": "EXTERNAL  UNF"
+        },
+        {
+          "mrc": "THSD",
+          "requirement": "THREAD SERIES DESIGNATOR",
+          "reply": "HEAD INTERNAL  UNF"
+        },
+        {
+          "mrc": "STYL",
+          "requirement": "STYLE DESIGNATOR",
+          "reply": null
+        },
+        {
+          "mrc": "CQJX",
+          "requirement": "NOMINAL THREAD SIZE",
+          "reply": "EXTERNAL  INCHES  0.875"
+        },
+        {
+          "mrc": "CQJX",
+          "requirement": "NOMINAL THREAD SIZE",
+          "reply": "HEAD INTERNAL  INCHES  0.375"
+        },
+        {
+          "mrc": "CQJX",
+          "requirement": "NOMINAL THREAD SIZE",
+          "reply": "INTERNAL  INCHES  0.625"
+        },
+        {
+          "mrc": "CXCY",
+          "requirement": "PART NAME ASSIGNED BY CONTROLLING AGENCY",
+          "reply": "PLUG"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "OVERALL  BRASS"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "OVERALL  AMERICAN SOCIETY FOR TESTING AND MATERIALS (ASTM)  SINGLE MATERIAL RESPONSE  AST- B16 TO B16- ALLOY C36000"
+        },
+        {
+          "mrc": "PRPY",
+          "requirement": "PROPRIETARY CHARACTERISTICS",
+          "reply": "PACS"
+        },
+        {
+          "mrc": "SFTT",
+          "requirement": "SURFACE TREATMENT",
+          "reply": "OVERALL  OXIDE"
+        },
+        {
+          "mrc": "STDC",
+          "requirement": "SURFACE TREATMENT DOCUMENT AND CLASSIFICATION",
+          "reply": "OVERALL  MIL SPEC  SINGLE TREATMENT RESPONSE  ARAGRAH 3.2 OF -IL-STD-171 REV. D"
+        },
+        {
+          "mrc": "AASA",
+          "requirement": "THREAD LENGTH",
+          "reply": "HEAD INTERNAL  INCHES  MINIMUM  0.23 AND INCHES  MAXIMUM  0.24"
+        },
+        {
+          "mrc": "AAJF",
+          "requirement": "THREAD DIRECTION",
+          "reply": "INTERNAL  RIGHT-HAND"
+        },
+        {
+          "mrc": "CMLP",
+          "requirement": "THREAD QUANTITY PER INCH",
+          "reply": "11"
+        },
+        {
+          "mrc": "CMLP",
+          "requirement": "THREAD QUANTITY PER INCH",
+          "reply": "14"
+        },
+        {
+          "mrc": "CMLP",
+          "requirement": "THREAD QUANTITY PER INCH",
+          "reply": "24"
+        },
+        {
+          "mrc": "AAJD",
+          "requirement": "THREAD CLASS",
+          "reply": "2A"
+        },
+        {
+          "mrc": "AAJD",
+          "requirement": "THREAD CLASS",
+          "reply": "2B"
+        },
+        {
+          "mrc": "AAJF",
+          "requirement": "THREAD DIRECTION",
+          "reply": "EXTERNAL  RIGHT-HAND"
+        },
+        {
+          "mrc": "AAJF",
+          "requirement": "THREAD DIRECTION",
+          "reply": "HEAD INTERNAL  RIGHT-HAND"
+        },
+        {
+          "mrc": "AASA",
+          "requirement": "THREAD LENGTH",
+          "reply": "EXTERNAL  INCHES  MINIMUM  0.423 AND INCHES  MAXIMUM  0.453"
+        }
+      ]
+    },
+    {
+      "nsn": "5365016711884",
+      "fsc": "5365",
+      "itemName": "SPACER,PLATE",
+      "n": 29,
+      "characteristics": [
+        {
+          "mrc": "AAUB",
+          "requirement": "HOLE DIAMETER",
+          "reply": "INCHES  NOMINAL  0.33"
+        },
+        {
+          "mrc": "ABGC",
+          "requirement": "SLOT WIDTH",
+          "reply": "INCHES  NOMINAL  0.44"
+        },
+        {
+          "mrc": "ABHP",
+          "requirement": "OVERALL LENGTH",
+          "reply": "INCHES  NOMINAL  4.75"
+        },
+        {
+          "mrc": "ABMK",
+          "requirement": "OVERALL WIDTH",
+          "reply": "INCHES  NOMINAL  3.25"
+        },
+        {
+          "mrc": "ABTJ",
+          "requirement": "MOUNTING HOLE QUANTITY",
+          "reply": "6"
+        },
+        {
+          "mrc": "ACHY",
+          "requirement": "MOUNTING HOLE TYPE",
+          "reply": "THRU HOLE AND SLOTTED"
+        },
+        {
+          "mrc": "ADUM",
+          "requirement": "OVERALL THICKNESS",
+          "reply": "INCHES  NOMINAL  0.20"
+        },
+        {
+          "mrc": "ADUY",
+          "requirement": "CENTER TO CENTER DISTANCE BETWEEN BOLT HOLES ALONG WIDTH",
+          "reply": "INCHES  NOMINAL  1.250"
+        },
+        {
+          "mrc": "ADUZ",
+          "requirement": "CENTER TO CENTER DISTANCE BETWEEN BOLT HOLES ALONG LENGTH",
+          "reply": "INCHES  NOMINAL  3.50"
+        },
+        {
+          "mrc": "ADVD",
+          "requirement": "OUTSIDE EDGE TO BOLT HOLE CENTER DISTANCE ALONG WIDTH",
+          "reply": "INCHES  NOMINAL  1.0"
+        },
+        {
+          "mrc": "ADVE",
+          "requirement": "OUTSIDE EDGE TO BOLT HOLE CENTER DISTANCE ALONG LENGTH",
+          "reply": "INCHES  NOMINAL  0.63"
+        },
+        {
+          "mrc": "AECS",
+          "requirement": "BOLT HOLE QUANTITY",
+          "reply": "5"
+        },
+        {
+          "mrc": "AGAV",
+          "requirement": "END ITEM IDENTIFICATION",
+          "reply": "F-35 AIRCRAFT SUPPORT EQUIPMENT"
+        },
+        {
+          "mrc": "ALZX",
+          "requirement": "SLOT RADIUS",
+          "reply": "INCHES  NOMINAL  0.03"
+        },
+        {
+          "mrc": "ATPP",
+          "requirement": "SLOT QUANTITY",
+          "reply": "1"
+        },
+        {
+          "mrc": "BYWW",
+          "requirement": "SMALLEST BOLT HOLE DIAMETER",
+          "reply": "INCHES  NOMINAL  0.13"
+        },
+        {
+          "mrc": "BYWX",
+          "requirement": "LARGEST BOLT HOLE DIAMETER",
+          "reply": "INCHES  NOMINAL  0.33"
+        },
+        {
+          "mrc": "CRTL",
+          "requirement": "CRITICALITY CODE JUSTIFICATION",
+          "reply": "ADUZ AND ADUY"
+        },
+        {
+          "mrc": "CWQP",
+          "requirement": "SMALLEST BOLT HOLE QUANTITY",
+          "reply": "1"
+        },
+        {
+          "mrc": "CWQZ",
+          "requirement": "LARGEST BOLT HOLE QUANTITY",
+          "reply": "4"
+        },
+        {
+          "mrc": "CXCY",
+          "requirement": "PART NAME ASSIGNED BY CONTROLLING AGENCY",
+          "reply": "PLATE, SLOTTED COMPONENT HANDLING ADAPTER"
+        },
+        {
+          "mrc": "FEAT",
+          "requirement": "SPECIAL FEATURES",
+          "reply": "CRITICAL PARAMETERS FOR VARIABILITY REDUCTION REQUIREMENTS. UNLESS OTHERWISE SPECIFIED, THE TARGET VALUE FOR EACH PARAMETER SHALL BE THE MIDPOINT VALUE OF THE FULL TOLERANCE RANGE."
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "STEEL CORROSION RESISTING"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "ASSN STD  SINGLE MATERIAL RESPONSE  A-S 5643"
+        },
+        {
+          "mrc": "PRPY",
+          "requirement": "PROPRIETARY CHARACTERISTICS",
+          "reply": "PACS"
+        },
+        {
+          "mrc": "SFTT",
+          "requirement": "SURFACE TREATMENT",
+          "reply": "PASSIVATE"
+        },
+        {
+          "mrc": "STDC",
+          "requirement": "SURFACE TREATMENT DOCUMENT AND CLASSIFICATION",
+          "reply": "ASSN STD  SINGLE TREATMENT RESPONSE  A-S 2700, TYE 8 AFTER -ACHINING"
+        },
+        {
+          "mrc": "STYL",
+          "requirement": "STYLE DESIGNATOR",
+          "reply": null
+        },
+        {
+          "mrc": "SUPP",
+          "requirement": "SUPPLEMENTARY FEATURES",
+          "reply": "HEAT TREAT H1100 PER AMS 2759/3"
+        }
+      ]
+    },
+    {
+      "nsn": "5330008043501",
+      "fsc": "5330",
+      "itemName": "SEAL,NONMETALLIC CHANNEL",
+      "n": 29,
+      "characteristics": [
+        {
+          "mrc": "AAGR",
+          "requirement": "CROSS-SECTIONAL SHAPE STYLE",
+          "reply": null
+        },
+        {
+          "mrc": "CSQD",
+          "requirement": "RIGHT INSIDE ANGLE",
+          "reply": "DEGREES  NOMINAL  90.0"
+        },
+        {
+          "mrc": "ADPW",
+          "requirement": "OUTSIDE CORNER RADIUS",
+          "reply": "INCHES  NOMINAL  0.594"
+        },
+        {
+          "mrc": "ADPQ",
+          "requirement": "INSIDE CORNER RADIUS",
+          "reply": "INCHES  NOMINAL  0.500"
+        },
+        {
+          "mrc": "CQHP",
+          "requirement": "LEFT INSIDE ANGLE",
+          "reply": "DEGREES  NOMINAL  90.0"
+        },
+        {
+          "mrc": "CRSB",
+          "requirement": "LEFT OUTSIDE ANGLE",
+          "reply": "DEGREES  NOMINAL  90.0"
+        },
+        {
+          "mrc": "ADXW",
+          "requirement": "LEFT FLANGE OUTER RADIUS AT WEB",
+          "reply": "INCHES  NOMINAL  0.094"
+        },
+        {
+          "mrc": "ADXX",
+          "requirement": "RIGHT FLANGE FILLET RADIUS AT WEB",
+          "reply": "INCHES  NOMINAL  0.016"
+        },
+        {
+          "mrc": "ADXY",
+          "requirement": "RIGHT FLANGE OUTER RADIUS AT WEB",
+          "reply": "INCHES  NOMINAL  0.094"
+        },
+        {
+          "mrc": "CQCF",
+          "requirement": "CONSTRUCTION",
+          "reply": "SOLID"
+        },
+        {
+          "mrc": "ADXQ",
+          "requirement": "RIGHT SIDE FLANGE THICKNESS AT WEB",
+          "reply": "INCHES  NOMINAL  0.057"
+        },
+        {
+          "mrc": "ADXV",
+          "requirement": "LEFT FLANGE FILLET RADIUS AT WEB",
+          "reply": "INCHES  NOMINAL  0.016"
+        },
+        {
+          "mrc": "CTCG",
+          "requirement": "RIGHT OUTSIDE ANGLE",
+          "reply": "DEGREES  NOMINAL  90.0"
+        },
+        {
+          "mrc": "CTNK",
+          "requirement": "LEFT TIP STYLE",
+          "reply": null
+        },
+        {
+          "mrc": "CTNL",
+          "requirement": "RIGHT TIP RELATIONSHIP WITH LEFT TIP",
+          "reply": "IDENTICAL"
+        },
+        {
+          "mrc": "CTTX",
+          "requirement": "LEFT TIP RADIUS",
+          "reply": "INCHES  NOMINAL  0.016"
+        },
+        {
+          "mrc": "CTTY",
+          "requirement": "RIGHT TIP RADIUS",
+          "reply": "INCHES  NOMINAL  0.016"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "OVERALL  RUBBER CHLOROPRENE CLASS CR"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "OVERALL  ASSN STD  SINGLE MATERIAL RESPONSE  A-S 3208"
+        },
+        {
+          "mrc": "STYL",
+          "requirement": "STYLE DESIGNATOR",
+          "reply": null
+        },
+        {
+          "mrc": "ADUE",
+          "requirement": "APERTURE WIDTH",
+          "reply": "INCHES  NOMINAL  2.050"
+        },
+        {
+          "mrc": "ADUF",
+          "requirement": "APERTURE LENGTH",
+          "reply": "INCHES  NOMINAL  3.700"
+        },
+        {
+          "mrc": "ADXH",
+          "requirement": "WEB WIDTH",
+          "reply": "INCHES  NOMINAL  0.188"
+        },
+        {
+          "mrc": "ADXJ",
+          "requirement": "LEFT SIDE FLANGE HEIGHT",
+          "reply": "INCHES  NOMINAL  0.219"
+        },
+        {
+          "mrc": "ADXK",
+          "requirement": "RIGHT SIDE FLANGE HEIGHT",
+          "reply": "INCHES  NOMINAL  0.219"
+        },
+        {
+          "mrc": "ADXL",
+          "requirement": "LEFT SIDE FLANGE THICKNESS",
+          "reply": "INCHES  NOMINAL  0.057"
+        },
+        {
+          "mrc": "ADXM",
+          "requirement": "RIGHT SIDE FLANGE THICKNESS",
+          "reply": "INCHES  NOMINAL  0.057"
+        },
+        {
+          "mrc": "ADXN",
+          "requirement": "WEB THICKNESS",
+          "reply": "INCHES  NOMINAL  0.094"
+        },
+        {
+          "mrc": "ADXP",
+          "requirement": "LEFT SIDE FLANGE THICKNESS AT WEB",
+          "reply": "INCHES  NOMINAL  0.057"
+        }
+      ]
+    },
+    {
+      "nsn": "5330012404462",
+      "fsc": "5330",
+      "itemName": "INSULATION,THERMAL,SPECIAL PURPO",
+      "n": 29,
+      "characteristics": [
+        {
+          "mrc": "ABGL",
+          "requirement": "WIDTH",
+          "reply": "INCHES  NOMINAL  11.000"
+        },
+        {
+          "mrc": "ABRY",
+          "requirement": "LENGTH",
+          "reply": "INCHES  NOMINAL  34.000"
+        },
+        {
+          "mrc": "AMHB",
+          "requirement": "LAYER QUANTITY",
+          "reply": "1"
+        },
+        {
+          "mrc": "AMHB",
+          "requirement": "LAYER QUANTITY",
+          "reply": "3"
+        },
+        {
+          "mrc": "AMHB",
+          "requirement": "LAYER QUANTITY",
+          "reply": "2"
+        },
+        {
+          "mrc": "AMHB",
+          "requirement": "LAYER QUANTITY",
+          "reply": "4"
+        },
+        {
+          "mrc": "AMHB",
+          "requirement": "LAYER QUANTITY",
+          "reply": "5"
+        },
+        {
+          "mrc": "ASWC",
+          "requirement": "MATERIAL FORM",
+          "reply": "ONE SIDE  FABRIC"
+        },
+        {
+          "mrc": "AZGM",
+          "requirement": "MOUNTING FACILITY",
+          "reply": "SNAP FASTENER(S)"
+        },
+        {
+          "mrc": "BDBG",
+          "requirement": "MAXIMUM THERMAL CONDUCTIVITY",
+          "reply": "NOT RATED"
+        },
+        {
+          "mrc": "BDNX",
+          "requirement": "ONE SIDE DECORATION PROVISION",
+          "reply": "PROVIDED"
+        },
+        {
+          "mrc": "BDNY",
+          "requirement": "DECORATIVE SIDE COLOR",
+          "reply": "GRAY, DARK GULL, 36231, FED STD 595, SUPPLEMENTED BY MIL-STD-795"
+        },
+        {
+          "mrc": "BDPD",
+          "requirement": "LAYER THICKNESS",
+          "reply": "FIRST LAYER  INCHES  NOMINAL  0.001"
+        },
+        {
+          "mrc": "BDPD",
+          "requirement": "LAYER THICKNESS",
+          "reply": "SECOND LAYER  INCHES  NOMINAL  0.007"
+        },
+        {
+          "mrc": "BDPD",
+          "requirement": "LAYER THICKNESS",
+          "reply": "THIRD LAYER  INCHES  NOMINAL  0.007"
+        },
+        {
+          "mrc": "BDPD",
+          "requirement": "LAYER THICKNESS",
+          "reply": "FIFTH LAYER  INCHES  NOMINAL  0.500"
+        },
+        {
+          "mrc": "BDPD",
+          "requirement": "LAYER THICKNESS",
+          "reply": "FOURTH LAYER  INCHES  NOMINAL  0.007"
+        },
+        {
+          "mrc": "BDPF",
+          "requirement": "ADDED BINDER",
+          "reply": "NOT INCLUDED"
+        },
+        {
+          "mrc": "BDPG",
+          "requirement": "REFLECTIVE SURFACE LOCATION",
+          "reply": "ONE SIDE"
+        },
+        {
+          "mrc": "BDPH",
+          "requirement": "QUILTED FEATURE",
+          "reply": "NOT INCLUDED"
+        },
+        {
+          "mrc": "BDRS",
+          "requirement": "AFFIXED SHEET",
+          "reply": "INCLUDED"
+        },
+        {
+          "mrc": "FEAT",
+          "requirement": "SPECIAL FEATURES",
+          "reply": "RIGHT HAND"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "LAYER FOURTH LAYER  COTTON"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "ONE SIDE  COTTON"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "LAYER SECOND LAYER  COTTON"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "LAYER FIFTH LAYER  FIBERGLASS"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "LAYER THIRD LAYER  COTTON"
+        },
+        {
+          "mrc": "SFTT",
+          "requirement": "SURFACE TREATMENT",
+          "reply": "TRIM FIRST LAYER  PLASTIC COATED OR PLASTIC FILM OR PLASTIC LAMINATE COATING"
+        },
+        {
+          "mrc": "SFTT",
+          "requirement": "SURFACE TREATMENT",
+          "reply": "ONE SIDE  VINYL COATED"
+        }
+      ]
+    },
+    {
+      "nsn": "5365010635347",
+      "fsc": "5365",
+      "itemName": "RING,EXTERNALLY THREADED",
+      "n": 26,
+      "characteristics": [
+        {
+          "mrc": "AAJD",
+          "requirement": "THREAD CLASS",
+          "reply": "3A"
+        },
+        {
+          "mrc": "AAJF",
+          "requirement": "THREAD DIRECTION",
+          "reply": "RIGHT-HAND"
+        },
+        {
+          "mrc": "AASG",
+          "requirement": "CASEHARDENING INDICATOR",
+          "reply": "NOT CASE-HARDENED"
+        },
+        {
+          "mrc": "AATE",
+          "requirement": "CHAMFER ANGLE IN DEG",
+          "reply": "45.0"
+        },
+        {
+          "mrc": "AAZP",
+          "requirement": "CHAMFER LENGTH",
+          "reply": "INCHES  NOMINAL  0.060"
+        },
+        {
+          "mrc": "ABFF",
+          "requirement": "FURNISHED ITEMS",
+          "reply": "BEVELED THREAD"
+        },
+        {
+          "mrc": "ABGL",
+          "requirement": "WIDTH",
+          "reply": "INCHES  MINIMUM  0.510 AND INCHES  MAXIMUM  0.520"
+        },
+        {
+          "mrc": "ABHP",
+          "requirement": "OVERALL LENGTH",
+          "reply": "INCHES  MINIMUM  0.670 AND INCHES  MAXIMUM  0.710"
+        },
+        {
+          "mrc": "ABPZ",
+          "requirement": "END RADIUS",
+          "reply": "INCHES  NOMINAL  1.935"
+        },
+        {
+          "mrc": "ABUJ",
+          "requirement": "THREAD SIZE",
+          "reply": "5.656-12"
+        },
+        {
+          "mrc": "ABXV",
+          "requirement": "BORE DIAMETER",
+          "reply": "INCHES  NOMINAL  3.750"
+        },
+        {
+          "mrc": "AEJZ",
+          "requirement": "DEPTH",
+          "reply": "INCHES  NOMINAL  0.180"
+        },
+        {
+          "mrc": "AGZD",
+          "requirement": "BORE SHAPE",
+          "reply": "STRAIGHT"
+        },
+        {
+          "mrc": "AJYP",
+          "requirement": "SCREW THREAD SERIES DESIGNATOR",
+          "reply": "BUTTRESS"
+        },
+        {
+          "mrc": "AKCV",
+          "requirement": "DRIVE TYPE",
+          "reply": "SLOTTED FACE"
+        },
+        {
+          "mrc": "ALME",
+          "requirement": "MATERIAL HARDNESS RATING",
+          "reply": "ROCKWELL C  MINIMUM  30.0 AND ROCKWELL C  MAXIMUM  36.0"
+        },
+        {
+          "mrc": "APJC",
+          "requirement": "THREAD LOCATION",
+          "reply": "BOTH ENDS"
+        },
+        {
+          "mrc": "AWHW",
+          "requirement": "ACCOMMODATION TYPE AND QUANTITY",
+          "reply": "SLOTS  2"
+        },
+        {
+          "mrc": "AWPF",
+          "requirement": "ANGLE BETWEEN ACCOMMODATIONS IN DEG",
+          "reply": "180.0"
+        },
+        {
+          "mrc": "AWQA",
+          "requirement": "BORE EDGE PROCESS",
+          "reply": "CHAMFERED"
+        },
+        {
+          "mrc": "AWQB",
+          "requirement": "PROCESS END LOCATION",
+          "reply": "BOTH ENDS"
+        },
+        {
+          "mrc": "FEAT",
+          "requirement": "SPECIAL FEATURES",
+          "reply": "4 THRU HOLES 0.290 IN. DIA EQUALLY SPACED ON 4.500 IN. DIA BOLT CIRCLE,2 HOLES COUNTERBORED0.530 IN. DIA BY 0.350 IN. DEEP,2 HOLES COUNTERBORED 0.530 IN. DIA BY 0.242 IN. DEEP,ONE CUT THRU ONA TAPER TOP TO BOTTOM OF RING 45 DEG FROM CENTER OFSLOT TO CENTER OF CUT,TOP END TAPER 0.790 IN. W,BOTTOM END TAPER 0.620 IN. W"
+        },
+        {
+          "mrc": "MATT",
+          "requirement": "MATERIAL",
+          "reply": "STEEL COMP 4140 OR STEEL COMP 8640"
+        },
+        {
+          "mrc": "MDCL",
+          "requirement": "MATERIAL DOCUMENT AND CLASSIFICATION",
+          "reply": "ASSN STD  ALL MATERIAL RESPONSES  AST- A331, CO- 4140 OR 8640 OR ASSN STD  ALL MATERIAL RESPONSES  AST- A322, CO- 4140 OR 8640"
+        },
+        {
+          "mrc": "SFTT",
+          "requirement": "SURFACE TREATMENT",
+          "reply": "PHOSPHATE ZINC"
+        },
+        {
+          "mrc": "STDC",
+          "requirement": "SURFACE TREATMENT DOCUMENT AND CLASSIFICATION",
+          "reply": "FED SPEC  SINGLE TREATMENT RESPONSE  QQ--35,TY 2"
+        }
+      ]
+    }
+  ]
+}

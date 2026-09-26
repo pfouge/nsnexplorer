@@ -1,0 +1,13 @@
+{
+  "name": "parts-explorer",
+  "private": true,
+  "workspaces": [
+    "web",
+    "ingest",
+    "shared",
+    "scoring"
+  ],
+  "dependencies": {
+    "pg-copy-streams": "^7.0.0"
+  }
+}

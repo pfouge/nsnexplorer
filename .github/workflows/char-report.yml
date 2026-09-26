@@ -1,0 +1,63 @@
+name: char-report
+
+# One-shot: dump the richest-characteristic NSNs from the DB so the
+# diagram work can target a real, well-specified part in another
+# category. Commits ingest/char-candidates.json. Touch to dispatch.
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/char-report.yml'
+
+env:
+  DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: char-report
+  cancel-in-progress: false
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: query
+        run: |
+          node --input-type=module --eval "
+            import pg from 'pg';
+            import { writeFileSync } from 'node:fs';
+            const c = new pg.Client({ connectionString: process.env.DATABASE_URL });
+            await c.connect();
+            const r = await c.query(\`
+              SELECT nsn, fsc, item_name,
+                     jsonb_array_length(characteristics) AS n,
+                     characteristics
+              FROM pub.nsns
+              WHERE characteristics IS NOT NULL
+                AND jsonb_array_length(characteristics) >= 4
+              ORDER BY jsonb_array_length(characteristics) DESC
+              LIMIT 25\`);
+            await c.end();
+            writeFileSync('ingest/char-candidates.json', JSON.stringify({ at: new Date().toISOString(), rows: r.rows }, null, 2) + '\n');
+            console.log('candidates:', r.rows.length);
+          "
+      - name: commit
+        if: always()
+        run: |
+          git config user.name "char-bot"
+          git config user.email "noreply@anthropic.com"
+          git add ingest/char-candidates.json || true
+          if git diff --cached --quiet; then echo "no change"; else
+            git commit -m "char: candidate report [skip ci]"
+            git pull --rebase --autostash origin main
+            git push origin main
+          fi

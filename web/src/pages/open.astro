@@ -1,0 +1,257 @@
+---
+// open.astro — the open-demand storefront: every currently-open government
+// solicitation a supplier can bid on, right now, across the entire catalog
+// (not gated by the deep-FSC render depth that governs the historic priced
+// catalog). Audience is the supplier/manufacturer deciding what to bid on;
+// this is not commerce — every link routes to the official DIBBS record.
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE_URL } from '../consts';
+import { loadSiteData, toDashedNsn } from '../lib/data';
+import { buildOpenDepartments, fscDisplayName } from '../lib/browse';
+
+const data = await loadSiteData();
+const departments = buildOpenDepartments(data);
+
+const fmtInt = (n: number) => n.toLocaleString('en-US');
+
+const S = data.stats.openSolicitationsCount;
+const hasS = S > 0;
+
+const title = hasS
+  ? `${fmtInt(S)} Open Government Solicitations, DLA RFQs Open for Bid`
+  : 'Open Government Solicitations: DLA RFQs Open for Bid';
+const description = hasS
+  ? `${fmtInt(S)} open government solicitations from DLA DIBBS, updated daily and linked to the official RFQ. Browse by federal supply class. Free, no account needed.`
+  : 'Open government solicitations from DLA DIBBS, updated daily and linked to the official RFQ. Browse open demand by federal supply class. Free, no account needed.';
+const h1 = hasS
+  ? `${fmtInt(S)} open government solicitations, DLA RFQs open for bid`
+  : 'Open government solicitations: DLA RFQs open for bid';
+const canonicalUrl = `${SITE_URL}/open/`;
+
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  { name: 'Open demand', url: canonicalUrl },
+];
+
+const itemList = {
+  name: 'Federal supply classes with open solicitations',
+  items: departments.flatMap((dept) =>
+    dept.fscs.map((fsc) => ({ name: `FSC ${fsc.fsc} ${fsc.name}`, url: `/open/${fsc.fsc}/` }))
+  ),
+};
+
+const faq = [
+  {
+    question: 'What is a DLA solicitation?',
+    answer:
+      "A solicitation is the Defense Logistics Agency's public request for quotes on a set quantity of a part, identified by NSN, with a closing date. Suppliers respond with a price and delivery quote through DIBBS.",
+  },
+  {
+    question: 'How do I bid on one of these RFQs?',
+    answer:
+      'Click through to the DIBBS record and submit your quote there before the closing date. You need an active SAM.gov registration and a CAGE code; the For Suppliers guide walks through both.',
+  },
+  {
+    question: 'How often is this list updated?',
+    answer:
+      'The whole site is rebuilt from DIBBS every day and open solicitations are re-crawled more often than that. The date at the top of the stats shows the last build.',
+  },
+  {
+    question: 'Does it cost anything to use?',
+    answer:
+      'No. Browsing, searching and clicking through to the official record are free and require no account. NSN Explorer does not submit bids or broker parts.',
+  },
+];
+
+// Build-date baseline for the "closes in Nd" reads below — this page is
+// static, so the countdown is accurate as of the last build, not live.
+const now = new Date();
+const todayMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+const daysUntil = (returnBy: string | null): number | null => {
+  if (!returnBy) return null;
+  const targetMs = new Date(`${returnBy}T00:00:00Z`).getTime();
+  return Math.ceil((targetMs - todayMs) / 86400000);
+};
+
+interface ClosesLabel {
+  text: string;
+  cls: 'green' | 'amber' | '';
+}
+const closesLabel = (d: number | null): ClosesLabel => {
+  if (d === null) return { text: 'date unknown', cls: '' };
+  if (d <= 0) return { text: 'closes today', cls: 'amber' };
+  if (d <= 2) return { text: `closes in ${d}d`, cls: 'amber' };
+  return { text: `closes in ${d}d`, cls: 'green' };
+};
+
+const closingSoon = data.openSolicitations.slice(0, 20);
+
+const buildDate = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  pageType="CollectionPage"
+  canonicalUrl={canonicalUrl}
+  breadcrumbs={breadcrumbs}
+  itemList={itemList}
+  faq={faq}
+>
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a> › Open demand
+  </nav>
+
+  <p class="eyebrow">Open demand <span class="x">×</span> live</p>
+
+  <header class="hero">
+    <h1>{h1}</h1>
+    <p class="lede">What the government is buying right now</p>
+    <p class="lede">
+      Every currently-open solicitation we've indexed — real requests for quote a supplier can bid
+      on today, each linked to its official DIBBS record. This isn't a marketplace and we don't
+      broker anything: it's a live index of public buying activity, organized so you can find the
+      demand you can fill before it closes. Every solicitation we index stays on record after it
+      closes, too — nothing gets deleted — so this index is also building a live, growing history
+      of federal demand you can look back through.
+    </p>
+  </header>
+
+  <section class="intro">
+    <h2 class="section-title">Every DLA solicitation open for bid, in one free list</h2>
+    <p class="gloss">
+      This page lists every open government solicitation NSN Explorer has indexed from DLA's DIBBS
+      bid board, grouped by federal supply class so a supplier can find the RFQs it can fill. The
+      list is rebuilt every day and open items are refreshed through the day, so the counts below
+      reflect the latest crawl. Each row links to the official DIBBS record where quotes are
+      submitted. Nothing here is a marketplace; it is a free index of public buying activity.
+    </p>
+  </section>
+
+  <div class="stat-strip">
+    <div class="stat">
+      <div class="value up">{fmtInt(data.stats.openSolicitationsCount)}</div>
+      <div class="label">Open solicitations</div>
+    </div>
+    <div class="stat">
+      <div class="value">{fmtInt(data.stats.openClosingSoon)}</div>
+      <div class="label">Closing within 7 days</div>
+    </div>
+    <div class="stat">
+      <div class="value">{fmtInt(data.stats.openTotalQuantity)}</div>
+      <div class="label">Total open quantity</div>
+    </div>
+    <div class="stat">
+      <div class="value">{fmtInt(data.openByFsc.size)}</div>
+      <div class="label">Categories with open demand</div>
+    </div>
+  </div>
+
+  <div class="stat-strip" style="margin-top:0.5rem;">
+    <div class="stat">
+      <div class="value">{fmtInt(data.stats.totalSolicitations)}</div>
+      <div class="label">Solicitations tracked, all-time</div>
+    </div>
+    <div class="stat">
+      <div class="value">{fmtInt(data.stats.closedSolicitationsCount)}</div>
+      <div class="label">Closed / recorded as history</div>
+    </div>
+  </div>
+
+  <p class="updated">Updated {buildDate} from DLA DIBBS. Closed solicitations stay on record.</p>
+
+  {data.stats.openSolicitationsCount === 0 ? (
+    <div class="note">
+      <b>No open solicitations indexed yet.</b> The crawler runs continuously against DIBBS —
+      check back soon, or <a href="/catalog/">browse the priced catalog</a> in the meantime.
+    </div>
+  ) : (
+    <>
+      <section>
+        <h2 class="section-title">Closing soon</h2>
+        <p class="gloss">
+          The {closingSoon.length} open solicitations closing soonest, across every category —
+          every row links to its official DIBBS record.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>NSN</th>
+                <th>Item</th>
+                <th class="num">Qty</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {closingSoon.map((s) => {
+                const label = closesLabel(daysUntil(s.returnBy));
+                return (
+                  <tr>
+                    <td class="mono">
+                      {s.nsn ? (
+                        data.nsnByNsn.has(s.nsn) || data.openNsnByNsn.has(s.nsn) ? (
+                          <a href={`/nsn/${toDashedNsn(s.nsn)}/`}>{toDashedNsn(s.nsn)}</a>
+                        ) : (
+                          <a href={s.sourceUrl} target="_blank" rel="nofollow noopener">{toDashedNsn(s.nsn)}</a>
+                        )
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                    <td>{s.nomenclature ?? s.itemName ?? 'Unnamed item'}</td>
+                    <td class="num mono">{s.quantity !== null ? s.quantity.toLocaleString('en-US') : '—'}</td>
+                    <td>
+                      <span class:list={['badge', label.cls]}>{label.text}</span>
+                    </td>
+                    <td><a href={s.sourceUrl} target="_blank" rel="nofollow noopener">View at DIBBS →</a></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2 class="section-title">Browse open demand by category</h2>
+        <p class="gloss">
+          Open solicitations grouped by department and Federal Supply Class — pick a category to
+          filter, sort, and find the parts you can bid on.
+        </p>
+        {departments.length === 0 ? (
+          <p class="gloss">No categories have open demand indexed yet.</p>
+        ) : (
+          departments.map((dept) => (
+            <div style="margin-top:1.75rem;">
+              <h3>{dept.name} <span class="tag">FSG {dept.fsg}</span></h3>
+              <div class="dept-grid">
+                {dept.fscs.map((fsc) => {
+                  const count = data.openByFsc.get(fsc.fsc)?.solicitations.length ?? 0;
+                  return (
+                    <a class="dept-card card" href={`/open/${fsc.fsc}/`}>
+                      <div class="dept-code mono">FSC {fsc.fsc}</div>
+                      <h3>{fscDisplayName(fsc.fsc, fsc.name)}</h3>
+                      <p>{fmtInt(count)} open {count === 1 ? 'solicitation' : 'solicitations'}</p>
+                    </a>
+                  );
+                })}
+              </div>
+            </div>
+          ))
+        )}
+      </section>
+    </>
+  )}
+
+  <section class="faq">
+    <h2 class="section-title">Open solicitation questions</h2>
+    {faq.map((f) => (
+      <>
+        <h3>{f.question}</h3>
+        <p class="gloss">{f.answer}</p>
+      </>
+    ))}
+  </section>
+</BaseLayout>
