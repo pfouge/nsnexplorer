@@ -1,57 +1,55 @@
-at: 2026-09-27T03:38:39Z  sha: 8a89baf68b000e5e0a3b0d1895ea891336e262cd
+at: 2026-09-27T20:13:28Z  sha: d3d9a9e52044a15bf8550fee14cd77dfa0422252
 == fetch log tail ==
-fetch.mjs: wrote /tmp/dibbs-awd/awd-09-17-2026-p128.html
-fetch.mjs: wrote /tmp/dibbs-awd/awd-09-17-2026-p129.html
-fetch.mjs: wrote /tmp/dibbs-awd/awd-09-17-2026-p130.html
-fetch.mjs: wrote /tmp/dibbs-awd/awd-09-17-2026-p131.html
-fetch.mjs: wrote /tmp/dibbs-awd/awd-09-17-2026-p132.html
-fetch.mjs: wrote /tmp/dibbs-awd/awd-09-17-2026-p133.html
-fetch.mjs: wrote /tmp/dibbs-awd/awd-09-17-2026-p134.html
-fetch.mjs: wrote /tmp/dibbs-awd/awd-09-17-2026-p135.html
-fetch.mjs: wrote /tmp/dibbs-awd/awd-09-17-2026-p136.html
-fetch.mjs: wrote /tmp/dibbs-awd/awd-09-17-2026-p137.html
-fetch.mjs: wrote /tmp/dibbs-awd/awd-09-17-2026-p138.html
-fetch.mjs: wrote /tmp/dibbs-awd/awd-09-17-2026-p139.html
-fetch.mjs: wrote /tmp/dibbs-awd/awd-09-17-2026-p140.html
-fetch.mjs: wrote /tmp/dibbs-awd/awd-09-17-2026-p141.html
-fetch.mjs: wrote /tmp/dibbs-awd/awd-09-17-2026-p142.html
-fetch.mjs: wrote /tmp/dibbs-awd/awd-09-17-2026-p143.html
-fetch.mjs: wrote /tmp/dibbs-awd/awd-09-17-2026-p144.html
-fetch.mjs: wrote /tmp/dibbs-awd/awd-09-17-2026-p145.html
-fetch.mjs: wrote /tmp/dibbs-awd/awd-09-17-2026-p146.html
-fetch.mjs: wrote /tmp/dibbs-awd/awd-09-17-2026-p147.html
+fetch.mjs: wrote /tmp/dibbs-awd/awd-09-21-2026-p77.html
+fetch.mjs: wrote /tmp/dibbs-awd/awd-09-21-2026-p78.html
+fetch.mjs: wrote /tmp/dibbs-awd/awd-09-21-2026-p79.html
+fetch.mjs: wrote /tmp/dibbs-awd/awd-09-21-2026-p80.html
+fetch.mjs: wrote /tmp/dibbs-awd/awd-09-21-2026-p81.html
+fetch.mjs: wrote /tmp/dibbs-awd/awd-09-21-2026-p82.html
+fetch.mjs: wrote /tmp/dibbs-awd/awd-09-21-2026-p83.html
+fetch.mjs: wrote /tmp/dibbs-awd/awd-09-21-2026-p84.html
+fetch.mjs: wrote /tmp/dibbs-awd/awd-09-21-2026-p85.html
+fetch.mjs: wrote /tmp/dibbs-awd/awd-09-21-2026-p86.html
+fetch.mjs: wrote /tmp/dibbs-awd/awd-09-21-2026-p87.html
+fetch.mjs: wrote /tmp/dibbs-awd/awd-09-21-2026-p88.html
+fetch.mjs: wrote /tmp/dibbs-awd/awd-09-21-2026-p89.html
+fetch.mjs: wrote /tmp/dibbs-awd/awd-09-21-2026-p90.html
+fetch.mjs: wrote /tmp/dibbs-awd/awd-09-21-2026-p91.html
+fetch.mjs: wrote /tmp/dibbs-awd/awd-09-21-2026-p92.html
+fetch.mjs: wrote /tmp/dibbs-awd/awd-09-21-2026-p93.html
+fetch.mjs: wrote /tmp/dibbs-awd/awd-09-21-2026-p94.html
+fetch.mjs: wrote /tmp/dibbs-awd/awd-09-21-2026-p95.html
+fetch.mjs: wrote /tmp/dibbs-awd/awd-09-21-2026-p96.html
 == load log tail ==
-loadAwardGridActions: 36676 loaded, 8588 skipped
-pipeline.mjs: 910 files, 45264 parsed records, 36676 loaded, 8588 skipped
-pipeline.mjs skip reasons: {"unparseable NSN":6639,"missing total":933,"fsc not in deep set":1016}
+no load log
 == fetched files ==
-total 391912
-drwxr-xr-x  2 runner runner  45056 Sep 27 01:31 .
-drwxrwxrwt 16 root   root     4096 Sep 27 03:09 ..
--rw-r--r--  1 runner runner 428859 Sep 27 01:24 awd-09-17-2026-p1.html
--rw-r--r--  1 runner runner 482000 Sep 27 01:24 awd-09-17-2026-p10.html
--rw-r--r--  1 runner runner 481488 Sep 27 01:28 awd-09-17-2026-p100.html
--rw-r--r--  1 runner runner 481261 Sep 27 01:28 awd-09-17-2026-p101.html
--rw-r--r--  1 runner runner 481560 Sep 27 01:28 awd-09-17-2026-p102.html
--rw-r--r--  1 runner runner 481293 Sep 27 01:28 awd-09-17-2026-p103.html
--rw-r--r--  1 runner runner 481205 Sep 27 01:28 awd-09-17-2026-p104.html
--rw-r--r--  1 runner runner 466428 Sep 27 01:28 awd-09-17-2026-p105.html
--rw-r--r--  1 runner runner 445882 Sep 27 01:28 awd-09-17-2026-p106.html
--rw-r--r--  1 runner runner 480805 Sep 27 01:28 awd-09-17-2026-p107.html
--rw-r--r--  1 runner runner 479495 Sep 27 01:28 awd-09-17-2026-p108.html
--rw-r--r--  1 runner runner 425363 Sep 27 01:28 awd-09-17-2026-p109.html
--rw-r--r--  1 runner runner 482924 Sep 27 01:24 awd-09-17-2026-p11.html
--rw-r--r--  1 runner runner 420119 Sep 27 01:28 awd-09-17-2026-p110.html
--rw-r--r--  1 runner runner 431887 Sep 27 01:28 awd-09-17-2026-p111.html
--rw-r--r--  1 runner runner 431867 Sep 27 01:29 awd-09-17-2026-p112.html
--rw-r--r--  1 runner runner 431927 Sep 27 01:29 awd-09-17-2026-p113.html
--rw-r--r--  1 runner runner 423549 Sep 27 01:29 awd-09-17-2026-p114.html
--rw-r--r--  1 runner runner 424607 Sep 27 01:29 awd-09-17-2026-p115.html
--rw-r--r--  1 runner runner 424607 Sep 27 01:29 awd-09-17-2026-p116.html
--rw-r--r--  1 runner runner 424607 Sep 27 01:29 awd-09-17-2026-p117.html
--rw-r--r--  1 runner runner 430420 Sep 27 01:29 awd-09-17-2026-p118.html
--rw-r--r--  1 runner runner 395980 Sep 27 01:29 awd-09-17-2026-p119.html
--rw-r--r--  1 runner runner 483226 Sep 27 01:24 awd-09-17-2026-p12.html
--rw-r--r--  1 runner runner 395347 Sep 27 01:29 awd-09-17-2026-p120.html
--rw-r--r--  1 runner runner 398898 Sep 27 01:29 awd-09-17-2026-p121.html
--rw-r--r--  1 runner runner 409572 Sep 27 01:29 awd-09-17-2026-p122.html
+total 318276
+drwxr-xr-x  2 runner runner  36864 Sep 27 20:13 .
+drwxrwxrwt 16 root   root     4096 Sep 27 20:09 ..
+-rw-r--r--  1 runner runner 450740 Sep 27 19:27 awd-09-21-2026-p1.html
+-rw-r--r--  1 runner runner 482969 Sep 27 19:32 awd-09-21-2026-p10.html
+-rw-r--r--  1 runner runner 482693 Sep 27 19:33 awd-09-21-2026-p11.html
+-rw-r--r--  1 runner runner 482941 Sep 27 19:33 awd-09-21-2026-p12.html
+-rw-r--r--  1 runner runner 483225 Sep 27 19:34 awd-09-21-2026-p13.html
+-rw-r--r--  1 runner runner 481252 Sep 27 19:35 awd-09-21-2026-p14.html
+-rw-r--r--  1 runner runner 483528 Sep 27 19:35 awd-09-21-2026-p15.html
+-rw-r--r--  1 runner runner 483163 Sep 27 19:36 awd-09-21-2026-p16.html
+-rw-r--r--  1 runner runner 483501 Sep 27 19:36 awd-09-21-2026-p17.html
+-rw-r--r--  1 runner runner 483205 Sep 27 19:37 awd-09-21-2026-p18.html
+-rw-r--r--  1 runner runner 482999 Sep 27 19:37 awd-09-21-2026-p19.html
+-rw-r--r--  1 runner runner 482794 Sep 27 19:28 awd-09-21-2026-p2.html
+-rw-r--r--  1 runner runner 454343 Sep 27 19:38 awd-09-21-2026-p20.html
+-rw-r--r--  1 runner runner 465869 Sep 27 19:38 awd-09-21-2026-p21.html
+-rw-r--r--  1 runner runner 480157 Sep 27 19:39 awd-09-21-2026-p22.html
+-rw-r--r--  1 runner runner 480142 Sep 27 19:39 awd-09-21-2026-p23.html
+-rw-r--r--  1 runner runner 480041 Sep 27 19:40 awd-09-21-2026-p24.html
+-rw-r--r--  1 runner runner 480041 Sep 27 19:41 awd-09-21-2026-p25.html
+-rw-r--r--  1 runner runner 480041 Sep 27 19:41 awd-09-21-2026-p26.html
+-rw-r--r--  1 runner runner 480041 Sep 27 19:42 awd-09-21-2026-p27.html
+-rw-r--r--  1 runner runner 480043 Sep 27 19:42 awd-09-21-2026-p28.html
+-rw-r--r--  1 runner runner 480425 Sep 27 19:43 awd-09-21-2026-p29.html
+-rw-r--r--  1 runner runner 482060 Sep 27 19:28 awd-09-21-2026-p3.html
+-rw-r--r--  1 runner runner 480425 Sep 27 19:43 awd-09-21-2026-p30.html
+-rw-r--r--  1 runner runner 480425 Sep 27 19:44 awd-09-21-2026-p31.html
+-rw-r--r--  1 runner runner 472356 Sep 27 19:44 awd-09-21-2026-p32.html
+-rw-r--r--  1 runner runner 480739 Sep 27 19:45 awd-09-21-2026-p33.html
