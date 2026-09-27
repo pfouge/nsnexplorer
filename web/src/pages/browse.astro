@@ -5,10 +5,10 @@ import { SITE_URL } from '../consts';
 import { fscDisplayName } from '../lib/browse';
 
 const data = await loadSiteData();
-const rows = data.deepFscs.map((f) => ({
-  fsc: f,
-  count: data.nsnsByFsc.get(f.fsc)?.length ?? 0,
-}));
+// Only categories with at least one tracked NSN are listed.
+const rows = data.deepFscs
+  .map((f) => ({ fsc: f, count: data.nsnsByFsc.get(f.fsc)?.length ?? 0 }))
+  .filter((r) => r.count > 0);
 
 const fmtInt = (n: number) => n.toLocaleString('en-US');
 

@@ -101,7 +101,7 @@ async function fetchSiteData(): Promise<SiteData> {
     const fscRes = await pool.query<{ fsc: string; name: string; fsg: string; render_depth: string }>(
       // Every non-excluded category (migration 0005 retired the deep/shallow
       // gate; the name deepFscs is kept for API stability).
-      `SELECT fsc, name, fsg, render_depth FROM pub.fsc WHERE render_depth <> 'excluded' ORDER BY fsc`
+      `SELECT fsc, name, fsg, render_depth FROM pub.fsc WHERE render_depth <> 'excluded' AND fsc ~ '^[0-9]{4}$' ORDER BY fsc`
     );
     const deepFscs: FscConfig[] = fscRes.rows.map((r) => ({
       fsc: r.fsc,

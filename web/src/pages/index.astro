@@ -6,7 +6,9 @@ import { loadSiteData } from '../lib/data';
 import { fscDisplayName } from '../lib/browse';
 
 const data = await loadSiteData();
-const { stats, deepFscs, nsnsByFsc } = data;
+const { stats, nsnsByFsc } = data;
+// Only categories with at least one tracked NSN are listed on the home page.
+const deepFscs = data.deepFscs.filter((f) => (nsnsByFsc.get(f.fsc)?.length ?? 0) > 0);
 
 const fmtInt = (n: number) => n.toLocaleString('en-US');
 const fmtUsd = (n: number) =>
