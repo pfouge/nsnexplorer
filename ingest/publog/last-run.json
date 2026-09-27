@@ -1,9 +1,9 @@
 {
-  "at": "2026-09-07T13:11:06.570Z",
+  "at": "2026-09-27T00:49:02.787Z",
   "counts": {
     "pub.nsns": 35577,
-    "pub.part_numbers": 128837,
-    "pub.suppliers": 13523,
+    "pub.part_numbers": 129165,
+    "pub.suppliers": 13553,
     "pub.nsns with item_name": 35575,
     "pub.nsns with characteristics": 31764
   }
