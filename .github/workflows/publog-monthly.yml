@@ -18,7 +18,9 @@ name: publog-nightly
 
 on:
   schedule:
-    - cron: '0 7 * * *'
+    # After the RFQ lanes (09:05-09:45 UTC) so NSNs added today get their
+    # FLIS characteristics (and drawings) the same day; deploy follows at 10:30.
+    - cron: '55 9 * * *'
   workflow_dispatch: {}
   push:
     branches: [main]
