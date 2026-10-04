@@ -13,6 +13,7 @@ import {
   formatUsd,
   formatUsdPrecise,
   amscGloss,
+  solicitationLinkLabel,
   parseCharacteristics,
 } from '../../lib/shared';
 import { loadNsnPage, openSql } from '../../lib/nsn-page';
@@ -571,7 +572,7 @@ const datasetSchema = {
                   <td class="mono">{s.returnBy ? formatDate(s.returnBy) : '—'}</td>
                   <td class="num mono">{s.quantity !== null ? s.quantity.toLocaleString('en-US') : '—'}</td>
                   <td><span class={`badge ${badge.cls}`}>{badge.text}</span></td>
-                  <td><a href={s.sourceUrl} target="_blank" rel="nofollow noopener">View at DIBBS →</a></td>
+                  <td><a href={s.sourceUrl} target="_blank" rel="nofollow noopener">{solicitationLinkLabel(s.source)}</a></td>
                 </tr>
               );
             })}

@@ -293,15 +293,25 @@ async function fetchSiteData(): Promise<SiteData> {
     closingSoonCutoff.setUTCDate(closingSoonCutoff.getUTCDate() + 7);
 
     const solRes = await pool.query(
-      `SELECT s.sol_number, s.nsn, s.fsc, f.name AS fsc_name, s.nomenclature,
-              s.quantity, s.unit_of_issue, s.issued_on, s.return_by, s.status,
+      // Open means open TODAY: a row still flagged 'open' whose return_by has
+      // passed (i.e. NOT (return_by IS NULL OR return_by >= CURRENT_DATE)) is
+      // reported as 'expired' so it is neither listed nor counted as open.
+      `SELECT s.sol_number, s.nsn, s.fsc, f.name AS fsc_name, f.render_depth AS fsc_depth, s.nomenclature,
+              s.quantity, s.unit_of_issue, s.issued_on, s.return_by,
+              CASE WHEN s.status = 'open' AND s.return_by < CURRENT_DATE THEN 'expired' ELSE s.status END AS status,
               s.setaside, s.buyer_office, s.source, s.source_url, n.item_name
        FROM pub.solicitations s
        LEFT JOIN pub.nsns n ON n.nsn = s.nsn
        LEFT JOIN pub.fsc f ON f.fsc = s.fsc
        ORDER BY COALESCE(s.return_by, s.issued_on) DESC NULLS LAST, s.sol_number`
     );
-    const allSolicitations: SolicitationRecord[] = solRes.rows.map((r) => {
+    // Open lane excludes service PSCs: a non-null fsc must be a 4-digit class
+    // and not 'excluded' in pub.fsc (same rule as the catalog query above).
+    // Rows with a NULL fsc keep their existing treatment.
+    const solRows = solRes.rows.filter(
+      (r) => r.fsc === null || r.fsc === undefined || (/^[0-9]{4}$/.test(String(r.fsc)) && r.fsc_depth !== 'excluded')
+    );
+    const allSolicitations: SolicitationRecord[] = solRows.map((r) => {
       const returnBy = r.return_by ? new Date(r.return_by).toISOString().slice(0, 10) : null;
       const rec: SolicitationRecord = {
         solNumber: r.sol_number,

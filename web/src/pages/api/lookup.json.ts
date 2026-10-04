@@ -35,6 +35,12 @@ export const GET: APIRoute = async (ctx) => {
   const databaseUrl = databaseUrlFrom(ctx);
   if (!databaseUrl) return json({ ok: false, kind: 'invalid', matches: [], error: 'Lookup is not configured.' }, 503, 'no-store');
 
+  const unavailable = (): Response =>
+    new Response(JSON.stringify({ error: 'temporarily unavailable' }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' },
+    });
+
   const sql = openSql(databaseUrl);
   try {
     let rows: { nsn: string }[];
@@ -57,6 +63,8 @@ export const GET: APIRoute = async (ctx) => {
       );
     }
     return json({ ok: true, kind, matches: rows.map((r) => toDashedNsn(r.nsn)) }, 200, 'public, max-age=0, s-maxage=3600');
+  } catch {
+    return unavailable();
   } finally {
     await sql.end({ timeout: 1 }).catch(() => {});
   }

@@ -30,6 +30,8 @@ export const GET: APIRoute = async (ctx) => {
       200,
       'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400'
     );
+  } catch {
+    return json({ error: 'temporarily unavailable' }, 503, 'no-store');
   } finally {
     await sql.end({ timeout: 1 }).catch(() => {});
   }

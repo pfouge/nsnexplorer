@@ -182,6 +182,10 @@ const breadcrumbSchema = {
           ))}
         </div>
       </div>
+      <p class="gloss" id="empty-state" hidden>
+        No items match these filters.
+        <button type="button" class="btn btn-ghost" id="clear-filters">Clear filters</button>
+      </p>
     )}
   </section>
 
@@ -230,7 +234,22 @@ const breadcrumbSchema = {
           if (visible) visibleCount++;
         }
         if (countEl) countEl.textContent = `${visibleCount} of ${total} shown`;
+        const emptyEl = document.getElementById('empty-state');
+        if (emptyEl) emptyEl.hidden = visibleCount !== 0;
       };
+
+      const clearFilters = () => {
+        document.querySelectorAll('input[name="f-competition"]').forEach((el) => {
+          if (el instanceof HTMLInputElement) el.checked = el.value === 'all';
+        });
+        lastPurchasedSelect.value = 'any';
+        hasDrawingCheckbox.checked = false;
+        materialCheckboxes.forEach((el) => {
+          if (el instanceof HTMLInputElement) el.checked = false;
+        });
+        apply();
+      };
+      document.getElementById('clear-filters')?.addEventListener('click', clearFilters);
 
       const sortCards = () => {
         const mode = sortSelect.value;
@@ -241,7 +260,11 @@ const breadcrumbSchema = {
             return Number(bel.dataset.demand ?? 0) - Number(ael.dataset.demand ?? 0);
           }
           if (mode === 'name') {
-            return (ael.dataset.itemname ?? '').localeCompare(bel.dataset.itemname ?? '');
+            const an = ael.dataset.itemname ?? '';
+            const bn = bel.dataset.itemname ?? '';
+            // Unnamed items ("Unnamed item") sort last.
+            if (an === '' || bn === '') return an === bn ? 0 : an === '' ? 1 : -1;
+            return an.localeCompare(bn);
           }
           return (bel.dataset.lastpurchased ?? '').localeCompare(ael.dataset.lastpurchased ?? '');
         });

@@ -4,10 +4,18 @@ import { loadSiteData } from '../lib/data';
 import { SITE_URL } from '../consts';
 
 const data = await loadSiteData();
-const rows = data.agencies.map((a) => ({
-  agency: a,
-  count: data.purchasesByAgency.get(a.agencyId)?.length ?? 0,
-}));
+// Ranked by total obligations (same dollar figure the agency page shows),
+// highest first; ties by name.
+const rows = data.agencies
+  .map((a) => {
+    const purchases = data.purchasesByAgency.get(a.agencyId) ?? [];
+    return {
+      agency: a,
+      count: purchases.length,
+      total: purchases.reduce((sum, p) => sum + (p.totalValue ?? p.unitPrice * (p.quantity ?? 1)), 0),
+    };
+  })
+  .sort((a, b) => b.total - a.total || a.agency.name.localeCompare(b.agency.name));
 
 const fmtInt = (n: number) => n.toLocaleString('en-US');
 

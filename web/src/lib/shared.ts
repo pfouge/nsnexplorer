@@ -262,6 +262,11 @@ export function mapNsnRow(r: {
   };
 }
 
+/** Link text for a solicitation's source record, chosen from its source. */
+export function solicitationLinkLabel(source: string | null | undefined): string {
+  return source === 'sam_gov' ? 'View at SAM.gov →' : 'View at DIBBS →';
+}
+
 export function formatUsd(value: number): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',

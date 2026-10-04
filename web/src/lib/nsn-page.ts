@@ -84,8 +84,11 @@ export async function loadNsnPage(sql: Sql, nsnCode: string): Promise<NsnPageDat
       [nsnCode]
     ),
     sql.unsafe(
+      // Open means open today: past-dated 'open' rows are reported as 'expired'.
       `SELECT s.sol_number, s.nsn, s.fsc, s.nomenclature, s.quantity, s.unit_of_issue,
-              s.issued_on, s.return_by, s.status, s.setaside, s.buyer_office, s.source, s.source_url,
+              s.issued_on, s.return_by,
+              CASE WHEN s.status = 'open' AND s.return_by < CURRENT_DATE THEN 'expired' ELSE s.status END AS status,
+              s.setaside, s.buyer_office, s.source, s.source_url,
               n.item_name
        FROM pub.solicitations s
        LEFT JOIN pub.nsns n ON n.nsn = s.nsn

@@ -362,6 +362,8 @@ export function buildProductCards(data: SiteData, fsc: FscConfig): ProductCard[]
 export function buildDepartments(data: SiteData): DepartmentGroup[] {
   const byFsg = new Map<string, FscConfig[]>();
   for (const fsc of data.deepFscs) {
+    // Empty categories are hidden, matching the home and browse lists.
+    if ((data.nsnsByFsc.get(fsc.fsc)?.length ?? 0) === 0) continue;
     if (!byFsg.has(fsc.fsg)) byFsg.set(fsc.fsg, []);
     byFsg.get(fsc.fsg)!.push(fsc);
   }
