@@ -123,6 +123,28 @@ export const CHECKS = [
     sql: `SELECT count(*) AS n FROM pub.fsc WHERE fsc ~ '^[0-9]{4}$' AND name LIKE 'FSC %'`,
   },
   {
+    key: 'sam_open_services',
+    label: 'Open SAM.gov service notices (letter service code; listed under /services/)',
+    fail: false,
+    sql: `SELECT count(*) AS n FROM pub.solicitations
+          WHERE source = 'sam_gov' AND status = 'open' AND fsc ~ '^[A-Za-z]'`,
+  },
+  {
+    key: 'sam_open_equipment_services',
+    label: 'Open SAM.gov equipment-service notices tied to a supply group (H, J, K, L, N, W)',
+    fail: false,
+    sql: `SELECT count(*) AS n FROM pub.solicitations
+          WHERE source = 'sam_gov' AND status = 'open'
+            AND (fsc ~ '^[JKLNWjklnw]0[0-9]{2}$' OR fsc ~ '^[Hh][1239][0-9]{2}$')`,
+  },
+  {
+    key: 'sam_open_uncoded',
+    label: 'Open SAM.gov notices with no code at all',
+    fail: false,
+    sql: `SELECT count(*) AS n FROM pub.solicitations
+          WHERE source = 'sam_gov' AND status = 'open' AND fsc IS NULL`,
+  },
+  {
     key: 'sam_open_unclassified',
     label: 'Open SAM.gov notices with no product supply class (services or uncoded)',
     fail: false,
