@@ -63,6 +63,7 @@ const title = pagedTitle(fscTitle(copy), page, pages);
 const description = fscDescription(copy, pagedDescriptionPrefix(page, pages));
 const canonicalUrl = `${SITE_URL}${pageUrl(baseUrl, page)}`;
 const headLinks = [
+  ...(page === 1 ? [{ rel: 'alternate', type: 'text/markdown', href: `${SITE_URL}/fsc/${fsc.fsc}.md` }] : []),
   ...(page > 1 ? [{ rel: 'prev', href: `${SITE_URL}${pageUrl(baseUrl, page - 1)}` }] : []),
   ...(page < pages ? [{ rel: 'next', href: `${SITE_URL}${pageUrl(baseUrl, page + 1)}` }] : []),
 ];

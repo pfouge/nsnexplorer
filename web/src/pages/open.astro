@@ -5,6 +5,7 @@
 // catalog). Audience is the supplier/manufacturer deciding what to bid on;
 // this is not commerce — every link routes to the official DIBBS record.
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { fscLabel, listedFscName } from '../lib/seo-copy';
 import { SITE_URL } from '../consts';
 import { loadSiteData, toDashedNsn, solicitationLinkLabel } from '../lib/data';
 import { buildOpenDepartments, fscDisplayName } from '../lib/browse';
@@ -36,7 +37,7 @@ const breadcrumbs = [
 const itemList = {
   name: 'Federal supply classes with open solicitations',
   items: departments.flatMap((dept) =>
-    dept.fscs.map((fsc) => ({ name: `FSC ${fsc.fsc} ${fsc.name}`, url: `/open/${fsc.fsc}/` }))
+    dept.fscs.map((fsc) => ({ name: fscLabel(fsc.fsc, listedFscName(fsc.fsc, fsc.name)), url: `/open/${fsc.fsc}/` }))
   ),
 };
 

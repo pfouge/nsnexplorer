@@ -3,7 +3,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import { SITE_URL } from '../../consts';
 import { loadSiteData, solicitationLinkLabel } from '../../lib/data';
 import { buildDepartments, fscDisplayName, isPlaceholderFscName, type DepartmentGroup } from '../../lib/browse';
-import { groupDescription, groupIntro, groupTitle } from '../../lib/seo-copy';
+import { fscLabel, groupDescription, groupIntro, groupTitle, listedFscName } from '../../lib/seo-copy';
 import { closesLabel, daysUntil, serviceCategoryName } from '../../lib/services';
 
 export async function getStaticPaths() {
@@ -44,7 +44,7 @@ const description = groupDescription(copy);
 const intro = groupIntro({ ...copy, topClasses: classRows.slice(0, 3).map((r) => ({ label: r.label, nsnCount: r.nsnCount })), openCount: groupOpen });
 const itemList = {
   name: `${department.name} (FSG ${department.fsg}) supply classes`,
-  items: department.fscs.map((f) => ({ name: `FSC ${f.fsc} ${fscDisplayName(f.fsc, f.name)}`, url: `/fsc/${f.fsc}/` })),
+  items: department.fscs.map((f) => ({ name: fscLabel(f.fsc, listedFscName(f.fsc, f.name)), url: `/fsc/${f.fsc}/` })),
 };
 const canonicalUrl = `${SITE_URL}/group/${department.fsg}/`;
 

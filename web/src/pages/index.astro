@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { fscLabel, listedFscName } from '../lib/seo-copy';
 import HomeSearch from '../components/HomeSearch.astro';
 import SignupForm from '../components/SignupForm.astro';
 import { loadSiteData } from '../lib/data';
@@ -53,7 +54,7 @@ const faq = [
 const breadcrumbs = [{ name: 'Home', url: '/' }];
 const itemList = {
   name: 'Federal supply classes with full price history',
-  items: deepFscs.map((f) => ({ name: `${f.fsc} ${f.name}`, url: `/fsc/${f.fsc}/` })),
+  items: deepFscs.map((f) => ({ name: listedFscName(f.fsc, f.name) ? `${f.fsc} ${f.name}` : fscLabel(f.fsc, null), url: `/fsc/${f.fsc}/` })),
 };
 ---
 

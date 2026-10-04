@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { fscLabel, listedFscName } from '../lib/seo-copy';
 import { loadSiteData } from '../lib/data';
 import { SITE_URL } from '../consts';
 import { fscDisplayName } from '../lib/browse';
@@ -34,7 +35,7 @@ const breadcrumbs = [
 
 const itemList = {
   name: 'Federal supply classes with full price history',
-  items: rows.map((r) => ({ name: `FSC ${r.fsc.fsc} ${r.fsc.name}`, url: `/fsc/${r.fsc.fsc}/` })),
+  items: rows.map((r) => ({ name: fscLabel(r.fsc.fsc, listedFscName(r.fsc.fsc, r.fsc.name)), url: `/fsc/${r.fsc.fsc}/` })),
 };
 
 const faq = [
