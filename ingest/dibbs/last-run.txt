@@ -1,4 +1,4 @@
-at: 2026-10-03T16:20:12Z  sha: 946e3850026497f2e1d375c8b771affccabbbd18
+at: 2026-10-04T15:02:02Z  sha: ea5c2d0a4bc623ee858151f150d2f4894c869024
 == fetch log tail ==
 fetch.mjs: wrote /tmp/dibbs-awd/awd-09-24-2026-p181.html
 fetch.mjs: wrote /tmp/dibbs-awd/awd-09-24-2026-p182.html
@@ -21,37 +21,54 @@ fetch.mjs: wrote /tmp/dibbs-awd/awd-09-24-2026-p198.html
 fetch.mjs: wrote /tmp/dibbs-awd/awd-09-24-2026-p199.html
 fetch.mjs: wrote /tmp/dibbs-awd/awd-09-24-2026-p200.html
 == load log tail ==
-loadAwardGridActions: 35322 loaded, 4207 skipped
-pipeline.mjs: 793 files, 39529 parsed records, 35322 loaded, 4207 skipped
-pipeline.mjs skip reasons: {"unparseable NSN":2994,"missing total":1097,"fsc not in deep set":116}
+    at async main (file:///home/runner/work/nsnexplorer/nsnexplorer/ingest/dibbs/pipeline.mjs:126:5) {
+  length: 345,
+  severity: 'ERROR',
+  code: '40P01',
+  detail: 'Process 2949383 waits for ShareLock on transaction 98165; blocked by process 2949375.\n' +
+    'Process 2949375 waits for ShareLock on transaction 98164; blocked by process 2949383.',
+  hint: 'See server log for query details.',
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: 'while inserting index tuple (7147,18) in relation "nsns"',
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'deadlock.c',
+  line: '1130',
+  routine: 'DeadLockReport'
+}
 == fetched files ==
-total 339244
-drwxr-xr-x  2 runner runner  36864 Oct  3 14:22 .
-drwxrwxrwt 16 root   root     4096 Oct  3 16:09 ..
--rw-r--r--  1 runner runner 401645 Oct  3 14:11 awd-09-24-2026-p1.html
--rw-r--r--  1 runner runner 481921 Oct  3 14:12 awd-09-24-2026-p10.html
--rw-r--r--  1 runner runner 465024 Oct  3 14:17 awd-09-24-2026-p100.html
--rw-r--r--  1 runner runner 389842 Oct  3 14:17 awd-09-24-2026-p101.html
--rw-r--r--  1 runner runner 396688 Oct  3 14:17 awd-09-24-2026-p102.html
--rw-r--r--  1 runner runner 396932 Oct  3 14:17 awd-09-24-2026-p103.html
--rw-r--r--  1 runner runner 396873 Oct  3 14:17 awd-09-24-2026-p104.html
--rw-r--r--  1 runner runner 395597 Oct  3 14:17 awd-09-24-2026-p105.html
--rw-r--r--  1 runner runner 395864 Oct  3 14:17 awd-09-24-2026-p106.html
--rw-r--r--  1 runner runner 396842 Oct  3 14:17 awd-09-24-2026-p107.html
--rw-r--r--  1 runner runner 395712 Oct  3 14:17 awd-09-24-2026-p108.html
--rw-r--r--  1 runner runner 435004 Oct  3 14:17 awd-09-24-2026-p109.html
--rw-r--r--  1 runner runner 482480 Oct  3 14:12 awd-09-24-2026-p11.html
--rw-r--r--  1 runner runner 456771 Oct  3 14:17 awd-09-24-2026-p110.html
--rw-r--r--  1 runner runner 392131 Oct  3 14:17 awd-09-24-2026-p111.html
--rw-r--r--  1 runner runner 397438 Oct  3 14:17 awd-09-24-2026-p112.html
--rw-r--r--  1 runner runner 394492 Oct  3 14:17 awd-09-24-2026-p113.html
--rw-r--r--  1 runner runner 397121 Oct  3 14:17 awd-09-24-2026-p114.html
--rw-r--r--  1 runner runner 397121 Oct  3 14:17 awd-09-24-2026-p115.html
--rw-r--r--  1 runner runner 466803 Oct  3 14:18 awd-09-24-2026-p116.html
--rw-r--r--  1 runner runner 479977 Oct  3 14:18 awd-09-24-2026-p117.html
--rw-r--r--  1 runner runner 479782 Oct  3 14:18 awd-09-24-2026-p118.html
--rw-r--r--  1 runner runner 430716 Oct  3 14:18 awd-09-24-2026-p119.html
--rw-r--r--  1 runner runner 482485 Oct  3 14:12 awd-09-24-2026-p12.html
--rw-r--r--  1 runner runner 397142 Oct  3 14:18 awd-09-24-2026-p120.html
--rw-r--r--  1 runner runner 396110 Oct  3 14:18 awd-09-24-2026-p121.html
--rw-r--r--  1 runner runner 398905 Oct  3 14:18 awd-09-24-2026-p122.html
+total 339252
+drwxr-xr-x  2 runner runner  36864 Oct  4 14:59 .
+drwxrwxrwt 16 root   root     4096 Oct  4 14:59 ..
+-rw-r--r--  1 runner runner 401645 Oct  4 14:49 awd-09-24-2026-p1.html
+-rw-r--r--  1 runner runner 481921 Oct  4 14:50 awd-09-24-2026-p10.html
+-rw-r--r--  1 runner runner 465024 Oct  4 14:55 awd-09-24-2026-p100.html
+-rw-r--r--  1 runner runner 389842 Oct  4 14:55 awd-09-24-2026-p101.html
+-rw-r--r--  1 runner runner 396688 Oct  4 14:55 awd-09-24-2026-p102.html
+-rw-r--r--  1 runner runner 396932 Oct  4 14:55 awd-09-24-2026-p103.html
+-rw-r--r--  1 runner runner 396873 Oct  4 14:55 awd-09-24-2026-p104.html
+-rw-r--r--  1 runner runner 395597 Oct  4 14:55 awd-09-24-2026-p105.html
+-rw-r--r--  1 runner runner 395864 Oct  4 14:55 awd-09-24-2026-p106.html
+-rw-r--r--  1 runner runner 396842 Oct  4 14:55 awd-09-24-2026-p107.html
+-rw-r--r--  1 runner runner 395712 Oct  4 14:55 awd-09-24-2026-p108.html
+-rw-r--r--  1 runner runner 435004 Oct  4 14:55 awd-09-24-2026-p109.html
+-rw-r--r--  1 runner runner 482480 Oct  4 14:50 awd-09-24-2026-p11.html
+-rw-r--r--  1 runner runner 456771 Oct  4 14:55 awd-09-24-2026-p110.html
+-rw-r--r--  1 runner runner 392131 Oct  4 14:55 awd-09-24-2026-p111.html
+-rw-r--r--  1 runner runner 397438 Oct  4 14:55 awd-09-24-2026-p112.html
+-rw-r--r--  1 runner runner 394492 Oct  4 14:55 awd-09-24-2026-p113.html
+-rw-r--r--  1 runner runner 397121 Oct  4 14:55 awd-09-24-2026-p114.html
+-rw-r--r--  1 runner runner 397121 Oct  4 14:55 awd-09-24-2026-p115.html
+-rw-r--r--  1 runner runner 466803 Oct  4 14:55 awd-09-24-2026-p116.html
+-rw-r--r--  1 runner runner 479977 Oct  4 14:55 awd-09-24-2026-p117.html
+-rw-r--r--  1 runner runner 479782 Oct  4 14:55 awd-09-24-2026-p118.html
+-rw-r--r--  1 runner runner 430716 Oct  4 14:56 awd-09-24-2026-p119.html
+-rw-r--r--  1 runner runner 482485 Oct  4 14:50 awd-09-24-2026-p12.html
+-rw-r--r--  1 runner runner 397142 Oct  4 14:56 awd-09-24-2026-p120.html
+-rw-r--r--  1 runner runner 396110 Oct  4 14:56 awd-09-24-2026-p121.html
+-rw-r--r--  1 runner runner 398905 Oct  4 14:56 awd-09-24-2026-p122.html
