@@ -19,6 +19,10 @@ export default defineConfig({
   },
   integrations: [
     sitemap({
+      // Uncoded SAM notices are kept out of the index (the page carries
+      // noindex, follow). NSN pages have their own prerendered sitemap files
+      // (pages/sitemap-nsn-*.xml.ts), listed in robots.txt.
+      filter: (page) => !page.includes('/services/other/'),
       // Freshness + crawl-priority signals on every entry.
       serialize(item) {
         const isOpenDemand = item.url.includes('/open/') || item.url.includes('/solicitation/');

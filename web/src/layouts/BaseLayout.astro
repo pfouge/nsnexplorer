@@ -9,7 +9,7 @@ interface Props {
   ogImage?: string;
   ogType?: 'website' | 'article';
   canonicalUrl?: string;
-  noindex?: boolean;
+  noindex?: boolean | 'follow';
   pageType?: string;
   extraSchema?: object[];
   breadcrumbs?: { name: string; url: string }[];

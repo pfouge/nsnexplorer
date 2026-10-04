@@ -100,6 +100,31 @@ export interface SiteData {
   };
 }
 
+let cachedNsnCodes: Promise<string[]> | null = null;
+
+/**
+ * Every 13-digit NSN the on-demand /nsn/ route will serve whose class is not
+ * excluded, ordered by NSN. Kept out of SiteData on purpose (80k+ strings the
+ * other pages never need); only the NSN sitemap files read it.
+ */
+export function loadNsnSitemapCodes(): Promise<string[]> {
+  if (!cachedNsnCodes) {
+    cachedNsnCodes = (async () => {
+      const pool = await openPool();
+      try {
+        const res = await pool.query<{ nsn: string }>(
+          `SELECT n.nsn FROM pub.nsns n JOIN pub.fsc f ON f.fsc = n.fsc
+           WHERE f.render_depth <> 'excluded' ORDER BY n.nsn`
+        );
+        return res.rows.map((r) => r.nsn);
+      } finally {
+        await pool.end();
+      }
+    })();
+  }
+  return cachedNsnCodes;
+}
+
 let cached: Promise<SiteData> | null = null;
 
 export function loadSiteData(): Promise<SiteData> {

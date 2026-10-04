@@ -11,7 +11,8 @@ interface Props {
   ogImage?: string;
   ogType?: 'website' | 'article';
   canonicalUrl?: string;
-  noindex?: boolean;
+  /* true = noindex, nofollow; 'follow' = noindex, follow (keep link equity flowing). */
+  noindex?: boolean | 'follow';
   /* schema.org @type for this page's WebPage node
      (e.g. CollectionPage, AboutPage, ItemPage). Defaults to WebPage. */
   pageType?: string;
@@ -128,7 +129,9 @@ const faqSchema =
 <meta
   name="robots"
   content={noindex
-    ? 'noindex, nofollow'
+    ? noindex === 'follow'
+      ? 'noindex, follow'
+      : 'noindex, nofollow'
     : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1'}
 />
 

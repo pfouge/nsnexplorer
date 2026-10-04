@@ -69,6 +69,7 @@ const pscs = [...pscCounts.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   pageType="CollectionPage"
   canonicalUrl={canonicalUrl}
   breadcrumbs={breadcrumbs}
+  noindex={isOther ? 'follow' : false}
 >
   <nav class="breadcrumb" aria-label="Breadcrumb">
     <a href="/">Home</a> › <a href="/services/">Services</a> › {name}
