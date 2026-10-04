@@ -9,6 +9,7 @@ import { SITE_URL } from '../../../consts';
 import { loadSiteData, formatDate, solicitationLinkLabel, type ServiceNotice } from '../../../lib/data';
 import { buildDepartments } from '../../../lib/browse';
 import { closesLabel, daysUntil, serviceCategoryName, serviceCategoryNameInline } from '../../../lib/services';
+import { fitDescription } from '../../../lib/seo-copy';
 import { pageCount, pageItems, pageNumbers, pageParam, pageRange, pageUrl, rangeLabel, pagedDescriptionPrefix, pagedTitle } from '../../../lib/paginate';
 
 // /services/<letter>/ is page 1; /services/<letter>/page/<n>/ holds the next PAGE_SIZE notices.
@@ -56,9 +57,20 @@ const baseTitle = isOther
   : `${name}: ${fmtInt(n)} Open Federal Solicitations`;
 const baseDescription = isOther
   ? `${fmtInt(n)} open SAM.gov notices posted without a service or supply code, with closing dates and agency. Linked to the official notice.`
-  : `${fmtInt(n)} open federal solicitations for ${serviceCategoryNameInline(key)} (service category ${key}) from SAM.gov, with closing dates, set-asides and agency. Linked to the official notice.`;
+  : '';
 const title = pagedTitle(baseTitle, page, pages);
-const description = `${pagedDescriptionPrefix(page, pages)}${baseDescription}`;
+// Long category names pushed the one-sentence form to 200 characters; build
+// from clauses and drop trailing ones so every page stays within 160.
+const description = isOther
+  ? `${pagedDescriptionPrefix(page, pages)}${baseDescription}`
+  : fitDescription(
+      [
+        `${fmtInt(n)} open federal solicitations for ${serviceCategoryNameInline(key)} (service category ${key}) from SAM.gov.`,
+        ' Closing dates, set-asides and agency for each.',
+        ' Linked to the official notice.',
+      ],
+      { prefix: pagedDescriptionPrefix(page, pages) }
+    );
 const h1 = isOther ? 'Uncoded notices' : name;
 const subline = isOther
   ? `${fmtInt(n)} open notices with no service or supply code`
