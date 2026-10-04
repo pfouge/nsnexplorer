@@ -2,7 +2,8 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { SITE_URL } from '../../consts';
 import { loadSiteData, solicitationLinkLabel } from '../../lib/data';
-import { buildDepartments, fscDisplayName, type DepartmentGroup } from '../../lib/browse';
+import { buildDepartments, fscDisplayName, isPlaceholderFscName, type DepartmentGroup } from '../../lib/browse';
+import { groupDescription, groupIntro, groupTitle } from '../../lib/seo-copy';
 import { closesLabel, daysUntil, serviceCategoryName } from '../../lib/services';
 
 export async function getStaticPaths() {
@@ -26,8 +27,25 @@ const shownNotices = serviceNotices.slice(0, 10);
 const now = new Date();
 const todayMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
 
-const title = `${department.name} — FSG ${department.fsg}`;
-const description = `${department.name} (Federal Supply Group ${department.fsg}): ${department.fscs.length} categories, ${fmtInt(department.nsnCount)} NSNs tracked, every price linked to its source record.`;
+// Classes in this group with their NSN and open-solicitation counts, largest first.
+const openCount = (fsc: string) => data.openByFsc.get(fsc)?.solicitations.length ?? 0;
+const classRows = department.fscs
+  .map((f) => ({
+    fsc: f.fsc,
+    label: isPlaceholderFscName(f.fsc, f.name) ? `FSC ${f.fsc}` : f.name,
+    nsnCount: categoryCount(f.fsc),
+    open: openCount(f.fsc),
+  }))
+  .sort((a, b) => b.nsnCount - a.nsnCount || a.fsc.localeCompare(b.fsc));
+const groupOpen = classRows.reduce((sum, r) => sum + r.open, 0);
+const copy = { fsg: department.fsg, name: department.name, classCount: department.fscs.length, nsnCount: department.nsnCount };
+const title = groupTitle(copy);
+const description = groupDescription(copy);
+const intro = groupIntro({ ...copy, topClasses: classRows.slice(0, 3).map((r) => ({ label: r.label, nsnCount: r.nsnCount })), openCount: groupOpen });
+const itemList = {
+  name: `${department.name} (FSG ${department.fsg}) supply classes`,
+  items: department.fscs.map((f) => ({ name: `FSC ${f.fsc} ${fscDisplayName(f.fsc, f.name)}`, url: `/fsc/${f.fsc}/` })),
+};
 const canonicalUrl = `${SITE_URL}/group/${department.fsg}/`;
 
 const breadcrumbSchema = {
@@ -47,6 +65,7 @@ const breadcrumbSchema = {
   pageType="CollectionPage"
   canonicalUrl={canonicalUrl}
   extraSchema={[breadcrumbSchema]}
+  itemList={itemList}
 >
   <nav class="breadcrumb" aria-label="Breadcrumb">
     <a href="/">Home</a> › <a href="/catalog/">Catalog</a> › {department.name}
@@ -56,10 +75,7 @@ const breadcrumbSchema = {
 
   <header class="hero">
     <h1>{department.name}</h1>
-    <p class="lede">
-      {department.fscs.length} {department.fscs.length === 1 ? 'category' : 'categories'} in this
-      department, {fmtInt(department.nsnCount)} NSNs tracked in total.
-    </p>
+    <p class="lede">{intro}</p>
   </header>
 
   <div class="stat-strip">
@@ -84,6 +100,7 @@ const breadcrumbSchema = {
             <div class="dept-code mono">FSC {fsc.fsc}</div>
             <h3>{fscDisplayName(fsc.fsc, fsc.name)}</h3>
             <p>{fmtInt(categoryCount(fsc.fsc))} NSNs tracked</p>
+            {openCount(fsc.fsc) > 0 && <p>{fmtInt(openCount(fsc.fsc))} open {openCount(fsc.fsc) === 1 ? 'solicitation' : 'solicitations'}</p>}
           </a>
         ))}
       </div>

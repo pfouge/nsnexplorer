@@ -11,6 +11,7 @@ import { loadSiteData, formatDate } from '../../../lib/data';
 import { buildSolicitationCards, fsgName, isPlaceholderFscName, UNLISTED_FSC_NAME, type ProductCard } from '../../../lib/browse';
 import { PAGE_SIZE, pageCount, pageItems, pageNumbers, pageParam, pageRange, pageUrl, rangeLabel, pagedDescriptionPrefix, pagedTitle } from '../../../lib/paginate';
 import { memo, release } from '../../../lib/paged-cache';
+import { openDescription, openTitle } from '../../../lib/seo-copy';
 
 // /open/<code>/ is page 1; /open/<code>/page/<n>/ holds the next PAGE_SIZE cards.
 export async function getStaticPaths() {
@@ -110,25 +111,28 @@ const closedBadge = (lastSolicited: string | null): StatusBadge => ({
   cls: '',
 });
 
-const baseTitle = hasRealFscName
-  ? `Open demand — ${displayName} (FSC ${fscCode})`
-  : `Open demand — ${displayName} (FSC ${fscCode})`;
-const baseDescription = hasRealFscName
-  ? `${fmtInt(solicitations.length)} open government solicitation${
-      solicitations.length === 1 ? '' : 's'
-    } in Federal Supply Class ${fscCode} (${displayName}) that suppliers can bid on today, plus a
-      growing history of closed ones — each linked to its official DIBBS record.`
-  : `${fmtInt(solicitations.length)} open government solicitation${
-      solicitations.length === 1 ? '' : 's'
-    } in Federal Supply Class ${fscCode} that suppliers can bid on today, plus a growing history
-      of closed ones — each linked to its official DIBBS record.`;
-const title = pagedTitle(baseTitle, page, pages);
-const description = `${pagedDescriptionPrefix(page, pages)}${baseDescription}`;
+const copy = {
+  code: fscCode,
+  name: hasRealFscName ? displayName : null,
+  openCount: solicitations.length,
+  nsnCount: new Set(solicitations.map((x) => x.nsn)).size,
+};
+const title = pagedTitle(openTitle(copy), page, pages);
+const description = openDescription(copy, pagedDescriptionPrefix(page, pages));
 const canonicalUrl = `${SITE_URL}${pageUrl(baseUrl, page)}`;
 const headLinks = [
   ...(page > 1 ? [{ rel: 'prev', href: `${SITE_URL}${pageUrl(baseUrl, page - 1)}` }] : []),
   ...(page < pages ? [{ rel: 'next', href: `${SITE_URL}${pageUrl(baseUrl, page + 1)}` }] : []),
 ];
+
+// First 200 catalog NSN links of page 1 as an ItemList.
+const itemList =
+  page === 1
+    ? (() => {
+        const items = cards.filter((c) => c.hasCatalogPage).slice(0, 200).map((c) => ({ name: `NSN ${c.dashed}${c.itemName ? ` ${c.itemName}` : ''}`, url: `/nsn/${c.dashed}/` }));
+        return items.length > 0 ? { name: `${displayName} (FSC ${fscCode}) open demand NSNs`, items } : undefined;
+      })()
+    : undefined;
 
 const breadcrumbSchema = {
   '@context': 'https://schema.org',
@@ -148,6 +152,7 @@ const breadcrumbSchema = {
   canonicalUrl={canonicalUrl}
   extraSchema={[breadcrumbSchema]}
   headLinks={headLinks}
+  itemList={itemList}
 >
   <nav class="breadcrumb" aria-label="Breadcrumb">
     <a href="/">Home</a> › <a href="/open/">Open demand</a> › {displayName}

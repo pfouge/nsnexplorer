@@ -18,6 +18,7 @@ import {
 } from '../../lib/shared';
 import { loadNsnPage, openSql } from '../../lib/nsn-page';
 import { databaseUrlFrom } from '../../lib/runtime-env';
+import { listedFscName, nsnDescription, nsnSummary, nsnTitle } from '../../lib/seo-copy';
 
 // Rendered ON REQUEST by the Cloudflare Pages Function, not at build time.
 // Cloudflare Pages caps a deployment at 20,000 files and the catalog is far
@@ -154,10 +155,22 @@ const lastUpdated = [...rawPoints.map((p) => p.ingestedAt), ...contractActions.m
   .at(-1);
 
 const itemLabel = nsn.itemName ?? dashed;
-const title = `NSN ${dashed} — ${itemLabel} price history`;
-const description = `Price history for NSN ${dashed}${nsn.itemName ? ` (${nsn.itemName})` : ''}: ${
-  stats ? stats.count.toLocaleString('en-US') : 'no'
-} purchase${stats && stats.count === 1 ? '' : 's'} on record, sourced from official U.S. government award records.`;
+// Query-led copy: shared with the .md route through lib/seo-copy.ts.
+const copyInput = {
+  dashed,
+  itemName: nsn.itemName,
+  fscCode: fsc?.fsc ?? nsn.fsc,
+  fscName: listedFscName(fsc?.fsc ?? nsn.fsc, fsc?.name),
+  pricePoints: rawPoints.length,
+  openSolicitations: openSols.length,
+  hasCharacteristics: characteristics.length > 0,
+  partNumbers: partNumbers.length,
+  suppliers: new Set(partNumbers.map((p) => p.cage).filter((c): c is string => !!c)).size,
+  lastPurchased,
+};
+const title = nsnTitle(copyInput);
+const description = nsnDescription(copyInput);
+const summary = nsnSummary({ ...copyInput, nsn13: nsn.nsn });
 
 const canonicalUrl = `${SITE_URL}/nsn/${dashed}/`;
 
@@ -214,6 +227,7 @@ const datasetSchema = {
         Copy
       </button>
     </p>
+    <p class="lede">{summary}</p>
   </header>
 
   <!-- 1. Open for bid — the first question a supplier asks: is there a live RFQ to bid on? -->

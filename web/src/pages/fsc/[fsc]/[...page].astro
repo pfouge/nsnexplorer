@@ -7,6 +7,7 @@ import { loadSiteData, formatUsd, formatDate, type FscConfig } from '../../../li
 import { buildProductCards, fsgName, isPlaceholderFscName, UNLISTED_FSC_NAME, type ProductCard } from '../../../lib/browse';
 import { pageCount, pageItems, pageNumbers, pageParam, pageRange, pageUrl, rangeLabel, pagedDescriptionPrefix, pagedTitle } from '../../../lib/paginate';
 import { memo, release } from '../../../lib/paged-cache';
+import { fscDescription, fscTitle } from '../../../lib/seo-copy';
 
 // /fsc/<code>/ is page 1; /fsc/<code>/page/<n>/ holds the next PAGE_SIZE cards.
 export async function getStaticPaths() {
@@ -56,17 +57,21 @@ const departmentName = fsgName(fsc.fsg);
 const hasRealFscName = !isPlaceholderFscName(fsc.fsc, fsc.name);
 const fscDisplayName = hasRealFscName ? fsc.name : UNLISTED_FSC_NAME;
 
-const baseTitle = `${fscDisplayName} — FSC ${fsc.fsc}`;
-const title = pagedTitle(baseTitle, page, pages);
-const baseDescription = hasRealFscName
-  ? `Federal Supply Class ${fsc.fsc} (${fsc.name}): ${total.toLocaleString('en-US')} NSNs tracked with price history and competition status, so suppliers can quote with confidence and buyers can size the market. Every figure links to its source record.`
-  : `Federal Supply Class ${fsc.fsc}: ${total.toLocaleString('en-US')} NSNs tracked with price history and competition status, so suppliers can quote with confidence and buyers can size the market. Every figure links to its source record.`;
-const description = `${pagedDescriptionPrefix(page, pages)}${baseDescription}`;
+const openCount = data.openByFsc.get(fsc.fsc)?.solicitations.length ?? 0;
+const copy = { code: fsc.fsc, name: hasRealFscName ? fsc.name : null, nsnCount: total, openCount };
+const title = pagedTitle(fscTitle(copy), page, pages);
+const description = fscDescription(copy, pagedDescriptionPrefix(page, pages));
 const canonicalUrl = `${SITE_URL}${pageUrl(baseUrl, page)}`;
 const headLinks = [
   ...(page > 1 ? [{ rel: 'prev', href: `${SITE_URL}${pageUrl(baseUrl, page - 1)}` }] : []),
   ...(page < pages ? [{ rel: 'next', href: `${SITE_URL}${pageUrl(baseUrl, page + 1)}` }] : []),
 ];
+
+// First 200 NSN links of page 1 as an ItemList (later pages are linked via prev/next).
+const itemList =
+  page === 1 && cards.length > 0
+    ? { name: `${fscDisplayName} (FSC ${fsc.fsc}) NSNs`, items: cards.slice(0, 200).map((c) => ({ name: `NSN ${c.dashed}${c.itemName ? ` ${c.itemName}` : ''}`, url: `/nsn/${c.dashed}/` })) }
+    : undefined;
 
 const breadcrumbSchema = {
   '@context': 'https://schema.org',
@@ -87,6 +92,7 @@ const breadcrumbSchema = {
   canonicalUrl={canonicalUrl}
   extraSchema={[breadcrumbSchema]}
   headLinks={headLinks}
+  itemList={itemList}
 >
   <nav class="breadcrumb" aria-label="Breadcrumb">
     <a href="/">Home</a> › <a href="/catalog/">Catalog</a> ›{' '}
