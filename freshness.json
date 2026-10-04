@@ -1,0 +1,151 @@
+{
+  "at": "2026-10-04T18:00:12.775Z",
+  "ok": false,
+  "problems": [
+    "price_points stale (never landed, limit 120h)"
+  ],
+  "sources": [
+    {
+      "source": "dibbs_rfq",
+      "label": "DIBBS open solicitations (rfq-fast, rfq-reconcile)",
+      "last_landed": "2026-10-04T17:45:03.612Z",
+      "age_hours": 0.3,
+      "max_age_hours": 48,
+      "newest_record": "2026-10-03",
+      "rows": 77689,
+      "open_rows": 10657,
+      "status": "ok"
+    },
+    {
+      "source": "sam_gov",
+      "label": "SAM.gov solicitations (sam-daily)",
+      "last_landed": "2026-10-04T12:36:03.266Z",
+      "age_hours": 5.4,
+      "max_age_hours": 48,
+      "newest_record": "2026-10-04",
+      "rows": 4666,
+      "open_rows": 3306,
+      "status": "ok"
+    },
+    {
+      "source": "dibbs_awards",
+      "label": "DIBBS award totals (ingest-daily)",
+      "last_landed": "2026-10-03T14:22:18.945Z",
+      "age_hours": 27.6,
+      "max_age_hours": 120,
+      "newest_record": "2026-10-02",
+      "rows": 59087,
+      "status": "ok"
+    },
+    {
+      "source": "price_points",
+      "label": "Unit prices from award/solicitation join (ingest-daily, rfq-award-join)",
+      "last_landed": null,
+      "age_hours": null,
+      "max_age_hours": 120,
+      "newest_record": null,
+      "rows": 0,
+      "status": "STALE"
+    },
+    {
+      "source": "usaspending",
+      "label": "USAspending contract actions (ingest-daily)",
+      "last_landed": "2026-09-06T17:54:22.861Z",
+      "age_hours": 672.1,
+      "max_age_hours": 336,
+      "newest_record": "2026-08-21",
+      "rows": 95059,
+      "status": "warn"
+    },
+    {
+      "source": "publog",
+      "label": "PUB LOG / FLIS enrichment (publog-nightly)",
+      "last_landed": "2026-10-04T17:45:03.612Z",
+      "age_hours": 0.3,
+      "max_age_hours": 48,
+      "newest_record": null,
+      "rows": 80188,
+      "with_item_name": 80186,
+      "with_characteristics": 71090,
+      "status": "ok"
+    },
+    {
+      "source": "scoring",
+      "label": "Target scoring (ingest-daily)",
+      "last_landed": null,
+      "age_hours": null,
+      "max_age_hours": 72,
+      "newest_record": null,
+      "rows": 0,
+      "status": "warn"
+    }
+  ],
+  "checks": [
+    {
+      "check": "nsn_fsc_mismatch",
+      "label": "NSNs whose stored FSC is not the first four digits of the NSN",
+      "count": 0,
+      "status": "ok"
+    },
+    {
+      "check": "service_code_not_excluded",
+      "label": "Letter-code (service) classes not marked excluded",
+      "count": 0,
+      "status": "ok"
+    },
+    {
+      "check": "open_past_due",
+      "label": "Solicitations still marked open after their return-by date",
+      "count": 0,
+      "status": "ok"
+    },
+    {
+      "check": "dibbs_rfq_fsc_mismatch",
+      "label": "DIBBS solicitations whose FSC disagrees with their NSN",
+      "count": 0,
+      "status": "ok"
+    },
+    {
+      "check": "price_point_without_supplier",
+      "label": "Price points whose CAGE has no supplier row",
+      "count": 0,
+      "status": "ok"
+    },
+    {
+      "check": "unlisted_classes",
+      "label": "Supply classes with no handbook name (shown as \"Unlisted supply class\")",
+      "count": 12,
+      "status": "info"
+    },
+    {
+      "check": "sam_open_unclassified",
+      "label": "Open SAM.gov notices with no product supply class (services or uncoded)",
+      "count": 2558,
+      "status": "info"
+    },
+    {
+      "check": "nsns_without_item_name",
+      "label": "NSNs with no item name yet",
+      "count": 2,
+      "status": "info"
+    },
+    {
+      "check": "suppliers_without_name",
+      "label": "Supplier CAGE stubs awaiting PUB LOG name/address",
+      "count": 1120,
+      "status": "info"
+    }
+  ],
+  "classes_by_render_depth": [
+    {
+      "render_depth": "deep",
+      "classes": 485,
+      "nsns": 80188
+    },
+    {
+      "render_depth": "excluded",
+      "classes": 378,
+      "nsns": 0
+    }
+  ]
+}
