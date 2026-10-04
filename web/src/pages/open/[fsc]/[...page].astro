@@ -3,23 +3,36 @@
 // fsc/[fsc].astro's product-grid + filter-rail pattern, but the filters are
 // tuned for buying decisions on OPEN solicitations (closing window, quantity,
 // competition, drawing) rather than historic purchase cadence.
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import SignupForm from '../../components/SignupForm.astro';
-import { SITE_URL } from '../../consts';
-import { loadSiteData, formatDate } from '../../lib/data';
-import { buildSolicitationCards, fsgName, isPlaceholderFscName, UNLISTED_FSC_NAME, type ProductCard } from '../../lib/browse';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import SignupForm from '../../../components/SignupForm.astro';
+import Pager from '../../../components/Pager.astro';
+import { SITE_URL } from '../../../consts';
+import { loadSiteData, formatDate } from '../../../lib/data';
+import { buildSolicitationCards, fsgName, isPlaceholderFscName, UNLISTED_FSC_NAME, type ProductCard } from '../../../lib/browse';
+import { PAGE_SIZE, pageCount, pageItems, pageNumbers, pageParam, pageRange, pageUrl, rangeLabel, pagedDescriptionPrefix, pagedTitle } from '../../../lib/paginate';
+import { memo, release } from '../../../lib/paged-cache';
 
+// /open/<code>/ is page 1; /open/<code>/page/<n>/ holds the next PAGE_SIZE cards.
 export async function getStaticPaths() {
   const data = await loadSiteData();
   // Every FSC with ANY solicitation on record (open or closed) — the
   // history browse, not just the currently-open board.
-  return [...data.solicitationsByFsc.entries()].map(([fsc, entry]) => ({
-    params: { fsc },
-    props: { fscCode: fsc, fscName: entry.name },
-  }));
+  return [...data.solicitationsByFsc.entries()].flatMap(([fsc, entry]) => {
+    const total = buildSolicitationCards(data, fsc).length;
+    const pages = pageCount(total);
+    return pageNumbers(total).map((page) => ({
+      params: { fsc, page: pageParam(page) },
+      props: { fscCode: fsc, fscName: entry.name, page, pages },
+    }));
+  });
 }
 
-const { fscCode, fscName } = Astro.props as { fscCode: string; fscName: string | null };
+const { fscCode, fscName, page, pages } = Astro.props as {
+  fscCode: string;
+  fscName: string | null;
+  page: number;
+  pages: number;
+};
 const data = await loadSiteData();
 // entry = OPEN-only solicitations in this FSC (for the "open now" stat
 // strip); allEntry = every status (for the history signal line + filters).
@@ -35,19 +48,30 @@ const displayName = hasRealFscName ? rawDisplayName : UNLISTED_FSC_NAME;
 const fsg = fscCode.slice(0, 2);
 const departmentName = fsgName(fsg);
 
-const allCards: ProductCard[] = buildSolicitationCards(data, fscCode);
-// Cap the grid: Cloudflare Pages caps a deployment at 20k static files, so
-// per-solicitation/per-open-NSN pages are gone (browse-only now) — but a
-// single category page rendering tens of thousands of cards is still a
-// liability for build time and page weight. Cards are already sorted
-// open-first / closing-soonest (see buildSolicitationCards), so the cap
-// keeps the most actionable items even before the status filter is applied.
-const OPEN_CARDS_CAP = 1000;
-const cards: ProductCard[] = allCards.slice(0, OPEN_CARDS_CAP);
-const cardsTruncated = allCards.length > OPEN_CARDS_CAP;
-// First paint shows the default Status scope ("Open now"), so the counter
-// denominator is the number of open cards, not every card.
-const openCardCount = cards.filter((c) => c.openCount > 0).length;
+const cacheKey = `open:${fscCode}`;
+const allCards: ProductCard[] = memo(cacheKey, () => buildSolicitationCards(data, fscCode));
+if (page === pages) release(cacheKey);
+// Cards are sorted open-first / closing-soonest (see buildSolicitationCards);
+// each page renders PAGE_SIZE of them and the client merges the rest in on the
+// first filter/sort interaction, so filters always span the whole category.
+const cards: ProductCard[] = pageItems(allCards, page);
+const baseUrl = `/open/${fscCode}/`;
+const range = pageRange(allCards.length, page);
+// Status-scope totals over the WHOLE category (first paint shows "Open now"),
+// and how many cards of each scope sit on earlier pages (for "501–812 of 3,900").
+const isOpenCard = (c: ProductCard) => c.openCount > 0;
+const totalOpen = allCards.filter(isOpenCard).length;
+const totals = { open: totalOpen, closed: allCards.length - totalOpen, all: allCards.length };
+const before = allCards.slice(0, (page - 1) * PAGE_SIZE);
+const beforeOpen = before.filter(isOpenCard).length;
+const offsets = { open: beforeOpen, closed: before.length - beforeOpen, all: before.length };
+const openOnPage = cards.filter(isOpenCard).length;
+// First paint shows the default Status scope ("Open now").
+const firstPaintCount = pages > 1
+  ? openOnPage === 0
+    ? '0'
+    : rangeLabel(offsets.open + 1, offsets.open + openOnPage)
+  : openOnPage.toLocaleString('en-US');
 
 const fmtInt = (n: number) => n.toLocaleString('en-US');
 
@@ -86,10 +110,10 @@ const closedBadge = (lastSolicited: string | null): StatusBadge => ({
   cls: '',
 });
 
-const title = hasRealFscName
+const baseTitle = hasRealFscName
   ? `Open demand — ${displayName} (FSC ${fscCode})`
   : `Open demand — ${displayName} (FSC ${fscCode})`;
-const description = hasRealFscName
+const baseDescription = hasRealFscName
   ? `${fmtInt(solicitations.length)} open government solicitation${
       solicitations.length === 1 ? '' : 's'
     } in Federal Supply Class ${fscCode} (${displayName}) that suppliers can bid on today, plus a
@@ -98,7 +122,13 @@ const description = hasRealFscName
       solicitations.length === 1 ? '' : 's'
     } in Federal Supply Class ${fscCode} that suppliers can bid on today, plus a growing history
       of closed ones — each linked to its official DIBBS record.`;
-const canonicalUrl = `${SITE_URL}/open/${fscCode}/`;
+const title = pagedTitle(baseTitle, page, pages);
+const description = `${pagedDescriptionPrefix(page, pages)}${baseDescription}`;
+const canonicalUrl = `${SITE_URL}${pageUrl(baseUrl, page)}`;
+const headLinks = [
+  ...(page > 1 ? [{ rel: 'prev', href: `${SITE_URL}${pageUrl(baseUrl, page - 1)}` }] : []),
+  ...(page < pages ? [{ rel: 'next', href: `${SITE_URL}${pageUrl(baseUrl, page + 1)}` }] : []),
+];
 
 const breadcrumbSchema = {
   '@context': 'https://schema.org',
@@ -106,7 +136,7 @@ const breadcrumbSchema = {
   itemListElement: [
     { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
     { '@type': 'ListItem', position: 2, name: 'Open demand', item: `${SITE_URL}/open/` },
-    { '@type': 'ListItem', position: 3, name: displayName, item: canonicalUrl },
+    { '@type': 'ListItem', position: 3, name: displayName, item: `${SITE_URL}${baseUrl}` },
   ],
 };
 ---
@@ -117,6 +147,7 @@ const breadcrumbSchema = {
   pageType="CollectionPage"
   canonicalUrl={canonicalUrl}
   extraSchema={[breadcrumbSchema]}
+  headLinks={headLinks}
 >
   <nav class="breadcrumb" aria-label="Breadcrumb">
     <a href="/">Home</a> › <a href="/open/">Open demand</a> › {displayName}
@@ -155,13 +186,7 @@ const breadcrumbSchema = {
 
   <section class="products-section">
     <h2 class="section-title">Open parts</h2>
-    {cardsTruncated && (
-      <p class="note">
-        Showing the {fmtInt(OPEN_CARDS_CAP)} solicitations in this category ranked open-first,
-        closing-soonest — use the filters to narrow.
-      </p>
-    )}
-    {cards.length === 0 ? (
+    {allCards.length === 0 ? (
       <p class="gloss">No solicitations indexed for this category yet.</p>
     ) : (
       <div class="products-layout">
@@ -215,10 +240,23 @@ const breadcrumbSchema = {
             </select>
           </div>
 
-          <p class="filter-count" id="filter-count" aria-live="polite">{openCardCount} of {openCardCount} shown</p>
+          <p class="filter-count" id="filter-count" aria-live="polite">{firstPaintCount} of {totalOpen.toLocaleString('en-US')} shown</p>
         </aside>
 
-        <div class="product-grid" id="product-grid">
+        <div
+          class="product-grid"
+          id="product-grid"
+          data-page={page}
+          data-pages={pages}
+          data-base={baseUrl}
+          data-total={allCards.length}
+          data-total-open={totals.open}
+          data-total-closed={totals.closed}
+          data-total-all={totals.all}
+          data-offset-open={offsets.open}
+          data-offset-closed={offsets.closed}
+          data-offset-all={offsets.all}
+        >
           {cards.map((c) => {
             const badge = c.openCount > 0 ? openBadge(c.nextCloseDate) : closedBadge(c.lastSolicited);
             const externalAttrs = c.hasCatalogPage
@@ -227,6 +265,7 @@ const breadcrumbSchema = {
             return (
               <article
                 class="product-card"
+                data-key={c.dashed}
                 data-closes={c.nextCloseDate ?? ''}
                 data-qty={c.openQuantity ?? 0}
                 data-competition={c.competition}
@@ -267,6 +306,7 @@ const breadcrumbSchema = {
           })}
         </div>
       </div>
+      <Pager base={baseUrl} page={page} pages={pages} />
       <p class="gloss" id="empty-state" hidden>
         No items match these filters.
         <button type="button" class="btn btn-ghost" id="clear-filters">Clear filters</button>
@@ -275,6 +315,8 @@ const breadcrumbSchema = {
   </section>
 
   <script>
+    import { createPagedLoader, rangeLabel, readPagedConfig } from '../../../lib/paged-client';
+
     const grid = document.getElementById('product-grid');
     const countEl = document.getElementById('filter-count');
     const statusSelect = document.getElementById('f-status');
@@ -291,7 +333,10 @@ const breadcrumbSchema = {
       hasDrawingCheckbox instanceof HTMLInputElement &&
       sortSelect instanceof HTMLSelectElement
     ) {
-      const cards = Array.from(grid.querySelectorAll('.product-card'));
+      const cards = Array.from(grid.querySelectorAll<HTMLElement>(':scope > .product-card'));
+      const cfg = readPagedConfig(grid);
+      const fmt = (n: number) => n.toLocaleString('en-US');
+      const loader = createPagedLoader({ grid, cards, countEl, pager: document.getElementById('pager') });
       // Today (UTC) as of the viewer's clock; the page itself is static.
       const todayIso = () => new Date().toISOString().slice(0, 10);
       // A card is open only while it has open solicitations AND its closing
@@ -337,7 +382,17 @@ const breadcrumbSchema = {
           el.style.display = visible ? '' : 'none';
           if (visible) visibleCount++;
         }
-        if (countEl) countEl.textContent = `${visibleCount} of ${scopeCount} shown`;
+        if (!loader.complete && !loader.failed) {
+          // Before the first interaction only this page is present: show the
+          // card range within the Status scope, over the server-emitted total.
+          const scope = status === 'closed' ? 'closed' : status === 'all' ? 'all' : 'open';
+          const scopeTotal = Number(grid.dataset[scope === 'open' ? 'totalOpen' : scope === 'closed' ? 'totalClosed' : 'totalAll'] ?? 0);
+          const offset = Number(grid.dataset[scope === 'open' ? 'offsetOpen' : scope === 'closed' ? 'offsetClosed' : 'offsetAll'] ?? 0);
+          const first = visibleCount === 0 ? '0' : cfg.pages > 1 ? rangeLabel(offset + 1, offset + visibleCount) : fmt(visibleCount);
+          loader.setCount(`${first} of ${fmt(scopeTotal)} shown`);
+        } else {
+          loader.setCount(`${fmt(visibleCount)} of ${fmt(scopeCount)} shown`);
+        }
         const emptyEl = document.getElementById('empty-state');
         if (emptyEl) emptyEl.hidden = visibleCount !== 0;
       };
@@ -350,9 +405,7 @@ const breadcrumbSchema = {
           if (el instanceof HTMLInputElement) el.checked = el.value === 'all';
         });
         hasDrawingCheckbox.checked = false;
-        apply();
       };
-      document.getElementById('clear-filters')?.addEventListener('click', clearFilters);
 
       const sortCards = () => {
         const mode = sortSelect.value;
@@ -380,15 +433,33 @@ const breadcrumbSchema = {
         for (const card of sorted) grid.appendChild(card);
       };
 
-      statusSelect.addEventListener('change', apply);
-      document.querySelectorAll('input[name="f-competition"]').forEach((el) => el.addEventListener('change', apply));
-      closesSelect.addEventListener('change', apply);
-      minQtySelect.addEventListener('change', apply);
-      hasDrawingCheckbox.addEventListener('change', apply);
-      sortSelect.addEventListener('change', () => {
-        sortCards();
-        apply();
+      document.getElementById('clear-filters')?.addEventListener('click', () => {
+        clearFilters();
+        refresh();
       });
+
+      // Sort runs over the whole `cards` array (server order, stable ties). The
+      // DOM is only reordered when the selected sort differs from the last one applied.
+      const defaultSort = Array.from(sortSelect.options).find((o) => o.defaultSelected)?.value ?? sortSelect.options[0].value;
+      let appliedSort = defaultSort;
+      const refresh = () => {
+        if (sortSelect.value !== appliedSort) {
+          sortCards();
+          appliedSort = sortSelect.value;
+        }
+        apply();
+      };
+      // First interaction: pull in the other pages, then filter/sort the full category.
+      const schedule = () => {
+        if (loader.complete || loader.failed) refresh();
+        else void loader.ensureAll().then(refresh);
+      };
+      statusSelect.addEventListener('change', schedule);
+      document.querySelectorAll('input[name="f-competition"]').forEach((el) => el.addEventListener('change', schedule));
+      closesSelect.addEventListener('change', schedule);
+      minQtySelect.addEventListener('change', schedule);
+      hasDrawingCheckbox.addEventListener('change', schedule);
+      sortSelect.addEventListener('change', schedule);
 
       apply();
     }

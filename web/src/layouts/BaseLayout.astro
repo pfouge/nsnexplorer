@@ -15,6 +15,7 @@ interface Props {
   breadcrumbs?: { name: string; url: string }[];
   itemList?: { name: string; items: { name: string; url: string }[] };
   faq?: { question: string; answer: string }[];
+  headLinks?: { rel: string; href: string; type?: string }[];
 }
 
 const seoProps = Astro.props;

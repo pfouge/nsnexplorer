@@ -1,23 +1,38 @@
 ---
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import SignupForm from '../../components/SignupForm.astro';
-import { SITE_URL } from '../../consts';
-import { loadSiteData, formatUsd, formatDate, type FscConfig } from '../../lib/data';
-import { buildProductCards, fsgName, isPlaceholderFscName, UNLISTED_FSC_NAME, type ProductCard } from '../../lib/browse';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import SignupForm from '../../../components/SignupForm.astro';
+import Pager from '../../../components/Pager.astro';
+import { SITE_URL } from '../../../consts';
+import { loadSiteData, formatUsd, formatDate, type FscConfig } from '../../../lib/data';
+import { buildProductCards, fsgName, isPlaceholderFscName, UNLISTED_FSC_NAME, type ProductCard } from '../../../lib/browse';
+import { pageCount, pageItems, pageNumbers, pageParam, pageRange, pageUrl, rangeLabel, pagedDescriptionPrefix, pagedTitle } from '../../../lib/paginate';
+import { memo, release } from '../../../lib/paged-cache';
 
+// /fsc/<code>/ is page 1; /fsc/<code>/page/<n>/ holds the next PAGE_SIZE cards.
 export async function getStaticPaths() {
   const data = await loadSiteData();
-  return data.deepFscs.map((fsc: FscConfig) => ({
-    params: { fsc: fsc.fsc },
-    props: { fsc },
-  }));
+  return data.deepFscs.flatMap((fsc: FscConfig) => {
+    const total = buildProductCards(data, fsc).length;
+    const pages = pageCount(total);
+    return pageNumbers(total).map((page) => ({
+      params: { fsc: fsc.fsc, page: pageParam(page) },
+      props: { fsc, page, pages },
+    }));
+  });
 }
 
-const { fsc } = Astro.props as { fsc: FscConfig };
+const { fsc, page, pages } = Astro.props as { fsc: FscConfig; page: number; pages: number };
 const data = await loadSiteData();
 
-const cards: ProductCard[] = buildProductCards(data, fsc);
-const materials = [...new Set(cards.map((c) => c.material).filter((m): m is string => m !== null))].sort(
+const cacheKey = `fsc:${fsc.fsc}`;
+const allCards: ProductCard[] = memo(cacheKey, () => buildProductCards(data, fsc));
+if (page === pages) release(cacheKey);
+// This page's slice, in the default sort (most recently purchased, then demand).
+const cards: ProductCard[] = pageItems(allCards, page);
+const total = allCards.length;
+const range = pageRange(total, page);
+const baseUrl = `/fsc/${fsc.fsc}/`;
+const materials = [...new Set(allCards.map((c) => c.material).filter((m): m is string => m !== null))].sort(
   (a, b) => a.localeCompare(b)
 );
 
@@ -29,8 +44,8 @@ const fscActions = [...(data.contractActionsByFsc.get(fsc.fsc) ?? [])].sort((a, 
 const fscActionsObligated = fscActions.reduce((sum, a) => sum + (a.obligation ?? 0), 0);
 const recentActions = fscActions.slice(0, 25);
 
-const totalPurchases = cards.reduce((sum, c) => sum + c.purchaseRecords, 0) + fscActions.length;
-const totalDollars = cards.reduce((sum, c) => sum + c.totalDemand, 0) + fscActionsObligated;
+const totalPurchases = allCards.reduce((sum, c) => sum + c.purchaseRecords, 0) + fscActions.length;
+const totalDollars = allCards.reduce((sum, c) => sum + c.totalDemand, 0) + fscActionsObligated;
 
 const departmentName = fsgName(fsc.fsg);
 
@@ -41,11 +56,17 @@ const departmentName = fsgName(fsc.fsg);
 const hasRealFscName = !isPlaceholderFscName(fsc.fsc, fsc.name);
 const fscDisplayName = hasRealFscName ? fsc.name : UNLISTED_FSC_NAME;
 
-const title = `${fscDisplayName} — FSC ${fsc.fsc}`;
-const description = hasRealFscName
-  ? `Federal Supply Class ${fsc.fsc} (${fsc.name}): ${cards.length.toLocaleString('en-US')} NSNs tracked with price history and competition status, so suppliers can quote with confidence and buyers can size the market. Every figure links to its source record.`
-  : `Federal Supply Class ${fsc.fsc}: ${cards.length.toLocaleString('en-US')} NSNs tracked with price history and competition status, so suppliers can quote with confidence and buyers can size the market. Every figure links to its source record.`;
-const canonicalUrl = `${SITE_URL}/fsc/${fsc.fsc}/`;
+const baseTitle = `${fscDisplayName} — FSC ${fsc.fsc}`;
+const title = pagedTitle(baseTitle, page, pages);
+const baseDescription = hasRealFscName
+  ? `Federal Supply Class ${fsc.fsc} (${fsc.name}): ${total.toLocaleString('en-US')} NSNs tracked with price history and competition status, so suppliers can quote with confidence and buyers can size the market. Every figure links to its source record.`
+  : `Federal Supply Class ${fsc.fsc}: ${total.toLocaleString('en-US')} NSNs tracked with price history and competition status, so suppliers can quote with confidence and buyers can size the market. Every figure links to its source record.`;
+const description = `${pagedDescriptionPrefix(page, pages)}${baseDescription}`;
+const canonicalUrl = `${SITE_URL}${pageUrl(baseUrl, page)}`;
+const headLinks = [
+  ...(page > 1 ? [{ rel: 'prev', href: `${SITE_URL}${pageUrl(baseUrl, page - 1)}` }] : []),
+  ...(page < pages ? [{ rel: 'next', href: `${SITE_URL}${pageUrl(baseUrl, page + 1)}` }] : []),
+];
 
 const breadcrumbSchema = {
   '@context': 'https://schema.org',
@@ -54,7 +75,7 @@ const breadcrumbSchema = {
     { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
     { '@type': 'ListItem', position: 2, name: 'Catalog', item: `${SITE_URL}/catalog/` },
     { '@type': 'ListItem', position: 3, name: departmentName, item: `${SITE_URL}/group/${fsc.fsg}/` },
-    { '@type': 'ListItem', position: 4, name: fscDisplayName, item: canonicalUrl },
+    { '@type': 'ListItem', position: 4, name: fscDisplayName, item: `${SITE_URL}${baseUrl}` },
   ],
 };
 ---
@@ -65,6 +86,7 @@ const breadcrumbSchema = {
   pageType="CollectionPage"
   canonicalUrl={canonicalUrl}
   extraSchema={[breadcrumbSchema]}
+  headLinks={headLinks}
 >
   <nav class="breadcrumb" aria-label="Breadcrumb">
     <a href="/">Home</a> › <a href="/catalog/">Catalog</a> ›{' '}
@@ -83,7 +105,7 @@ const breadcrumbSchema = {
 
   <div class="stat-strip">
     <div class="stat">
-      <div class="value">{cards.length.toLocaleString('en-US')}</div>
+      <div class="value">{total.toLocaleString('en-US')}</div>
       <div class="label">NSNs tracked</div>
     </div>
     <div class="stat">
@@ -98,7 +120,7 @@ const breadcrumbSchema = {
 
   <section class="products-section">
     <h2 class="section-title">Products</h2>
-    {cards.length === 0 ? (
+    {total === 0 ? (
       <p class="gloss">No products indexed for this category yet.</p>
     ) : (
       <div class="products-layout">
@@ -143,13 +165,23 @@ const breadcrumbSchema = {
             </select>
           </div>
 
-          <p class="filter-count" id="filter-count" aria-live="polite">{cards.length} of {cards.length} shown</p>
+          <p class="filter-count" id="filter-count" aria-live="polite">{pages > 1 ? rangeLabel(range.start, range.end) : cards.length.toLocaleString('en-US')} of {total.toLocaleString('en-US')} shown</p>
         </aside>
 
-        <div class="product-grid" id="product-grid">
+        <div
+          class="product-grid"
+          id="product-grid"
+          data-page={page}
+          data-pages={pages}
+          data-base={baseUrl}
+          data-total={total}
+          data-range-start={range.start}
+          data-range-end={range.end}
+        >
           {cards.map((c) => (
             <article
               class="product-card"
+              data-key={c.dashed}
               data-competition={c.competition}
               data-lastpurchased={c.lastPurchased ?? ''}
               data-hasdrawing={c.hasDrawing ? '1' : '0'}
@@ -182,6 +214,7 @@ const breadcrumbSchema = {
           ))}
         </div>
       </div>
+      <Pager base={baseUrl} page={page} pages={pages} />
       <p class="gloss" id="empty-state" hidden>
         No items match these filters.
         <button type="button" class="btn btn-ghost" id="clear-filters">Clear filters</button>
@@ -190,6 +223,8 @@ const breadcrumbSchema = {
   </section>
 
   <script>
+    import { createPagedLoader, rangeLabel, readPagedConfig } from '../../../lib/paged-client';
+
     const grid = document.getElementById('product-grid');
     const countEl = document.getElementById('filter-count');
     const lastPurchasedSelect = document.getElementById('f-lastpurchased');
@@ -198,8 +233,10 @@ const breadcrumbSchema = {
 
     if (grid && lastPurchasedSelect instanceof HTMLSelectElement &&
         hasDrawingCheckbox instanceof HTMLInputElement && sortSelect instanceof HTMLSelectElement) {
-      const cards = Array.from(grid.querySelectorAll('.product-card'));
-      const total = cards.length;
+      const cards = Array.from(grid.querySelectorAll<HTMLElement>(':scope > .product-card'));
+      const cfg = readPagedConfig(grid);
+      const fmt = (n: number) => n.toLocaleString('en-US');
+      const loader = createPagedLoader({ grid, cards, countEl, pager: document.getElementById('pager') });
       const materialCheckboxes = Array.from(document.querySelectorAll('.f-material'));
 
       const apply = () => {
@@ -233,7 +270,14 @@ const breadcrumbSchema = {
           el.style.display = visible ? '' : 'none';
           if (visible) visibleCount++;
         }
-        if (countEl) countEl.textContent = `${visibleCount} of ${total} shown`;
+        if (!loader.complete && !loader.failed) {
+          // Before the first filter/sort interaction only this page is present.
+          const start = Number(grid.dataset.rangeStart ?? 1);
+          const end = Number(grid.dataset.rangeEnd ?? cards.length);
+          loader.setCount(`${rangeLabel(start, end)} of ${fmt(cfg.total)} shown`);
+        } else {
+          loader.setCount(`${fmt(visibleCount)} of ${fmt(loader.failed ? cards.length : cfg.total)} shown`);
+        }
         const emptyEl = document.getElementById('empty-state');
         if (emptyEl) emptyEl.hidden = visibleCount !== 0;
       };
@@ -247,9 +291,11 @@ const breadcrumbSchema = {
         materialCheckboxes.forEach((el) => {
           if (el instanceof HTMLInputElement) el.checked = false;
         });
-        apply();
       };
-      document.getElementById('clear-filters')?.addEventListener('click', clearFilters);
+      document.getElementById('clear-filters')?.addEventListener('click', () => {
+        clearFilters();
+        refresh();
+      });
 
       const sortCards = () => {
         const mode = sortSelect.value;
@@ -271,19 +317,33 @@ const breadcrumbSchema = {
         for (const card of sorted) grid.appendChild(card);
       };
 
-      document.querySelectorAll('input[name="f-competition"]').forEach((el) => el.addEventListener('change', apply));
-      lastPurchasedSelect.addEventListener('change', apply);
-      hasDrawingCheckbox.addEventListener('change', apply);
-      materialCheckboxes.forEach((el) => el.addEventListener('change', apply));
-      sortSelect.addEventListener('change', () => {
-        sortCards();
+      // Sort runs over the whole `cards` array (server order, stable ties). The
+      // DOM is only reordered when the selected sort differs from the last one applied.
+      const defaultSort = Array.from(sortSelect.options).find((o) => o.defaultSelected)?.value ?? sortSelect.options[0].value;
+      let appliedSort = defaultSort;
+      const refresh = () => {
+        if (sortSelect.value !== appliedSort) {
+          sortCards();
+          appliedSort = sortSelect.value;
+        }
         apply();
-      });
+      };
+      // First interaction: pull in the other pages, then filter/sort the full category.
+      const schedule = () => {
+        if (loader.complete || loader.failed) refresh();
+        else void loader.ensureAll().then(refresh);
+      };
+      document.querySelectorAll('input[name="f-competition"]').forEach((el) => el.addEventListener('change', schedule));
+      lastPurchasedSelect.addEventListener('change', schedule);
+      hasDrawingCheckbox.addEventListener('change', schedule);
+      materialCheckboxes.forEach((el) => el.addEventListener('change', schedule));
+      sortSelect.addEventListener('change', schedule);
 
       apply();
     }
   </script>
 
+  {page === 1 && (
   <section>
     <h2 class="section-title">Contract awards in this category</h2>
     <p class="gloss">
@@ -336,6 +396,7 @@ const breadcrumbSchema = {
       </details>
     )}
   </section>
+  )}
 
   <SignupForm
     hook="shop_alerts"

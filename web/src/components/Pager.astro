@@ -1,0 +1,64 @@
+---
+// Visible pager for paginated category pages: Previous / "Page n of N" / Next,
+// with numbered links when there are 10 pages or fewer. Renders nothing for a
+// single page. The client filter engine hides it once every page is loaded.
+import { pagerModel } from '../lib/paginate';
+
+interface Props {
+  base: string; // e.g. '/fsc/5340/'
+  page: number;
+  pages: number;
+}
+const { base, page, pages } = Astro.props;
+const model = pagerModel(base, page, pages);
+---
+
+{pages > 1 && (
+  <nav class="pager" id="pager" aria-label="Pagination">
+    {model.prev ? (
+      <a class="pager-link" href={model.prev} rel="prev">← Previous</a>
+    ) : (
+      <span class="pager-link pager-disabled" aria-disabled="true">← Previous</span>
+    )}
+    <span class="pager-status">Page {page.toLocaleString('en-US')} of {pages.toLocaleString('en-US')}</span>
+    {model.numbers && (
+      <span class="pager-numbers">
+        {model.numbers.map((n) =>
+          n.current ? (
+            <span class="pager-num pager-current" aria-current="page">{n.page}</span>
+          ) : (
+            <a class="pager-num" href={n.href}>{n.page}</a>
+          )
+        )}
+      </span>
+    )}
+    {model.next ? (
+      <a class="pager-link" href={model.next} rel="next">Next →</a>
+    ) : (
+      <span class="pager-link pager-disabled" aria-disabled="true">Next →</span>
+    )}
+  </nav>
+)}
+
+<style>
+  .pager {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem 1rem;
+    margin: 1.5rem 0;
+    font-size: 0.9rem;
+  }
+  .pager[hidden] { display: none; }
+  .pager-numbers { display: inline-flex; flex-wrap: wrap; gap: 0.25rem; }
+  .pager-num, .pager-link {
+    padding: 0.3rem 0.7rem;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    text-decoration: none;
+  }
+  .pager-current { font-weight: 600; background: rgba(127, 127, 127, 0.15); }
+  .pager-disabled { opacity: 0.45; }
+  .pager-status { color: var(--ink-soft); }
+</style>

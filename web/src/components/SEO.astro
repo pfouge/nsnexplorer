@@ -24,6 +24,8 @@ interface Props {
   itemList?: { name: string; items: { name: string; url: string }[] };
   /* Question/answer pairs for an FAQPage JSON-LD script. */
   faq?: { question: string; answer: string }[];
+  /* Extra <link> tags for the head: prev/next pagination, markdown alternates. */
+  headLinks?: { rel: string; href: string; type?: string }[];
 }
 
 const {
@@ -38,6 +40,7 @@ const {
   breadcrumbs,
   itemList,
   faq,
+  headLinks = [],
 } = Astro.props;
 
 const resolvedCanonical = canonicalUrl ?? new URL(Astro.url.pathname, SITE_URL).href;
@@ -126,6 +129,7 @@ const faqSchema =
 <title>{fullTitle}</title>
 <meta name="description" content={description} />
 <link rel="canonical" href={resolvedCanonical} />
+{headLinks.map((l) => <link rel={l.rel} href={l.href} type={l.type} />)}
 <meta
   name="robots"
   content={noindex
