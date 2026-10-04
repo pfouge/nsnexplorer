@@ -26,6 +26,7 @@ export const GET: APIRoute = async () => {
 
 ## Core pages
 - [Home](${SITE_URL}/) — search any NSN for its full recorded price history.
+- [Services](${SITE_URL}/services/) — open federal service notices from SAM.gov by service category.
 - [Browse deep categories](${SITE_URL}/browse/) — Federal Supply Classes with fully-indexed price history.
 - [Agencies](${SITE_URL}/agencies/) — purchases grouped by buying agency.
 - [Methodology](${SITE_URL}/methodology/) — how prices are sourced and linked to public records.

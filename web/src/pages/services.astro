@@ -1,0 +1,215 @@
+---
+// services.astro — hub for open SAM.gov SERVICE notices (repair, installation,
+// testing, construction, IT and professional support). These notices carry a
+// letter-led product/service code and no NSN, so they are grouped by service
+// category instead of by supply class. Parts demand lives on /open/.
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE_URL } from '../consts';
+import { loadSiteData, solicitationLinkLabel } from '../lib/data';
+import { closesLabel, daysUntil, serviceCategoryName } from '../lib/services';
+
+const data = await loadSiteData();
+const fmtInt = (n: number) => n.toLocaleString('en-US');
+
+// Build-date baseline for the "closes in Nd" reads below — this page is
+// static, so the countdown is accurate as of the last build, not live.
+const now = new Date();
+const todayMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+
+const coded = data.serviceNotices.filter((n) => n.category !== 'other');
+const uncodedCount = data.serviceNoticesByCategory.get('other')?.length ?? 0;
+const N = coded.length;
+const hasN = N > 0;
+
+const title = hasN
+  ? `${fmtInt(N)} Open Federal Service Contract Notices from SAM.gov`
+  : 'Open Federal Service Contract Notices from SAM.gov';
+const description = hasN
+  ? `${fmtInt(N)} open federal service solicitations from SAM.gov, grouped by service category and linked to the official notice. Updated daily. Free, no account needed.`
+  : 'Open federal service solicitations from SAM.gov, grouped by service category and linked to the official notice. Updated daily. Free, no account needed.';
+const h1 = hasN ? `${fmtInt(N)} open federal service notices` : 'Open federal service notices';
+const canonicalUrl = `${SITE_URL}/services/`;
+
+const closingWithin7 = (list: { closesOn: string | null }[]) =>
+  list.filter((n) => {
+    const d = daysUntil(n.closesOn, todayMs);
+    return d !== null && d <= 7;
+  }).length;
+
+const categories = [...data.serviceNoticesByCategory.entries()]
+  .filter(([key, list]) => key !== 'other' && list.length > 0)
+  .map(([key, list]) => ({
+    letter: key,
+    name: serviceCategoryName(key),
+    count: list.length,
+    soon: closingWithin7(list),
+  }))
+  .sort((a, b) => b.count - a.count || a.letter.localeCompare(b.letter));
+
+const closingSoonCount = closingWithin7(coded);
+const closingSoon = coded.slice(0, 20);
+
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  { name: 'Services', url: canonicalUrl },
+];
+
+const itemList = {
+  name: 'Federal service categories with open notices',
+  items: categories.map((c) => ({ name: c.name, url: `/services/${c.letter.toLowerCase()}/` })),
+};
+
+const faq = [
+  {
+    question: 'What is a service notice?',
+    answer:
+      'A solicitation, combined synopsis or request for quotes posted on SAM.gov for work rather than a part: repairing equipment, building or maintaining a facility, professional or IT support. Each carries a product and service code that begins with a letter.',
+  },
+  {
+    question: 'How is this different from the parts on the rest of the site?',
+    answer:
+      "The rest of NSN Explorer tracks items with a National Stock Number, mostly from DLA's DIBBS board. Service notices have no stock number, so they are listed here by service category instead of by supply class.",
+  },
+  {
+    question: 'Which notices are tied to equipment groups?',
+    answer:
+      "Testing and inspection (H), repair and maintenance (J), modification (K), technical representatives (L), installation (N) and lease or rental (W). Their codes end in the two-digit supply group of the equipment they cover, and those notices also appear on that group's page.",
+  },
+  {
+    question: 'How do I respond to a notice?',
+    answer:
+      "Follow the link to the SAM.gov notice. The instructions, attachments and contracting officer's contact are there. You need an active SAM.gov registration to be awarded a contract.",
+  },
+  {
+    question: 'How current is the list?',
+    answer:
+      'Notices are pulled from SAM.gov once a day and cover postings from the last 30 days. A notice drops off once its response date passes.',
+  },
+];
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  pageType="CollectionPage"
+  canonicalUrl={canonicalUrl}
+  breadcrumbs={breadcrumbs}
+  itemList={itemList}
+  faq={faq}
+>
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a> › Services
+  </nav>
+
+  <p class="eyebrow">Services <span class="x">×</span> SAM.gov</p>
+
+  <header class="hero">
+    <h1>{h1}</h1>
+    <p class="lede">
+      Solicitations for work rather than parts: repair and overhaul, installation, testing,
+      construction, IT and professional support. Every row links to the official SAM.gov notice.
+      Parts demand is on the <a href="/open/">Open Demand</a> page.
+    </p>
+  </header>
+
+  <div class="stat-strip">
+    <div class="stat">
+      <div class="value up">{fmtInt(N)}</div>
+      <div class="label">Open service notices</div>
+    </div>
+    <div class="stat">
+      <div class="value">{fmtInt(categories.length)}</div>
+      <div class="label">Service categories with open notices</div>
+    </div>
+    <div class="stat">
+      <div class="value">{fmtInt(closingSoonCount)}</div>
+      <div class="label">Closing within 7 days</div>
+    </div>
+  </div>
+
+  {!hasN ? (
+    <div class="note">
+      <b>No open service notices indexed yet.</b> Check back soon, or see the parts on the
+      <a href="/open/">Open Demand</a> page.
+    </div>
+  ) : (
+    <>
+      <section>
+        <h2 class="section-title">Browse service notices by category</h2>
+        <div class="dept-grid">
+          {categories.map((c) => (
+            <a class="dept-card card" href={`/services/${c.letter.toLowerCase()}/`}>
+              <div class="dept-code mono">Category {c.letter}</div>
+              <h3>{c.name}</h3>
+              <p>
+                {fmtInt(c.count)} open {c.count === 1 ? 'notice' : 'notices'} · {fmtInt(c.soon)} closing within 7 days
+              </p>
+            </a>
+          ))}
+        </div>
+        {uncodedCount > 0 && (
+          <p class="gloss" style="margin-top:1.25rem;">
+            {fmtInt(uncodedCount)} {uncodedCount === 1 ? 'notice carries' : 'notices carry'} no service or supply code.
+            <a href="/services/other/">See uncoded notices</a>.
+          </p>
+        )}
+      </section>
+
+      <section>
+        <h2 class="section-title">Equipment services</h2>
+        <p class="gloss">
+          Six categories cover work on equipment: testing and inspection (H), repair and maintenance
+          (J), modification (K), technical representatives (L), installation (N) and lease or rental
+          (W). Their codes end in the two-digit supply group of the equipment, so those notices also
+          appear on the matching group page in the catalog.
+        </p>
+      </section>
+
+      <section>
+        <h2 class="section-title">Closing soon</h2>
+        <p class="gloss">
+          The {closingSoon.length} coded service notices closing soonest — every row links to its official SAM.gov notice.
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Notice</th>
+                <th>Category</th>
+                <th>Agency</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {closingSoon.map((n) => {
+                const label = closesLabel(daysUntil(n.closesOn, todayMs));
+                return (
+                  <tr>
+                    <td style="white-space:normal; min-width:16rem;">{n.title ?? 'Untitled notice'}</td>
+                    <td style="white-space:normal;">{serviceCategoryName(n.category)}</td>
+                    <td style="white-space:normal;">{n.agency ?? '—'}</td>
+                    <td>
+                      <span class:list={['badge', label.cls]}>{label.text}</span>
+                    </td>
+                    <td><a href={n.sourceUrl} target="_blank" rel="nofollow noopener">{solicitationLinkLabel('sam_gov')}</a></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </>
+  )}
+
+  <section class="faq">
+    <h2 class="section-title">Service notice questions</h2>
+    {faq.map((f) => (
+      <>
+        <h3>{f.question}</h3>
+        <p class="gloss">{f.answer}</p>
+      </>
+    ))}
+  </section>
+</BaseLayout>

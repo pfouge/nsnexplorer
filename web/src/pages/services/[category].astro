@@ -1,0 +1,279 @@
+---
+// services/[category].astro — open SAM.gov service notices for one service
+// category (one lowercase letter), or the uncoded notices ('other'). Mirrors
+// open/[fsc].astro's filter-rail + card-grid pattern with filters tuned for
+// service work: closing window, set-aside, agency, service code.
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { SITE_URL } from '../../consts';
+import { loadSiteData, formatDate, solicitationLinkLabel, type ServiceNotice } from '../../lib/data';
+import { buildDepartments } from '../../lib/browse';
+import { closesLabel, daysUntil, serviceCategoryName, serviceCategoryNameInline } from '../../lib/services';
+
+export async function getStaticPaths() {
+  const data = await loadSiteData();
+  return [...data.serviceNoticesByCategory.entries()]
+    .filter(([, list]) => list.length > 0)
+    .map(([key, notices]) => ({
+      params: { category: key === 'other' ? 'other' : key.toLowerCase() },
+      props: { key, notices },
+    }));
+}
+
+const { key, notices } = Astro.props as { key: string; notices: ServiceNotice[] };
+const data = await loadSiteData();
+const isOther = key === 'other';
+const fmtInt = (n: number) => n.toLocaleString('en-US');
+const n = notices.length;
+
+const name = serviceCategoryName(key);
+const slug = isOther ? 'other' : key.toLowerCase();
+const canonicalUrl = `${SITE_URL}/services/${slug}/`;
+
+const title = isOther
+  ? 'Uncoded Federal Notices from SAM.gov'
+  : `${name}: ${fmtInt(n)} Open Federal Solicitations`;
+const description = isOther
+  ? `${fmtInt(n)} open SAM.gov notices posted without a service or supply code, with closing dates and agency. Linked to the official notice.`
+  : `${fmtInt(n)} open federal solicitations for ${serviceCategoryNameInline(key)} (service category ${key}) from SAM.gov, with closing dates, set-asides and agency. Linked to the official notice.`;
+const h1 = isOther ? 'Uncoded notices' : name;
+const subline = isOther
+  ? `${fmtInt(n)} open notices with no service or supply code`
+  : `${fmtInt(n)} open notices · service category ${key}`;
+
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  { name: 'Services', url: `${SITE_URL}/services/` },
+  { name, url: canonicalUrl },
+];
+
+// Build-date baseline for the "closes in Nd" badges — static page.
+const now = new Date();
+const todayMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+
+// Equipment-service notices link to their supply-group page when it exists.
+const groupNames = new Map(buildDepartments(data).map((d) => [d.fsg, d.name]));
+
+const NONE = '__none';
+const setasides = [...new Set(notices.map((x) => x.setaside).filter((v): v is string => v !== null))].sort((a, b) => a.localeCompare(b));
+const hasNoSetaside = notices.some((x) => x.setaside === null);
+const agencies = [...new Set(notices.map((x) => x.agency).filter((v): v is string => v !== null))].sort((a, b) => a.localeCompare(b));
+const hasNoAgency = notices.some((x) => x.agency === null);
+const pscCounts = new Map<string, number>();
+for (const x of notices) if (x.psc) pscCounts.set(x.psc, (pscCounts.get(x.psc) ?? 0) + 1);
+const pscs = [...pscCounts.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  pageType="CollectionPage"
+  canonicalUrl={canonicalUrl}
+  breadcrumbs={breadcrumbs}
+>
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a> › <a href="/services/">Services</a> › {name}
+  </nav>
+
+  <p class="eyebrow">Services <span class="x">×</span> {isOther ? 'Uncoded' : `Category ${key}`}</p>
+
+  <header class="hero">
+    <h1>{h1}</h1>
+    <p class="lede">{subline}</p>
+  </header>
+
+  <section class="products-section">
+    <h2 class="section-title">Open notices</h2>
+    <div class="products-layout">
+      <aside class="filter-rail" aria-label="Filter service notices">
+        <div class="filter-group">
+          <label class="filter-label" for="f-closes">Closing within</label>
+          <select id="f-closes">
+            <option value="any">Any time</option>
+            <option value="3">3 days</option>
+            <option value="7">7 days</option>
+            <option value="30">30 days</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label" for="f-setaside">Set-aside</label>
+          <select id="f-setaside">
+            <option value="all">All</option>
+            {hasNoSetaside && <option value={NONE}>No set-aside</option>}
+            {setasides.map((s) => <option value={s}>{s}</option>)}
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label" for="f-agency">Agency</label>
+          <select id="f-agency">
+            <option value="all">All</option>
+            {hasNoAgency && <option value={NONE}>Unknown agency</option>}
+            {agencies.map((a) => <option value={a}>{a}</option>)}
+          </select>
+        </div>
+
+        {!isOther && (
+          <div class="filter-group">
+            <label class="filter-label" for="f-psc">Service code</label>
+            <select id="f-psc">
+              <option value="all">All</option>
+              {pscs.map(([code, count]) => <option value={code}>{code} ({fmtInt(count)})</option>)}
+            </select>
+          </div>
+        )}
+
+        <div class="filter-group">
+          <label class="filter-label" for="f-sort">Sort</label>
+          <select id="f-sort">
+            <option value="closes">Closing soonest</option>
+            <option value="posted">Newest posted</option>
+            <option value="title">Title A–Z</option>
+          </select>
+        </div>
+
+        <p class="filter-count" id="filter-count" aria-live="polite">{n} of {n} shown</p>
+      </aside>
+
+      <div class="product-grid" id="product-grid">
+        {notices.map((x) => {
+          const label = closesLabel(daysUntil(x.closesOn, todayMs));
+          const groupName = x.fsg ? groupNames.get(x.fsg) : undefined;
+          return (
+            <article
+              class="product-card"
+              data-closes={x.closesOn ?? ''}
+              data-setaside={x.setaside ?? NONE}
+              data-agency={x.agency ?? NONE}
+              data-psc={x.psc ?? ''}
+              data-posted={x.postedOn ?? ''}
+              data-title={(x.title ?? '').toLowerCase().replace(/[<>]/g, '')}
+            >
+              <div class="product-body">
+                <h3 class="product-name">{x.title ?? 'Untitled notice'}</h3>
+                <div class="product-signals" style="margin-top:0;">
+                  <span class={`badge ${label.cls}`}>{label.text}</span>
+                  {x.psc && <span class="signal mono">{x.psc}</span>}
+                  <span class="signal mono">{x.solNumber}</span>
+                </div>
+                <p class="gloss" style="margin:0.35rem 0 0; font-size:0.78rem;">
+                  {x.agency ?? 'Unknown agency'}{x.office ? ` · ${x.office}` : ''}
+                </p>
+                <p class="gloss" style="margin:0.2rem 0 0; font-size:0.78rem;">
+                  {x.setaside ?? 'No set-aside'}
+                  {x.naics && ` · NAICS ${x.naics}`}
+                  {x.state && ` · ${x.state}`}
+                  {x.postedOn && ` · Posted ${formatDate(x.postedOn)}`}
+                </p>
+                {groupName && (
+                  <p class="gloss" style="margin:0.2rem 0 0; font-size:0.78rem;">
+                    <a href={`/group/${x.fsg}/`}>Group {x.fsg}: {groupName}</a>
+                  </p>
+                )}
+                <p style="margin:auto 0 0; padding-top:0.5rem;">
+                  <a href={x.sourceUrl} target="_blank" rel="nofollow noopener">{solicitationLinkLabel('sam_gov')}</a>
+                </p>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </div>
+    <p class="gloss" id="empty-state" hidden>
+      No notices match these filters.
+      <button type="button" class="btn btn-ghost" id="clear-filters">Clear filters</button>
+    </p>
+  </section>
+
+  <script>
+    const grid = document.getElementById('product-grid');
+    const countEl = document.getElementById('filter-count');
+    const closesSelect = document.getElementById('f-closes');
+    const setasideSelect = document.getElementById('f-setaside');
+    const agencySelect = document.getElementById('f-agency');
+    const pscSelect = document.getElementById('f-psc'); // absent on the uncoded page
+    const sortSelect = document.getElementById('f-sort');
+
+    if (
+      grid &&
+      closesSelect instanceof HTMLSelectElement &&
+      setasideSelect instanceof HTMLSelectElement &&
+      agencySelect instanceof HTMLSelectElement &&
+      sortSelect instanceof HTMLSelectElement
+    ) {
+      const cards = Array.from(grid.querySelectorAll('.product-card'));
+      const total = cards.length;
+
+      const apply = () => {
+        const maxCloseDays = closesSelect.value === 'any' ? null : Number(closesSelect.value);
+        const wantedSetaside = setasideSelect.value;
+        const wantedAgency = agencySelect.value;
+        const wantedPsc = pscSelect instanceof HTMLSelectElement ? pscSelect.value : 'all';
+        const today = new Date().toISOString().slice(0, 10);
+        const todayMs = new Date(`${today}T00:00:00Z`).getTime();
+
+        let visibleCount = 0;
+        for (const card of cards) {
+          const el = card as HTMLElement;
+          let visible = true;
+          if (maxCloseDays !== null) {
+            const closes = el.dataset.closes;
+            if (!closes) {
+              visible = false; // no closing date only matches "Any time"
+            } else {
+              const daysUntil = (new Date(`${closes}T00:00:00Z`).getTime() - todayMs) / 86400000;
+              if (daysUntil < 0 || daysUntil > maxCloseDays) visible = false;
+            }
+          }
+          if (visible && wantedSetaside !== 'all' && el.dataset.setaside !== wantedSetaside) visible = false;
+          if (visible && wantedAgency !== 'all' && el.dataset.agency !== wantedAgency) visible = false;
+          if (visible && wantedPsc !== 'all' && el.dataset.psc !== wantedPsc) visible = false;
+          el.style.display = visible ? '' : 'none';
+          if (visible) visibleCount++;
+        }
+        if (countEl) countEl.textContent = `${visibleCount} of ${total} shown`;
+        const emptyEl = document.getElementById('empty-state');
+        if (emptyEl) emptyEl.hidden = visibleCount !== 0;
+      };
+
+      const clearFilters = () => {
+        closesSelect.value = 'any';
+        setasideSelect.value = 'all';
+        agencySelect.value = 'all';
+        if (pscSelect instanceof HTMLSelectElement) pscSelect.value = 'all';
+        apply();
+      };
+      document.getElementById('clear-filters')?.addEventListener('click', clearFilters);
+
+      // Missing values sort last in every mode; ties keep the server order
+      // (closing soonest, then solicitation number).
+      const sortCards = () => {
+        const mode = sortSelect.value;
+        const sorted = [...cards].sort((a, b) => {
+          const ael = a as HTMLElement;
+          const bel = b as HTMLElement;
+          const key = mode === 'posted' ? 'posted' : mode === 'title' ? 'title' : 'closes';
+          const av = ael.dataset[key] ?? '';
+          const bv = bel.dataset[key] ?? '';
+          if (av === bv) return 0;
+          if (av === '') return 1;
+          if (bv === '') return -1;
+          if (mode === 'posted') return bv.localeCompare(av); // newest first
+          return av.localeCompare(bv);
+        });
+        for (const card of sorted) grid.appendChild(card);
+      };
+
+      closesSelect.addEventListener('change', apply);
+      setasideSelect.addEventListener('change', apply);
+      agencySelect.addEventListener('change', apply);
+      pscSelect?.addEventListener('change', apply);
+      sortSelect.addEventListener('change', () => {
+        sortCards();
+        apply();
+      });
+
+      apply();
+    }
+  </script>
+</BaseLayout>

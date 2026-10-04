@@ -14,8 +14,10 @@ import {
   type AgencyRecord, type PartNumberRecord, type SolicitationRecord,
   parseCharacteristics, slugify, assertSourceUrl, NSN_WITH_AMSC_SELECT, mapNsnRow,
 } from './shared';
+import { compareByClosing, mapServiceNotice, type ServiceNotice, type ServiceNoticeRow } from './services';
 
 export * from './shared';
+export type { ServiceNotice } from './services';
 
 // `pg` is loaded lazily so this module can sit in the same bundle chunk as
 // the pure helpers without dragging a Node-only driver into the Cloudflare
@@ -74,6 +76,16 @@ export interface SiteData {
    * only" set — the name is kept for API stability.
    */
   openNsnByNsn: Map<string, NsnRecord>;
+  /**
+   * Open SAM.gov SERVICE notices (letter-coded PSC, or no code), closing
+   * soonest first. Separate from the parts lane above, which drops letter
+   * codes on purpose; this feeds /services/.
+   */
+  serviceNotices: ServiceNotice[];
+  /** Keyed by category letter ('J'); 'other' = no usable code. */
+  serviceNoticesByCategory: Map<string, ServiceNotice[]>;
+  /** Keyed by 2-digit supply group, equipment-service notices only. */
+  serviceNoticesByFsg: Map<string, ServiceNotice[]>;
   stats: {
     totalNsns: number;
     totalPurchases: number;   // rows in pub.price_points (real unit prices)
@@ -424,6 +436,38 @@ async function fetchSiteData(): Promise<SiteData> {
       console.warn('DRAWING-COVERAGE: coverage check failed (non-fatal)', err);
     }
 
+    // Open service notices from SAM.gov: letter-coded (service PSC) or
+    // uncoded rows, open today. Only the fields the /services/ pages need are
+    // selected, not the whole raw record.
+    const svcRes = await pool.query<ServiceNoticeRow>(
+      `SELECT s.sol_number, s.nomenclature, s.fsc, s.setaside, s.buyer_office,
+              s.issued_on, s.return_by, s.source_url,
+              s.raw ->> 'naicsCode' AS naics,
+              s.raw ->> 'type' AS notice_type,
+              s.raw ->> 'typeOfSetAsideDescription' AS setaside_desc,
+              s.raw -> 'placeOfPerformance' -> 'state' ->> 'code' AS state
+       FROM pub.solicitations s
+       WHERE s.source = 'sam_gov' AND s.status = 'open'
+         AND (s.return_by IS NULL OR s.return_by >= CURRENT_DATE)
+         AND (s.fsc IS NULL OR s.fsc ~ '^[A-Za-z]')`
+    );
+    const serviceNotices: ServiceNotice[] = svcRes.rows
+      .map((r) => {
+        assertSourceUrl(r.source_url, `solicitations.sol_number=${r.sol_number} (service notice)`);
+        return mapServiceNotice(r);
+      })
+      .sort(compareByClosing);
+    const serviceNoticesByCategory = new Map<string, ServiceNotice[]>();
+    const serviceNoticesByFsg = new Map<string, ServiceNotice[]>();
+    for (const n of serviceNotices) {
+      if (!serviceNoticesByCategory.has(n.category)) serviceNoticesByCategory.set(n.category, []);
+      serviceNoticesByCategory.get(n.category)!.push(n);
+      if (n.fsg) {
+        if (!serviceNoticesByFsg.has(n.fsg)) serviceNoticesByFsg.set(n.fsg, []);
+        serviceNoticesByFsg.get(n.fsg)!.push(n);
+      }
+    }
+
     return {
       deepFscs,
       nsns,
@@ -441,6 +485,9 @@ async function fetchSiteData(): Promise<SiteData> {
       solicitationsByFsc,
       openNsnCodes,
       openNsnByNsn,
+      serviceNotices,
+      serviceNoticesByCategory,
+      serviceNoticesByFsg,
       stats: {
         totalNsns: nsns.length,
         totalPurchases,
