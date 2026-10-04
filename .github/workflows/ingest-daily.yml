@@ -18,6 +18,7 @@ on:
 
 permissions:
   contents: write
+  deployments: write
 
 env:
   DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
@@ -37,16 +38,22 @@ jobs:
     needs: migrate
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        psc: [5331]
+        # Every class that was backfilled (see backfill.yml) must also be
+        # here, or it stops updating the day the backfill finishes.
+        psc: [5331, 5330]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - run: npm ci
+      # 120-day window, not 2: USAspending publishes DoD awards about 90
+      # days after they are signed, so a 2-day window never sees them. Loads
+      # are idempotent upserts, so the overlap costs nothing.
       - name: fetch
-        run: node ingest/usaspending/fetch.mjs --psc ${{ matrix.psc }} --days 2 --out /tmp/usaspending-${{ matrix.psc }}.jsonl
+        run: node ingest/usaspending/fetch.mjs --psc ${{ matrix.psc }} --days 120 --out /tmp/usaspending-${{ matrix.psc }}.jsonl
       - name: load
         run: node ingest/usaspending/load.mjs --file /tmp/usaspending-${{ matrix.psc }}.jsonl --psc ${{ matrix.psc }}
 
@@ -58,6 +65,7 @@ jobs:
     # unit-price path is still gated in code — see parse.mjs's
     # LAYOUT_CONFIRMED comment and load.mjs's loadAwardRecords.
     runs-on: ubuntu-latest
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -68,6 +76,12 @@ jobs:
         run: node ingest/dibbs/fetch.mjs --days 7 --out /tmp/dibbs-awd 2>&1 | tee /tmp/dibbs-fetch.log
       - name: parse + load awards
         run: set -o pipefail; node ingest/dibbs/pipeline.mjs --type awd --dir /tmp/dibbs-awd 2>&1 | tee /tmp/dibbs-load.log
+      # Same crawl, second use: join these awards against the retained
+      # solicitations to derive unit prices (pub.price_points). Doing it here
+      # keeps price history current daily without a second award crawl; the
+      # weekly rfq-award-join lane re-checks a 30-day window as a backstop.
+      - name: join awards to solicitations (price points)
+        run: set -o pipefail; node ingest/dibbs/price-join.mjs --dir /tmp/dibbs-awd 2>&1 | tee /tmp/dibbs-join.log
       # TEMPORARY: commit run diagnostics so results are readable over git
       # (dev container cannot reach the Actions UI). Remove with the other
       # git-report steps once dashboard access is reliable.
@@ -80,6 +94,8 @@ jobs:
             tail -20 /tmp/dibbs-fetch.log 2>/dev/null || echo 'no fetch log'
             echo '== load log tail =='
             tail -20 /tmp/dibbs-load.log 2>/dev/null || echo 'no load log'
+            echo '== price join =='
+            tail -5 /tmp/dibbs-join.log 2>/dev/null || echo 'no join log'
             echo '== fetched files =='
             ls -la /tmp/dibbs-awd 2>/dev/null | head -30 || echo 'no dir'
           } > ingest/dibbs/last-run.txt
@@ -98,6 +114,7 @@ jobs:
     # Fresh-runner retry: DIBBS blocks some Azure runner IPs outright,
     # so a failed fetch retries on a new runner (new IP).
     runs-on: ubuntu-latest
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -108,6 +125,12 @@ jobs:
         run: node ingest/dibbs/fetch.mjs --days 7 --out /tmp/dibbs-awd 2>&1 | tee /tmp/dibbs-fetch.log
       - name: parse + load awards
         run: set -o pipefail; node ingest/dibbs/pipeline.mjs --type awd --dir /tmp/dibbs-awd 2>&1 | tee /tmp/dibbs-load.log
+      # Same crawl, second use: join these awards against the retained
+      # solicitations to derive unit prices (pub.price_points). Doing it here
+      # keeps price history current daily without a second award crawl; the
+      # weekly rfq-award-join lane re-checks a 30-day window as a backstop.
+      - name: join awards to solicitations (price points)
+        run: set -o pipefail; node ingest/dibbs/price-join.mjs --dir /tmp/dibbs-awd 2>&1 | tee /tmp/dibbs-join.log
       # TEMPORARY: commit run diagnostics so results are readable over git
       # (dev container cannot reach the Actions UI). Remove with the other
       # git-report steps once dashboard access is reliable.
@@ -120,6 +143,8 @@ jobs:
             tail -20 /tmp/dibbs-fetch.log 2>/dev/null || echo 'no fetch log'
             echo '== load log tail =='
             tail -20 /tmp/dibbs-load.log 2>/dev/null || echo 'no load log'
+            echo '== price join =='
+            tail -5 /tmp/dibbs-join.log 2>/dev/null || echo 'no join log'
             echo '== fetched files =='
             ls -la /tmp/dibbs-awd 2>/dev/null | head -30 || echo 'no dir'
           } > ingest/dibbs/last-run.txt
@@ -138,6 +163,7 @@ jobs:
     # Fresh-runner retry: DIBBS blocks some Azure runner IPs outright,
     # so a failed fetch retries on a new runner (new IP).
     runs-on: ubuntu-latest
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -148,6 +174,12 @@ jobs:
         run: node ingest/dibbs/fetch.mjs --days 7 --out /tmp/dibbs-awd 2>&1 | tee /tmp/dibbs-fetch.log
       - name: parse + load awards
         run: set -o pipefail; node ingest/dibbs/pipeline.mjs --type awd --dir /tmp/dibbs-awd 2>&1 | tee /tmp/dibbs-load.log
+      # Same crawl, second use: join these awards against the retained
+      # solicitations to derive unit prices (pub.price_points). Doing it here
+      # keeps price history current daily without a second award crawl; the
+      # weekly rfq-award-join lane re-checks a 30-day window as a backstop.
+      - name: join awards to solicitations (price points)
+        run: set -o pipefail; node ingest/dibbs/price-join.mjs --dir /tmp/dibbs-awd 2>&1 | tee /tmp/dibbs-join.log
       # TEMPORARY: commit run diagnostics so results are readable over git
       # (dev container cannot reach the Actions UI). Remove with the other
       # git-report steps once dashboard access is reliable.
@@ -160,6 +192,8 @@ jobs:
             tail -20 /tmp/dibbs-fetch.log 2>/dev/null || echo 'no fetch log'
             echo '== load log tail =='
             tail -20 /tmp/dibbs-load.log 2>/dev/null || echo 'no load log'
+            echo '== price join =='
+            tail -5 /tmp/dibbs-join.log 2>/dev/null || echo 'no join log'
             echo '== fetched files =='
             ls -la /tmp/dibbs-awd 2>/dev/null | head -30 || echo 'no dir'
           } > ingest/dibbs/last-run.txt
@@ -183,3 +217,16 @@ jobs:
           node-version: 22
       - run: npm ci
       - run: node scoring/score.mjs
+
+  # Rebuild + deploy so the day's awards and prices go live (every other
+  # lane already chains a deploy; this one used to wait for the next one).
+  deploy:
+    needs: [dibbs, dibbs-retry, dibbs-retry-2, scoring]
+    if: >-
+      always() && (needs.dibbs.result == 'success'
+      || needs.dibbs-retry.result == 'success'
+      || needs.dibbs-retry-2.result == 'success')
+    uses: ./.github/workflows/deploy.yml
+    secrets: inherit
+    with:
+      commit_report: false

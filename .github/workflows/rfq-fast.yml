@@ -43,6 +43,7 @@ env:
 jobs:
   rfq:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -86,6 +87,7 @@ jobs:
     # Fresh-runner retry: DIBBS blocks some Azure runner IPs outright,
     # so a failed fetch retries on a new runner (new IP).
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

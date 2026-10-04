@@ -70,6 +70,7 @@ jobs:
       - name: load (enrich existing NSNs, incl. open-solicitation set)
         run: set -o pipefail; node ingest/publog/load.mjs --dir /tmp/publog 2>&1 | tee /tmp/load-output.txt
       - name: collect diagnostics
+        if: always()
         run: |
           {
             echo '== files =='
@@ -86,6 +87,7 @@ jobs:
             tail -40 /tmp/load-output.txt
           } > ingest/publog/last-run-diagnostics.txt
       - name: run report
+        if: always()
         run: |
           node --input-type=module --eval "
             import pg from 'pg';
@@ -105,6 +107,7 @@ jobs:
             writeFileSync('ingest/publog/last-run.json', JSON.stringify({ at: new Date().toISOString(), counts }, null, 2) + '\n');
           "
       - name: commit run report
+        if: always()
         run: |
           git config user.name "publog-bot"
           git config user.email "noreply@anthropic.com"

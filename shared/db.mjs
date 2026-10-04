@@ -52,13 +52,23 @@ export async function closePool() {
  * checked out from the pool. Rolls back and rethrows on error. Always
  * releases the client back to the pool.
  *
+ * The whole transaction is re-run when it fails with a retryable error
+ * (deadlock, serialization failure, dropped connection — see withRetry
+ * below), so `fn` must be safe to repeat: do the writes inside it and count
+ * results from what it returns, not from variables it mutates.
+ *
  * @template T
  * @param {(client: pg.PoolClient) => Promise<T>} fn
+ * @param {{ pool?: pg.Pool, label?: string }} [opts]
  * @returns {Promise<T>}
  */
-export async function tx(fn) {
-  const pool = getPool();
-  const client = await pool.connect();
+export async function tx(fn, { pool, label = 'tx' } = {}) {
+  return withRetry(() => txOnce(fn, pool), { label });
+}
+
+async function txOnce(fn, pool) {
+  const db = pool || getPool();
+  const client = await db.connect();
   try {
     await client.query('BEGIN');
     const result = await fn(client);
@@ -118,4 +128,48 @@ export async function upsert(table, conflictCols, row, opts = {}) {
   const sql = `INSERT INTO ${table} (${columns.join(', ')}) VALUES (${placeholders.join(', ')}) ${onConflict}${returning}`;
 
   return executor.query(sql, values);
+}
+
+/** Splits `arr` into consecutive slices of at most `n` items. */
+export function chunk(arr, n) {
+  const out = [];
+  for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n));
+  return out;
+}
+
+// Postgres errors that mean "another writer got in the way, try again":
+// deadlock_detected, serialization_failure, lock_not_available, and the
+// connection-level failures a pooler restart produces. The ingest lanes run
+// concurrently against the same tables (pub.nsns, pub.suppliers), so any of
+// these can hit a perfectly healthy load.
+const RETRYABLE_CODES = new Set(['40P01', '40001', '55P03', '57P01', '08006', '08003', 'ECONNRESET', 'EPIPE', 'ETIMEDOUT']);
+
+export function isRetryable(err) {
+  return Boolean(err && RETRYABLE_CODES.has(err.code));
+}
+
+/**
+ * Runs `fn` and re-runs it (up to `attempts` times, with a growing, jittered
+ * wait) when it fails with a retryable error — see RETRYABLE_CODES. `fn` must
+ * be safe to repeat: every caller passes an idempotent upsert transaction.
+ *
+ * @template T
+ * @param {() => Promise<T>} fn
+ * @param {{ attempts?: number, baseMs?: number, label?: string }} [opts]
+ * @returns {Promise<T>}
+ */
+export async function withRetry(fn, { attempts = 5, baseMs = 500, label = 'db' } = {}) {
+  let lastErr;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      if (!isRetryable(err) || attempt === attempts) throw err;
+      const wait = Math.round(baseMs * 2 ** (attempt - 1) * (0.5 + Math.random()));
+      console.error(`${label}: ${err.code} on attempt ${attempt}/${attempts}; retrying in ${wait}ms`);
+      await new Promise((r) => setTimeout(r, wait));
+    }
+  }
+  throw lastErr;
 }

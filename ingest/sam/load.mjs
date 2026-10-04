@@ -170,6 +170,21 @@ export async function loadSamSolicitations(records, { pool } = {}) {
     );
     expired = expiredResult.rowCount || 0;
 
+    // Notices without a response deadline never trip the sweep above, and a
+    // notice SAM stops returning (withdrawn, archived, or aged out of the
+    // posted-date window) is simply no longer seen. Close any open sam_gov
+    // row this lane has not re-observed in 45 days, so "open" keeps meaning
+    // "still listed".
+    const staleResult = await client.query(
+      `UPDATE pub.solicitations
+         SET status = 'expired', updated_at = now()
+       WHERE source = 'sam_gov'
+         AND status = 'open'
+         AND (return_by IS NULL OR return_by < CURRENT_DATE)
+         AND last_seen_at < now() - interval '45 days'`
+    );
+    expired += staleResult.rowCount || 0;
+
     await client.query('COMMIT');
   } catch (err) {
     try {

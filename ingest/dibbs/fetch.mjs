@@ -37,6 +37,11 @@ import { parsePagination, extractAspNetForm } from './parse.mjs';
 const BASE_URL = 'https://www.dibbs.bsm.dla.mil';
 const UA = 'nsnexplorer.com ingest (contact: hello@nsnexplorer.com)';
 const REQUEST_INTERVAL_MS = 1500;
+// DIBBS's F5 sometimes accepts a connection and then never answers. Without
+// a deadline that one request hangs until the runner's 6-hour limit kills the
+// job, so every request gets a hard timeout and goes through the normal
+// retry path instead.
+const REQUEST_TIMEOUT_MS = 90000;
 // Safety valve against a pagination-parsing bug looping forever; DIBBS award
 // grids have run into the hundreds of pages for a single busy posting day,
 // so this is deliberately generous, not a realistic expected count.
@@ -115,8 +120,17 @@ async function jarFetch(jar, url, opts = {}) {
   let lastErr;
   for (let attempt = 1; attempt <= 4; attempt += 1) {
     try {
-      const res = await fetch(url, { ...opts, headers, redirect: 'manual' });
+      const res = await fetch(url, {
+        ...opts,
+        headers,
+        redirect: 'manual',
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
       jar.absorb(res.headers);
+      // Read the body under the same deadline: a response that stalls
+      // mid-body would otherwise hang in res.text() with no timeout at all.
+      const text = await res.text();
+      res.text = async () => text;
       return res;
     } catch (err) {
       lastErr = err;
@@ -369,9 +383,21 @@ async function main() {
   const jar = new CookieJar();
   const dates = businessDays(args.days);
 
+  // One bad date must not cost the other dates: record the failure, keep
+  // going, and exit nonzero at the end so the workflow can decide whether a
+  // partial crawl is usable (incremental lanes) or not (full reconcile).
+  const failed = [];
   for (const date of dates) {
-    await fetchDate(jar, args.out, args.type, date);
+    try {
+      await fetchDate(jar, args.out, args.type, date);
+    } catch (err) {
+      failed.push(date);
+      console.error(`fetch.mjs: ${date} failed (${err.cause?.code || err.name}: ${err.message}); continuing`);
+    }
   }
+  console.log(`fetch.mjs: ${dates.length - failed.length}/${dates.length} dates fetched` +
+    (failed.length ? `; FAILED: ${failed.join(', ')}` : ''));
+  if (failed.length) process.exitCode = 1;
 }
 
 const isMain = process.argv[1] && import.meta.url === `file://${process.argv[1]}`;

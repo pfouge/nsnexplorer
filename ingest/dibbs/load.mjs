@@ -33,7 +33,7 @@ import { readFile } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import { tx, upsert, getPool } from '../../shared/db.mjs';
+import { tx, upsert, getPool, chunk } from '../../shared/db.mjs';
 import { normalizeNsn } from '../../shared/nsn.mjs';
 import { LAYOUT_CONFIRMED } from './parse.mjs';
 import { mapRfqRecord } from './map-rfq.mjs';
@@ -223,100 +223,97 @@ export async function loadRfqSolicitations(records, { pool, today } = {}) {
     if (!nsnMap.has(plan.nsn)) nsnMap.set(plan.nsn, { fsc: plan.fsc, nomenclature: plan.nomenclature });
     solMap.set(plan.row.sol_number, plan);
   }
-  const solPlans = [...solMap.values()];
+  // Every lane that upserts pub.nsns / pub.solicitations writes its rows in
+  // key order, so two lanes running at once take row locks in the same
+  // order and cannot deadlock each other.
+  const byKey = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+  const fscList = [...fscSet].sort(byKey);
+  const nsnList = [...nsnMap.entries()].sort((a, b) => byKey(a[0], b[0]));
+  const solPlans = [...solMap.values()].sort((a, b) => byKey(a.row.sol_number, b.row.sol_number));
 
-  const chunk = (arr, n) => {
-    const out = [];
-    for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n));
-    return out;
-  };
+  // 1) FSCs — real title when we have one authoritatively sourced (see
+  // FSC_NAMES above), placeholder 'FSC NNNN' otherwise. The DO UPDATE only
+  // fires when the existing row is STILL a placeholder (name LIKE 'FSC %')
+  // — a curated/real name already in place is never clobbered.
+  for (const c of chunk(fscList, 1000)) {
+    const params = [];
+    const tuples = c.map((fsc, i) => {
+      params.push(fsc, FSC_NAMES[fsc] || null);
+      return `($${i * 2 + 1}::text, COALESCE($${i * 2 + 2}, 'FSC ' || $${i * 2 + 1}::text))`;
+    });
+    await tx(
+      (client) =>
+        client.query(
+          `INSERT INTO pub.fsc (fsc, name)
+           VALUES ${tuples.join(',')}
+           ON CONFLICT (fsc) DO UPDATE SET name = EXCLUDED.name
+             WHERE pub.fsc.name LIKE 'FSC %'`,
+          params
+        ),
+      { pool: db, label: 'rfq fsc' }
+    );
+  }
 
+  // 2) NSNs — batched multi-row upsert (grows the catalog for open NSNs).
+  // One short transaction per batch: row locks are held for milliseconds,
+  // not for the whole load.
+  for (const c of chunk(nsnList, 500)) {
+    const params = [];
+    const tuples = c.map(([nsn, meta], i) => {
+      const b = i * 3;
+      params.push(nsn, meta.fsc, meta.nomenclature);
+      return `($${b + 1},$${b + 2},$${b + 3})`;
+    });
+    await tx(
+      (client) =>
+        client.query(
+          `INSERT INTO pub.nsns (nsn, fsc, item_name)
+           VALUES ${tuples.join(',')}
+           ON CONFLICT (nsn) DO UPDATE SET
+             item_name = COALESCE(pub.nsns.item_name, EXCLUDED.item_name),
+             updated_at = now()`,
+          params
+        ),
+      { pool: db, label: 'rfq nsns' }
+    );
+  }
+
+  // 3) Solicitations — batched multi-row upsert.
   let loaded = 0;
-  const client = await db.connect();
-  try {
-    await client.query('BEGIN');
-
-    // 1) FSCs — real title when we have one authoritatively sourced (see
-    // FSC_NAMES above), placeholder 'FSC NNNN' otherwise. The DO UPDATE only
-    // fires when the existing row is STILL a placeholder (name LIKE 'FSC %')
-    // — a curated/real name already in place is never clobbered. Batched,
-    // one round-trip per 1000.
-    for (const c of chunk([...fscSet], 1000)) {
-      const params = [];
-      const tuples = c.map((fsc, i) => {
-        params.push(fsc, FSC_NAMES[fsc] || null);
-        return `($${i * 2 + 1}::text, COALESCE($${i * 2 + 2}, 'FSC ' || $${i * 2 + 1}::text))`;
-      });
-      await client.query(
-        `INSERT INTO pub.fsc (fsc, name)
-         VALUES ${tuples.join(',')}
-         ON CONFLICT (fsc) DO UPDATE SET name = EXCLUDED.name
-           WHERE pub.fsc.name LIKE 'FSC %'`,
-        params
+  for (const c of chunk(solPlans, 500)) {
+    const params = [];
+    const tuples = c.map(({ row }, i) => {
+      const b = i * 10;
+      params.push(
+        row.sol_number, row.nsn, row.quantity, row.issued_on, row.return_by,
+        row.status, row.nomenclature, row.fsc, row.source_url, JSON.stringify(row.raw)
       );
-    }
-
-    // 2) NSNs — batched multi-row upsert (grows the catalog for open NSNs).
-    for (const c of chunk([...nsnMap.entries()], 500)) {
-      const params = [];
-      const tuples = c.map(([nsn, meta], i) => {
-        const b = i * 3;
-        params.push(nsn, meta.fsc, meta.nomenclature);
-        return `($${b + 1},$${b + 2},$${b + 3})`;
-      });
-      await client.query(
-        `INSERT INTO pub.nsns (nsn, fsc, item_name)
-         VALUES ${tuples.join(',')}
-         ON CONFLICT (nsn) DO UPDATE SET
-           item_name = COALESCE(pub.nsns.item_name, EXCLUDED.item_name),
-           updated_at = now()`,
-        params
-      );
-    }
-
-    // 3) Solicitations — batched multi-row upsert.
-    for (const c of chunk(solPlans, 500)) {
-      const params = [];
-      const tuples = c.map(({ row }, i) => {
-        const b = i * 10;
-        params.push(
-          row.sol_number, row.nsn, row.quantity, row.issued_on, row.return_by,
-          row.status, row.nomenclature, row.fsc, row.source_url, JSON.stringify(row.raw)
-        );
-        return `($${b + 1},$${b + 2},$${b + 3},$${b + 4},$${b + 5},$${b + 6},'dibbs_rfq',$${b + 7},$${b + 8},$${b + 9},$${b + 10},now())`;
-      });
-      await client.query(
-        `INSERT INTO pub.solicitations
-           (sol_number, nsn, quantity, issued_on, return_by, status, source,
-            nomenclature, fsc, source_url, raw, last_seen_at)
-         VALUES ${tuples.join(',')}
-         ON CONFLICT (sol_number) DO UPDATE SET
-           nsn = EXCLUDED.nsn,
-           quantity = EXCLUDED.quantity,
-           issued_on = EXCLUDED.issued_on,
-           return_by = EXCLUDED.return_by,
-           status = EXCLUDED.status,
-           nomenclature = EXCLUDED.nomenclature,
-           fsc = EXCLUDED.fsc,
-           source_url = EXCLUDED.source_url,
-           raw = EXCLUDED.raw,
-           last_seen_at = now(),
-           updated_at = now()`,
-        params
-      );
-      loaded += c.length;
-    }
-
-    await client.query('COMMIT');
-  } catch (err) {
-    try {
-      await client.query('ROLLBACK');
-    } catch {
-      // ignore rollback errors; original error is what matters
-    }
-    throw err;
-  } finally {
-    client.release();
+      return `($${b + 1},$${b + 2},$${b + 3},$${b + 4},$${b + 5},$${b + 6},'dibbs_rfq',$${b + 7},$${b + 8},$${b + 9},$${b + 10},now())`;
+    });
+    await tx(
+      (client) =>
+        client.query(
+          `INSERT INTO pub.solicitations
+             (sol_number, nsn, quantity, issued_on, return_by, status, source,
+              nomenclature, fsc, source_url, raw, last_seen_at)
+           VALUES ${tuples.join(',')}
+           ON CONFLICT (sol_number) DO UPDATE SET
+             nsn = EXCLUDED.nsn,
+             quantity = EXCLUDED.quantity,
+             issued_on = EXCLUDED.issued_on,
+             return_by = EXCLUDED.return_by,
+             status = EXCLUDED.status,
+             nomenclature = EXCLUDED.nomenclature,
+             fsc = EXCLUDED.fsc,
+             source_url = EXCLUDED.source_url,
+             raw = EXCLUDED.raw,
+             last_seen_at = now(),
+             updated_at = now()`,
+          params
+        ),
+      { pool: db, label: 'rfq solicitations' }
+    );
+    loaded += c.length;
   }
 
   console.log(
@@ -385,6 +382,32 @@ export async function reconcileOpenSolicitations({ pool, mode, crawlStartedAt, c
 
   console.log(`reconcileOpenSolicitations: ${expired} expired, ${cancelled} cancelled (mode=${mode})`);
   return { expired, cancelled };
+}
+
+/**
+ * Makes sure every CAGE in `cages` has a pub.suppliers row (a bare stub when
+ * we have never seen it — the PUB LOG lane fills in name and address later).
+ * pub.price_points.cage and the award loaders reference pub.suppliers, so
+ * this must run before any insert that carries a CAGE.
+ *
+ * @param {string[]} cages
+ * @param {{ pool?: import('pg').Pool }} [opts]
+ */
+export async function ensureSuppliers(cages, { pool } = {}) {
+  const list = [...new Set(cages.filter(Boolean))].sort();
+  for (const c of chunk(list, 1000)) {
+    await tx(
+      (client) =>
+        client.query(
+          `INSERT INTO pub.suppliers (cage)
+           SELECT unnest($1::text[])
+           ON CONFLICT (cage) DO NOTHING`,
+          [c]
+        ),
+      { pool, label: 'suppliers' }
+    );
+  }
+  return list.length;
 }
 
 /** Uppercases and validates a CAGE code (5 alphanumerics); returns null otherwise. */
@@ -491,48 +514,80 @@ export async function loadAwardGridActions(records) {
     }
   }
 
-  await tx(async (client) => {
-    for (const plan of plans) {
-      await client.query(
-        `INSERT INTO pub.nsns (nsn, fsc, item_name)
-         VALUES ($1,$2,$3)
-         ON CONFLICT (nsn) DO UPDATE SET
-           item_name = COALESCE(pub.nsns.item_name, EXCLUDED.item_name),
-           updated_at = now()`,
-        [plan.nsn, plan.fsc, plan.item_name]
-      );
+  // Batched, key-ordered, one short transaction per batch. The previous
+  // row-at-a-time loop held a single transaction open for the whole load
+  // (three round-trips per award row — hours through the pooler), keeping
+  // row locks on pub.nsns the entire time; that is what deadlocked against
+  // the RFQ and PUB LOG lanes and ran jobs into the 6-hour limit.
+  const byKey = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 
-      if (plan.cage) {
-        await client.query(
-          `INSERT INTO pub.suppliers (cage) VALUES ($1) ON CONFLICT (cage) DO NOTHING`,
-          [plan.cage]
-        );
-      }
-
-      await client.query(
-        `INSERT INTO pub.contract_actions
-           (award_uid, piid, psc, description, action_date, obligation,
-            recipient_name, source_url, raw)
-         VALUES ($1,$2,$3,$4,$5,$6,
-                 (SELECT name FROM pub.suppliers WHERE cage = $7),
-                 $8,$9)
-         ON CONFLICT (award_uid, action_date) DO NOTHING`,
-        [
-          plan.award_uid,
-          plan.piid,
-          plan.psc,
-          plan.description,
-          plan.action_date,
-          plan.obligation,
-          plan.cage,
-          awardUrl(plan.nsn),
-          JSON.stringify(plan.raw),
-        ]
-      );
-
-      loaded += 1;
+  const nsnMap = new Map(); // nsn -> plan (first occurrence carries the name)
+  const cageSet = new Set();
+  const actionMap = new Map(); // award_uid|action_date -> plan (first wins, as DO NOTHING did)
+  for (const plan of plans) {
+    if (!nsnMap.has(plan.nsn) || (!nsnMap.get(plan.nsn).item_name && plan.item_name)) {
+      nsnMap.set(plan.nsn, plan);
     }
-  });
+    if (plan.cage) cageSet.add(plan.cage);
+    const key = `${plan.award_uid}|${plan.action_date}`;
+    if (!actionMap.has(key)) actionMap.set(key, plan);
+  }
+
+  for (const c of chunk([...nsnMap.values()].sort((a, b) => byKey(a.nsn, b.nsn)), 500)) {
+    const params = [];
+    const tuples = c.map((plan, i) => {
+      const b = i * 3;
+      params.push(plan.nsn, plan.fsc, plan.item_name);
+      return `($${b + 1},$${b + 2},$${b + 3})`;
+    });
+    await tx(
+      (client) =>
+        client.query(
+          `INSERT INTO pub.nsns (nsn, fsc, item_name)
+           VALUES ${tuples.join(',')}
+           ON CONFLICT (nsn) DO UPDATE SET
+             item_name = COALESCE(pub.nsns.item_name, EXCLUDED.item_name),
+             updated_at = now()`,
+          params
+        ),
+      { label: 'award nsns' }
+    );
+  }
+
+  await ensureSuppliers([...cageSet]);
+
+  const actions = [...actionMap.values()].sort((a, b) =>
+    byKey(`${a.award_uid}|${a.action_date}`, `${b.award_uid}|${b.action_date}`)
+  );
+  for (const c of chunk(actions, 500)) {
+    const params = [];
+    const tuples = c.map((plan, i) => {
+      const b = i * 9;
+      params.push(
+        plan.award_uid, plan.piid, plan.psc, plan.description, plan.action_date,
+        plan.obligation, plan.cage, awardUrl(plan.nsn), JSON.stringify(plan.raw)
+      );
+      return `($${b + 1}::text,$${b + 2}::text,$${b + 3}::text,$${b + 4}::text,$${b + 5}::date,$${b + 6}::numeric,$${b + 7}::text,$${b + 8}::text,$${b + 9}::jsonb)`;
+    });
+    await tx(
+      (client) =>
+        client.query(
+          `INSERT INTO pub.contract_actions
+             (award_uid, piid, psc, description, action_date, obligation,
+              recipient_name, source_url, raw)
+           SELECT v.award_uid, v.piid, v.psc, v.description, v.action_date,
+                  v.obligation, s.name, v.source_url, v.raw
+           FROM (VALUES ${tuples.join(',')})
+             AS v(award_uid, piid, psc, description, action_date, obligation,
+                  cage, source_url, raw)
+           LEFT JOIN pub.suppliers s ON s.cage = v.cage
+           ON CONFLICT (award_uid, action_date) DO NOTHING`,
+          params
+        ),
+      { label: 'award actions' }
+    );
+  }
+  loaded = plans.length;
 
   console.log(
     `loadAwardGridActions: ${loaded} loaded, ${skipped.length} skipped`
@@ -685,58 +740,49 @@ export async function loadPricePointsFromAwards(awardRecords, { pool } = {}) {
   for (const p of plans) {
     dedup.set(`${p.award_ref}|${p.nsn}|${p.awarded_on}`, p);
   }
-  const finalPlans = [...dedup.values()];
+  const finalPlans = [...dedup.values()].sort((a, b) => {
+    const ka = `${a.award_ref}|${a.nsn}|${a.awarded_on}`;
+    const kb = `${b.award_ref}|${b.nsn}|${b.awarded_on}`;
+    return ka < kb ? -1 : ka > kb ? 1 : 0;
+  });
 
-  const chunk = (arr, n) => {
-    const out = [];
-    for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n));
-    return out;
-  };
+  // pub.price_points.cage references pub.suppliers. An award can go to a
+  // CAGE no other lane has recorded yet, which used to fail the whole load
+  // on price_points_cage_fkey — so create the missing supplier stubs first.
+  await ensureSuppliers(finalPlans.map((p) => p.cage), { pool: db });
 
   let loaded = 0;
-  const client = await db.connect();
-  try {
-    await client.query('BEGIN');
-
-    for (const c of chunk(finalPlans, 500)) {
-      const params = [];
-      const tuples = c.map((p, i) => {
-        const b = i * 10;
-        params.push(
-          p.nsn, p.awarded_on, p.unit_price, p.quantity, p.total_value,
-          p.cage, p.sol_number, p.award_ref, p.source_url, JSON.stringify(p.raw)
-        );
-        return `($${b + 1},$${b + 2},$${b + 3},$${b + 4},$${b + 5},$${b + 6},$${b + 7},$${b + 8},'dibbs_award',$${b + 9},$${b + 10})`;
-      });
-
-      await client.query(
-        `INSERT INTO pub.price_points
-           (nsn, awarded_on, unit_price, quantity, total_value, cage, sol_number,
-            award_ref, source, source_url, raw)
-         VALUES ${tuples.join(',')}
-         ON CONFLICT (source, award_ref, nsn, awarded_on) DO UPDATE SET
-           unit_price = EXCLUDED.unit_price,
-           quantity = EXCLUDED.quantity,
-           total_value = EXCLUDED.total_value,
-           cage = EXCLUDED.cage,
-           sol_number = EXCLUDED.sol_number,
-           source_url = EXCLUDED.source_url,
-           raw = EXCLUDED.raw`,
-        params
+  for (const c of chunk(finalPlans, 500)) {
+    const params = [];
+    const tuples = c.map((p, i) => {
+      const b = i * 10;
+      params.push(
+        p.nsn, p.awarded_on, p.unit_price, p.quantity, p.total_value,
+        p.cage, p.sol_number, p.award_ref, p.source_url, JSON.stringify(p.raw)
       );
-      loaded += c.length;
-    }
+      return `($${b + 1},$${b + 2},$${b + 3},$${b + 4},$${b + 5},$${b + 6},$${b + 7},$${b + 8},'dibbs_award',$${b + 9},$${b + 10})`;
+    });
 
-    await client.query('COMMIT');
-  } catch (err) {
-    try {
-      await client.query('ROLLBACK');
-    } catch {
-      // ignore rollback errors; original error is what matters
-    }
-    throw err;
-  } finally {
-    client.release();
+    await tx(
+      (client) =>
+        client.query(
+          `INSERT INTO pub.price_points
+             (nsn, awarded_on, unit_price, quantity, total_value, cage, sol_number,
+              award_ref, source, source_url, raw)
+           VALUES ${tuples.join(',')}
+           ON CONFLICT (source, award_ref, nsn, awarded_on) DO UPDATE SET
+             unit_price = EXCLUDED.unit_price,
+             quantity = EXCLUDED.quantity,
+             total_value = EXCLUDED.total_value,
+             cage = EXCLUDED.cage,
+             sol_number = EXCLUDED.sol_number,
+             source_url = EXCLUDED.source_url,
+             raw = EXCLUDED.raw`,
+          params
+        ),
+      { pool: db, label: 'price points' }
+    );
+    loaded += c.length;
   }
 
   console.log(

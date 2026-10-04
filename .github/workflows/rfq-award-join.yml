@@ -10,7 +10,10 @@ name: rfq-award-join
 
 on:
   schedule:
-    - cron: '45 9 * * *'
+    # Weekly 30-day backstop. The daily join now runs inside ingest-daily
+    # on that lane's own award crawl, so this no longer re-crawls 30 days
+    # of award grids (~3 hours of DIBBS requests) every day.
+    - cron: '45 9 * * 0'
   workflow_dispatch: {}
   push:
     branches: [main]
@@ -33,6 +36,7 @@ env:
 jobs:
   award-join:
     runs-on: ubuntu-latest
+    timeout-minutes: 300
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -77,6 +81,7 @@ jobs:
     # failed fetch retries on a new runner (new IP) — same pattern as the
     # other dibbs lanes (ingest-daily.yml, rfq-reconcile.yml).
     runs-on: ubuntu-latest
+    timeout-minutes: 300
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -118,6 +123,7 @@ jobs:
     # failed fetch retries on a new runner (new IP) — same pattern as the
     # other dibbs lanes.
     runs-on: ubuntu-latest
+    timeout-minutes: 300
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
