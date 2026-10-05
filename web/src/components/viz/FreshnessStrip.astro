@@ -1,0 +1,24 @@
+---
+// FreshnessStrip.astro — five cells (one per data source) that scripts/freshness.ts
+// fills from /data/freshness.json with the viewer's clock. Hidden until that
+// load succeeds. `heading` adds the small footer heading inside the hidden
+// wrapper so a failed load leaves no empty heading behind.
+interface Props {
+  heading?: string;
+}
+const { heading } = Astro.props;
+const KEYS = ['dibbs_rfq', 'sam_gov', 'dibbs_awards', 'publog', 'usaspending'];
+---
+<div class="viz-fresh-wrap" data-fresh-scope hidden>
+  {heading && <h2 class="viz-fresh-h">{heading}</h2>}
+  <div class="viz-fresh">
+    {KEYS.map((key) => (
+      <div data-fresh={key}>
+        <div class="n"></div>
+        <div class="a"></div>
+        <div class="m" role="img" aria-label="Age against the normal update window"><i style="width:0%"></i></div>
+        <div class="s"></div>
+      </div>
+    ))}
+  </div>
+</div>

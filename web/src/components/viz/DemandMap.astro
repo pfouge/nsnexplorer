@@ -1,0 +1,46 @@
+---
+// DemandMap.astro — treemap of open product solicitations by 2-digit supply
+// group. Size = open solicitations; shade = share closing within 7 days.
+import Viz from './Viz.astro';
+import { SEQ_OPACITY, el, fmtInt, seqTextClass, svg, text, tip } from '../../lib/viz';
+import { layoutDemandTiles, tileLabels, type DemandTile } from '../../lib/viz-site';
+interface Props {
+  tiles: DemandTile[];
+  full?: boolean;
+}
+const { tiles, full = true } = Astro.props;
+
+const W = 1160;
+const H = 280;
+const rects = layoutDemandTiles(tiles, W, H);
+const focusable = rects.length < 40;
+
+const marks = rects.map(({ item: t, x, y, w, h }) => {
+  const pct = Math.round(t.share * 100);
+  const closing = t.closing7 > 0 && pct === 0 ? '<1%' : `${pct}%`;
+  const label = `${t.name}: ${fmtInt(t.open)} open ${t.open === 1 ? 'solicitation' : 'solicitations'}`;
+  const tipText = tip(
+    t.fsg ? `${t.fsg} ${t.name}` : `${t.name} (${fmtInt(t.groups)} groups)`,
+    `${fmtInt(t.open)} open ${t.open === 1 ? 'solicitation' : 'solicitations'}`,
+    `${closing} close within 7 days`
+  );
+  const { line1, line2 } = tileLabels(t, w, h);
+  const tcls = seqTextClass(t.bin);
+  const inner = [
+    el('rect', { x: x + 1, y: y + 1, width: Math.max(0, w - 2), height: Math.max(0, h - 2), rx: 3, class: 'vf-main', 'fill-opacity': String(SEQ_OPACITY[t.bin]) }),
+    line1 ? text(x + 7, y + 17, line1, { class: tcls === 'vt-on' ? 'vt-on' : 'vt-ink vt-b' }) : '',
+    line2 ? text(x + 7, y + 32, line2, { class: `${tcls} vt-sub` }) : '',
+  ];
+  return t.href
+    ? el('a', { href: t.href, 'data-tip': tipText, 'aria-label': label }, inner)
+    : el('g', { 'data-tip': tipText, tabindex: focusable ? 0 : null, role: 'img', 'aria-label': label }, inner);
+});
+const chart = svg(W, H, 'Open solicitations by federal supply group', marks);
+---
+<Viz
+  title="Open demand by supply group"
+  question="Where is the open demand right now? Tile size is open solicitations; a darker tile has more closing this week."
+  full={full}
+>
+  <Fragment set:html={chart} />
+</Viz>

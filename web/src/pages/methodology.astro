@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import SignupForm from '../components/SignupForm.astro';
+import FreshnessStrip from '../components/viz/FreshnessStrip.astro';
 import { loadSiteData, formatUsd } from '../lib/data';
 import { SITE_URL } from '../consts';
 
@@ -55,6 +56,17 @@ const faq = [
     links to the record it came from so a supplier, buyer or reporter can check it. The site is
     free.
   </p>
+
+  <hr class="rule" />
+
+  <section>
+    <h2>How current the data is</h2>
+    <p class="gloss">
+      Each source is checked once a day; the bar shows the age of its newest record against how
+      often that source normally updates.
+    </p>
+    <FreshnessStrip />
+  </section>
 
   <hr class="rule" />
 

@@ -1,0 +1,33 @@
+---
+// HeadlineTiles.astro — four headline numbers; each gets a 90-day sparkline
+// and a week-over-week line only when pub.daily_stats holds enough rows.
+import { el, svg } from '../../lib/viz';
+import type { TileModel } from '../../lib/viz-site';
+interface Props {
+  tiles: TileModel[];
+}
+const { tiles } = Astro.props;
+
+const W = 200;
+const H = 36;
+const sparkSvg = (t: TileModel): string => {
+  const s = t.spark;
+  if (!s) return '';
+  return svg(W, H, s.aria, [
+    el('path', { d: s.area, class: 'vf-main', 'fill-opacity': '0.12' }),
+    el('path', { d: s.line, class: 'vf-none vs-main', 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }),
+    el('circle', { cx: s.last.x, cy: s.last.y, r: 4, class: 'vf-main vring' }),
+    el('rect', { x: 0, y: 0, width: W, height: H, class: 'vf-clear', 'data-tip': s.tip }),
+  ]);
+};
+---
+<div class="viz-tiles">
+  {tiles.map((t) => (
+    <div class="viz-tile">
+      <div class="k">{t.label}</div>
+      <div class="v">{t.value}</div>
+      {t.spark && <Fragment set:html={sparkSvg(t)} />}
+      {t.delta && <div class="d">{t.delta.text}</div>}
+    </div>
+  ))}
+</div>

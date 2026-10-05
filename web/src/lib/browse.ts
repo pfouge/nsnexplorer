@@ -201,7 +201,7 @@ function extractMaterial(entries: CharacteristicEntry[]): string | null {
 
 /** Shared AMC/AMSC -> competition read, used by both the deep catalog cards
  * and the open-demand cards (which may fall outside the deep-FSC gate). */
-function competitionFromAmscAmc(
+export function competitionFromAmscAmc(
   nsn: Pick<NsnRecord, 'amsc' | 'amc'> | undefined
 ): ProductCard['competition'] {
   if (!nsn) return 'unknown';

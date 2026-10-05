@@ -2,6 +2,7 @@
 import '../styles/global.css';
 import '../styles/viz.css';
 import SEO from '../components/SEO.astro';
+import FreshnessStrip from '../components/viz/FreshnessStrip.astro';
 import { SITE_NAME } from '../consts';
 
 interface Props {
@@ -17,9 +18,11 @@ interface Props {
   itemList?: { name: string; items: { name: string; url: string }[] };
   faq?: { question: string; answer: string }[];
   headLinks?: { rel: string; href: string; type?: string }[];
+  /** The demand tape under the header; false for embeddable pages. */
+  tape?: boolean;
 }
 
-const seoProps = Astro.props;
+const { tape = true, ...seoProps } = Astro.props;
 const year = new Date().getFullYear();
 ---
 
@@ -92,6 +95,8 @@ const year = new Date().getFullYear();
       </div>
     </header>
 
+    {tape && <div class="viz-tape" id="demand-tape" role="region" hidden aria-label="Newest solicitations"></div>}
+
     <main id="main-content" tabindex="-1">
       <div class="container">
         <slot />
@@ -120,6 +125,7 @@ const year = new Date().getFullYear();
           sells nothing and offers no recommendations. Figures reflect official records, which may
           lag actual events.
         </p>
+        <FreshnessStrip heading="Data freshness" />
         <nav aria-label="Footer">
           <a href="/open/">Open Demand</a>
           <a href="/services/">Services</a>
@@ -164,8 +170,10 @@ const year = new Date().getFullYear();
         });
       })();
     </script>
-      <script>
+    <script>
       import '../scripts/viz.ts';
+      import '../scripts/tape.ts';
+      import '../scripts/freshness.ts';
     </script>
   </body>
 </html>

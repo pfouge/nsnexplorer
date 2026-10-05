@@ -12,9 +12,13 @@ import { buildThumbnail } from './diagram';
 import {
   type FscConfig, type NsnRecord, type PricePointRecord, type ContractActionRecord,
   type AgencyRecord, type PartNumberRecord, type SolicitationRecord,
-  parseCharacteristics, slugify, assertSourceUrl, NSN_WITH_AMSC_SELECT, mapNsnRow,
+  parseCharacteristics, slugify, assertSourceUrl, NSN_WITH_AMSC_SELECT, mapNsnRow, toDashedNsn,
 } from './shared';
 import { compareByClosing, mapServiceNotice, type ServiceNotice, type ServiceNoticeRow } from './services';
+import { nomen } from './seo-copy';
+import { foldCalendarRows } from './viz-open';
+import type { DailyStatRow, FreshnessSource, GroupDemandRow, TapeItem, TileInput } from './viz-site';
+import type { RepeatRow, StateCount, WeekCount, WinnerRow } from './viz-class';
 
 export * from './shared';
 export type { ServiceNotice } from './services';
@@ -39,7 +43,35 @@ function sslFor(connectionString: string): { rejectUnauthorized: false } | undef
   return local ? undefined : { rejectUnauthorized: false };
 }
 
+/** Per-class aggregates for the "Market view" charts, computed once in SQL. */
+export interface ClassViz {
+  repeat: RepeatRow[];
+  weekly: WeekCount[];
+  winners: { top: WinnerRow[]; suppliers: number; total: number } | null;
+  states: StateCount[];
+}
+
+/**
+ * Aggregates behind the charts, one grouped SQL query per feature (see
+ * loadVizData). `today` is the database's CURRENT_DATE so every "N days from
+ * now" on a page agrees with the SQL that selected the rows.
+ */
+export interface SiteViz {
+  today: string;
+  /** earliest issued_on of any solicitation on record, ISO, or null */
+  earliestSolicitation: string | null;
+  tape: TapeItem[];
+  freshness: FreshnessSource[];
+  tiles: TileInput;
+  dailyStats: DailyStatRow[];
+  groups: GroupDemandRow[];
+  /** 30 daily counts of open product solicitations by return_by, per class and for all ('*') */
+  closing: Map<string, number[]>;
+  byClass: Map<string, ClassViz>;
+}
+
 export interface SiteData {
+  viz: SiteViz;
   deepFscs: FscConfig[];
   nsns: NsnRecord[];
   nsnByNsn: Map<string, NsnRecord>;
@@ -493,7 +525,10 @@ async function fetchSiteData(): Promise<SiteData> {
       }
     }
 
+    const viz = await loadVizData(pool);
+
     return {
+      viz,
       deepFscs,
       nsns,
       nsnByNsn,
@@ -529,4 +564,216 @@ async function fetchSiteData(): Promise<SiteData> {
   } finally {
     await pool.end();
   }
+}
+
+
+// ---------------------------------------------------------------------------
+// Chart aggregates. Every feature is one grouped query; the pages only look
+// results up by class. "Open" = status 'open' and not past its return_by.
+// "Product" = a 4-digit class that is not excluded (the open lane's rule).
+
+const OPEN_NOW = `s.status = 'open' AND (s.return_by IS NULL OR s.return_by >= CURRENT_DATE)`;
+const PRODUCT = `s.fsc ~ '^[0-9]{4}$' AND COALESCE(f.render_depth, '') <> 'excluded'`;
+const NOT_EXCLUDED_JOIN = `LEFT JOIN pub.fsc f ON f.fsc = s.fsc`;
+
+async function loadVizData(pool: pgTypes.Pool): Promise<SiteViz> {
+  const iso = (v: unknown): string | null => (v === null || v === undefined ? null : String(v));
+
+  const tiles = (
+    await pool.query(
+      // The tile definitions are exactly those of db/freshness.mjs recordDailyStats.
+      `SELECT CURRENT_DATE::text AS today,
+         (SELECT count(*) FROM pub.solicitations s
+            WHERE s.status = 'open' AND (s.return_by IS NULL OR s.return_by >= CURRENT_DATE)
+              AND (s.fsc IS NULL OR s.fsc ~ '^[0-9]{4}$'))::int AS open,
+         (SELECT max(issued_on)::text FROM pub.solicitations WHERE source = 'dibbs_rfq') AS posted_on,
+         (SELECT count(*) FROM pub.solicitations s
+            WHERE s.issued_on = (SELECT max(issued_on) FROM pub.solicitations WHERE source = 'dibbs_rfq')
+              AND s.source = 'dibbs_rfq')::int AS posted,
+         (SELECT count(*) FROM pub.solicitations s
+            WHERE s.status = 'open' AND s.return_by >= CURRENT_DATE AND s.return_by < CURRENT_DATE + 7
+              AND (s.fsc IS NULL OR s.fsc ~ '^[0-9]{4}$'))::int AS closing7,
+         (SELECT coalesce(sum(obligation), 0) FROM pub.contract_actions
+            WHERE award_uid LIKE 'DIBBS-%' AND action_date >= CURRENT_DATE - 7)::float8 AS awards7,
+         (SELECT min(issued_on)::text FROM pub.solicitations) AS earliest`
+    )
+  ).rows[0];
+
+  let dailyStats: DailyStatRow[] = [];
+  try {
+    const ds = await pool.query(
+      `SELECT day::text AS day, open_solicitations, posted, closing_7d, award_dollars_7d::float8 AS awards
+       FROM pub.daily_stats ORDER BY day DESC LIMIT 90`
+    );
+    dailyStats = ds.rows
+      .map((r) => ({ day: r.day as string, open: Number(r.open_solicitations), posted: Number(r.posted), closing7: Number(r.closing_7d), awards7: Number(r.awards) }))
+      .reverse();
+  } catch (err) {
+    // The trend is optional: without the snapshot table the tiles show numbers only.
+    console.warn('viz: pub.daily_stats unavailable, trend lines skipped', (err as Error).message);
+  }
+
+  const tapeRes = await pool.query(
+    `SELECT s.fsc, s.nsn, n.item_name, s.nomenclature, s.quantity, s.issued_on::text AS issued_on, s.return_by::text AS return_by, s.source
+     FROM pub.solicitations s
+     LEFT JOIN pub.nsns n ON n.nsn = s.nsn ${NOT_EXCLUDED_JOIN}
+     WHERE s.source = 'dibbs_rfq' AND ${OPEN_NOW} AND s.nsn IS NOT NULL AND ${PRODUCT}
+     ORDER BY s.issued_on DESC NULLS LAST, s.sol_number
+     LIMIT 24`
+  );
+  const tape: TapeItem[] = tapeRes.rows.map((r) => ({
+    fsc: r.fsc,
+    name: nomen(r.item_name ?? r.nomenclature),
+    quantity: r.quantity !== null ? Number(r.quantity) : null,
+    issuedOn: iso(r.issued_on),
+    returnBy: iso(r.return_by),
+    source: r.source,
+    nsn: toDashedNsn(r.nsn),
+  }));
+
+  // Same SQL as db/freshness.mjs SOURCES; the limits are those sources' limits.
+  const fresh = async (sql: string): Promise<string | null> => {
+    const r = await pool.query<{ t: Date | null }>(sql);
+    return r.rows[0]?.t ? new Date(r.rows[0].t).toISOString() : null;
+  };
+  const freshDefs: { key: string; label: string; limitHours: number; cadence: string; sql: string }[] = [
+    { key: 'dibbs_rfq', label: 'DIBBS solicitations', limitHours: 48, cadence: 'updates daily', sql: `SELECT max(last_seen_at) AS t FROM pub.solicitations WHERE source = 'dibbs_rfq'` },
+    { key: 'sam_gov', label: 'SAM.gov notices', limitHours: 48, cadence: 'updates daily', sql: `SELECT max(last_seen_at) AS t FROM pub.solicitations WHERE source = 'sam_gov'` },
+    { key: 'dibbs_awards', label: 'DIBBS awards and prices', limitHours: 120, cadence: 'updates on business days', sql: `SELECT max(ingested_at) AS t FROM pub.contract_actions WHERE award_uid LIKE 'DIBBS-%'` },
+    { key: 'publog', label: 'PUB LOG specs', limitHours: 48, cadence: 'updates nightly', sql: `SELECT max(updated_at) FILTER (WHERE characteristics IS NOT NULL) AS t FROM pub.nsns` },
+    { key: 'usaspending', label: 'USAspending', limitHours: 336, cadence: 'publishes in bursts', sql: `SELECT max(ingested_at) AS t FROM pub.contract_actions WHERE award_uid NOT LIKE 'DIBBS-%'` },
+  ];
+  const freshness: FreshnessSource[] = [];
+  for (const d of freshDefs) {
+    const lastLanded = await fresh(d.sql);
+    if (lastLanded) freshness.push({ key: d.key, label: d.label, lastLanded, limitHours: d.limitHours, cadence: d.cadence });
+  }
+
+  const groups: GroupDemandRow[] = (
+    await pool.query(
+      `SELECT left(s.fsc, 2) AS fsg, count(*)::int AS open,
+              count(*) FILTER (WHERE s.return_by >= CURRENT_DATE AND s.return_by < CURRENT_DATE + 7)::int AS closing7
+       FROM pub.solicitations s ${NOT_EXCLUDED_JOIN}
+       WHERE ${OPEN_NOW} AND ${PRODUCT}
+       GROUP BY 1 ORDER BY 2 DESC, 1`
+    )
+  ).rows.map((r) => ({ fsg: r.fsg, open: Number(r.open), closing7: Number(r.closing7) }));
+
+  const closingRows = (
+    await pool.query(
+      `SELECT s.fsc, (s.return_by - CURRENT_DATE)::int AS d, count(*)::int AS n
+       FROM pub.solicitations s ${NOT_EXCLUDED_JOIN}
+       WHERE ${OPEN_NOW} AND ${PRODUCT} AND s.return_by >= CURRENT_DATE AND s.return_by < CURRENT_DATE + 30
+       GROUP BY 1, 2`
+    )
+  ).rows;
+  const closingBy = new Map<string, { d: number; n: number }[]>();
+  const closingAll: { d: number; n: number }[] = [];
+  for (const r of closingRows) {
+    const row = { d: Number(r.d), n: Number(r.n) };
+    if (!closingBy.has(r.fsc)) closingBy.set(r.fsc, []);
+    closingBy.get(r.fsc)!.push(row);
+    closingAll.push(row);
+  }
+  const closing = new Map<string, number[]>([['*', foldCalendarRows(closingAll)]]);
+  for (const [fsc, rows] of closingBy) closing.set(fsc, foldCalendarRows(rows));
+
+  const byClass = new Map<string, ClassViz>();
+  const cls = (fsc: string): ClassViz => {
+    let c = byClass.get(fsc);
+    if (!c) byClass.set(fsc, (c = { repeat: [], weekly: [], winners: null, states: [] }));
+    return c;
+  };
+
+  // Most re-bought: per NSN, solicitations issued in the last 12 months (any
+  // status), kept when the item came up at least twice and ranks in the top 7
+  // of its class by count or by total quantity.
+  const repeatRes = await pool.query(
+    `WITH g AS (
+       SELECT s.fsc, s.nsn, count(*)::int AS n, coalesce(sum(s.quantity), 0)::float8 AS qty,
+              (array_agg(s.nomenclature ORDER BY s.issued_on DESC NULLS LAST))[1] AS nomenclature
+       FROM pub.solicitations s ${NOT_EXCLUDED_JOIN}
+       WHERE s.nsn IS NOT NULL AND ${PRODUCT} AND s.issued_on >= CURRENT_DATE - INTERVAL '12 months'
+       GROUP BY s.fsc, s.nsn HAVING count(*) >= 2
+     ), r AS (
+       SELECT g.*, row_number() OVER (PARTITION BY fsc ORDER BY n DESC, qty DESC, nsn) AS rn_n,
+                   row_number() OVER (PARTITION BY fsc ORDER BY qty DESC, n DESC, nsn) AS rn_q
+       FROM g
+     )
+     SELECT r.fsc, r.nsn, r.n, r.qty, r.nomenclature, nn.item_name
+     FROM r LEFT JOIN pub.nsns nn ON nn.nsn = r.nsn
+     WHERE r.rn_n <= 7 OR r.rn_q <= 7`
+  );
+  for (const r of repeatRes.rows) {
+    cls(r.fsc).repeat.push({
+      nsn: toDashedNsn(r.nsn),
+      name: nomen(r.item_name ?? r.nomenclature),
+      solicitations: Number(r.n),
+      quantity: Number(r.qty),
+    });
+  }
+
+  // Demand trend: solicitations per Monday week for the 52 most recent complete weeks.
+  const weeklyRes = await pool.query(
+    `SELECT s.fsc, date_trunc('week', s.issued_on)::date::text AS week, count(*)::int AS n
+     FROM pub.solicitations s ${NOT_EXCLUDED_JOIN}
+     WHERE ${PRODUCT} AND s.issued_on IS NOT NULL
+       AND s.issued_on >= date_trunc('week', CURRENT_DATE)::date - 364
+       AND s.issued_on <  date_trunc('week', CURRENT_DATE)::date
+     GROUP BY 1, 2`
+  );
+  for (const r of weeklyRes.rows) cls(r.fsc).weekly.push({ week: r.week, n: Number(r.n) });
+
+  // Who wins: award dollars by supplier per class, last 12 months. The label
+  // is the recipient name, else the CAGE from the record, else "Unidentified".
+  const winnersRes = await pool.query(
+    `WITH x AS (
+       SELECT ca.psc AS fsc,
+              COALESCE(NULLIF(btrim(ca.recipient_name), ''),
+                       CASE WHEN NULLIF(btrim(ca.raw ->> 'cage'), '') IS NOT NULL THEN 'CAGE ' || upper(btrim(ca.raw ->> 'cage')) END,
+                       'Unidentified supplier') AS label,
+              sum(ca.obligation) AS amt
+       FROM pub.contract_actions ca
+       WHERE ca.psc ~ '^[0-9]{4}$' AND ca.action_date >= CURRENT_DATE - INTERVAL '12 months' AND ca.obligation IS NOT NULL
+       GROUP BY 1, 2 HAVING sum(ca.obligation) > 0
+     ), r AS (
+       SELECT fsc, label, amt, row_number() OVER (PARTITION BY fsc ORDER BY amt DESC, label) AS rn,
+              sum(amt) OVER (PARTITION BY fsc) AS total, count(*) OVER (PARTITION BY fsc) AS n
+       FROM x
+     )
+     SELECT fsc, label, amt::float8 AS amt, rn::int, total::float8 AS total, n::int AS n FROM r WHERE rn <= 6 ORDER BY fsc, rn`
+  );
+  for (const r of winnersRes.rows) {
+    const c = cls(r.fsc);
+    if (!c.winners) c.winners = { top: [], suppliers: Number(r.n), total: Number(r.total) };
+    c.winners.top.push({ label: r.label, amount: Number(r.amt) });
+  }
+
+  // Where the winning suppliers are: distinct CAGEs with awards in the class
+  // over 24 months, by the state on their CAGE record.
+  const statesRes = await pool.query(
+    `WITH c AS (
+       SELECT ca.psc AS fsc, upper(btrim(ca.raw ->> 'cage')) AS cage, sum(ca.obligation) AS amt
+       FROM pub.contract_actions ca
+       WHERE ca.psc ~ '^[0-9]{4}$' AND ca.action_date >= CURRENT_DATE - INTERVAL '24 months'
+         AND NULLIF(btrim(ca.raw ->> 'cage'), '') IS NOT NULL
+       GROUP BY 1, 2
+     )
+     SELECT c.fsc, upper(btrim(s.state)) AS st, count(*)::int AS n, coalesce(sum(c.amt), 0)::float8 AS amt
+     FROM c LEFT JOIN pub.suppliers s ON s.cage = c.cage
+     GROUP BY 1, 2`
+  );
+  for (const r of statesRes.rows) cls(r.fsc).states.push({ state: r.st ?? null, suppliers: Number(r.n), amount: Math.max(0, Number(r.amt)) });
+
+  return {
+    today: tiles.today,
+    earliestSolicitation: iso(tiles.earliest),
+    tape,
+    freshness,
+    tiles: { open: Number(tiles.open), posted: Number(tiles.posted), postedOn: iso(tiles.posted_on), closing7: Number(tiles.closing7), awards7: Number(tiles.awards7) },
+    dailyStats,
+    groups,
+    closing,
+    byClass,
+  };
 }

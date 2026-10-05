@@ -4,12 +4,20 @@ import { fscLabel, listedFscName } from '../lib/seo-copy';
 import HomeSearch from '../components/HomeSearch.astro';
 import SignupForm from '../components/SignupForm.astro';
 import { loadSiteData } from '../lib/data';
-import { fscDisplayName } from '../lib/browse';
+import { buildDepartments, fscDisplayName, fsgName } from '../lib/browse';
+import HeadlineTiles from '../components/viz/HeadlineTiles.astro';
+import DemandMap from '../components/viz/DemandMap.astro';
+import { buildDemandTiles, buildTiles } from '../lib/viz-site';
 
 const data = await loadSiteData();
 const { stats, nsnsByFsc } = data;
 // Only categories with at least one tracked NSN are listed on the home page.
 const deepFscs = data.deepFscs.filter((f) => (nsnsByFsc.get(f.fsc)?.length ?? 0) > 0);
+
+// Headline numbers and the demand map (charts, lib/viz-site.ts).
+const tiles = buildTiles(data.viz.tiles, data.viz.dailyStats);
+const groupPages = new Set(buildDepartments(data).map((d) => d.fsg));
+const demandTiles = buildDemandTiles(data.viz.groups, fsgName, (fsg) => groupPages.has(fsg));
 
 const fmtInt = (n: number) => n.toLocaleString('en-US');
 const fmtUsd = (n: number) =>
@@ -83,6 +91,12 @@ const itemList = {
     <p class="gloss" style="margin-top:1rem">
       New to government parts? <a href="/suppliers/">How suppliers use NSN Explorer →</a>
     </p>
+  </section>
+
+  <section class="viz-section" aria-labelledby="market-today">
+    <h2 class="section-title" id="market-today">Open demand today</h2>
+    <HeadlineTiles tiles={tiles} />
+    {demandTiles && <div style="margin-top:1rem"><DemandMap tiles={demandTiles} /></div>}
   </section>
 
   <section class="intro">
