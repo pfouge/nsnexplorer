@@ -26,6 +26,7 @@ const { title, pageUrl, updated = new Date() } = Astro.props;
     <meta name="color-scheme" content="light dark" />
     <title>{title}</title>
     <link rel="canonical" href={pageUrl} />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <script is:inline>
       // Follow the viewer's color scheme (default light); no stored choice inside a frame.
