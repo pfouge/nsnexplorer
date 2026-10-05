@@ -193,7 +193,9 @@ export function seqBin(v: number, max: number): number {
   return Math.min(4, Math.floor((v / max) * 5));
 }
 /** Text on a sequential cell flips to the on-color class at the dark end. */
-export const seqTextClass = (bin: number): string => (bin >= 3 ? 'vt-on' : 'vt-ink');
+// Only the strongest step takes the on-color: at step 3 the page ink reads
+// better than the on-color in BOTH themes (checked against each card surface).
+export const seqTextClass = (bin: number): string => (bin >= 4 ? 'vt-on' : 'vt-ink');
 
 /** Joins tooltip lines for a data-tip attribute (first line renders bold). */
 export function tip(...lines: (string | null | undefined | false)[]): string {

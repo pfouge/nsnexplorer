@@ -251,7 +251,9 @@ export function buildDemandTiles(
   const maxShare = Math.max(...tiles.map((t) => t.share));
   return tiles
     .map((t) => ({ ...t, bin: seqBin(t.share, maxShare) }))
-    .sort((a, b) => b.open - a.open || (a.fsg ?? '~').localeCompare(b.fsg ?? '~'));
+    // Largest first, but the "Other groups" remainder always goes last so a
+    // catch-all never takes the lead position.
+    .sort((a, b) => Number(a.fsg === null) - Number(b.fsg === null) || b.open - a.open || (a.fsg ?? '~').localeCompare(b.fsg ?? '~'));
 }
 
 export function layoutDemandTiles(tiles: DemandTile[], w: number, h: number): TreeRect<DemandTile & { value: number }>[] {
@@ -269,7 +271,13 @@ export function tileLabels(tile: Pick<DemandTile, 'fsg' | 'name' | 'open'>, w: n
   if (h > 24) {
     const full = tile.fsg ? `${tile.fsg} ${tile.name}` : tile.name;
     if (labelFits(full, w)) line1 = full;
-    else if (tile.fsg && labelFits(`FSG ${tile.fsg}`, w)) line1 = `FSG ${tile.fsg}`;
+    else {
+      // Shorten the name to what fits ("59 Electrical and Elec…") before
+      // falling back to the bare group code.
+      const room = Math.floor((w - 14) / 6.3) - 1;
+      if (room >= 12) line1 = `${full.slice(0, room).replace(/[\s,]+$/, '')}…`;
+      else if (tile.fsg && labelFits(`FSG ${tile.fsg}`, w)) line1 = `FSG ${tile.fsg}`;
+    }
   }
   const count = `${fmtInt(tile.open)} open`;
   const line2 = line1 && h > 40 && labelFits(count, w) ? count : null;

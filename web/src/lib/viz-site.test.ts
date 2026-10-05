@@ -129,10 +129,11 @@ test('demand tiles: shade bins against the largest share, links only where a pag
   assert.ok(none.every((x) => x.bin === 0));
 });
 
-test('tile labels: full name, then FSG NN, then nothing; count line needs height and width', () => {
+test('tile labels: full name, then shortened name, then FSG NN, then nothing; count line needs height and width', () => {
   const tile = { fsg: '53', name: 'Hardware and Abrasives', open: 2910 };
   assert.deepEqual(tileLabels(tile, 300, 100), { line1: '53 Hardware and Abrasives', line2: '2,910 open' });
-  assert.deepEqual(tileLabels(tile, 100, 100), { line1: 'FSG 53', line2: '2,910 open' });
+  assert.deepEqual(tileLabels(tile, 100, 100), { line1: '53 Hardware…', line2: '2,910 open' });
+  assert.deepEqual(tileLabels(tile, 80, 100), { line1: 'FSG 53', line2: '2,910 open' });
   assert.deepEqual(tileLabels(tile, 45, 100), { line1: null, line2: null });
   assert.deepEqual(tileLabels(tile, 300, 30), { line1: '53 Hardware and Abrasives', line2: null });
   assert.deepEqual(tileLabels(tile, 300, 20), { line1: null, line2: null });
