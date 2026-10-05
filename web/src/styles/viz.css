@@ -147,3 +147,8 @@ table.viz-table td.sup { white-space: normal; min-width: 8rem; overflow-wrap: an
   .viz-win-row { grid-template-columns: minmax(0, 1fr) auto; }
   .viz-win-row .viz-dots { grid-column: 1 / -1; grid-row: 2; }
 }
+.viz-compare-form { display: flex; flex-wrap: wrap; gap: 0.7rem 1rem; align-items: flex-end; margin: 1rem 0 1.4rem; }
+.viz-compare-form label { display: grid; gap: 0.2rem; font-size: 0.8rem; color: var(--ink-soft); flex: 1 1 13rem; min-width: 0; }
+.viz-compare-form input { font: inherit; font-family: var(--font-mono); font-size: 0.9rem; padding: 0.5rem 0.65rem; border: 1px solid var(--line); border-radius: 4px; background: var(--card); color: var(--ink); min-width: 0; width: 100%; box-sizing: border-box; }
+.viz-compare-form input:focus { outline: 2px solid var(--v-main); outline-offset: -1px; }
+.viz-svg text.vt-link { fill: var(--ink); text-decoration: underline; }

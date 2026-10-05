@@ -1,0 +1,41 @@
+---
+// /compare/ — up to three NSNs side by side on one price scale. Prerendered:
+// the page is only the form and a mount point; the bundled script reads
+// location.hash, fetches /api/nsn/<nsn>.json for each item and draws the panels.
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE_URL } from '../consts';
+
+const canonicalUrl = `${SITE_URL}/compare/`;
+const breadcrumbs = [
+  { name: 'Home', url: `${SITE_URL}/` },
+  { name: 'Compare', url: canonicalUrl },
+];
+---
+
+<BaseLayout
+  title="Compare NSNs: Price History Side by Side"
+  description="Compare up to three National Stock Numbers side by side: unit price history, open solicitations and competition status. Free, from public government records."
+  canonicalUrl={canonicalUrl}
+  breadcrumbs={breadcrumbs}
+>
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a> › Compare
+  </nav>
+
+  <h1>Compare NSNs side by side</h1>
+  <p class="lede">Enter up to three stock numbers. Each chart uses the same price scale, so heights compare directly.</p>
+
+  <form class="viz-compare-form" id="compare-form" autocomplete="off" novalidate>
+    <label>NSN 1<input type="text" name="nsn1" inputmode="numeric" placeholder="5331-01-123-4567" /></label>
+    <label>NSN 2<input type="text" name="nsn2" inputmode="numeric" placeholder="5331-01-123-4567" /></label>
+    <label>NSN 3<input type="text" name="nsn3" inputmode="numeric" placeholder="5331-01-123-4567" /></label>
+    <button class="btn" type="submit">Compare</button>
+  </form>
+  <p class="gloss" id="compare-status" role="status" aria-live="polite"></p>
+  <div id="compare-out"></div>
+  <noscript><p class="gloss">The comparison needs JavaScript. Each item's own page shows the same price history.</p></noscript>
+</BaseLayout>
+
+<script>
+  import '../scripts/compare';
+</script>
