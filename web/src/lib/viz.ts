@@ -153,25 +153,64 @@ export interface TreeRect<T> {
   w: number;
   h: number;
 }
-/** Binary-split treemap. `items` must be sorted by value, largest first. */
+/**
+ * Squarified treemap: tiles are laid out in rows along the shorter side and
+ * each row is closed as soon as adding another tile would make its tiles
+ * less square. Compared with a plain binary split this avoids tall, thin
+ * slivers that cannot hold a label. Items are placed in the order given
+ * (largest first reads best); areas are proportional to `value`.
+ */
 export function treemap<T extends TreeItem>(items: T[], x: number, y: number, w: number, h: number): TreeRect<T>[] {
-  if (items.length === 0) return [];
-  if (items.length === 1) return [{ item: items[0], x, y, w, h }];
-  const total = items.reduce((a, b) => a + b.value, 0) || 1;
-  let acc = 0;
-  let k = 0;
-  while (k < items.length - 1 && acc + items[k].value <= total / 2) {
-    acc += items[k].value;
-    k += 1;
+  const live = items.filter((i) => i.value > 0);
+  const total = live.reduce((a, b) => a + b.value, 0);
+  if (live.length === 0 || !(total > 0) || !(w > 0) || !(h > 0)) return [];
+  const scale = (w * h) / total;
+  const out: TreeRect<T>[] = [];
+  let rest = live.map((item) => ({ item, area: item.value * scale }));
+  let bx = x;
+  let by = y;
+  let bw = w;
+  let bh = h;
+  // Worst aspect ratio in a row of the given areas laid along a side of length `side`.
+  const worst = (areas: number[], side: number): number => {
+    const sum = areas.reduce((a, b) => a + b, 0);
+    const max = Math.max(...areas);
+    const min = Math.min(...areas);
+    return Math.max((side * side * max) / (sum * sum), (sum * sum) / (side * side * min));
+  };
+  while (rest.length > 0) {
+    const side = Math.min(bw, bh);
+    let n = 1;
+    while (n < rest.length && worst(rest.slice(0, n + 1).map((r) => r.area), side) <= worst(rest.slice(0, n).map((r) => r.area), side)) n += 1;
+    const row = rest.slice(0, n);
+    const sum = row.reduce((a, r) => a + r.area, 0);
+    const last = n === rest.length;
+    if (bw >= bh) {
+      // Row is a column on the left: fixed width, tiles stacked top to bottom.
+      const cw = last ? bw : sum / bh;
+      let cy = by;
+      for (const r of row) {
+        const ch = r.area / cw;
+        out.push({ item: r.item, x: bx, y: cy, w: cw, h: ch });
+        cy += ch;
+      }
+      bx += cw;
+      bw -= cw;
+    } else {
+      // Row is a strip along the top: fixed height, tiles left to right.
+      const rh = last ? bh : sum / bw;
+      let cx = bx;
+      for (const r of row) {
+        const rw = r.area / rh;
+        out.push({ item: r.item, x: cx, y: by, w: rw, h: rh });
+        cx += rw;
+      }
+      by += rh;
+      bh -= rh;
+    }
+    rest = rest.slice(n);
   }
-  if (k === 0) {
-    acc = items[0].value;
-    k = 1;
-  }
-  const f = acc / total;
-  return w >= h
-    ? [...treemap(items.slice(0, k), x, y, w * f, h), ...treemap(items.slice(k), x + w * f, y, w * (1 - f), h)]
-    : [...treemap(items.slice(0, k), x, y, w, h * f), ...treemap(items.slice(k), x, y + h * f, w, h * (1 - f))];
+  return out;
 }
 
 /** State tile grid: [postal code, row, column]. 50 states + DC. */

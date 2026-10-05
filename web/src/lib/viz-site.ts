@@ -263,23 +263,82 @@ export function layoutDemandTiles(tiles: DemandTile[], w: number, h: number): Tr
 const CHAR_PX = 6.3;
 const LABEL_PAD = 14;
 /** Whether `str` fits a tile `w` wide (6.3px a character plus 14 of padding). */
+/** Pixel width a label line is allowed inside a tile `w` wide. */
+export const labelRoom = (w: number): number => w - LABEL_PAD;
+/** Estimated pixel width of a label line. */
+export const labelWidth = (str: string): number => str.length * CHAR_PX;
 export const labelFits = (str: string, w: number): boolean => w >= str.length * CHAR_PX + LABEL_PAD;
 
-/** One or two label lines for a tile: `NN Group Name`, then `FSG NN`, then nothing. */
-export function tileLabels(tile: Pick<DemandTile, 'fsg' | 'name' | 'open'>, w: number, h: number): { line1: string | null; line2: string | null } {
-  let line1: string | null = null;
-  if (h > 24) {
-    const full = tile.fsg ? `${tile.fsg} ${tile.name}` : tile.name;
-    if (labelFits(full, w)) line1 = full;
+/**
+ * Plain-English labels for the supply groups, short enough to read on a
+ * chart tile. The official group title ("Electrical and Electronic Equipment
+ * Components") stays in the tooltip and on the group page; these are display
+ * labels only.
+ */
+export const FSG_SHORT: Record<string, string> = {
+  '10': 'Weapons', '11': 'Nuclear ordnance', '12': 'Fire control equipment', '13': 'Ammunition and explosives',
+  '14': 'Guided missiles', '15': 'Airframe parts', '16': 'Aircraft components', '17': 'Aircraft ground equipment',
+  '18': 'Space vehicles', '19': 'Ships and small craft', '20': 'Ship and marine equipment', '22': 'Railway equipment',
+  '23': 'Vehicles and trailers', '24': 'Tractors', '25': 'Vehicle parts', '26': 'Tires and tubes',
+  '28': 'Engines and turbines', '29': 'Engine accessories', '30': 'Power transmission', '31': 'Bearings',
+  '32': 'Woodworking machinery', '34': 'Metalworking machinery', '35': 'Service and trade equipment',
+  '36': 'Special industry machinery', '37': 'Agricultural machinery', '38': 'Construction and mining equipment',
+  '39': 'Materials handling', '40': 'Rope, cable and chain', '41': 'Refrigeration and A/C',
+  '42': 'Fire, rescue and safety', '43': 'Pumps and compressors', '44': 'Furnaces and dryers',
+  '45': 'Plumbing and heating', '46': 'Water purification', '47': 'Pipe, hose and fittings', '48': 'Valves',
+  '49': 'Maintenance shop equipment', '51': 'Hand tools', '52': 'Measuring tools', '53': 'Hardware and abrasives',
+  '54': 'Prefabricated structures', '55': 'Lumber and millwork', '56': 'Construction materials',
+  '58': 'Communication and detection', '59': 'Electrical components', '60': 'Fiber optics',
+  '61': 'Electric wire and power', '62': 'Lighting', '63': 'Alarms and signals', '65': 'Medical and dental supplies',
+  '66': 'Instruments and lab equipment', '67': 'Photographic equipment', '68': 'Chemicals', '69': 'Training aids',
+  '70': 'IT equipment', '71': 'Furniture', '72': 'Household furnishings', '73': 'Food service equipment',
+  '74': 'Office machines', '75': 'Office supplies', '76': 'Books and maps', '77': 'Musical instruments and radios',
+  '78': 'Recreational equipment', '79': 'Cleaning equipment', '80': 'Paints, brushes and sealers',
+  '81': 'Containers and packaging', '83': 'Textiles, leather and tents', '84': 'Clothing and gear',
+  '85': 'Toiletries', '87': 'Agricultural supplies', '88': 'Live animals', '89': 'Food',
+  '91': 'Fuels and lubricants', '93': 'Nonmetallic materials', '94': 'Nonmetallic crude materials',
+  '95': 'Metal bars and sheets', '96': 'Ores and minerals', '99': 'Miscellaneous',
+};
+
+const LINE_PX = 14;
+
+/**
+ * Label lines for a tile. The name is always words, never a bare code: the
+ * short English label, wrapped over up to three lines to fit the tile, with
+ * an ellipsis only when even that will not fit. A tile too small for a
+ * readable word gets no label (its tooltip still names it). `count` is the
+ * "N open" line, shown when there is room under the name.
+ */
+export function tileLabels(tile: Pick<DemandTile, 'fsg' | 'name' | 'open'>, w: number, h: number): { lines: string[]; count: string | null } {
+  const maxChars = Math.floor((w - LABEL_PAD) / CHAR_PX);
+  const rows = Math.floor((h - 10) / LINE_PX);
+  if (rows < 1 || maxChars < 5) return { lines: [], count: null };
+  const name = (tile.fsg && FSG_SHORT[tile.fsg]) || tile.name;
+  const maxLines = Math.max(1, Math.min(3, rows - 1));
+  // A single word may run up to 20% over the line; the chart squeezes that
+  // line slightly (SVG textLength) instead of cutting the word.
+  const softMax = Math.floor(maxChars * 1.2);
+  const lines: string[] = [];
+  let truncated = false;
+  for (const word of name.split(/\s+/)) {
+    const last = lines[lines.length - 1];
+    if (last !== undefined && `${last} ${word}`.length <= maxChars) lines[lines.length - 1] = `${last} ${word}`;
+    else if (lines.length < maxLines) lines.push(word);
     else {
-      // Shorten the name to what fits ("59 Electrical and Elec…") before
-      // falling back to the bare group code.
-      const room = Math.floor((w - 14) / 6.3) - 1;
-      if (room >= 12) line1 = `${full.slice(0, room).replace(/[\s,]+$/, '')}…`;
-      else if (tile.fsg && labelFits(`FSG ${tile.fsg}`, w)) line1 = `FSG ${tile.fsg}`;
+      truncated = true;
+      break;
     }
   }
-  const count = `${fmtInt(tile.open)} open`;
-  const line2 = line1 && h > 40 && labelFits(count, w) ? count : null;
-  return { line1, line2 };
+  // Clip any line that is still too long (one long word, or the cut-off tail).
+  for (let i = 0; i < lines.length; i += 1) {
+    const isLast = i === lines.length - 1;
+    const limit = lines[i].includes(' ') ? maxChars : softMax;
+    if (lines[i].length > limit || (isLast && truncated)) {
+      const room = Math.max(1, maxChars - 1);
+      lines[i] = `${lines[i].slice(0, lines[i].length > limit ? room : Math.min(lines[i].length, room)).replace(/[\s,]+$/, '')}…`;
+    }
+  }
+  const countText = `${fmtInt(tile.open)} open`;
+  const count = rows >= lines.length + 1 && labelFits(countText, w) ? countText : null;
+  return { lines, count };
 }

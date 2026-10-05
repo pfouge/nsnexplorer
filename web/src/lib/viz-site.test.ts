@@ -129,15 +129,27 @@ test('demand tiles: shade bins against the largest share, links only where a pag
   assert.ok(none.every((x) => x.bin === 0));
 });
 
-test('tile labels: full name, then shortened name, then FSG NN, then nothing; count line needs height and width', () => {
-  const tile = { fsg: '53', name: 'Hardware and Abrasives', open: 2910 };
-  assert.deepEqual(tileLabels(tile, 300, 100), { line1: '53 Hardware and Abrasives', line2: '2,910 open' });
-  assert.deepEqual(tileLabels(tile, 100, 100), { line1: '53 Hardware…', line2: '2,910 open' });
-  assert.deepEqual(tileLabels(tile, 80, 100), { line1: 'FSG 53', line2: '2,910 open' });
-  assert.deepEqual(tileLabels(tile, 45, 100), { line1: null, line2: null });
-  assert.deepEqual(tileLabels(tile, 300, 30), { line1: '53 Hardware and Abrasives', line2: null });
-  assert.deepEqual(tileLabels(tile, 300, 20), { line1: null, line2: null });
-  assert.deepEqual(tileLabels({ fsg: null, name: 'Other groups', open: 5 }, 80, 100), { line1: null, line2: null });
+test('tile labels: English name wrapped to fit, never a bare code; count line when there is room', () => {
+  const hw = { fsg: '53', name: 'Hardware and Abrasives', open: 2910 };
+  assert.deepEqual(tileLabels(hw, 300, 100), { lines: ['Hardware and abrasives'], count: '2,910 open' });
+  assert.deepEqual(tileLabels(hw, 100, 100), { lines: ['Hardware and', 'abrasives'], count: '2,910 open' });
+  // The official long title is replaced by the short label and wrapped.
+  const el = { fsg: '59', name: 'Electrical and Electronic Equipment Components', open: 1620 };
+  assert.deepEqual(tileLabels(el, 150, 200), { lines: ['Electrical components'], count: '1,620 open' });
+  assert.deepEqual(tileLabels(el, 90, 200), { lines: ['Electrical', 'components'], count: '1,620 open' });
+  // A narrow tile clips with an ellipsis rather than showing "FSG 41".
+  const ac = { fsg: '41', name: 'Refrigeration, Air Conditioning, and Air Circulating Equipment', open: 200 };
+  const narrow = tileLabels(ac, 60, 160);
+  assert.ok(narrow.lines.length >= 1 && narrow.lines.every((l) => l.length <= 7 && !/^FSG|^\d/.test(l)), JSON.stringify(narrow));
+  assert.match(narrow.lines.join(' '), /…/);
+  // Too small for a readable word: no label at all.
+  assert.deepEqual(tileLabels(hw, 40, 100), { lines: [], count: null });
+  assert.deepEqual(tileLabels(hw, 300, 20), { lines: [], count: null });
+  // One row of height: the name only.
+  assert.deepEqual(tileLabels(hw, 300, 30), { lines: ['Hardware and abrasives'], count: null });
+  // A group with no short label falls back to its own name; the catch-all keeps its name.
+  assert.deepEqual(tileLabels({ fsg: '00', name: 'Unlisted supply class', open: 3 }, 300, 100).lines, ['Unlisted supply class']);
+  assert.deepEqual(tileLabels({ fsg: null, name: 'Other groups', open: 5 }, 120, 100), { lines: ['Other groups'], count: '5 open' });
   assert.ok(labelFits('abcd', 14 + 4 * 6.3));
   assert.ok(!labelFits('abcd', 14 + 4 * 6.3 - 0.1));
 });
