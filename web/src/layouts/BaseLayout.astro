@@ -19,10 +19,45 @@ interface Props {
   itemList?: { name: string; items: { name: string; url: string }[] };
   faq?: { question: string; answer: string }[];
   headLinks?: { rel: string; href: string; type?: string }[];
+  /** Show the moving demand tape under the header (home and the open-demand hub only). */
+  tape?: boolean;
 }
 
-const seoProps = Astro.props;
+const { tape = false, ...seoProps } = Astro.props;
 const year = new Date().getFullYear();
+
+// One navigation model for the desktop bar and the phone drawer.
+const path = Astro.url.pathname;
+const under = (href: string) => (href === '/' ? path === '/' : path.startsWith(href));
+const NAV = [
+  {
+    title: 'Find work',
+    links: [
+      { href: '/open/', label: 'Open demand', note: 'Solicitations open for bid now', primary: true },
+      { href: '/services/', label: 'Services', note: 'Open service contract notices', primary: true },
+      { href: '/suppliers/', label: 'For suppliers', note: 'How to use the site to win work', primary: false },
+    ],
+  },
+  {
+    title: 'Look up',
+    links: [
+      { href: '/catalog/', label: 'Catalog', note: 'Every federal supply class', primary: true },
+      { href: '/browse/', label: 'Price history', note: 'Classes with full purchase prices', primary: true },
+      { href: '/agencies/', label: 'Agencies', note: 'Who is buying', primary: true },
+      { href: '/compare/', label: 'Compare items', note: 'Two parts side by side', primary: false },
+    ],
+  },
+  {
+    title: 'About',
+    links: [
+      { href: '/methodology/', label: 'Methodology', note: 'Where every number comes from', primary: false },
+      { href: '/about/', label: 'About', note: 'Who runs NSN Explorer', primary: false },
+    ],
+  },
+];
+const allLinks = NAV.flatMap((g) => g.links);
+const primary = allLinks.filter((l) => l.primary);
+const secondary = allLinks.filter((l) => !l.primary);
 ---
 
 <!doctype html>
@@ -46,13 +81,6 @@ const year = new Date().getFullYear();
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
-    />
-
     <SEO {...seoProps} />
 
     <!-- Google Analytics 4 (gtag.js). Loads for all visitors; a cookie
@@ -70,26 +98,81 @@ const year = new Date().getFullYear();
 
     <header class="site">
       <div class="container">
+        <button class="icon-btn menu-btn" type="button" data-open="site-drawer" aria-label="Open menu" aria-haspopup="dialog">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+        </button>
         <a class="brand" href="/" aria-label={`${SITE_NAME} home`}>
           <Logo height={28} />
         </a>
+        <button class="search-pill" type="button" data-open="site-search" aria-haspopup="dialog" aria-label="Search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></svg>
+          <span>Search an NSN, part number or category</span>
+          <kbd aria-hidden="true">/</kbd>
+        </button>
         <nav class="site" aria-label="Site">
-          <a href="/open/">Open Demand</a>
-          <a href="/services/">Services</a>
-          <a href="/suppliers/">For Suppliers</a>
-          <a href="/catalog/">Catalog</a>
-          <a href="/browse/">Browse</a>
-          <a href="/agencies/">Agencies</a>
-          <a href="/methodology/">Methodology</a>
-          <a href="/about/">About</a>
-          <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch color theme">
-            Dark
-          </button>
+          {primary.map((l) => <a href={l.href} aria-current={under(l.href) ? 'page' : undefined}>{l.label}</a>)}
+          <details>
+            <summary>More</summary>
+            <div class="menu">
+              {secondary.map((l) => <a href={l.href} aria-current={under(l.href) ? 'page' : undefined}>{l.label}</a>)}
+            </div>
+          </details>
         </nav>
+        <button class="icon-btn theme-toggle" type="button" data-theme-toggle aria-label="Switch color theme">
+          <svg class="to-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" stroke-linejoin="round" /></svg>
+          <svg class="to-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4" /><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4" /></svg>
+        </button>
       </div>
     </header>
 
-    <div class="viz-tape" id="demand-tape" role="region" hidden aria-label="Newest solicitations"></div>
+    <dialog class="sheet" id="site-drawer" aria-label="Menu">
+      <div class="sheet-head">
+        <a class="brand" href="/" aria-label={`${SITE_NAME} home`}><Logo height={26} /></a>
+        <button class="icon-btn" type="button" data-close aria-label="Close menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+      </div>
+      <nav aria-label="All pages">
+        {NAV.map((g) => (
+          <div class="drawer-group">
+            <h2>{g.title}</h2>
+            {g.links.map((l) => (
+              <a href={l.href} aria-current={under(l.href) ? 'page' : undefined}>
+                <span>{l.label}<small>{l.note}</small></span>
+              </a>
+            ))}
+          </div>
+        ))}
+      </nav>
+      <div class="drawer-group">
+        <button class="drawer-row" type="button" data-theme-toggle role="switch" aria-checked="false">
+          <span>Dark theme</span><span class="switch" aria-hidden="true"></span>
+        </button>
+      </div>
+    </dialog>
+
+    <dialog class="sheet" id="site-search" aria-label="Search">
+      <form class="search-head" data-site-search role="search" method="dialog">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></svg>
+        <input type="text" inputmode="search" name="q" data-site-search-input placeholder="NSN, part number or category" aria-label="Search an NSN, part number or category" autocomplete="off" enterkeyhint="search" />
+        <button class="icon-btn" type="button" data-close aria-label="Close search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+      </form>
+      <div class="search-body" data-site-search-results aria-live="polite">
+        <p class="search-msg">Type a 13-digit NSN, a 9-digit NIIN, a manufacturer part number, or a category name such as “gasket”.</p>
+        <h2>Jump to</h2>
+        <div class="chips wrap-wide">
+          <a class="chip" href="/open/">Open demand</a>
+          <a class="chip" href="/services/">Services</a>
+          <a class="chip" href="/catalog/">Catalog</a>
+          <a class="chip" href="/browse/">Price history</a>
+          <a class="chip" href="/agencies/">Agencies</a>
+        </div>
+      </div>
+    </dialog>
+
+    {tape && <div class="viz-tape" id="demand-tape" role="region" hidden aria-label="Newest solicitations"></div>}
 
     <main id="main-content" tabindex="-1">
       <div class="container">
@@ -128,26 +211,25 @@ const year = new Date().getFullYear();
       </div>
     </footer>
     <script is:inline>
-      // Theme switching, ported from the followthemoney heatmap: the button
-      // shows the theme you'd switch to; an explicit choice persists and
-      // stops OS-preference tracking.
+      // Theme switching: an explicit choice persists and stops OS-preference tracking.
       (() => {
         const root = document.documentElement;
-        const btn = document.getElementById('theme-toggle');
-        if (!btn) return;
+        const btns = document.querySelectorAll('[data-theme-toggle]');
         const sync = () => {
           const dark = root.dataset.theme === 'dark';
-          btn.textContent = dark ? 'Light' : 'Dark';
-          btn.setAttribute('aria-label', `Switch to ${dark ? 'light' : 'dark'} theme`);
+          btns.forEach((b) => {
+            if (b.getAttribute('role') === 'switch') b.setAttribute('aria-checked', String(dark));
+            else b.setAttribute('aria-label', `Switch to ${dark ? 'light' : 'dark'} theme`);
+          });
         };
         sync();
-        btn.addEventListener('click', () => {
+        btns.forEach((b) => b.addEventListener('click', () => {
           const dark = root.dataset.theme !== 'dark';
           if (dark) root.dataset.theme = 'dark';
           else delete root.dataset.theme;
           localStorage.setItem('theme', dark ? 'dark' : 'light');
           sync();
-        });
+        }));
         const mq = matchMedia('(prefers-color-scheme: dark)');
         mq.addEventListener('change', (e) => {
           if (localStorage.getItem('theme')) return;
@@ -161,6 +243,7 @@ const year = new Date().getFullYear();
       import '../scripts/viz.ts';
       import '../scripts/tape.ts';
       import '../scripts/freshness.ts';
+      import '../scripts/shell.ts';
     </script>
   </body>
 </html>

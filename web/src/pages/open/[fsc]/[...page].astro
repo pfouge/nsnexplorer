@@ -195,7 +195,13 @@ const breadcrumbSchema = {
     </p>
   </header>
 
-  <div class="stat-strip">
+  <nav class="tabs" aria-label="On this page">
+    <a href="#overview">Overview</a>
+    {(calendar || bidMap) && <a href="#open-charts">Closing dates</a>}
+    <a href="#parts">Open parts</a>
+  </nav>
+
+  <div class="stat-strip" id="overview">
     <div class="stat">
       <div class="value up">{fmtInt(solicitations.length)}</div>
       <div class="label">Open solicitations</div>
@@ -224,7 +230,7 @@ const breadcrumbSchema = {
     </section>
   )}
 
-  <section class="products-section">
+  <section class="products-section" id="parts">
     <h2 class="section-title">Open parts</h2>
     {allCards.length === 0 ? (
       <p class="gloss">No solicitations indexed for this category yet.</p>

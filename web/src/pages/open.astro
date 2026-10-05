@@ -102,6 +102,7 @@ const buildDate = now.toLocaleDateString('en-US', { year: 'numeric', month: 'lon
 ---
 
 <BaseLayout
+  tape
   title={title}
   description={description}
   pageType="CollectionPage"
@@ -131,18 +132,16 @@ const buildDate = now.toLocaleDateString('en-US', { year: 'numeric', month: 'lon
 
   <p class="gloss">Looking for service contracts rather than parts? See <a href="/services/">open service notices</a>.</p>
 
-  <section class="intro">
-    <h2 class="section-title">Every DLA solicitation open for bid, in one free list</h2>
-    <p class="gloss">
-      This page lists every open government solicitation NSN Explorer has indexed from DLA's DIBBS
-      bid board, grouped by federal supply class so a supplier can find the RFQs it can fill. The
-      list is rebuilt every day and open items are refreshed through the day, so the counts below
-      reflect the latest crawl. Each row links to the official DIBBS record where quotes are
-      submitted. Nothing here is a marketplace; it is a free index of public buying activity.
-    </p>
-  </section>
 
-  <HeadlineTiles tiles={tiles} />
+  <nav class="tabs" aria-label="On this page">
+    <a href="#overview">Overview</a>
+    <a href="#closing">Closing soon</a>
+    <a href="#open-charts">Where it is</a>
+    <a href="#categories">Categories</a>
+    <a href="#questions">Questions</a>
+  </nav>
+
+  <div id="overview"><HeadlineTiles tiles={tiles} /></div>
 
   <div class="stat-strip" style="margin-top:0.5rem;">
     <div class="stat">
@@ -164,7 +163,7 @@ const buildDate = now.toLocaleDateString('en-US', { year: 'numeric', month: 'lon
     </div>
   ) : (
     <>
-      <section>
+      <section id="closing">
         <h2 class="section-title">Closing soon</h2>
         <p class="gloss">
           The {closingSoon.length} open solicitations closing soonest, across every category —
@@ -221,17 +220,27 @@ const buildDate = now.toLocaleDateString('en-US', { year: 'numeric', month: 'lon
         </section>
       )}
 
-      <section>
+      <section id="categories">
         <h2 class="section-title">Browse open demand by category</h2>
         <p class="gloss">
           Open solicitations grouped by department and Federal Supply Class — pick a category to
           filter, sort, and find the parts you can bid on.
         </p>
+        {departments.length > 1 && (
+          <div class="chips wrap-wide" aria-label="Jump to a supply group">
+            {departments.map((dept) => (
+              <a class="chip" href={`#g-${dept.fsg}`}>
+                {dept.name}
+                <span class="n">{fmtInt(dept.fscs.reduce((n, f) => n + (data.openByFsc.get(f.fsc)?.solicitations.length ?? 0), 0))}</span>
+              </a>
+            ))}
+          </div>
+        )}
         {departments.length === 0 ? (
           <p class="gloss">No categories have open demand indexed yet.</p>
         ) : (
           departments.map((dept) => (
-            <div style="margin-top:1.75rem;">
+            <div class="dept-block" id={`g-${dept.fsg}`}>
               <h3>{dept.name} <span class="tag">FSG {dept.fsg}</span></h3>
               <div class="dept-grid">
                 {dept.fscs.map((fsc) => {
@@ -252,7 +261,18 @@ const buildDate = now.toLocaleDateString('en-US', { year: 'numeric', month: 'lon
     </>
   )}
 
-  <section class="faq">
+  <section class="intro">
+    <h2 class="section-title">Every DLA solicitation open for bid, in one free list</h2>
+    <p class="gloss">
+      This page lists every open government solicitation NSN Explorer has indexed from DLA's DIBBS
+      bid board, grouped by federal supply class so a supplier can find the RFQs it can fill. The
+      list is rebuilt every day and open items are refreshed through the day, so the counts below
+      reflect the latest crawl. Each row links to the official DIBBS record where quotes are
+      submitted. Nothing here is a marketplace; it is a free index of public buying activity.
+    </p>
+  </section>
+
+  <section class="faq" id="questions">
     <h2 class="section-title">Open solicitation questions</h2>
     {faq.map((f) => (
       <>

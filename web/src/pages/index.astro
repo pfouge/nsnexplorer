@@ -67,15 +67,15 @@ const itemList = {
 ---
 
 <BaseLayout
+  tape
   title={title}
   description={description}
   breadcrumbs={breadcrumbs}
   itemList={itemList}
   faq={faq}
 >
-  <section class="hero">
+  <section class="hero home">
     <div class="hero-bg" aria-hidden="true"><canvas></canvas></div>
-    <p class="eyebrow">Open demand <span class="x">×</span> Prices <span class="x">×</span> Receipts</p>
     <h1>{h1}</h1>
     <p class="lede">Find the federal parts demand you can fill.</p>
     <p class="lede">
@@ -84,13 +84,15 @@ const itemList = {
       the work, and anyone sizing up the market. Free.
     </p>
     <HomeSearch />
-    <div class="btns">
-      <a class="btn" href="/open/">Browse open demand →</a>
-      <a class="btn-ghost btn" href="/methodology/">How the data works</a>
+    <div class="chips wrap-wide" aria-label="Popular">
+      <a class="chip" href="/open/">Open demand <span class="n">{fmtInt(stats.openSolicitationsCount)}</span></a>
+      <a class="chip" href="/services/">Service notices</a>
+      <a class="chip" href="/catalog/">Catalog</a>
+      <a class="chip" href="/browse/">Price history</a>
+      <a class="chip" href="/agencies/">Agencies</a>
+      <a class="chip" href="/suppliers/">New to government parts?</a>
+      <a class="chip" href="/methodology/">How the data works</a>
     </div>
-    <p class="gloss" style="margin-top:1rem">
-      New to government parts? <a href="/suppliers/">How suppliers use NSN Explorer →</a>
-    </p>
   </section>
 
   <section class="viz-section" aria-labelledby="market-today">

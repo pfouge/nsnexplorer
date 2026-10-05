@@ -148,7 +148,14 @@ const breadcrumbSchema = {
     </p>
   </header>
 
-  <div class="stat-strip">
+  <nav class="tabs" aria-label="On this page">
+    <a href="#overview">Overview</a>
+    {hasMarket && market && <a href="#market-view">Market</a>}
+    <a href="#products">Products</a>
+    <a href="#awards">Contract awards</a>
+  </nav>
+
+  <div class="stat-strip" id="overview">
     <div class="stat">
       <div class="value">{total.toLocaleString('en-US')}</div>
       <div class="label">NSNs tracked</div>
@@ -176,7 +183,7 @@ const breadcrumbSchema = {
     </section>
   )}
 
-  <section class="products-section">
+  <section class="products-section" id="products">
     <h2 class="section-title">Products</h2>
     {total === 0 ? (
       <p class="gloss">No products indexed for this category yet.</p>
@@ -402,7 +409,7 @@ const breadcrumbSchema = {
   </script>
 
   {page === 1 && (
-  <section>
+  <section id="awards">
     <h2 class="section-title">Contract awards in this category</h2>
     <p class="gloss">
       {fscActions.length.toLocaleString('en-US')} award {fscActions.length === 1 ? 'record' : 'records'} totaling{' '}

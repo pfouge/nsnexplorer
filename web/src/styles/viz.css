@@ -27,10 +27,10 @@
 
 .viz { margin: 0 0 1.6rem; min-width: 0; }
 .viz-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3rem 0.8rem; margin-bottom: 0.2rem; }
-.viz-title { font-family: var(--font-display); font-size: 1.12rem; font-weight: 600; letter-spacing: -0.01em; margin: 0; color: var(--ink); }
+.viz-title { font-family: var(--font-display); font-size: 1.0625rem; font-weight: 600; letter-spacing: 0; margin: 0; color: var(--ink); }
 .viz-q { color: var(--ink-soft); font-size: 0.9rem; margin: 0 0 0.6rem; max-width: 70ch; }
 .viz-note { color: var(--ink-soft); font-size: 0.84rem; margin: 0.5rem 0 0; max-width: 78ch; }
-.viz-panel { background: var(--card); border: 1px solid var(--line); border-radius: 4px; padding: 1rem 1.1rem; min-width: 0; }
+.viz-panel { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.1rem; min-width: 0; }
 .viz-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
 .viz-grid > .viz { margin: 0; }
 .viz-grid > .viz.full { grid-column: 1 / -1; }
@@ -62,8 +62,8 @@
 .viz-legend i.k-diamond { transform: rotate(45deg) scale(0.85); border-radius: 1px; }
 .viz-legend i.k-ring { background: transparent; border: 2px solid var(--v-alt); border-radius: 50%; }
 
-.viz-seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; margin: 0 0 0.5rem; }
-.viz-seg button { font: inherit; font-size: 0.8rem; border: 0; background: var(--card); color: var(--ink-soft); padding: 0.25rem 0.7rem; cursor: pointer; }
+.viz-seg { display: inline-flex; flex-wrap: wrap; gap: 6px; border: 0; margin: 0 0 0.6rem; }
+.viz-seg button { font: inherit; font-size: 0.875rem; border: 0; border-radius: 15px; height: 30px; background: var(--paper-2); color: var(--ink); padding: 0 12px; cursor: pointer; }
 .viz-seg button[aria-pressed='true'] { background: var(--inv-bg); color: var(--inv-text); }
 .viz-seg button:focus-visible { outline: 2px solid var(--v-main); outline-offset: -2px; }
 
@@ -71,21 +71,21 @@
 #viz-tip b { font-weight: 600; display: block; }
 
 .viz-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.75rem; }
-.viz-tile { border: 1px solid var(--line); border-radius: 4px; padding: 0.75rem 0.9rem; background: var(--card); min-width: 0; }
+.viz-tile { border: 1px solid var(--line); border-radius: 12px; padding: 0.8rem 0.95rem; background: var(--card); min-width: 0; }
 .viz-tile .k { font-size: 0.8rem; color: var(--ink-soft); }
-.viz-tile .v { font-family: var(--font-display); font-size: 1.7rem; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.viz-tile .v { font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; letter-spacing: 0; font-variant-numeric: tabular-nums; line-height: 1.2; }
 .viz-tile .d { font-size: 0.8rem; color: var(--ink-soft); }
 @media (max-width: 820px) { .viz-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 .viz-table-wrap { overflow-x: auto; }
 table.viz-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; font-variant-numeric: tabular-nums; }
-table.viz-table th { font-family: var(--font-mono); font-size: 0.68rem; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); background: transparent; position: static; white-space: nowrap; }
-table.viz-table td { padding: 5px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.viz-table th { font-size: 0.78rem; font-weight: 400; color: var(--ink-soft); text-align: left; height: auto; padding: 4px 8px; border-bottom: 1px solid var(--line); background: transparent; position: static; white-space: nowrap; }
+table.viz-table td { height: auto; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 table.viz-table .r { text-align: right; }
 table.viz-table tr.inc td { background: color-mix(in srgb, var(--v-main) 12%, transparent); }
 
 .viz-steps { display: grid; gap: 0.5rem; }
-.viz-steps > div { border: 1px solid var(--line); border-radius: 4px; padding: 0.5rem 0.7rem; background: var(--paper); display: flex; justify-content: space-between; align-items: baseline; gap: 0.7rem; }
+.viz-steps > div { border: 1px solid var(--line); border-radius: 8px; padding: 0.5rem 0.7rem; background: var(--paper); display: flex; justify-content: space-between; align-items: baseline; gap: 0.7rem; }
 .viz-steps .k { font-size: 0.78rem; color: var(--ink-soft); }
 .viz-steps .v { font-family: var(--font-display); font-size: 1.1rem; font-weight: 600; font-variant-numeric: tabular-nums; }
 
@@ -99,13 +99,13 @@ table.viz-table tr.inc td { background: color-mix(in srgb, var(--v-main) 12%, tr
 .viz-tape .run { display: inline-block; padding: 0.45rem 0; animation: viz-tape 80s linear infinite; }
 .viz-tape:hover .run, .viz-tape:focus-within .run { animation-play-state: paused; }
 .viz-tape a { color: inherit; margin: 0 1.3rem; font-size: 0.82rem; }
-.viz-tape em { font-style: normal; font-family: var(--font-mono); font-weight: 600; }
+.viz-tape em { font-style: normal; font-weight: 600; font-variant-numeric: tabular-nums; }
 .viz-tape .new { color: #6FD6A6; } .viz-tape .soon { color: #F0B45E; } .viz-tape small { color: var(--inv-soft); }
 @keyframes viz-tape { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 @media (prefers-reduced-motion: reduce) { .viz-tape .run { animation: none; } .viz-tape { overflow-x: auto; } }
 
 .viz-fresh { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.6rem; }
-.viz-fresh > div { border: 1px solid var(--line); border-radius: 4px; padding: 0.55rem 0.7rem; min-width: 0; }
+.viz-fresh > div { border: 1px solid var(--line); border-radius: 8px; padding: 0.55rem 0.7rem; min-width: 0; }
 .viz-fresh .n { font-weight: 600; font-size: 0.82rem; }
 .viz-fresh .a { font-family: var(--font-mono); font-size: 0.74rem; color: var(--ink-soft); margin: 2px 0 6px; }
 .viz-fresh .m { height: 6px; border-radius: 3px; background: var(--v-band); overflow: hidden; }
@@ -114,13 +114,15 @@ table.viz-table tr.inc td { background: color-mix(in srgb, var(--v-main) 12%, tr
 .viz-fresh .s { font-size: 0.74rem; color: var(--ink-soft); margin-top: 5px; }
 @media (max-width: 820px) { .viz-fresh { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
+/* The table rules in global.css (sticky first column, 48px rows) are for page tables, not the small ones inside charts. */
+table.viz-table th:first-child, table.viz-table td:first-child { position: static; background: transparent; padding-left: 8px; }
 /* ---- site-wide and class charts (agent A additions) ---- */
 .viz-svg text.vt-sub { font-weight: 400; opacity: 0.9; }
 .viz-tile .viz-svg { margin: 0.35rem 0 0.15rem; }
 .viz-tape { border-bottom: 1px solid var(--line); }
 .viz-tape[hidden], .viz-fresh-wrap[hidden] { display: none; }
 .viz-fresh-wrap { margin: 1.25rem 0 1.5rem; }
-.viz-fresh-h { font-family: var(--font-mono); font-size: 0.7rem; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); margin: 0 0 0.5rem; }
+.viz-fresh-h { font-size: 0.875rem; font-weight: 600; color: inherit; margin: 0 0 0.5rem; }
 .viz-stack { display: grid; gap: 1rem; }
 .viz-stack > .viz { margin: 0; }
 .viz-legend i.k-dot { border-radius: 50%; }
@@ -185,11 +187,11 @@ body.embed-page { background: var(--card); padding: 12px; font-size: 16px; overf
 .embed-foot a { color: var(--ink); text-decoration: underline; }
 
 /* The Embed control under a chart on the full pages. */
-.viz-embed-btn { margin-left: auto; font: inherit; font-size: 0.78rem; line-height: 1.2; color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 4px; padding: 0.2rem 0.6rem; cursor: pointer; }
+.viz-embed-btn { margin-left: auto; font: inherit; font-size: 0.8125rem; line-height: 1.2; color: var(--ink); background: var(--paper-2); border: 0; border-radius: 14px; height: 28px; padding: 0 12px; cursor: pointer; }
 .viz-embed-btn:hover, .viz-embed-btn[aria-expanded='true'] { background: var(--paper-2); }
 .viz-embed-btn:focus-visible, .viz-embed-copy:focus-visible { outline: 2px solid var(--v-main); outline-offset: 2px; }
 .viz-embed { margin-top: 0.7rem; padding-top: 0.7rem; border-top: 1px solid var(--line); }
 .viz-embed[hidden] { display: none; }
 .viz-embed-top { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; margin-bottom: 0.4rem; font-size: 0.84rem; color: var(--ink-soft); }
 .viz-embed-copy { font: inherit; font-size: 0.78rem; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 4px; padding: 0.2rem 0.7rem; cursor: pointer; }
-.viz-embed pre { margin: 0; padding: 0.7rem 0.8rem; background: var(--paper-2); border: 1px solid var(--line); border-radius: 4px; font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; user-select: all; }
+.viz-embed pre { margin: 0; padding: 0.7rem 0.8rem; background: var(--paper-2); border: 1px solid var(--line); border-radius: 8px; font-family: var(--font-code); font-size: 0.78rem; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; user-select: all; }
