@@ -183,3 +183,10 @@ export function closesLabel(d: number | null): ClosesLabel {
   if (d <= 2) return { text: `closes in ${d}d`, cls: 'amber' };
   return { text: `closes in ${d}d`, cls: 'green' };
 }
+
+/**
+ * Value the /services/<letter>/ filter selects (and each card's data-setaside /
+ * data-agency carries) for "no set-aside" / "unknown agency". The charts that
+ * link into the filter use the same literal.
+ */
+export const FILTER_NONE = '__none';

@@ -8,7 +8,10 @@ import Pager from '../../../components/Pager.astro';
 import { SITE_URL } from '../../../consts';
 import { loadSiteData, formatDate, solicitationLinkLabel, type ServiceNotice } from '../../../lib/data';
 import { buildDepartments } from '../../../lib/browse';
-import { closesLabel, daysUntil, serviceCategoryName, serviceCategoryNameInline } from '../../../lib/services';
+import { FILTER_NONE, closesLabel, daysUntil, serviceCategoryName, serviceCategoryNameInline } from '../../../lib/services';
+import { setasideMix, stateModel } from '../../../lib/viz-services';
+import SetasideMix from '../../../components/viz/SetasideMix.astro';
+import StateMap from '../../../components/viz/StateMap.astro';
 import { fitDescription } from '../../../lib/seo-copy';
 import { pageCount, pageItems, pageNumbers, pageParam, pageRange, pageUrl, rangeLabel, pagedDescriptionPrefix, pagedTitle } from '../../../lib/paginate';
 
@@ -89,7 +92,7 @@ const todayMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate
 // Equipment-service notices link to their supply-group page when it exists.
 const groupNames = new Map(buildDepartments(data).map((d) => [d.fsg, d.name]));
 
-const NONE = '__none';
+const NONE = FILTER_NONE;
 const setasides = [...new Set(allNotices.map((x) => x.setaside).filter((v): v is string => v !== null))].sort((a, b) => a.localeCompare(b));
 const hasNoSetaside = allNotices.some((x) => x.setaside === null);
 const agencies = [...new Set(allNotices.map((x) => x.agency).filter((v): v is string => v !== null))].sort((a, b) => a.localeCompare(b));
@@ -97,6 +100,11 @@ const hasNoAgency = allNotices.some((x) => x.agency === null);
 const pscCounts = new Map<string, number>();
 for (const x of allNotices) if (x.psc) pscCounts.set(x.psc, (pscCounts.get(x.psc) ?? 0) + 1);
 const pscs = [...pscCounts.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+
+// Charts over the WHOLE category, on page 1 of a coded category only.
+const showCharts = page === 1 && !isOther;
+const setasideModel = showCharts ? setasideMix(allNotices) : null;
+const stateMapModel = showCharts ? stateModel(allNotices) : null;
 ---
 
 <BaseLayout
@@ -118,6 +126,13 @@ const pscs = [...pscCounts.entries()].sort((a, b) => a[0].localeCompare(b[0]));
     <h1>{h1}</h1>
     <p class="lede">{subline}</p>
   </header>
+
+  {(setasideModel || stateMapModel) && (
+    <div class="viz-grid" style="margin-top:1.6rem;">
+      <SetasideMix model={setasideModel} interactive full={!stateMapModel} />
+      <StateMap model={stateMapModel} full={!setasideModel} />
+    </div>
+  )}
 
   <section class="products-section">
     <h2 class="section-title">Open notices</h2>
@@ -257,6 +272,12 @@ const pscs = [...pscCounts.entries()].sort((a, b) => a[0].localeCompare(b[0]));
       const fmt = (n: number) => n.toLocaleString('en-US');
       const loader = createPagedLoader({ grid, cards, countEl, pager: document.getElementById('pager') });
 
+      // Set-aside mix bars (chart entry point); they mirror the Set-aside select.
+      const saBars = Array.from(document.querySelectorAll<SVGElement>('[data-sa-bar]'));
+      const syncBars = () => {
+        for (const bar of saBars) bar.setAttribute('aria-pressed', String(bar.dataset.saBar === setasideSelect.value));
+      };
+
       const apply = () => {
         const maxCloseDays = closesSelect.value === 'any' ? null : Number(closesSelect.value);
         const wantedSetaside = setasideSelect.value;
@@ -294,6 +315,7 @@ const pscs = [...pscCounts.entries()].sort((a, b) => a[0].localeCompare(b[0]));
         }
         const emptyEl = document.getElementById('empty-state');
         if (emptyEl) emptyEl.hidden = visibleCount !== 0;
+        syncBars();
       };
 
       const clearFilters = () => {
@@ -348,15 +370,33 @@ const pscs = [...pscCounts.entries()].sort((a, b) => a[0].localeCompare(b[0]));
       pscSelect?.addEventListener('change', schedule);
       sortSelect.addEventListener('change', schedule);
 
-      // Chart entry point: #within-3|7|30 (deadline grid on the hub) sets "Closing within"
-      // and hands over to `schedule`, the same path the control uses (including the
-      // lazy load of the other pages).
+      // Chart entry points. Both only set a control and hand over to `schedule`,
+      // the same path the controls use (including the lazy load of other pages).
+      //  - #within-3|7|30 (deadline grid on the hub) sets "Closing within".
+      //  - a set-aside bar sets the Set-aside select.
       const applyHash = () => {
         const m = /^#within-(3|7|30)$/.exec(window.location.hash);
         if (!m) return;
         closesSelect.value = m[1];
         schedule();
       };
+      const pickBar = (bar: SVGElement) => {
+        const value = bar.dataset.saBar;
+        if (!value) return;
+        setasideSelect.value = value;
+        if (setasideSelect.value !== value) return; // not an option on this page
+        schedule();
+      };
+      for (const bar of saBars) {
+        bar.addEventListener('click', () => pickBar(bar));
+        bar.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            pickBar(bar);
+          }
+        });
+      }
+
       apply();
       applyHash();
       window.addEventListener('hashchange', applyHash);

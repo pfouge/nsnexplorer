@@ -7,8 +7,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import { SITE_URL } from '../consts';
 import { loadSiteData, solicitationLinkLabel } from '../lib/data';
 import { closesLabel, daysUntil, serviceCategoryName } from '../lib/services';
-import { deadlineGrid } from '../lib/viz-services';
+import { deadlineGrid, setasideMix, stateModel } from '../lib/viz-services';
 import DeadlineGrid from '../components/viz/DeadlineGrid.astro';
+import SetasideMix from '../components/viz/SetasideMix.astro';
+import StateMap from '../components/viz/StateMap.astro';
 
 const data = await loadSiteData();
 const fmtInt = (n: number) => n.toLocaleString('en-US');
@@ -49,8 +51,10 @@ const categories = [...data.serviceNoticesByCategory.entries()]
   }))
   .sort((a, b) => b.count - a.count || a.letter.localeCompare(b.letter));
 
-// Chart model: null below its minimum, and then nothing renders.
+// Charts (each is null below its minimum and then renders nothing).
 const gridModel = deadlineGrid(coded, todayIso, serviceCategoryName);
+const setasideModel = setasideMix(coded);
+const stateMapModel = stateModel(coded);
 
 const closingSoonCount = closingWithin7(coded);
 const closingSoon = coded.slice(0, 20);
@@ -161,6 +165,13 @@ const faq = [
           </p>
         )}
       </section>
+
+      {(setasideModel || stateMapModel) && (
+        <div class="viz-grid" style="margin-top:1.6rem;">
+          <SetasideMix model={setasideModel} full={!stateMapModel} />
+          <StateMap model={stateMapModel} full={!setasideModel} />
+        </div>
+      )}
 
       <section>
         <h2 class="section-title">Equipment services</h2>

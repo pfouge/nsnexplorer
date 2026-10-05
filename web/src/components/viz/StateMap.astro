@@ -1,0 +1,52 @@
+---
+// StateMap.astro — tile map of open service notices by place-of-performance
+// state. Layout only; counting and the 5-notice minimum are in lib/viz-services.ts.
+import Viz from './Viz.astro';
+import { SEQ_OPACITY, STATE_TILES, el, fmtInt, seqBin, seqTextClass, svg, text, tip } from '../../lib/viz.ts';
+import { noPlaceNote, type StateModel } from '../../lib/viz-services.ts';
+
+interface Props {
+  model: StateModel | null;
+  full?: boolean;
+}
+const { model, full = false } = Astro.props;
+
+let chart = '';
+if (model) {
+  const CW = 48;
+  const CH = 34;
+  const parts: string[] = [];
+  for (const [st, r, c] of STATE_TILES) {
+    const v = model.counts.get(st) ?? 0;
+    const bin = seqBin(v, model.max);
+    const x = 10 + c * CW;
+    const y = 6 + r * CH;
+    parts.push(
+      el('g', { 'data-tip': tip(st, `${fmtInt(v)} open ${v === 1 ? 'notice' : 'notices'}`) }, [
+        el('rect', { x, y, width: CW - 3, height: CH - 3, rx: 3, class: v > 0 ? 'vf-main' : 'vf-band', 'fill-opacity': v > 0 ? String(SEQ_OPACITY[bin]) : null }),
+        text(x + (CW - 3) / 2, y + 20, st, { 'text-anchor': 'middle', class: v > 0 ? `${seqTextClass(bin)} vt-b` : null }),
+      ])
+    );
+  }
+  // legend strip: no notices, then fewer ... more
+  const LY = 284;
+  parts.push(el('rect', { x: 150, y: LY, width: 24, height: 10, rx: 2, class: 'vf-band' }), text(180, LY + 9, 'none'));
+  SEQ_OPACITY.forEach((o, i) => parts.push(el('rect', { x: 330 + i * 26, y: LY, width: 24, height: 10, rx: 2, class: 'vf-main', 'fill-opacity': String(o) })));
+  parts.push(text(326, LY + 9, 'fewer', { 'text-anchor': 'end' }), text(464, LY + 9, 'more'));
+  chart = svg(560, 300, 'Open service notices by place of performance, one tile per state', parts);
+}
+---
+{model && (
+  <Viz
+    title="Where the work is"
+    question="Which states have open service work? Notices by place of performance."
+    note={noPlaceNote(model.unplaced)}
+    full={full}
+  >
+    <div class="viz-cap"><Fragment set:html={chart} /></div>
+  </Viz>
+)}
+
+<style is:global>
+  .viz-cap > .viz-svg { max-width: 640px; }
+</style>

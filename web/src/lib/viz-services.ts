@@ -1,19 +1,27 @@
 // lib/viz-services.ts — pure number-crunching for the three /services/ charts
-// (deadline grid; the set-aside mix and place-of-performance map follow). No pg, no DOM: the
+// (deadline grid, set-aside mix, where-the-work-is map). No pg, no DOM: the
 // components in components/viz/ only lay these models out as SVG.
 //
 // All three count OPEN, CODED service notices (letter category). The uncoded
 // 'other' bucket is excluded by the callers and is its own page.
 
-import { daysBetween } from './viz.ts';
+import { FILTER_NONE } from './services.ts';
+import { STATE_TILES, daysBetween } from './viz.ts';
 
 export const MIN_CATEGORIES_GRID = 2;
+export const MIN_SETASIDE_VALUES = 2;
+export const MIN_NOTICES_WITH_STATE = 5;
 export const MAX_GRID_ROWS = 12;
+export const MAX_SETASIDE_ROWS = 7;
 export const OTHER_CATEGORIES = 'Other categories';
+export const OTHER_SETASIDES = 'Other set-asides';
+export const NO_SETASIDE = 'No set-aside';
 
 export interface NoticeLike {
   category: string;
   closesOn: string | null;
+  setaside: string | null;
+  state: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -73,7 +81,7 @@ export interface DeadlineGridModel {
  * minimum of two categories.
  */
 export function deadlineGrid(
-  notices: NoticeLike[],
+  notices: Pick<NoticeLike, 'category' | 'closesOn'>[],
   todayIso: string,
   nameOf: (letter: string) => string,
   maxRows = MAX_GRID_ROWS
@@ -113,8 +121,65 @@ export function deadlineGrid(
 }
 
 // ---------------------------------------------------------------------------
-// Label wrapping
+// Set-aside mix
 // ---------------------------------------------------------------------------
+
+export interface SetasideRow {
+  label: string;
+  /** Value the page's Set-aside filter takes; null for the rolled-up row. */
+  filterValue: string | null;
+  value: number;
+  /** Whole-percent share of all notices; '<1%' when it rounds to zero. */
+  share: string;
+  kind: 'none' | 'main' | 'other';
+  /** Number of distinct set-aside values behind a rolled-up row. */
+  types: number;
+}
+export interface SetasideModel {
+  rows: SetasideRow[];
+  total: number;
+}
+
+export function shareLabel(v: number, total: number): string {
+  if (!(total > 0) || !(v > 0)) return '0%';
+  const p = Math.round((v / total) * 100);
+  return p === 0 ? '<1%' : `${p}%`;
+}
+
+/**
+ * "No set-aside" first (when any), then the other values by count; at most
+ * `maxRows` rows including an "Other set-asides" roll-up. null with fewer
+ * than two distinct values (no set-aside counts as one).
+ */
+export function setasideMix(notices: Pick<NoticeLike, 'setaside'>[], maxRows = MAX_SETASIDE_ROWS): SetasideModel | null {
+  const counts = new Map<string, number>();
+  let none = 0;
+  for (const n of notices) {
+    if (n.setaside === null) none += 1;
+    else counts.set(n.setaside, (counts.get(n.setaside) ?? 0) + 1);
+  }
+  const total = notices.length;
+  const distinct = counts.size + (none > 0 ? 1 : 0);
+  if (distinct < MIN_SETASIDE_VALUES) return null;
+  const others = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  const rows: SetasideRow[] = [];
+  if (none > 0) rows.push({ label: NO_SETASIDE, filterValue: FILTER_NONE, value: none, share: shareLabel(none, total), kind: 'none', types: 1 });
+  const room = maxRows - rows.length;
+  const shown = others.length > room ? others.slice(0, room - 1) : others;
+  for (const [label, value] of shown) rows.push({ label, filterValue: label, value, share: shareLabel(value, total), kind: 'main', types: 1 });
+  const rest = others.slice(shown.length);
+  if (rest.length > 0) {
+    const value = rest.reduce((s, [, v]) => s + v, 0);
+    rows.push({ label: OTHER_SETASIDES, filterValue: null, value, share: shareLabel(value, total), kind: 'other', types: rest.length });
+  }
+  return { rows, total };
+}
+
+/** Drops the trailing "(FAR 19.5)" citation so labels fit; the tooltip keeps the full text. */
+export function shortSetaside(label: string): string {
+  const s = label.replace(/\s*\(FAR[^)]*\)\s*$/i, '').trim();
+  return s === '' ? label : s;
+}
 
 /** Greedy word wrap into at most `maxLines` lines; the last line gets an ellipsis when cut. */
 export function wrapLabel(s: string, maxChars: number, maxLines = 2): string[] {
@@ -138,3 +203,42 @@ export function wrapLabel(s: string, maxChars: number, maxLines = 2): string[] {
   lines.push(last.length > maxChars ? `${last.slice(0, maxChars - 1).trimEnd()}…` : last);
   return lines;
 }
+
+// ---------------------------------------------------------------------------
+// Where the work is
+// ---------------------------------------------------------------------------
+
+const TILE_CODES = new Set(STATE_TILES.map((t) => t[0]));
+
+/** Upper-cased 2-letter code that has a tile (50 states + DC); anything else is null. */
+export function normalizeState(raw: string | null | undefined): string | null {
+  if (typeof raw !== 'string') return null;
+  const s = raw.trim().toUpperCase();
+  return /^[A-Z]{2}$/.test(s) && TILE_CODES.has(s) ? s : null;
+}
+
+export interface StateModel {
+  counts: Map<string, number>;
+  max: number;
+  /** Notices that landed on a tile. */
+  placed: number;
+  /** Notices with no usable place of performance. */
+  unplaced: number;
+}
+
+/** null below the minimum of five notices with a usable state. */
+export function stateModel(notices: Pick<NoticeLike, 'state'>[]): StateModel | null {
+  const counts = new Map<string, number>();
+  let placed = 0;
+  for (const n of notices) {
+    const st = normalizeState(n.state);
+    if (!st) continue;
+    counts.set(st, (counts.get(st) ?? 0) + 1);
+    placed += 1;
+  }
+  if (placed < MIN_NOTICES_WITH_STATE) return null;
+  return { counts, max: Math.max(...counts.values()), placed, unplaced: notices.length - placed };
+}
+
+export const noPlaceNote = (n: number): string | undefined =>
+  n > 0 ? `${n.toLocaleString('en-US')} ${n === 1 ? 'notice gives' : 'notices give'} no place of performance.` : undefined;

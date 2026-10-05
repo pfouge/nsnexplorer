@@ -1,0 +1,71 @@
+---
+// SetasideMix.astro — horizontal bars of open notices by set-aside type.
+// On a category page each bar (except the "Other set-asides" roll-up) is a
+// button that sets that page's Set-aside filter; the page script owns that
+// (it reuses the existing filter code). On the hub the bars are plain marks.
+import Viz from './Viz.astro';
+import { el, fmtInt, hbar, svg, text, tip } from '../../lib/viz.ts';
+import { shortSetaside, wrapLabel, type SetasideModel } from '../../lib/viz-services.ts';
+
+interface Props {
+  model: SetasideModel | null;
+  interactive?: boolean;
+  full?: boolean;
+}
+const { model, interactive = false, full = false } = Astro.props;
+
+let chart = '';
+if (model) {
+  const W = 560;
+  const LBL = 214;
+  const BAR_X = 222;
+  const BAR_MAX = 270;
+  const PITCH = 34;
+  const max = Math.max(...model.rows.map((r) => r.value));
+  const parts: string[] = [];
+  model.rows.forEach((r, i) => {
+    const y = i * PITCH + 2;
+    const lines = wrapLabel(shortSetaside(r.label), 36, 2);
+    const w = Math.max(3, (r.value / max) * BAR_MAX);
+    const clickable = interactive && r.filterValue !== null;
+    const tipText = tip(
+      r.label,
+      `${fmtInt(r.value)} open ${r.value === 1 ? 'notice' : 'notices'} · ${r.share}`,
+      r.kind === 'other' && `${fmtInt(r.types)} other set-aside types`
+    );
+    const marks = [
+      el('rect', { x: 0, y, width: W, height: PITCH - 2, class: 'vf-clear' }),
+      ...lines.map((ln, k) => text(0, y + (PITCH - 2) / 2 + (lines.length === 1 ? 4 : k * 13 - 2), ln, { class: 'vt-ink' })),
+      hbar(BAR_X, y + 7, w, 16, r.kind === 'none' ? 'vf-neutral' : 'vf-main'),
+      text(BAR_X + w + 6, y + 19, fmtInt(r.value), { class: 'vt-ink' }),
+    ];
+    const common = { 'data-tip': tipText, 'aria-label': `${r.label}: ${fmtInt(r.value)} open notices, ${r.share}` };
+    parts.push(
+      clickable
+        ? el('a', { ...common, role: 'button', tabindex: 0, 'aria-pressed': 'false', 'data-sa-bar': r.filterValue, class: 'vsa-bar' }, marks)
+        : el('g', { ...common, tabindex: 0, role: 'img' }, marks)
+    );
+  });
+  chart = svg(W, model.rows.length * PITCH + 4, 'Open service notices by set-aside type', parts);
+}
+const note = interactive ? 'Select a bar to show only those notices.' : 'Share of all open coded notices by set-aside type.';
+---
+{model && (
+  <Viz
+    title="Set-aside mix"
+    question="Which notices can a given kind of business bid on? Open notices by set-aside type."
+    note={note}
+    full={full}
+  >
+    <div class="viz-cap"><Fragment set:html={chart} /></div>
+  </Viz>
+)}
+
+<style is:global>
+  /* a chart that takes the full row alone keeps its natural size */
+  .viz-cap > .viz-svg { max-width: 640px; }
+  .vsa-bar, .vsa-bar:hover { cursor: pointer; text-decoration: none; }
+  .vsa-bar:hover path { opacity: 0.85; }
+  .vsa-bar[aria-pressed='true'] path { stroke: var(--ink); stroke-width: 2; }
+  .vsa-bar[aria-pressed='true'] text { font-weight: 600; }
+</style>
