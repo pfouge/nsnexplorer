@@ -1,0 +1,14 @@
+---
+// Chart 16: days from solicitation to award, one bar per matched award.
+import Viz from './Viz.astro';
+import type { TimingModel } from '../../lib/viz-nsn-timing';
+
+interface Props {
+  model: TimingModel;
+  full?: boolean;
+}
+const { model, full = false } = Astro.props;
+---
+<Viz title="Time from solicitation to award" question={model.question} legend={model.legend} note={model.note} full={full}>
+  <Fragment set:html={model.svg} />
+</Viz>

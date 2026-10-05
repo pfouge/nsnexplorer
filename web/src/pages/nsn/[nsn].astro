@@ -3,6 +3,9 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import NsnPriceHistory from '../../components/viz/NsnPriceHistory.astro';
 import NsnPriceByQty from '../../components/viz/NsnPriceByQty.astro';
 import NsnAwardCalculator from '../../components/viz/NsnAwardCalculator.astro';
+import NsnBuyingRhythm from '../../components/viz/NsnBuyingRhythm.astro';
+import NsnTimeToAward from '../../components/viz/NsnTimeToAward.astro';
+import NsnWhoWins from '../../components/viz/NsnWhoWins.astro';
 import SignupForm from '../../components/SignupForm.astro';
 import { SITE_URL } from '../../consts';
 import { buildDiagram } from '../../lib/diagram';
@@ -25,6 +28,10 @@ import { nsnDescription, nsnSummary, nsnTitle } from '../../lib/seo-copy';
 import { MIN_POINTS_CALC, calcRows } from '../../lib/viz-nsn-calc';
 import { buildPriceHistory } from '../../lib/viz-nsn-price';
 import { buildPriceByQty } from '../../lib/viz-nsn-qty';
+import { buildBuyingRhythm, type AwardEvent } from '../../lib/viz-nsn-rhythm';
+import { buildTimeToAward } from '../../lib/viz-nsn-timing';
+import { buildWinners, type WinAward } from '../../lib/viz-nsn-winners';
+import { supplierLabel } from '../../lib/viz-nsn-common';
 
 // Rendered ON REQUEST by the Cloudflare Pages Function, not at build time.
 // Cloudflare Pages caps a deployment at 20,000 files and the catalog is far
@@ -177,6 +184,24 @@ const priceHistory = buildPriceHistory(points, todayIso);
 const priceByQty = buildPriceByQty(points, allSols);
 const calcData = points.length >= MIN_POINTS_CALC ? calcRows(points) : [];
 const hasPriceCharts = priceHistory !== null || priceByQty !== null || calcData.length >= MIN_POINTS_CALC;
+// Awards for the demand charts: price points, else the item's contract actions.
+const datedActions = contractActions.filter((c): c is typeof c & { actionDate: string } => c.actionDate !== null);
+const awardEvents: AwardEvent[] =
+  points.length > 0
+    ? points.map((p) => ({ date: p.awardedOn, quantity: p.quantity, supplier: supplierLabel(p.supplierName, p.cage), solNumber: p.solNumber }))
+    : datedActions.map((c) => ({ date: c.actionDate, quantity: null, supplier: supplierLabel(c.recipientName, c.cage), solNumber: null }));
+const winAwards: WinAward[] =
+  points.length > 0
+    ? points.map((p) => ({ date: p.awardedOn, cage: p.cage, name: p.supplierName }))
+    : datedActions.map((c) => ({ date: c.actionDate, cage: c.cage, name: c.recipientName }));
+const rhythm = buildBuyingRhythm(allSols, awardEvents, todayIso);
+const timing = buildTimeToAward(points, allSols);
+const winners = buildWinners(
+  winAwards,
+  partNumbers.filter((pn) => pn.cage).map((pn) => ({ cage: pn.cage!, name: pn.supplierName })),
+  todayIso
+);
+const hasDemandCharts = rhythm !== null || timing !== null || winners !== null;
 
 const breadcrumbSchema = {
   '@context': 'https://schema.org',
@@ -564,14 +589,24 @@ const datasetSchema = {
   </section>
 
   <!-- 5. Demand history — every solicitation on record, open and closed. -->
-  {allSols.length > 0 && (
+  {(allSols.length > 0 || hasDemandCharts) && (
     <section style="margin-top:2.5rem;">
       <h2 class="section-title" style="margin-top:0;">Demand history</h2>
+      {allSols.length > 0 && (
       <p class="gloss">
         Every solicitation we've indexed for this NSN, open and closed — {allSols.length} on record.
         Closed RFQs (expired, cancelled, or awarded) stay here as a record of past demand; they
         never get removed.
       </p>
+      )}
+      {rhythm && <NsnBuyingRhythm model={rhythm} />}
+      {(timing || winners) && (
+        <div class="viz-grid" style="margin-bottom:1.6rem;">
+          {timing && <NsnTimeToAward model={timing} full={!winners} />}
+          {winners && <NsnWhoWins model={winners} full={!timing} />}
+        </div>
+      )}
+      {allSols.length > 0 && (
       <div class="table-wrap">
         <table>
           <thead>
@@ -601,6 +636,7 @@ const datasetSchema = {
           </tbody>
         </table>
       </div>
+      )}
     </section>
   )}
 

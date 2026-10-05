@@ -1,0 +1,13 @@
+---
+// Chart 15: every solicitation and award for the item on one timeline.
+import Viz from './Viz.astro';
+import type { RhythmModel } from '../../lib/viz-nsn-rhythm';
+
+interface Props {
+  model: RhythmModel;
+}
+const { model } = Astro.props;
+---
+<Viz title="Buying rhythm" question={model.question} legend={model.legend} note={model.note} full>
+  <Fragment set:html={model.svg} />
+</Viz>

@@ -26,11 +26,16 @@ import {
   slugify,
 } from './shared';
 
+/** A contract action plus the awardee's CAGE when the source carried one (DIBBS award grid rows do). */
+export interface NsnContractAction extends ContractActionRecord {
+  cage: string | null;
+}
+
 export interface NsnPageData {
   nsn: NsnRecord;
   fsc: FscConfig | null;
   pricePoints: PricePointRecord[];
-  contractActions: ContractActionRecord[];
+  contractActions: NsnContractAction[];
   /** Every solicitation on record for this NSN (any status), newest first. */
   solicitations: SolicitationRecord[];
   partNumbers: PartNumberRecord[];
@@ -76,7 +81,8 @@ export async function loadNsnPage(sql: Sql, nsnCode: string): Promise<NsnPageDat
     sql.unsafe(
       `SELECT ca.id, ca.award_uid, ca.piid, ca.psc, ca.naics, ca.description, ca.action_date,
               ca.obligation, ca.agency_id, ag.name AS agency_name, ca.recipient_name,
-              ca.recipient_uei, ca.source_url, ca.ingested_at
+              ca.recipient_uei, ca.source_url, ca.ingested_at,
+              NULLIF(btrim(ca.raw ->> 'cage'), '') AS cage
        FROM pub.contract_actions ca
        LEFT JOIN pub.agencies ag ON ag.agency_id = ca.agency_id
        WHERE (ca.raw ->> 'nsn') = $1
@@ -145,7 +151,7 @@ export async function loadNsnPage(sql: Sql, nsnCode: string): Promise<NsnPageDat
     return rec;
   });
 
-  const contractActions: ContractActionRecord[] = caRows.map((r) => ({
+  const contractActions: NsnContractAction[] = caRows.map((r) => ({
     id: Number(r.id),
     awardUid: r.award_uid,
     piid: r.piid,
@@ -160,6 +166,7 @@ export async function loadNsnPage(sql: Sql, nsnCode: string): Promise<NsnPageDat
     recipientUei: r.recipient_uei,
     sourceUrl: assertSourceUrl(r.source_url, `contract_actions.id=${r.id}`),
     ingestedAt: new Date(r.ingested_at).toISOString(),
+    cage: r.cage ?? null,
   }));
 
   const solicitations: SolicitationRecord[] = solRows.map((r) => ({

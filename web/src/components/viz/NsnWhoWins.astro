@@ -1,0 +1,34 @@
+---
+// Chart 17: who wins this item. One row per supplier, one dot per award.
+import Viz from './Viz.astro';
+import { lastAwardText, type WinnersModel } from '../../lib/viz-nsn-winners';
+
+interface Props {
+  model: WinnersModel;
+  full?: boolean;
+}
+const { model, full = false } = Astro.props;
+const dots = (n: number): number[] => Array.from({ length: n }, (_, i) => i);
+---
+<Viz
+  title="Who wins this item"
+  question="Does one supplier win this every time, and are the winners on the listed-source list? One dot per award."
+  legend={[{ key: 'main', label: 'Award in the last 2 years' }, { key: 'neutral', label: 'Older award' }]}
+  note={model.note}
+  full={full}
+>
+  <div class="viz-win">
+    {model.rows.map((r) => (
+      <div class="viz-win-row">
+        <div><div class="nm">{r.name}</div><div class="sub">{lastAwardText(r.lastAward)}</div></div>
+        <div class="viz-dots" role="img" tabindex="0" aria-label={r.ariaLabel} data-tip={`${r.name}\n${r.ariaLabel}`}>
+          {dots(r.dotsRecent).map(() => <i />)}
+          {dots(r.dotsOld).map(() => <i class="old" />)}
+          {r.more > 0 && <span class="more">+{r.more}</span>}
+          {r.recent + r.older === 0 && <span class="sub">no awards on record</span>}
+        </div>
+        {model.haveSources && <span class:list={['viz-pill', { yes: r.listed }]}>{r.listed ? 'Listed source' : 'Not listed'}</span>}
+      </div>
+    ))}
+  </div>
+</Viz>
