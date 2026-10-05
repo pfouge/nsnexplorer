@@ -7,6 +7,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import { SITE_URL } from '../consts';
 import { loadSiteData, solicitationLinkLabel } from '../lib/data';
 import { closesLabel, daysUntil, serviceCategoryName } from '../lib/services';
+import { deadlineGrid } from '../lib/viz-services';
+import DeadlineGrid from '../components/viz/DeadlineGrid.astro';
 
 const data = await loadSiteData();
 const fmtInt = (n: number) => n.toLocaleString('en-US');
@@ -16,6 +18,7 @@ const fmtInt = (n: number) => n.toLocaleString('en-US');
 const now = new Date();
 const todayMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
 
+const todayIso = now.toISOString().slice(0, 10);
 const coded = data.serviceNotices.filter((n) => n.category !== 'other');
 const uncodedCount = data.serviceNoticesByCategory.get('other')?.length ?? 0;
 const N = coded.length;
@@ -45,6 +48,9 @@ const categories = [...data.serviceNoticesByCategory.entries()]
     soon: closingWithin7(list),
   }))
   .sort((a, b) => b.count - a.count || a.letter.localeCompare(b.letter));
+
+// Chart model: null below its minimum, and then nothing renders.
+const gridModel = deadlineGrid(coded, todayIso, serviceCategoryName);
 
 const closingSoonCount = closingWithin7(coded);
 const closingSoon = coded.slice(0, 20);
@@ -136,6 +142,7 @@ const faq = [
     <>
       <section>
         <h2 class="section-title">Browse service notices by category</h2>
+        <DeadlineGrid model={gridModel} asOf={todayIso} />
         <div class="dept-grid">
           {categories.map((c) => (
             <a class="dept-card card" href={`/services/${c.letter.toLowerCase()}/`}>

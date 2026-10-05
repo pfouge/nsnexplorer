@@ -1,0 +1,93 @@
+---
+// DeadlineGrid.astro — heat table of open service notices: category rows by
+// closing-window columns. Layout only; the counting is lib/viz-services.ts.
+// Each cell links to the category page, whose script turns #within-3|7|30
+// into the "Closing within" filter.
+import Viz from './Viz.astro';
+import { SEQ_OPACITY, el, fmtInt, monthDay, seqBin, seqTextClass, svg, text, tip } from '../../lib/viz.ts';
+import { wrapLabel, type DeadlineGridModel } from '../../lib/viz-services.ts';
+
+interface Props {
+  model: DeadlineGridModel | null;
+  /** Build date, ISO (YYYY-MM-DD): the day closing windows are counted from. */
+  asOf: string;
+}
+const { model, asOf } = Astro.props;
+
+let chart = '';
+let note = '';
+if (model) {
+  const LBL = 260;
+  const COLS_W = 640;
+  const TOTAL_W = 100;
+  const W = LBL + COLS_W + TOTAL_W;
+  const RH = 34;
+  const TOP = 24;
+  const cw = COLS_W / model.columns.length;
+  const parts: string[] = [];
+  model.columns.forEach((c, j) => {
+    parts.push(text(LBL + j * cw + cw / 2, 14, c.label, { 'text-anchor': 'middle', class: 'vt-ink vt-b' }));
+  });
+  parts.push(text(LBL + COLS_W + TOTAL_W / 2, 14, 'Total', { 'text-anchor': 'middle', class: 'vt-ink vt-b' }));
+  model.rows.forEach((r, i) => {
+    const y = TOP + i * RH;
+    const href = r.letter ? `/services/${r.letter.toLowerCase()}/` : null;
+    const lines = wrapLabel(r.name, 38, 2);
+    const labelY = lines.length === 1 ? y + RH / 2 + 2 : y + RH / 2 - 5;
+    const label = lines.map((ln, k) => text(0, labelY + k * 13, ln, { class: 'vt-ink' }));
+    const labelTip = tip(r.name, `${fmtInt(r.total)} open ${r.total === 1 ? 'notice' : 'notices'}${r.letter ? '' : ` · ${fmtInt(r.categories)} categories`}`);
+    parts.push(
+      href
+        ? el('a', { href, 'aria-label': `${r.name}: ${fmtInt(r.total)} open notices`, 'data-tip': labelTip, class: 'vg-label' }, [
+            el('rect', { x: 0, y, width: LBL - 8, height: RH, class: 'vf-clear' }),
+            ...label,
+          ])
+        : el('g', { 'data-tip': labelTip, tabindex: 0 }, [el('rect', { x: 0, y, width: LBL - 8, height: RH, class: 'vf-clear' }), ...label])
+    );
+    r.counts.forEach((v, j) => {
+      const col = model.columns[j];
+      const bin = seqBin(v, model.max);
+      const tipText = tip(
+        r.name,
+        col.key === 'none'
+          ? `${fmtInt(v)} ${v === 1 ? 'notice' : 'notices'} with no closing date`
+          : `${fmtInt(v)} ${v === 1 ? 'notice' : 'notices'} closing in ${col.phrase}`
+      );
+      const cell = [
+        el('rect', { x: LBL + j * cw + 1, y: y + 1, width: cw - 2, height: RH - 2, rx: 3, class: 'vf-main', 'fill-opacity': String(SEQ_OPACITY[bin]) }),
+        text(LBL + j * cw + cw / 2, y + RH / 2 + 4, fmtInt(v), { 'text-anchor': 'middle', class: seqTextClass(bin) }),
+      ];
+      parts.push(
+        href
+          ? el('a', { href: `${href}${col.hash}`, 'data-tip': tipText, 'aria-label': `${r.name}, ${col.label}: ${fmtInt(v)}`, class: 'vg-cell' }, cell)
+          : el('g', { 'data-tip': tipText, tabindex: 0 }, cell)
+      );
+    });
+    parts.push(text(LBL + COLS_W + TOTAL_W / 2, y + RH / 2 + 4, fmtInt(r.total), { 'text-anchor': 'middle', class: 'vt-ink vt-b' }));
+  });
+  chart = svg(W, TOP + model.rows.length * RH + 6, 'Open service notices by category and closing window', parts);
+  note = `Counts as of ${monthDay(asOf)}, ${asOf.slice(0, 4)}. Darker means more notices.`;
+}
+---
+{model && (
+  <Viz
+    title="Deadline grid"
+    question="Which service categories have the most notices closing soon? Category by closing window."
+    note={note}
+    full
+  >
+    <div class="viz-scroll" style="--viz-min: 720px"><Fragment set:html={chart} /></div>
+    <p class="viz-note viz-scroll-hint">Swipe sideways to see every column.</p>
+  </Viz>
+)}
+
+<style is:global>
+  .viz-scroll { overflow-x: auto; overflow-y: hidden; max-width: 100%; }
+  .viz-scroll > .viz-svg { min-width: var(--viz-min, 0); }
+  .viz-scroll-hint { display: none; }
+  @media (max-width: 760px) { .viz-scroll-hint { display: block; } }
+  .vg-label:hover text, .vg-label:focus-visible text { text-decoration: underline; }
+  .vg-cell:hover { text-decoration: none; }
+  .vg-cell:hover rect, .vg-cell:focus-visible rect { stroke: var(--ink); stroke-width: 1.5; }
+  .viz-svg a:focus-visible, .viz-svg [tabindex]:focus-visible { outline: 2px solid var(--v-main); outline-offset: 1px; }
+</style>

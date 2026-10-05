@@ -348,7 +348,18 @@ const pscs = [...pscCounts.entries()].sort((a, b) => a[0].localeCompare(b[0]));
       pscSelect?.addEventListener('change', schedule);
       sortSelect.addEventListener('change', schedule);
 
+      // Chart entry point: #within-3|7|30 (deadline grid on the hub) sets "Closing within"
+      // and hands over to `schedule`, the same path the control uses (including the
+      // lazy load of the other pages).
+      const applyHash = () => {
+        const m = /^#within-(3|7|30)$/.exec(window.location.hash);
+        if (!m) return;
+        closesSelect.value = m[1];
+        schedule();
+      };
       apply();
+      applyHash();
+      window.addEventListener('hashchange', applyHash);
     }
   </script>
 </BaseLayout>
