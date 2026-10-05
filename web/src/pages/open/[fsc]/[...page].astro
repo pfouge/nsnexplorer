@@ -7,8 +7,12 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
 import SignupForm from '../../../components/SignupForm.astro';
 import Pager from '../../../components/Pager.astro';
 import { SITE_URL } from '../../../consts';
-import { loadSiteData, formatDate } from '../../../lib/data';
-import { buildSolicitationCards, fsgName, isPlaceholderFscName, UNLISTED_FSC_NAME, type ProductCard } from '../../../lib/browse';
+import { loadSiteData, formatDate, toDashedNsn } from '../../../lib/data';
+import { buildSolicitationCards, competitionFromAmscAmc, fsgName, isPlaceholderFscName, UNLISTED_FSC_NAME, type ProductCard } from '../../../lib/browse';
+import ClosingCalendar from '../../../components/viz/ClosingCalendar.astro';
+import BidWindowMap from '../../../components/viz/BidWindowMap.astro';
+import { buildBidMarks, buildCalendar } from '../../../lib/viz-open';
+import { nomen } from '../../../lib/seo-copy';
 import { PAGE_SIZE, pageCount, pageItems, pageNumbers, pageParam, pageRange, pageUrl, rangeLabel, pagedDescriptionPrefix, pagedTitle } from '../../../lib/paginate';
 import { memo, release } from '../../../lib/paged-cache';
 import { openDescription, openTitle } from '../../../lib/seo-copy';
@@ -111,6 +115,27 @@ const closedBadge = (lastSolicited: string | null): StatusBadge => ({
   cls: '',
 });
 
+// Open-demand charts (page 1 only): closing calendar and bid-window map. Each
+// is null, and renders nothing, below its minimum.
+const calendar = page === 1 ? buildCalendar(data.viz.closing.get(fscCode) ?? [], data.viz.today) : null;
+const bidMap =
+  page === 1
+    ? buildBidMarks(
+        solicitations.map((s) => {
+          const meta = s.nsn ? data.openNsnByNsn.get(s.nsn) ?? data.nsnByNsn.get(s.nsn) : undefined;
+          return {
+            solNumber: s.solNumber,
+            nsn: s.nsn && meta ? toDashedNsn(s.nsn) : null,
+            name: nomen(s.itemName ?? s.nomenclature),
+            quantity: s.quantity,
+            returnBy: s.returnBy,
+            competition: competitionFromAmscAmc(meta),
+          };
+        }),
+        data.viz.today
+      )
+    : null;
+
 const copy = {
   code: fscCode,
   name: hasRealFscName ? displayName : null,
@@ -188,6 +213,16 @@ const breadcrumbSchema = {
       <div class="label">Tracked all-time ({fmtInt(closedCountHere)} closed)</div>
     </div>
   </div>
+
+  {(calendar || bidMap) && (
+    <section class="viz-section" aria-labelledby="open-charts">
+      <h2 class="section-title" id="open-charts">Closing dates and quantities</h2>
+      <div class="viz-grid">
+        {calendar && <ClosingCalendar bars={calendar.bars} max={calendar.max} today={data.viz.today} full={!bidMap} />}
+        {bidMap && <BidWindowMap marks={bidMap.marks} total={bidMap.total} capped={bidMap.capped} full={!calendar} />}
+      </div>
+    </section>
+  )}
 
   <section class="products-section">
     <h2 class="section-title">Open parts</h2>

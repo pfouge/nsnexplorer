@@ -1,0 +1,73 @@
+---
+// BidWindowMap.astro — one mark per open solicitation in a class: x = days
+// until it closes, y = quantity on a log scale. Shape repeats competition so
+// it reads without color; each mark opens the NSN page.
+import Viz from './Viz.astro';
+import { el, fmtInt, linear, log10, svg, text, tip } from '../../lib/viz';
+import { powerAbove, type BidMark } from '../../lib/viz-open';
+interface Props {
+  marks: BidMark[];
+  total: number;
+  capped: boolean;
+  full?: boolean;
+}
+const { marks, total, capped, full = false } = Astro.props;
+
+const W = full ? 1160 : 560;
+const H = 270;
+const X0 = 58;
+const X1 = W - 10;
+const YTOP = 20;
+const YBASE = 230;
+const top = powerAbove(Math.max(...marks.map((m) => m.quantity)));
+const x = linear(0, 30, X0, X1);
+const y = log10(1, top, YBASE, YTOP);
+
+const COMP = {
+  open: { label: 'Open competition', cls: 'vf-main vring', r: 5 },
+  restricted: { label: 'Restricted to listed sources', cls: 'vf-alt vring', r: 6 },
+  unknown: { label: 'Not coded', cls: 'vf-neutral vring', r: 4 },
+} as const;
+
+const parts: string[] = [];
+for (let p = 1; p <= top; p *= 10) {
+  parts.push(el('line', { x1: X0, x2: X1, y1: y(p), y2: y(p), class: p === 1 ? 'vs-axis' : 'vs-grid' }));
+  parts.push(text(X0 - 6, y(p) + 4, fmtInt(p), { 'text-anchor': 'end' }));
+}
+for (const d of [0, 7, 14, 21, 28]) parts.push(text(x(d), YBASE + 16, d === 0 ? 'today' : `${d}d`, { 'text-anchor': 'middle' }));
+parts.push(el('rect', { x: x(0), y: y(top), width: x(7) - x(0), height: y(1) - y(top), class: 'vf-band' }));
+parts.push(text(x(3.5), y(top) + 13, 'this week', { 'text-anchor': 'middle' }));
+
+const focusable = marks.length < 40;
+for (const m of marks) {
+  const c = COMP[m.competition];
+  const cx = x(m.days);
+  const cy = y(m.quantity);
+  const shape =
+    m.competition === 'restricted'
+      ? el('path', { d: `M${cx},${cy - c.r}l${c.r},${c.r}l${-c.r},${c.r}l${-c.r},${-c.r}z`, class: c.cls, 'fill-opacity': '0.85' })
+      : el('circle', { cx, cy, r: c.r, class: c.cls, 'fill-opacity': '0.85' });
+  const tipText = tip(m.name, `qty ${fmtInt(m.quantity)} · ${m.days === 0 ? 'closes today' : `closes in ${m.days}d`}`, c.label);
+  parts.push(
+    m.nsn
+      ? el('a', { href: `/nsn/${m.nsn}/`, 'data-tip': tipText, 'aria-label': `${m.name}, quantity ${fmtInt(m.quantity)}, ${c.label}` }, shape)
+      : el('g', { 'data-tip': tipText, tabindex: focusable ? 0 : null }, shape)
+  );
+}
+parts.push(text((X0 + X1) / 2, H - 4, 'days until the solicitation closes', { 'text-anchor': 'middle' }));
+parts.push(text(X0, 12, 'quantity requested (log scale)'));
+const chart = svg(W, H, 'Open solicitations by days until they close and quantity requested', parts);
+---
+<Viz
+  title="Bid-window map"
+  question="Which open solicitations are large, and how long is left? One mark per solicitation."
+  legend={[
+    { key: 'main', label: 'Open competition', shape: 'dot' },
+    { key: 'alt', label: 'Restricted to listed sources', shape: 'diamond' },
+    { key: 'neutral', label: 'Not coded', shape: 'dot' },
+  ]}
+  note={capped ? `Showing the ${fmtInt(marks.length)} soonest of ${fmtInt(total)}.` : undefined}
+  full={full}
+>
+  <Fragment set:html={chart} />
+</Viz>

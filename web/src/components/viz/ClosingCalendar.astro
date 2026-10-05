@@ -1,0 +1,57 @@
+---
+// ClosingCalendar.astro — open product solicitations by return_by for the 30
+// days starting at the build date. The first 7 days are amber, the rest green.
+import Viz from './Viz.astro';
+import { el, fmtInt, linear, monthDay, svg, text, tip, vbar } from '../../lib/viz';
+import { countAxis, whenLabel, type CalendarBar } from '../../lib/viz-open';
+interface Props {
+  bars: CalendarBar[];
+  max: number;
+  today: string;
+  full?: boolean;
+}
+const { bars, max, today, full = false } = Astro.props;
+
+const W = full ? 1160 : 560;
+const H = 210;
+const X0 = 36;
+const X1 = W - 8;
+const BASE = 176;
+const TOP = 12;
+const bw = (X1 - X0) / bars.length;
+const axis = countAxis(max);
+const y = linear(0, axis.top, BASE, TOP);
+
+const parts: string[] = [];
+for (const t of axis.ticks) {
+  parts.push(el('line', { x1: X0, x2: X1, y1: y(t), y2: y(t), class: 'vs-grid' }));
+  parts.push(text(X0 - 6, y(t) + 4, fmtInt(t), { 'text-anchor': 'end' }));
+}
+parts.push(el('line', { x1: X0, x2: X1, y1: BASE, y2: BASE, class: 'vs-axis' }));
+for (const b of bars) {
+  const x = X0 + b.day * bw;
+  parts.push(vbar(x + 1, BASE, bw - 2, BASE - y(b.count), b.warn ? 'vf-warn' : 'vf-main'));
+  if (b.day % 7 === 0) parts.push(text(x + bw / 2, BASE + 14, monthDay(b.date), { 'text-anchor': 'middle' }));
+}
+parts.push(text(X0, H - 4, 'closing date'));
+for (const b of bars) {
+  parts.push(
+    el('rect', {
+      x: X0 + b.day * bw, y: TOP - 2, width: bw, height: BASE - TOP + 2, class: 'vf-clear', tabindex: 0,
+      'data-tip': tip(`${whenLabel(b.day)} · ${monthDay(b.date)}`, `${fmtInt(b.count)} ${b.count === 1 ? 'solicitation closes' : 'solicitations close'}`),
+      'aria-label': `${whenLabel(b.day)}, ${monthDay(b.date)}: ${b.count} closing`,
+    })
+  );
+}
+const chart = svg(W, H, 'Open solicitations closing each day for the next 30 days', parts);
+const year = today.slice(0, 4);
+---
+<Viz
+  title="Closing calendar"
+  question="What closes when? Solicitations by closing date for the next 30 days."
+  legend={[{ key: 'warn', label: 'Closes within 7 days' }, { key: 'main', label: 'Closes later' }]}
+  note={`Counts as of ${monthDay(today)}, ${year}. Weekends are near zero because DLA sets weekday deadlines.`}
+  full={full}
+>
+  <Fragment set:html={chart} />
+</Viz>

@@ -8,12 +8,23 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import { fscLabel, listedFscName } from '../lib/seo-copy';
 import { SITE_URL } from '../consts';
 import { loadSiteData, toDashedNsn, solicitationLinkLabel } from '../lib/data';
-import { buildOpenDepartments, fscDisplayName } from '../lib/browse';
+import { buildDepartments, buildOpenDepartments, fscDisplayName, fsgName } from '../lib/browse';
+import HeadlineTiles from '../components/viz/HeadlineTiles.astro';
+import DemandMap from '../components/viz/DemandMap.astro';
+import ClosingCalendar from '../components/viz/ClosingCalendar.astro';
+import { buildDemandTiles, buildTiles } from '../lib/viz-site';
+import { buildCalendar } from '../lib/viz-open';
 
 const data = await loadSiteData();
 const departments = buildOpenDepartments(data);
 
 const fmtInt = (n: number) => n.toLocaleString('en-US');
+
+// Charts (lib/viz-site.ts, lib/viz-open.ts): headline tiles, demand map, closing calendar.
+const tiles = buildTiles(data.viz.tiles, data.viz.dailyStats);
+const groupPages = new Set(buildDepartments(data).map((d) => d.fsg));
+const demandTiles = buildDemandTiles(data.viz.groups, fsgName, (fsg) => groupPages.has(fsg));
+const calendar = buildCalendar(data.viz.closing.get('*') ?? [], data.viz.today);
 
 const S = data.stats.openSolicitationsCount;
 const hasS = S > 0;
@@ -131,24 +142,7 @@ const buildDate = now.toLocaleDateString('en-US', { year: 'numeric', month: 'lon
     </p>
   </section>
 
-  <div class="stat-strip">
-    <div class="stat">
-      <div class="value up">{fmtInt(data.stats.openSolicitationsCount)}</div>
-      <div class="label">Open solicitations</div>
-    </div>
-    <div class="stat">
-      <div class="value">{fmtInt(data.stats.openClosingSoon)}</div>
-      <div class="label">Closing within 7 days</div>
-    </div>
-    <div class="stat">
-      <div class="value">{fmtInt(data.stats.openTotalQuantity)}</div>
-      <div class="label">Total open quantity</div>
-    </div>
-    <div class="stat">
-      <div class="value">{fmtInt(data.openByFsc.size)}</div>
-      <div class="label">Categories with open demand</div>
-    </div>
-  </div>
+  <HeadlineTiles tiles={tiles} />
 
   <div class="stat-strip" style="margin-top:0.5rem;">
     <div class="stat">
@@ -216,6 +210,16 @@ const buildDate = now.toLocaleDateString('en-US', { year: 'numeric', month: 'lon
           </table>
         </div>
       </section>
+
+      {(demandTiles || calendar) && (
+        <section class="viz-section" aria-labelledby="open-charts">
+          <h2 class="section-title" id="open-charts">Where the open demand is</h2>
+          <div class="viz-stack">
+            {demandTiles && <DemandMap tiles={demandTiles} />}
+            {calendar && <ClosingCalendar bars={calendar.bars} max={calendar.max} today={data.viz.today} full />}
+          </div>
+        </section>
+      )}
 
       <section>
         <h2 class="section-title">Browse open demand by category</h2>
