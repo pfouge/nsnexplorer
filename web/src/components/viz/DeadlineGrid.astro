@@ -66,7 +66,7 @@ if (model) {
     parts.push(text(LBL + COLS_W + TOTAL_W / 2, y + RH / 2 + 4, fmtInt(r.total), { 'text-anchor': 'middle', class: 'vt-ink vt-b' }));
   });
   chart = svg(W, TOP + model.rows.length * RH + 6, 'Open service notices by category and closing window', parts);
-  note = `Counts as of ${monthDay(asOf)}, ${asOf.slice(0, 4)}. Darker means more notices.`;
+  note = `Counts as of ${monthDay(asOf)}, ${asOf.slice(0, 4)}. A stronger shade means more notices.`;
 }
 ---
 {model && (

@@ -32,7 +32,7 @@ export function esc(v: unknown): string {
 export function el(tag: string, attrs: Attrs = {}, children: string | string[] = ''): string {
   const a = Object.entries(attrs)
     .filter(([, v]) => v !== null && v !== undefined && v !== false)
-    .map(([k, v]) => ` ${k}="${esc(typeof v === 'number' ? round(v) : v)}"`)
+    .map(([k, v]) => ` ${k}="${esc(typeof v === 'number' ? round(v, 2) : v)}"`)
     .join('');
   const body = Array.isArray(children) ? children.join('') : children;
   return `<${tag}${a}>${body}</${tag}>`;
@@ -45,7 +45,9 @@ export function text(x: number, y: number, str: unknown, attrs: Attrs = {}): str
 
 /** Root <svg>; width is 100% of its container, height follows the viewBox. */
 export function svg(w: number, h: number, label: string, children: string | string[]): string {
-  return el('svg', { viewBox: `0 0 ${w} ${h}`, width: '100%', role: 'img', 'aria-label': label, class: 'viz-svg' }, children);
+  // viz-wide charts keep a readable minimum width on phones and scroll
+  // sideways inside their frame (see .viz-body in viz.css).
+  return el('svg', { viewBox: `0 0 ${w} ${h}`, width: '100%', role: 'img', 'aria-label': label, class: w > 700 ? 'viz-svg viz-wide' : 'viz-svg' }, children);
 }
 
 export function round(n: number, dp = 1): number {

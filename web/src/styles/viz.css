@@ -152,3 +152,12 @@ table.viz-table td.sup { white-space: normal; min-width: 8rem; overflow-wrap: an
 .viz-compare-form input { font: inherit; font-family: var(--font-mono); font-size: 0.9rem; padding: 0.5rem 0.65rem; border: 1px solid var(--line); border-radius: 4px; background: var(--card); color: var(--ink); min-width: 0; width: 100%; box-sizing: border-box; }
 .viz-compare-form input:focus { outline: 2px solid var(--v-main); outline-offset: -1px; }
 .viz-svg text.vt-link { fill: var(--ink); text-decoration: underline; }
+
+/* Phones: a chart drawn for a wide frame keeps a readable size and scrolls
+   sideways inside its own frame; the page itself never scrolls sideways. */
+.viz-body { min-width: 0; }
+@media (max-width: 760px) {
+  .viz-body { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .viz-body > .viz-svg.viz-wide, .viz-body > * > .viz-svg.viz-wide { min-width: 900px; max-width: none; }
+  .viz-body > .viz-svg:not(.viz-wide) { min-width: 440px; max-width: none; }
+}

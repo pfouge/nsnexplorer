@@ -727,15 +727,23 @@ async function loadVizData(pool: pgTypes.Pool): Promise<SiteViz> {
   // Who wins: award dollars by supplier per class, last 12 months. The label
   // is the recipient name, else the CAGE from the record, else "Unidentified".
   const winnersRes = await pool.query(
-    `WITH x AS (
+    `WITH raw AS (
        SELECT ca.psc AS fsc,
-              COALESCE(NULLIF(btrim(ca.recipient_name), ''),
-                       CASE WHEN NULLIF(btrim(ca.raw ->> 'cage'), '') IS NOT NULL THEN 'CAGE ' || upper(btrim(ca.raw ->> 'cage')) END,
-                       'Unidentified supplier') AS label,
-              sum(ca.obligation) AS amt
+              NULLIF(upper(btrim(ca.raw ->> 'cage')), '') AS cage,
+              NULLIF(btrim(ca.recipient_name), '') AS nm,
+              ca.obligation
        FROM pub.contract_actions ca
        WHERE ca.psc ~ '^[0-9]{4}$' AND ca.action_date >= CURRENT_DATE - INTERVAL '12 months' AND ca.obligation IS NOT NULL
-       GROUP BY 1, 2 HAVING sum(ca.obligation) > 0
+     ), g AS (
+       -- One group per supplier: by CAGE when the record has one (so rows
+       -- loaded before the supplier's name was known still merge), else by name.
+       SELECT fsc, COALESCE(cage, 'name:' || COALESCE(nm, '')) AS k, max(cage) AS cage, max(nm) AS nm, sum(obligation) AS amt
+       FROM raw GROUP BY 1, 2 HAVING sum(obligation) > 0
+     ), x AS (
+       SELECT g.fsc,
+              COALESCE(g.nm, NULLIF(btrim(s.name), ''), CASE WHEN g.cage IS NOT NULL THEN 'CAGE ' || g.cage END, 'Unidentified supplier') AS label,
+              g.amt
+       FROM g LEFT JOIN pub.suppliers s ON s.cage = g.cage
      ), r AS (
        SELECT fsc, label, amt, row_number() OVER (PARTITION BY fsc ORDER BY amt DESC, label) AS rn,
               sum(amt) OVER (PARTITION BY fsc) AS total, count(*) OVER (PARTITION BY fsc) AS n

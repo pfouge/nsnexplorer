@@ -32,6 +32,6 @@ const { title, question, legend = [], note, full = false, panel = true, id } = A
       ))}
     </ul>
   )}
-  <slot />
+  <div class="viz-body"><slot /></div>
   {note && <p class="viz-note">{note}</p>}
 </figure>
