@@ -10,7 +10,13 @@ interface Props {
   today: string;
   full?: boolean;
 }
-const { bars, max, today, full = false } = Astro.props;
+const { bars: allBars, max, today, full = false } = Astro.props;
+// DLA quote windows are short: when nothing closes after the second week,
+// draw 14 days instead of 30 so the bars are not crowded into one corner.
+const lastDay = allBars.reduce((m, b) => (b.count > 0 ? Math.max(m, b.day) : m), 0);
+const span = lastDay < 14 ? 14 : allBars.length;
+const bars = allBars.slice(0, span);
+const labelEvery = span === 14 ? 2 : 7;
 
 const W = full ? 1160 : 560;
 const H = 210;
@@ -31,7 +37,7 @@ parts.push(el('line', { x1: X0, x2: X1, y1: BASE, y2: BASE, class: 'vs-axis' }))
 for (const b of bars) {
   const x = X0 + b.day * bw;
   parts.push(vbar(x + 1, BASE, bw - 2, BASE - y(b.count), b.warn ? 'vf-warn' : 'vf-main'));
-  if (b.day % 7 === 0) parts.push(text(x + bw / 2, BASE + 14, monthDay(b.date), { 'text-anchor': 'middle' }));
+  if (b.day % labelEvery === 0) parts.push(text(x + bw / 2, BASE + 14, monthDay(b.date), { 'text-anchor': 'middle' }));
 }
 parts.push(text(X0, H - 4, 'closing date'));
 for (const b of bars) {
@@ -43,12 +49,12 @@ for (const b of bars) {
     })
   );
 }
-const chart = svg(W, H, 'Open solicitations closing each day for the next 30 days', parts);
+const chart = svg(W, H, `Open solicitations closing each day for the next ${span} days`, parts);
 const year = today.slice(0, 4);
 ---
 <Viz
   title="Closing calendar"
-  question="What closes when? Solicitations by closing date for the next 30 days."
+  question={`What closes when? Solicitations by closing date for the next ${span} days.`}
   legend={[{ key: 'warn', label: 'Closes within 7 days' }, { key: 'main', label: 'Closes later' }]}
   note={`Counts as of ${monthDay(today)}, ${year}. Weekends are near zero because DLA sets weekday deadlines.`}
   full={full}

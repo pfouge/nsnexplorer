@@ -20,7 +20,13 @@ const X1 = W - 10;
 const YTOP = 20;
 const YBASE = 230;
 const top = powerAbove(Math.max(...marks.map((m) => m.quantity)));
-const x = linear(0, 30, X0, X1);
+// Fit the time axis to the data in whole weeks (DLA windows are usually
+// under two weeks) instead of always drawing 30 days.
+const xMax = Math.min(30, Math.max(7, Math.ceil(Math.max(...marks.map((m) => m.days)) / 7) * 7));
+const x = linear(0, xMax, X0, X1);
+// When no item in the class carries an acquisition code, competition cannot
+// be shown: draw one plain series and say so rather than a chart of gray.
+const noCodes = marks.every((m) => m.competition === 'unknown');
 const y = log10(1, top, YBASE, YTOP);
 
 const COMP = {
@@ -28,21 +34,25 @@ const COMP = {
   restricted: { label: 'Restricted to listed sources', cls: 'vf-alt vring', r: 6 },
   unknown: { label: 'Not coded', cls: 'vf-neutral vring', r: 4 },
 } as const;
+const PLAIN = { label: '', cls: 'vf-main vring', r: 5 } as const;
 
 const parts: string[] = [];
 for (let p = 1; p <= top; p *= 10) {
   parts.push(el('line', { x1: X0, x2: X1, y1: y(p), y2: y(p), class: p === 1 ? 'vs-axis' : 'vs-grid' }));
   parts.push(text(X0 - 6, y(p) + 4, fmtInt(p), { 'text-anchor': 'end' }));
 }
-for (const d of [0, 7, 14, 21, 28]) parts.push(text(x(d), YBASE + 16, d === 0 ? 'today' : `${d}d`, { 'text-anchor': 'middle' }));
-parts.push(el('rect', { x: x(0), y: y(top), width: x(7) - x(0), height: y(1) - y(top), class: 'vf-band' }));
-parts.push(text(x(3.5), y(top) + 13, 'this week', { 'text-anchor': 'middle' }));
+for (const d of [0, 7, 14, 21, 28].filter((d) => d <= xMax)) parts.push(text(x(d), YBASE + 16, d === 0 ? 'today' : `${d}d`, { 'text-anchor': 'middle' }));
+// The 'this week' band only means something when the axis runs past a week.
+if (xMax > 7) {
+  parts.push(el('rect', { x: x(0), y: y(top), width: x(7) - x(0), height: y(1) - y(top), class: 'vf-band' }));
+  parts.push(text(x(3.5), y(top) + 13, 'this week', { 'text-anchor': 'middle' }));
+}
 
 const focusable = marks.length < 40;
 for (const m of marks) {
-  const c = COMP[m.competition];
+  const c = noCodes ? PLAIN : COMP[m.competition];
   // Deterministic spread of up to ±0.3 day so same-day marks do not sit exactly on top of each other.
-  const cx = x(Math.max(0, Math.min(30, m.days + (((marks.indexOf(m) * 37) % 13) / 12 - 0.5) * 0.6)));
+  const cx = x(Math.max(0, Math.min(xMax, m.days + (((marks.indexOf(m) * 37) % 13) / 12 - 0.5) * 0.8)));
   const cy = y(m.quantity);
   const shape =
     m.competition === 'restricted'
@@ -51,7 +61,7 @@ for (const m of marks) {
   const tipText = tip(m.name, `qty ${fmtInt(m.quantity)} · ${m.days === 0 ? 'closes today' : `closes in ${m.days}d`}`, c.label);
   parts.push(
     m.nsn
-      ? el('a', { href: `/nsn/${m.nsn}/`, 'data-tip': tipText, 'aria-label': `${m.name}, quantity ${fmtInt(m.quantity)}, ${c.label}` }, shape)
+      ? el('a', { href: `/nsn/${m.nsn}/`, 'data-tip': tipText, 'aria-label': `${m.name}, quantity ${fmtInt(m.quantity)}${c.label ? `, ${c.label}` : ''}` }, shape)
       : el('g', { 'data-tip': tipText, tabindex: focusable ? 0 : null }, shape)
   );
 }
@@ -62,12 +72,12 @@ const chart = svg(W, H, 'Open solicitations by days until they close and quantit
 <Viz
   title="Bid-window map"
   question="Which open solicitations are large, and how long is left? One mark per solicitation."
-  legend={[
+  legend={noCodes ? [] : [
     { key: 'main', label: 'Open competition', shape: 'dot' },
     { key: 'alt', label: 'Restricted to listed sources', shape: 'diamond' },
     { key: 'neutral', label: 'Not coded', shape: 'dot' },
   ]}
-  note={capped ? `Showing the ${fmtInt(marks.length)} soonest of ${fmtInt(total)}.` : undefined}
+  note={[capped && `Showing the ${fmtInt(marks.length)} soonest of ${fmtInt(total)}.`, noCodes && 'Acquisition method codes are not on record for these items, so competition status is not shown.'].filter(Boolean).join(' ') || undefined}
   full={full}
 >
   <Fragment set:html={chart} />

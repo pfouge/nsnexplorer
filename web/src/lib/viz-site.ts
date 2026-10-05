@@ -121,10 +121,10 @@ export function buildTiles(live: TileInput, rows: DailyStatRow[]): TileModel[] {
     { key: 'open', label: 'Open solicitations', raw: live.open, fmt: fmtInt, noun: 'open solicitations' },
     {
       key: 'posted',
-      label: live.postedOn ? `Posted ${monthDay(live.postedOn)}` : 'Posted on the newest day',
+      label: 'Posted in the last 7 days',
       raw: live.posted,
       fmt: fmtInt,
-      noun: 'posted on the newest day',
+      noun: 'posted in the last 7 days',
     },
     { key: 'closing7', label: 'Closing in the next 7 days', raw: live.closing7, fmt: fmtInt, noun: 'closing within 7 days' },
     { key: 'awards7', label: 'Award dollars, last 7 days', raw: live.awards7, fmt: fmtUsd, noun: 'in award dollars over the prior 7 days' },

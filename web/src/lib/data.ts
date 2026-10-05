@@ -588,8 +588,7 @@ async function loadVizData(pool: pgTypes.Pool): Promise<SiteViz> {
               AND (s.fsc IS NULL OR s.fsc ~ '^[0-9]{4}$'))::int AS open,
          (SELECT max(issued_on)::text FROM pub.solicitations WHERE source = 'dibbs_rfq') AS posted_on,
          (SELECT count(*) FROM pub.solicitations s
-            WHERE s.issued_on = (SELECT max(issued_on) FROM pub.solicitations WHERE source = 'dibbs_rfq')
-              AND s.source = 'dibbs_rfq')::int AS posted,
+            WHERE s.source = 'dibbs_rfq' AND s.issued_on >= CURRENT_DATE - 7)::int AS posted,
          (SELECT count(*) FROM pub.solicitations s
             WHERE s.status = 'open' AND s.return_by >= CURRENT_DATE AND s.return_by < CURRENT_DATE + 7
               AND (s.fsc IS NULL OR s.fsc ~ '^[0-9]{4}$'))::int AS closing7,

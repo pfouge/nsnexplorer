@@ -190,7 +190,7 @@ export function evaluateSource(source, row, now = new Date()) {
 /**
  * Upserts today's headline counts into pub.daily_stats (migration 0008) so
  * the site can draw trend lines. Same definitions the site's headline tiles
- * use: "open" means status open and not past its return-by date; product
+ * use ("posted" = DIBBS solicitations issued in the last 7 days): "open" means status open and not past its return-by date; product
  * solicitations only (4-digit class or uncoded), service notices counted
  * separately. A failure here is logged and never fails the freshness run.
  */
@@ -204,8 +204,7 @@ export async function recordDailyStats(pool) {
             WHERE s.status = 'open' AND (s.return_by IS NULL OR s.return_by >= CURRENT_DATE)
               AND (s.fsc IS NULL OR s.fsc ~ '^[0-9]{4}$')),
          (SELECT count(*) FROM pub.solicitations s
-            WHERE s.issued_on = (SELECT max(issued_on) FROM pub.solicitations WHERE source = 'dibbs_rfq')
-              AND s.source = 'dibbs_rfq'),
+            WHERE s.source = 'dibbs_rfq' AND s.issued_on >= CURRENT_DATE - 7),
          (SELECT count(*) FROM pub.solicitations s
             WHERE s.status = 'open' AND s.return_by >= CURRENT_DATE AND s.return_by < CURRENT_DATE + 7
               AND (s.fsc IS NULL OR s.fsc ~ '^[0-9]{4}$')),

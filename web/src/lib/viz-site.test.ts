@@ -57,7 +57,7 @@ test('tiles: no sparkline or delta below 7 rows, both with 10', () => {
   const few = buildTiles(live, days(6));
   assert.ok(few.every((t) => t.spark === null && t.delta === null));
   assert.deepEqual(few.map((t) => t.value), ['2,433', '12', '400', '$1.2M']);
-  assert.equal(few[1].label, 'Posted Oct 5');
+  assert.equal(few[1].label, 'Posted in the last 7 days');
   const ten = buildTiles(live, days(10));
   assert.ok(ten.every((t) => t.spark !== null && t.delta !== null));
   assert.match(ten[0].spark!.aria, /last 10 days: 1,000 on Sep 25, 1,090 on Oct 4/);
