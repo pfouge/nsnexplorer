@@ -126,3 +126,14 @@ table.viz-table tr.inc td { background: color-mix(in srgb, var(--v-main) 12%, tr
 .viz-legend i.k-dot { border-radius: 50%; }
 .viz-section { margin: 0 0 2rem; }
 .viz-section > .viz { margin-bottom: 0; }
+/* ---- NSN page charts and the compare tool (agent B) ---- */
+.viz-svg text.vt-lg { font-size: 13px; }
+/* Direct labels sit on top of dots and bands: a card-colored halo keeps them legible in both themes. */
+.viz-svg text.vt-halo { paint-order: stroke; stroke: var(--card); stroke-width: 3px; stroke-linejoin: round; }
+.viz-seg[hidden] { display: none; }
+.viz-sub { font-family: var(--font-display); font-size: 0.95rem; font-weight: 600; margin: 0 0 0.5rem; color: var(--ink); }
+.viz-steps .v.sm { font-size: 0.95rem; }
+.viz-steps { margin-bottom: 0.2rem; }
+.viz-calc-bar { max-width: 340px; margin-top: 0.8rem; }
+.viz-split > *, .viz-grid > * { min-width: 0; }
+table.viz-table td.sup { white-space: normal; min-width: 8rem; overflow-wrap: anywhere; }

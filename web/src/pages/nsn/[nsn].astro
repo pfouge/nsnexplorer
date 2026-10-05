@@ -1,6 +1,8 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import PriceChart from '../../components/PriceChart.astro';
+import NsnPriceHistory from '../../components/viz/NsnPriceHistory.astro';
+import NsnPriceByQty from '../../components/viz/NsnPriceByQty.astro';
+import NsnAwardCalculator from '../../components/viz/NsnAwardCalculator.astro';
 import SignupForm from '../../components/SignupForm.astro';
 import { SITE_URL } from '../../consts';
 import { buildDiagram } from '../../lib/diagram';
@@ -20,6 +22,9 @@ import { loadNsnPage, openSql } from '../../lib/nsn-page';
 import { databaseUrlFrom } from '../../lib/runtime-env';
 import { nsnCopyInputFrom } from '../../lib/nsn-copy';
 import { nsnDescription, nsnSummary, nsnTitle } from '../../lib/seo-copy';
+import { MIN_POINTS_CALC, calcRows } from '../../lib/viz-nsn-calc';
+import { buildPriceHistory } from '../../lib/viz-nsn-price';
+import { buildPriceByQty } from '../../lib/viz-nsn-qty';
 
 // Rendered ON REQUEST by the Cloudflare Pages Function, not at build time.
 // Cloudflare Pages caps a deployment at 20,000 files and the catalog is far
@@ -163,6 +168,15 @@ const description = nsnDescription(copyInput);
 const summary = nsnSummary(copyInput);
 
 const canonicalUrl = `${SITE_URL}/nsn/${dashed}/`;
+
+// Charts: each builder returns null below its minimum, and a null chart (or a
+// section with no charts) renders nothing. Flagged awards use the same
+// withSpikeRatios() result as the highlighted rows in the purchase table.
+const todayIso = new Date().toISOString().slice(0, 10);
+const priceHistory = buildPriceHistory(points, todayIso);
+const priceByQty = buildPriceByQty(points, allSols);
+const calcData = points.length >= MIN_POINTS_CALC ? calcRows(points) : [];
+const hasPriceCharts = priceHistory !== null || priceByQty !== null || calcData.length >= MIN_POINTS_CALC;
 
 const breadcrumbSchema = {
   '@context': 'https://schema.org',
@@ -453,10 +467,13 @@ const datasetSchema = {
     </div>
   </div>
 
-  <section style="margin-top:2rem;">
-    <h3 class="section-title">Price history</h3>
-    <PriceChart points={points} chartId={nsn.nsn} />
-  </section>
+  {hasPriceCharts && (
+    <section style="margin-top:1rem;">
+      {priceHistory && <NsnPriceHistory model={priceHistory} />}
+      {priceByQty && <NsnPriceByQty model={priceByQty} />}
+      {calcData.length >= MIN_POINTS_CALC && <NsnAwardCalculator rows={calcData} />}
+    </section>
+  )}
 
   <section>
     <h3 class="section-title">Purchase history</h3>

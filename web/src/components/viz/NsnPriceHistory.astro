@@ -1,0 +1,13 @@
+---
+// Chart 12. Layout only: the numbers and SVG come from lib/viz-nsn-price.ts.
+import Viz from './Viz.astro';
+import type { PriceHistoryModel } from '../../lib/viz-nsn-price';
+
+interface Props {
+  model: PriceHistoryModel;
+}
+const { model } = Astro.props;
+---
+<Viz title="Price history with quantity and a typical range" question={model.question} legend={model.legend} note={model.note} full>
+  <Fragment set:html={model.svg} />
+</Viz>

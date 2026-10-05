@@ -1,0 +1,38 @@
+---
+// Chart 13: price by order quantity, with the awards near an open solicitation's quantity beside it.
+import Viz from './Viz.astro';
+import { fmtInt, monthYear } from '../../lib/viz';
+import { money } from '../../lib/viz-nsn-common';
+import type { QtyModel } from '../../lib/viz-nsn-qty';
+
+interface Props {
+  model: QtyModel;
+}
+const { model } = Astro.props;
+const showTable = model.openQty !== null && model.near.length > 0;
+---
+<Viz title="Price by order quantity" question={model.question} legend={model.legend} note={model.note} full>
+  <div class:list={{ 'viz-split': showTable }}>
+    <div><Fragment set:html={model.svg} /></div>
+    {showTable && (
+      <div>
+        <h4 class="viz-sub">Awards near {fmtInt(model.openQty!)} units</h4>
+        <div class="viz-table-wrap">
+          <table class="viz-table">
+            <thead><tr><th>Awarded</th><th class="r">Quantity</th><th class="r">Unit price</th><th>Supplier</th></tr></thead>
+            <tbody>
+              {model.near.map((p) => (
+                <tr>
+                  <td>{monthYear(p.awardedOn)}</td>
+                  <td class="r">{fmtInt(p.quantity!)}</td>
+                  <td class="r">{money(p.unitPrice)}</td>
+                  <td class="sup">{p.supplierName ?? (p.cage ? `CAGE ${p.cage}` : '—')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )}
+  </div>
+</Viz>

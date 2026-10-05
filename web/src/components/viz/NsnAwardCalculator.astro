@@ -1,0 +1,93 @@
+---
+// Chart 14: award price calculator. The server renders the default window in
+// full (correct with JavaScript off); the script below only recomputes it,
+// using the same lib/viz-nsn-calc.ts functions, when a window size is chosen.
+import Viz from './Viz.astro';
+import { fmtInt, monthYear } from '../../lib/viz';
+import { money } from '../../lib/viz-nsn-common';
+import { calcOptions, calcStats, rangeBarSvg, rangeLabel, windowLabel, type CalcRow } from '../../lib/viz-nsn-calc';
+
+interface Props {
+  rows: CalcRow[];
+}
+const { rows } = Astro.props;
+const options = calcOptions(rows.length);
+const k = options[0].n;
+const s = calcStats(rows, k);
+---
+<Viz
+  title="Award price calculator"
+  question="What do the last few awards average, and over what range? Choose how many awards to include."
+  note="Shaded rows are included. This reports past awards and does not suggest a price."
+  full
+>
+  <div class="viz-split" data-calc>
+    <div>
+      {options.length > 1 && (
+        <div class="viz-seg" role="group" aria-label="How many recent awards to include" data-calc-seg hidden>
+          {options.map((o) => <button type="button" data-calc-n={o.n} aria-pressed={o.n === k ? 'true' : 'false'}>{o.label}</button>)}
+        </div>
+      )}
+      <div class="viz-steps" aria-live="polite">
+        <div><span class="k">Average unit price</span><span class="v" data-calc-v="avg">{money(s.avg)}</span></div>
+        <div><span class="k">Weighted by quantity</span><span class="v" data-calc-v="weighted">{s.weighted === null ? 'n/a' : money(s.weighted)}</span></div>
+        <div><span class="k">Observed range</span><span class="v" data-calc-v="range">{rangeLabel(s)}</span></div>
+        <div><span class="k">Window covered</span><span class="v sm" data-calc-v="window">{windowLabel(s.from, s.to)}</span></div>
+      </div>
+      <div class="viz-calc-bar" data-calc-bar><Fragment set:html={rangeBarSvg(rows, k)} /></div>
+    </div>
+    <div class="viz-table-wrap">
+      <table class="viz-table" data-calc-table>
+        <thead><tr><th>Awarded</th><th class="r">Quantity</th><th class="r">Unit price</th><th>Supplier</th></tr></thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr class:list={{ inc: i < k }} data-price={r.price} data-qty={r.qty ?? ''} data-date={r.date}>
+              <td>{monthYear(r.date)}</td>
+              <td class="r">{r.qty !== null ? fmtInt(r.qty) : '—'}</td>
+              <td class="r">{money(r.price)}</td>
+              <td class="sup">{r.supplier ?? '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</Viz>
+<script>
+  import { calcStats, rangeBarSvg, rangeLabel, windowLabel, type CalcRow } from '../../lib/viz-nsn-calc';
+  import { money } from '../../lib/viz-nsn-common';
+
+  function init(root: HTMLElement): void {
+    const trs = Array.from(root.querySelectorAll<HTMLTableRowElement>('tbody tr[data-price]'));
+    const rows: CalcRow[] = trs.map((tr) => ({
+      date: tr.dataset.date ?? '',
+      price: Number(tr.dataset.price),
+      qty: tr.dataset.qty ? Number(tr.dataset.qty) : null,
+      supplier: null,
+    }));
+    const seg = root.querySelector<HTMLElement>('[data-calc-seg]');
+    const bar = root.querySelector<HTMLElement>('[data-calc-bar]');
+    const put = (key: string, value: string): void => {
+      const el = root.querySelector<HTMLElement>(`[data-calc-v="${key}"]`);
+      if (el) el.textContent = value;
+    };
+    const apply = (k: number): void => {
+      const s = calcStats(rows, k);
+      put('avg', money(s.avg));
+      put('weighted', s.weighted === null ? 'n/a' : money(s.weighted));
+      put('range', rangeLabel(s));
+      put('window', windowLabel(s.from, s.to));
+      trs.forEach((tr, i) => tr.classList.toggle('inc', i < k));
+      if (bar) bar.innerHTML = rangeBarSvg(rows, k);
+    };
+    if (!seg) return;
+    seg.hidden = false;
+    seg.addEventListener('click', (e) => {
+      const btn = e.target instanceof Element ? e.target.closest<HTMLButtonElement>('button[data-calc-n]') : null;
+      if (!btn) return;
+      seg.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'));
+      apply(Number(btn.dataset.calcN));
+    });
+  }
+  document.querySelectorAll<HTMLElement>('[data-calc]').forEach(init);
+</script>
