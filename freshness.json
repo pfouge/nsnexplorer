@@ -1,15 +1,13 @@
 {
-  "at": "2026-10-04T18:42:50.170Z",
-  "ok": false,
-  "problems": [
-    "price_points stale (never landed, limit 120h)"
-  ],
+  "at": "2026-10-05T00:18:30.947Z",
+  "ok": true,
+  "problems": [],
   "sources": [
     {
       "source": "dibbs_rfq",
       "label": "DIBBS open solicitations (rfq-fast, rfq-reconcile)",
       "last_landed": "2026-10-04T18:41:44.474Z",
-      "age_hours": 0,
+      "age_hours": 5.6,
       "max_age_hours": 48,
       "newest_record": "2026-10-03",
       "rows": 77689,
@@ -20,7 +18,7 @@
       "source": "sam_gov",
       "label": "SAM.gov solicitations (sam-daily)",
       "last_landed": "2026-10-04T18:00:16.576Z",
-      "age_hours": 0.7,
+      "age_hours": 6.3,
       "max_age_hours": 48,
       "newest_record": "2026-10-04",
       "rows": 4666,
@@ -31,7 +29,7 @@
       "source": "dibbs_awards",
       "label": "DIBBS award totals (ingest-daily)",
       "last_landed": "2026-10-03T14:22:18.945Z",
-      "age_hours": 28.3,
+      "age_hours": 33.9,
       "max_age_hours": 120,
       "newest_record": "2026-10-02",
       "rows": 59087,
@@ -40,18 +38,18 @@
     {
       "source": "price_points",
       "label": "Unit prices from award/solicitation join (ingest-daily, rfq-award-join)",
-      "last_landed": null,
-      "age_hours": null,
+      "last_landed": "2026-10-05T00:04:13.175Z",
+      "age_hours": 0.2,
       "max_age_hours": 120,
-      "newest_record": null,
-      "rows": 0,
-      "status": "STALE"
+      "newest_record": "2026-10-02",
+      "rows": 20143,
+      "status": "ok"
     },
     {
       "source": "usaspending",
       "label": "USAspending contract actions (ingest-daily)",
       "last_landed": "2026-10-04T18:05:18.005Z",
-      "age_hours": 0.6,
+      "age_hours": 6.2,
       "max_age_hours": 336,
       "newest_record": "2027-03-22",
       "rows": 97655,
@@ -60,8 +58,8 @@
     {
       "source": "publog",
       "label": "PUB LOG / FLIS enrichment (publog-nightly)",
-      "last_landed": "2026-10-04T18:42:50.275Z",
-      "age_hours": 0,
+      "last_landed": "2026-10-04T18:42:54.150Z",
+      "age_hours": 5.6,
       "max_age_hours": 48,
       "newest_record": null,
       "rows": 80195,
@@ -150,7 +148,7 @@
     {
       "check": "suppliers_without_name",
       "label": "Supplier CAGE stubs awaiting PUB LOG name/address",
-      "count": 1120,
+      "count": 1213,
       "status": "info"
     }
   ],
