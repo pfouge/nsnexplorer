@@ -1,10 +1,10 @@
 {
-  "at": "2026-10-04T18:03:43.996Z",
+  "at": "2026-10-05T18:57:22.921Z",
   "counts": {
-    "pub.nsns": 80188,
-    "pub.part_numbers": 289435,
-    "pub.suppliers": 22273,
-    "pub.nsns with item_name": 80186,
-    "pub.nsns with characteristics": 71090
+    "pub.nsns": 80195,
+    "pub.part_numbers": 289445,
+    "pub.suppliers": 22372,
+    "pub.nsns with item_name": 80192,
+    "pub.nsns with characteristics": 71096
   }
 }
