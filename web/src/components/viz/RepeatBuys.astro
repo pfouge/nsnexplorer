@@ -1,0 +1,61 @@
+---
+// RepeatBuys.astro — "Most re-bought items": top 7 NSNs of a class by
+// solicitations in the last 12 months, and by total quantity (segmented toggle).
+import Viz from './Viz.astro';
+import { el, fmtInt, hbar, svg, text, tip } from '../../lib/viz';
+import { repeatValueLabel, type RepeatRow } from '../../lib/viz-class';
+interface Props {
+  byCount: RepeatRow[];
+  byQty: RepeatRow[];
+  note: string;
+  /** class code, makes the toggle and panel ids unique */
+  fsc: string;
+  full?: boolean;
+}
+const { byCount, byQty, note, fsc, full = false } = Astro.props;
+
+const W = full ? 1160 : 560;
+const NAME_W = full ? 330 : 190;
+const BAR_MAX = full ? 560 : 250;
+const ROW = 30;
+const clip = (s: string, max: number) => (s.length > max ? `${s.slice(0, Math.max(1, max - 1)).trimEnd()}…` : s);
+const maxChars = Math.floor((NAME_W - 10) / 6.1);
+
+function panel(rows: RepeatRow[], mode: 'count' | 'qty'): string {
+  const mx = Math.max(...rows.map((r) => (mode === 'count' ? r.solicitations : r.quantity)));
+  const parts: string[] = [];
+  rows.forEach((r, i) => {
+    const y = i * ROW + 4;
+    const v = mode === 'count' ? r.solicitations : r.quantity;
+    const w = Math.max(3, (v / mx) * BAR_MAX);
+    const label = repeatValueLabel(r, mode);
+    const inner = [
+      el('rect', { x: 0, y: y - 2, width: W, height: ROW - 2, class: 'vf-clear' }),
+      text(0, y + 11, clip(r.name, maxChars), { class: 'vt-ink' }),
+      text(0, y + 24, r.nsn, { class: 'vt-mono', style: 'font-size:10px' }),
+      hbar(NAME_W, y + 4, w, 16, 'vf-main'),
+      text(NAME_W + 6 + w, y + 17, label, { class: 'vt-ink' }),
+    ];
+    parts.push(
+      el('a', {
+        href: `/nsn/${r.nsn}/`,
+        'data-tip': tip(r.name, r.nsn, `${mode === 'count' ? label : `${label} requested`} in 12 months`),
+        'aria-label': `${r.name}, ${r.nsn}: ${label}`,
+      }, inner)
+    );
+  });
+  return svg(W, rows.length * ROW + 6, mode === 'count' ? 'Items ranked by number of solicitations' : 'Items ranked by total quantity requested', parts);
+}
+const group = `rebought-${fsc}`;
+const hasQty = byQty.length >= 2;
+---
+<Viz title="Most re-bought items" question="Which items come up again and again? Ranked by solicitations recorded over the last 12 months." note={note} full={full}>
+  {hasQty && (
+    <div class="viz-seg" data-seg-group={group} role="group" aria-label="Rank items by">
+      <button type="button" aria-pressed="true" data-seg-show={`${group}-count`}>By number of solicitations</button>
+      <button type="button" aria-pressed="false" data-seg-show={`${group}-qty`}>By total quantity</button>
+    </div>
+  )}
+  <div id={`${group}-count`} data-seg-panel={group}><Fragment set:html={panel(byCount, 'count')} /></div>
+  {hasQty && <div id={`${group}-qty`} data-seg-panel={group} hidden><Fragment set:html={panel(byQty, 'qty')} /></div>}
+</Viz>

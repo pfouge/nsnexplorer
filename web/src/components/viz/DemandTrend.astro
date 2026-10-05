@@ -1,0 +1,59 @@
+---
+// DemandTrend.astro — solicitations posted in a class per week (Monday weeks,
+// complete weeks only), with an 8-week trailing average when 12+ weeks exist.
+import Viz from './Viz.astro';
+import { el, fmtInt, linear, monthDay, svg, text, tip, vbar } from '../../lib/viz';
+import { countAxis } from '../../lib/viz-open';
+import { fmtAvg, type WeeklyModel } from '../../lib/viz-class';
+interface Props {
+  model: WeeklyModel;
+}
+const { model } = Astro.props;
+const { weeks, avg } = model;
+
+const W = 1160;
+const H = 230;
+const X0 = 36;
+const BASE = 196;
+const TOP = avg ? 28 : 12;
+const bw = Math.min(56, (W - 44) / weeks.length);
+const X1 = X0 + bw * weeks.length;
+const axis = countAxis(model.max);
+const y = linear(0, axis.top, BASE, TOP);
+
+const parts: string[] = [];
+for (const t of axis.ticks) {
+  parts.push(el('line', { x1: X0, x2: X1 + 8, y1: y(t), y2: y(t), class: 'vs-grid' }));
+  parts.push(text(X0 - 6, y(t) + 4, fmtInt(t), { 'text-anchor': 'end' }));
+}
+weeks.forEach((w, i) => parts.push(vbar(X0 + i * bw + 1, BASE, bw - 2, BASE - y(w.n), 'vf-main')));
+parts.push(el('line', { x1: X0, x2: X1 + 8, y1: BASE, y2: BASE, class: 'vs-axis' }));
+for (const m of model.monthLabels) parts.push(text(X0 + m.i * bw, BASE + 14, m.label));
+if (avg) {
+  const pts = avg.flatMap((a, i) => (a === null ? [] : [`${(X0 + i * bw + bw / 2).toFixed(1)},${y(a).toFixed(1)}`]));
+  const d = pts.map((p, i) => `${i ? 'L' : 'M'}${p}`).join('');
+  parts.push(el('path', { d, class: 'vf-none vs-ink', 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+  const last = avg[avg.length - 1] as number;
+  parts.push(text(X0, 14, `8-week average: ${fmtAvg(last)} a week`, { class: 'vt-ink vt-b' }));
+}
+const focusable = weeks.length < 40;
+weeks.forEach((w, i) =>
+  parts.push(
+    el('rect', {
+      x: X0 + i * bw, y: TOP - 2, width: bw, height: BASE - TOP + 2, class: 'vf-clear', tabindex: focusable ? 0 : null,
+      'data-tip': tip(`Week of ${monthDay(w.week)}`, `${fmtInt(w.n)} ${w.n === 1 ? 'solicitation' : 'solicitations'} posted`),
+      'aria-label': `Week of ${monthDay(w.week)}: ${w.n} solicitations posted`,
+    })
+  )
+);
+const chart = svg(W, H, `Solicitations posted per week, last ${weeks.length} complete weeks`, parts);
+---
+<Viz
+  title="Demand trend"
+  question="Is the government buying more or less from this class? Solicitations posted per week."
+  legend={avg ? [{ key: 'main', label: 'Solicitations posted that week' }, { key: 'ink', label: '8-week average' }] : []}
+  note={model.note}
+  full
+>
+  <Fragment set:html={chart} />
+</Viz>

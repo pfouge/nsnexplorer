@@ -1,0 +1,46 @@
+---
+// ClassWinners.astro — award dollars by supplier in a class over the last 12
+// months: the top six plus everyone else. Names are plain text.
+import Viz from './Viz.astro';
+import { el, fmtInt, fmtUsd, hbar, svg, text, tip } from '../../lib/viz';
+import type { WinnerBar } from '../../lib/viz-class';
+interface Props {
+  bars: WinnerBar[];
+  topThreePct: number;
+  full?: boolean;
+}
+const { bars, topThreePct, full = false } = Astro.props;
+
+const W = full ? 1160 : 560;
+const NAME_W = full ? 300 : 176;
+const BAR_MAX = full ? 600 : 290;
+const ROW = 30;
+const clip = (s: string, max: number) => (s.length > max ? `${s.slice(0, Math.max(1, max - 1)).trimEnd()}…` : s);
+const maxChars = Math.floor((NAME_W - 10) / 6.1);
+const mx = Math.max(...bars.map((b) => b.amount));
+
+const parts: string[] = [];
+bars.forEach((b, i) => {
+  const y = i * ROW + 4;
+  const w = Math.max(3, (b.amount / mx) * BAR_MAX);
+  parts.push(text(0, y + 16, clip(b.label, maxChars), { class: 'vt-ink' }));
+  parts.push(
+    hbar(NAME_W, y + 4, w, 16, b.other ? 'vf-neutral' : 'vf-main', {
+      tabindex: 0,
+      'data-tip': tip(b.label, `${fmtUsd(b.amount)} in awards · ${b.pct}% of the class`),
+      'aria-label': `${b.label}: ${fmtUsd(b.amount)} in awards, ${b.pct}% of the class`,
+    })
+  );
+  parts.push(text(NAME_W + 6 + w, y + 17, fmtUsd(b.amount), { class: 'vt-ink' }));
+});
+const H = bars.length * ROW + 30;
+parts.push(text(0, H - 6, `The top three suppliers hold ${fmtInt(topThreePct)}% of award dollars in this class.`, { class: 'vt-ink vt-b' }));
+const chart = svg(W, H, 'Award dollars by supplier in this class over the last 12 months', parts);
+---
+<Viz
+  title="Who wins in this class"
+  question="Is this class spread across many suppliers or held by a few? Award dollars by supplier, last 12 months."
+  full={full}
+>
+  <Fragment set:html={chart} />
+</Viz>

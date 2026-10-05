@@ -4,7 +4,13 @@ import SignupForm from '../../../components/SignupForm.astro';
 import Pager from '../../../components/Pager.astro';
 import { SITE_URL } from '../../../consts';
 import { loadSiteData, formatUsd, formatDate, type FscConfig } from '../../../lib/data';
-import { buildProductCards, fsgName, isPlaceholderFscName, UNLISTED_FSC_NAME, type ProductCard } from '../../../lib/browse';
+import { buildProductCards, competitionFromAmscAmc, fscDisplayName as classDisplayName, fsgName, isPlaceholderFscName, UNLISTED_FSC_NAME, type ProductCard } from '../../../lib/browse';
+import CompetitionMix from '../../../components/viz/CompetitionMix.astro';
+import RepeatBuys from '../../../components/viz/RepeatBuys.astro';
+import DemandTrend from '../../../components/viz/DemandTrend.astro';
+import ClassWinners from '../../../components/viz/ClassWinners.astro';
+import SupplierMap from '../../../components/viz/SupplierMap.astro';
+import { buildCompetitionRows, buildRepeat, buildStateMap, buildWeekly, buildWinners } from '../../../lib/viz-class';
 import { pageCount, pageItems, pageNumbers, pageParam, pageRange, pageUrl, rangeLabel, pagedDescriptionPrefix, pagedTitle } from '../../../lib/paginate';
 import { memo, release } from '../../../lib/paged-cache';
 import { fscDescription, fscTitle } from '../../../lib/seo-copy';
@@ -58,6 +64,31 @@ const hasRealFscName = !isPlaceholderFscName(fsc.fsc, fsc.name);
 const fscDisplayName = hasRealFscName ? fsc.name : UNLISTED_FSC_NAME;
 
 const openCount = data.openByFsc.get(fsc.fsc)?.solicitations.length ?? 0;
+
+// "Market view" charts: page 1 only. Each chart is null (and renders nothing)
+// when its data is below that chart's minimum.
+const competitionCounts = (code: string, name: string | null) => {
+  const counts = { open: 0, restricted: 0, unknown: 0 };
+  for (const n of data.nsnsByFsc.get(code) ?? []) counts[competitionFromAmscAmc(n)] += 1;
+  return { fsc: code, label: `${code} ${classDisplayName(code, name)}`, ...counts };
+};
+const neighbours = data.deepFscs
+  .filter((f) => f.fsg === fsc.fsg && f.fsc !== fsc.fsc && (data.nsnsByFsc.get(f.fsc)?.length ?? 0) > 0)
+  .sort((a, b) => (data.nsnsByFsc.get(b.fsc)?.length ?? 0) - (data.nsnsByFsc.get(a.fsc)?.length ?? 0) || a.fsc.localeCompare(b.fsc))
+  .map((f) => competitionCounts(f.fsc, f.name));
+const classViz = page === 1 ? data.viz.byClass.get(fsc.fsc) : undefined;
+const market =
+  page === 1
+    ? {
+        competition: buildCompetitionRows(competitionCounts(fsc.fsc, fsc.name), neighbours),
+        repeat: buildRepeat(classViz?.repeat ?? [], data.viz.earliestSolicitation, data.viz.today),
+        trend: buildWeekly(classViz?.weekly ?? [], data.viz.today, data.viz.earliestSolicitation),
+        winners: classViz?.winners ? buildWinners(classViz.winners) : null,
+        states: buildStateMap(classViz?.states ?? []),
+      }
+    : null;
+const hasMarket = market !== null && Object.values(market).some((m) => m !== null);
+
 const copy = { code: fsc.fsc, name: hasRealFscName ? fsc.name : null, nsnCount: total, openCount };
 const title = pagedTitle(fscTitle(copy), page, pages);
 const description = fscDescription(copy, pagedDescriptionPrefix(page, pages));
@@ -124,6 +155,19 @@ const breadcrumbSchema = {
       <div class="label">Total $</div>
     </div>
   </div>
+
+  {hasMarket && market && (
+    <section class="viz-section" aria-labelledby="market-view">
+      <h2 class="section-title" id="market-view">Market view</h2>
+      <div class="viz-grid">
+        {market.competition && <CompetitionMix rows={market.competition} full={!market.repeat} />}
+        {market.repeat && <RepeatBuys byCount={market.repeat.byCount} byQty={market.repeat.byQty} note={market.repeat.note} fsc={fsc.fsc} full={!market.competition} />}
+        {market.trend && <DemandTrend model={market.trend} />}
+        {market.winners && <ClassWinners bars={market.winners.bars} topThreePct={market.winners.topThreePct} full={!market.states} />}
+        {market.states && <SupplierMap model={market.states} full={!market.winners} />}
+      </div>
+    </section>
+  )}
 
   <section class="products-section">
     <h2 class="section-title">Products</h2>

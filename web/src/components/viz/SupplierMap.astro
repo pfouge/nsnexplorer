@@ -1,0 +1,53 @@
+---
+// SupplierMap.astro — state tile map of the suppliers with awards in a class
+// over 24 months, shaded by supplier count.
+import Viz from './Viz.astro';
+import { SEQ_OPACITY, STATE_TILES, el, fmtInt, fmtUsd, seqBin, seqTextClass, svg, text, tip } from '../../lib/viz';
+import type { StateMapModel } from '../../lib/viz-class';
+interface Props {
+  model: StateMapModel;
+  full?: boolean;
+}
+const { model, full = false } = Astro.props;
+
+const W = full ? 1160 : 560;
+const CW = full ? 64 : 48;
+const CH = full ? 40 : 34;
+const GRID_W = 11 * CW;
+const X0 = full ? Math.round((W - GRID_W) / 2) : 10;
+const H = 8 * CH + 44;
+
+const parts: string[] = [];
+for (const [st, r, c] of STATE_TILES) {
+  const v = model.byState.get(st);
+  const n = v?.suppliers ?? 0;
+  const bin = seqBin(n, model.max);
+  const x = X0 + c * CW;
+  const y = 6 + r * CH;
+  const inner = [
+    el('rect', { x, y, width: CW - 3, height: CH - 3, rx: 3, class: n > 0 ? 'vf-main' : 'vf-band', 'fill-opacity': n > 0 ? String(SEQ_OPACITY[bin]) : null }),
+    text(x + (CW - 3) / 2, y + CH / 2 + 3, st, { 'text-anchor': 'middle', class: n > 0 ? (seqTextClass(bin) === 'vt-on' ? 'vt-on' : 'vt-ink vt-b') : 'vt-b' }),
+  ];
+  parts.push(
+    el('g', {
+      role: 'img',
+      'aria-label': `${st}: ${fmtInt(n)} ${n === 1 ? 'supplier' : 'suppliers'}`,
+      'data-tip': tip(st, `${fmtInt(n)} ${n === 1 ? 'supplier' : 'suppliers'} with awards`, `${fmtUsd(v?.amount ?? 0)} awarded`),
+    }, inner)
+  );
+}
+const LX = X0 + GRID_W - 5 * 26 - 4;
+const LY = H - 16;
+SEQ_OPACITY.forEach((o, i) => parts.push(el('rect', { x: LX + i * 26, y: LY, width: 24, height: 10, rx: 2, class: 'vf-main', 'fill-opacity': String(o) })));
+parts.push(text(LX - 4, LY + 9, 'fewer', { 'text-anchor': 'end' }));
+parts.push(text(LX + 5 * 26 + 2, LY + 9, 'more'));
+const chart = svg(W, H, 'Suppliers with awards in this class, by state', parts);
+---
+<Viz
+  title="Where the winning suppliers are"
+  question="Which states are the suppliers that win this class in? One tile per state."
+  note={model.note}
+  full={full}
+>
+  <Fragment set:html={chart} />
+</Viz>

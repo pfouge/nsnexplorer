@@ -1,0 +1,54 @@
+---
+// CompetitionMix.astro — 100% stacked bars of NSNs by competition code: this
+// class (bold) and up to five other classes of the same supply group.
+import Viz from './Viz.astro';
+import { el, fmtInt, svg, text, tip } from '../../lib/viz';
+import type { CompetitionRow } from '../../lib/viz-class';
+interface Props {
+  rows: CompetitionRow[];
+  full?: boolean;
+}
+const { rows, full = false } = Astro.props;
+
+const W = full ? 1160 : 560;
+const X0 = full ? 330 : 196;
+const BW = W - X0 - (full ? 90 : 76);
+const ROW = 34;
+const CLS = { open: 'vf-main', restricted: 'vf-alt', unknown: 'vf-neutral' } as const;
+const clip = (s: string, max: number) => (s.length > max ? `${s.slice(0, Math.max(1, max - 1)).trimEnd()}…` : s);
+const maxChars = Math.floor((X0 - 10) / 6.1);
+
+const parts: string[] = [];
+rows.forEach((r, i) => {
+  const y = i * ROW + 6;
+  parts.push(text(0, y + 15, clip(r.label, maxChars), { class: r.focus ? 'vt-ink vt-b' : 'vt-ink' }));
+  let x = X0;
+  for (const seg of r.segments) {
+    if (seg.count === 0) continue;
+    const w = (seg.count / r.total) * BW;
+    parts.push(
+      el('rect', {
+        x: x + 1, y: y + 2, width: Math.max(0, w - 2), height: 16, rx: 3, class: CLS[seg.key], tabindex: 0,
+        'data-tip': tip(r.label, `${seg.label}: ${seg.pct}% of items (${fmtInt(seg.count)})`),
+        'aria-label': `${r.label}: ${seg.label}, ${seg.pct}% of items`,
+      })
+    );
+    x += w;
+  }
+  parts.push(text(X0 + BW + 8, y + 15, `${r.openPct}% open`, { class: 'vt-ink' }));
+});
+const chart = svg(W, rows.length * ROW + 8, 'Share of items by competition status for this class and others in its supply group', parts);
+---
+<Viz
+  title="Competition mix"
+  question="Can a new supplier win work in this class, or is it locked to listed sources? Share of items by acquisition code."
+  legend={[
+    { key: 'main', label: 'Open competition' },
+    { key: 'alt', label: 'Restricted to listed sources' },
+    { key: 'neutral', label: 'Not coded' },
+  ]}
+  note="From the acquisition method codes on each item record."
+  full={full}
+>
+  <Fragment set:html={chart} />
+</Viz>
