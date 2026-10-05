@@ -5,10 +5,16 @@ import Viz from './Viz.astro';
 import { el, fmtInt, linear, monthDay, svg, text, tip, vbar } from '../../lib/viz';
 import { countAxis } from '../../lib/viz-open';
 import { fmtAvg, type WeeklyModel } from '../../lib/viz-class';
+import EmbedControl from './EmbedControl.astro';
+import type { EmbedInfo } from '../../lib/embed';
 interface Props {
   model: WeeklyModel;
+  /** Adds the Embed button and snippet block (full pages only). */
+  embed?: EmbedInfo;
+  /** Drops the panel frame (inside the embed page, which is the card). */
+  bare?: boolean;
 }
-const { model } = Astro.props;
+const { model, embed, bare = false } = Astro.props;
 const { weeks, avg } = model;
 
 const W = 1160;
@@ -53,7 +59,10 @@ const chart = svg(W, H, `Solicitations posted per week, last ${weeks.length} com
   question="Is the government buying more or less from this class? Solicitations posted per week."
   legend={avg ? [{ key: 'main', label: 'Solicitations posted that week' }, { key: 'ink', label: '8-week average' }] : []}
   note={model.note}
+  panel={!bare}
   full
 >
+  {embed && <EmbedControl slot="actions" part="button" {embed} id="embed-demand" />}
   <Fragment set:html={chart} />
+  {embed && <EmbedControl slot="after" part="panel" {embed} id="embed-demand" />}
 </Viz>

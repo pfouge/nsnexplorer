@@ -1,7 +1,8 @@
 ---
 // Viz.astro — the frame every chart sits in: title, the question it answers,
 // an optional legend, the chart (default slot), and an optional one-line
-// reading. Keeps the anatomy identical across pages.
+// reading. Keeps the anatomy identical across pages. The `actions` slot sits
+// beside the title; the `after` slot sits under the chart and its note.
 interface LegendItem {
   /** one of: main, alt, warn, neutral, flag, ink, band */
   key: string;
@@ -34,4 +35,5 @@ const { title, question, legend = [], note, full = false, panel = true, id } = A
   )}
   <div class="viz-body"><slot /></div>
   {note && <p class="viz-note">{note}</p>}
+  <slot name="after" />
 </figure>

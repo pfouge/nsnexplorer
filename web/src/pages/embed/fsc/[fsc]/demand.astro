@@ -1,0 +1,25 @@
+---
+// /embed/fsc/<code>/demand/ — the class page's Demand trend chart on its own,
+// for use in an iframe. Prerendered; exists only for classes where the chart
+// meets its minimum (buildWeekly returns null below it).
+import EmbedLayout from '../../../../layouts/EmbedLayout.astro';
+import DemandTrend from '../../../../components/viz/DemandTrend.astro';
+import { SITE_URL } from '../../../../consts';
+import { loadSiteData } from '../../../../lib/data';
+import { fscDisplayName } from '../../../../lib/browse';
+import { buildWeekly } from '../../../../lib/viz-class';
+
+export async function getStaticPaths() {
+  const data = await loadSiteData();
+  return data.deepFscs.flatMap((fsc) => {
+    const model = buildWeekly(data.viz.byClass.get(fsc.fsc)?.weekly ?? [], data.viz.today, data.viz.earliestSolicitation);
+    return model ? [{ params: { fsc: fsc.fsc }, props: { model, name: fscDisplayName(fsc.fsc, fsc.name) } }] : [];
+  });
+}
+
+const { fsc } = Astro.params;
+const { model, name } = Astro.props;
+---
+<EmbedLayout title={`FSC ${fsc} ${name}: demand trend`} pageUrl={`${SITE_URL}/fsc/${fsc}/`}>
+  <DemandTrend model={model} bare />
+</EmbedLayout>

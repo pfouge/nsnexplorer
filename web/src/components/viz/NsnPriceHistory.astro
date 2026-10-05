@@ -1,13 +1,21 @@
 ---
 // Chart 12. Layout only: the numbers and SVG come from lib/viz-nsn-price.ts.
 import Viz from './Viz.astro';
+import EmbedControl from './EmbedControl.astro';
+import type { EmbedInfo } from '../../lib/embed';
 import type { PriceHistoryModel } from '../../lib/viz-nsn-price';
 
 interface Props {
   model: PriceHistoryModel;
+  /** Adds the Embed button and snippet block (full pages only). */
+  embed?: EmbedInfo;
+  /** Drops the panel frame (inside the embed page, which is the card). */
+  bare?: boolean;
 }
-const { model } = Astro.props;
+const { model, embed, bare = false } = Astro.props;
 ---
-<Viz title="Price history with quantity and a typical range" question={model.question} legend={model.legend} note={model.note} full>
+<Viz title="Price history with quantity and a typical range" question={model.question} legend={model.legend} note={model.note} panel={!bare} full>
+  {embed && <EmbedControl slot="actions" part="button" {embed} id="embed-price" />}
   <Fragment set:html={model.svg} />
+  {embed && <EmbedControl slot="after" part="panel" {embed} id="embed-price" />}
 </Viz>

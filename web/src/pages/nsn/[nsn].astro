@@ -27,6 +27,7 @@ import { nsnCopyInputFrom } from '../../lib/nsn-copy';
 import { nsnDescription, nsnSummary, nsnTitle } from '../../lib/seo-copy';
 import { MIN_POINTS_CALC, calcRows } from '../../lib/viz-nsn-calc';
 import { buildPriceHistory } from '../../lib/viz-nsn-price';
+import { nsnEmbedPath } from '../../lib/embed';
 import { buildPriceByQty } from '../../lib/viz-nsn-qty';
 import { buildBuyingRhythm, type AwardEvent } from '../../lib/viz-nsn-rhythm';
 import { buildTimeToAward } from '../../lib/viz-nsn-timing';
@@ -175,6 +176,12 @@ const description = nsnDescription(copyInput);
 const summary = nsnSummary(copyInput);
 
 const canonicalUrl = `${SITE_URL}/nsn/${dashed}/`;
+// The price history's Embed control.
+const priceEmbed = {
+  src: `${SITE_URL}${nsnEmbedPath(dashed)}`,
+  pageUrl: canonicalUrl,
+  title: `${dashed} ${nsn.itemName ?? ''} price history, NSN Explorer`.replace(/\s+/g, ' '),
+};
 
 // Charts: each builder returns null below its minimum, and a null chart (or a
 // section with no charts) renders nothing. Flagged awards use the same
@@ -496,7 +503,7 @@ const datasetSchema = {
 
   {hasPriceCharts && (
     <section style="margin-top:1rem;">
-      {priceHistory && <NsnPriceHistory model={priceHistory} />}
+      {priceHistory && <NsnPriceHistory model={priceHistory} embed={priceEmbed} />}
       {priceByQty && <NsnPriceByQty model={priceByQty} />}
       {calcData.length >= MIN_POINTS_CALC && <NsnAwardCalculator rows={calcData} />}
     </section>

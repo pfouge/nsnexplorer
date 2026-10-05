@@ -18,11 +18,9 @@ interface Props {
   itemList?: { name: string; items: { name: string; url: string }[] };
   faq?: { question: string; answer: string }[];
   headLinks?: { rel: string; href: string; type?: string }[];
-  /** The demand tape under the header; false for embeddable pages. */
-  tape?: boolean;
 }
 
-const { tape = true, ...seoProps } = Astro.props;
+const seoProps = Astro.props;
 const year = new Date().getFullYear();
 ---
 
@@ -95,7 +93,7 @@ const year = new Date().getFullYear();
       </div>
     </header>
 
-    {tape && <div class="viz-tape" id="demand-tape" role="region" hidden aria-label="Newest solicitations"></div>}
+    <div class="viz-tape" id="demand-tape" role="region" hidden aria-label="Newest solicitations"></div>
 
     <main id="main-content" tabindex="-1">
       <div class="container">

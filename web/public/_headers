@@ -11,6 +11,14 @@
   # (rule below overrides this for that path).
   Cache-Control: public, max-age=0, s-maxage=120, must-revalidate
 
+/embed/*
+  # Embeddable charts: frameable by any site. Pages joins the headers of every
+  # matching rule, so the site-wide X-Frame-Options and CSP are detached here
+  # and one CSP (identical except frame-ancestors) is set in their place.
+  ! X-Frame-Options
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors *; img-src 'self' data: https://www.googletagmanager.com https://*.google-analytics.com; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com; form-action 'self'; upgrade-insecure-requests
+
 /_astro/*
   Cache-Control: public, max-age=31536000, immutable
 

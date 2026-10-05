@@ -1,0 +1,65 @@
+---
+// EmbedLayout.astro — a bare page for use inside an iframe on other sites:
+// the chart, an "Updated" date and a link back to the full page. No site
+// header, footer, tape, freshness strip or analytics. Not indexed; its
+// canonical is the full page the chart comes from.
+import '../styles/global.css';
+import '../styles/viz.css';
+import { embedDate } from '../lib/embed';
+
+interface Props {
+  title: string;
+  /** Absolute URL of the full page this chart comes from. */
+  pageUrl: string;
+  /** Date shown as "Updated": the build date (prerendered) or the request date (on demand). */
+  updated?: Date;
+}
+const { title, pageUrl, updated = new Date() } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, follow" />
+    <meta name="color-scheme" content="light dark" />
+    <title>{title}</title>
+    <link rel="canonical" href={pageUrl} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <script is:inline>
+      // Follow the viewer's color scheme (default light); no stored choice inside a frame.
+      (() => {
+        const mq = matchMedia('(prefers-color-scheme: dark)');
+        const apply = () => {
+          if (mq.matches) document.documentElement.dataset.theme = 'dark';
+          else delete document.documentElement.dataset.theme;
+        };
+        apply();
+        mq.addEventListener('change', apply);
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+    />
+  </head>
+  <body class="embed-page">
+    <main class="embed-main">
+      <slot />
+    </main>
+    <p class="embed-foot">
+      <span>Updated {embedDate(updated)}</span>
+      <span>Source: <a href={pageUrl} target="_blank" rel="noopener">NSN Explorer</a></span>
+    </p>
+    <script>
+      import '../scripts/viz.ts';
+      // In a very narrow frame the chart scrolls inside itself; start at the newest data (the right end).
+      document.querySelectorAll('.viz-body').forEach((b) => {
+        b.scrollLeft = b.scrollWidth;
+      });
+    </script>
+  </body>
+</html>

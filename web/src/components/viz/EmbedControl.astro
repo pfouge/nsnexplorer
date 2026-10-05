@@ -1,0 +1,32 @@
+---
+// EmbedControl.astro — the "Embed" button (part="button", goes in the <Viz>
+// `actions` slot) and the hidden snippet block it toggles (part="panel", goes
+// in the <Viz> `after` slot, i.e. under the chart). One shared component for
+// every embeddable chart; the snippet text is built in lib/embed.ts.
+import { embedSnippet, type EmbedInfo } from '../../lib/embed';
+
+interface Props {
+  part: 'button' | 'panel';
+  embed: EmbedInfo;
+  /** Distinguishes controls if a page ever carries more than one. */
+  id?: string;
+}
+const { part, embed, id = 'embed' } = Astro.props;
+const panelId = `${id}-panel`;
+const preId = `${id}-snippet`;
+---
+{part === 'button' && (
+  <button type="button" class="viz-embed-btn" data-embed-toggle aria-expanded="false" aria-controls={panelId}>Embed</button>
+)}
+{part === 'panel' && (
+  <div class="viz-embed" id={panelId} hidden>
+    <div class="viz-embed-top">
+      <span>Paste this into your page. It stays current and links back here.</span>
+      <button type="button" class="viz-embed-copy" data-embed-copy={preId}>Copy</button>
+    </div>
+    <pre id={preId} tabindex="0">{embedSnippet(embed)}</pre>
+  </div>
+)}
+<script>
+  import '../../scripts/embed.ts';
+</script>

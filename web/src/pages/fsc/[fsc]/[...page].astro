@@ -14,6 +14,7 @@ import { buildCompetitionRows, buildRepeat, buildStateMap, buildWeekly, buildWin
 import { pageCount, pageItems, pageNumbers, pageParam, pageRange, pageUrl, rangeLabel, pagedDescriptionPrefix, pagedTitle } from '../../../lib/paginate';
 import { memo, release } from '../../../lib/paged-cache';
 import { fscDescription, fscTitle } from '../../../lib/seo-copy';
+import { fscEmbedPath } from '../../../lib/embed';
 
 // /fsc/<code>/ is page 1; /fsc/<code>/page/<n>/ holds the next PAGE_SIZE cards.
 export async function getStaticPaths() {
@@ -93,6 +94,12 @@ const copy = { code: fsc.fsc, name: hasRealFscName ? fsc.name : null, nsnCount: 
 const title = pagedTitle(fscTitle(copy), page, pages);
 const description = fscDescription(copy, pagedDescriptionPrefix(page, pages));
 const canonicalUrl = `${SITE_URL}${pageUrl(baseUrl, page)}`;
+// The Demand trend's Embed control (page 1 only, like the chart itself).
+const trendEmbed = {
+  src: `${SITE_URL}${fscEmbedPath(fsc.fsc)}`,
+  pageUrl: `${SITE_URL}${baseUrl}`,
+  title: `FSC ${fsc.fsc} ${fscDisplayName} demand trend, NSN Explorer`,
+};
 const headLinks = [
   ...(page === 1 ? [{ rel: 'alternate', type: 'text/markdown', href: `${SITE_URL}/fsc/${fsc.fsc}.md` }] : []),
   ...(page > 1 ? [{ rel: 'prev', href: `${SITE_URL}${pageUrl(baseUrl, page - 1)}` }] : []),
@@ -162,7 +169,7 @@ const breadcrumbSchema = {
       <div class="viz-grid">
         {market.competition && <CompetitionMix rows={market.competition} full={!market.repeat} />}
         {market.repeat && <RepeatBuys byCount={market.repeat.byCount} byQty={market.repeat.byQty} note={market.repeat.note} fsc={fsc.fsc} full={!market.competition} />}
-        {market.trend && <DemandTrend model={market.trend} />}
+        {market.trend && <DemandTrend model={market.trend} embed={trendEmbed} />}
         {market.winners && <ClassWinners bars={market.winners.bars} topThreePct={market.winners.topThreePct} full={!market.states} />}
         {market.states && <SupplierMap model={market.states} full={!market.winners} />}
       </div>

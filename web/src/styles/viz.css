@@ -161,3 +161,35 @@ table.viz-table td.sup { white-space: normal; min-width: 8rem; overflow-wrap: an
   .viz-body > .viz-svg.viz-wide, .viz-body > * > .viz-svg.viz-wide { min-width: 900px; max-width: none; }
   .viz-body > .viz-svg:not(.viz-wide) { min-width: 440px; max-width: none; }
 }
+
+/* Embeds (EmbedLayout): a bare card for use inside an iframe. */
+body.embed-page { background: var(--card); padding: 12px; font-size: 16px; overflow-x: hidden; }
+.embed-main { min-width: 0; padding: 0; }
+/* The frame is the card, so the chart fits its width instead of scrolling
+   sideways (nothing may sit off-screen in a 640px frame); marks and labels
+   are drawn a little larger to stay readable at that scale. */
+.embed-page .viz-body { overflow: visible; }
+.embed-page .viz-body > .viz-svg, .embed-page .viz-body > .viz-svg.viz-wide { min-width: 0; max-width: 100%; }
+@media (max-width: 440px) {
+  /* Very narrow frames: keep marks legible and scroll inside the chart, newest data first (see EmbedLayout). */
+  .embed-page .viz-body { overflow-x: auto; }
+  .embed-page .viz-body > .viz-svg, .embed-page .viz-body > .viz-svg.viz-wide { min-width: 600px; max-width: none; }
+}
+.embed-page .viz-svg text { font-size: 15px; }
+.embed-page .viz-svg text.vt-lg { font-size: 17px; }
+.embed-page .viz { margin: 0; }
+.embed-page .viz-title { font-size: 1rem; }
+.embed-page .viz-q { font-size: 0.82rem; margin-bottom: 0.4rem; }
+.embed-page .viz-note { font-size: 0.78rem; margin-top: 0.35rem; }
+.embed-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.2rem 1rem; margin: 0.6rem 0 0; font-size: 0.78rem; line-height: 1.4; color: var(--ink-soft); }
+.embed-foot a { color: var(--ink); text-decoration: underline; }
+
+/* The Embed control under a chart on the full pages. */
+.viz-embed-btn { margin-left: auto; font: inherit; font-size: 0.78rem; line-height: 1.2; color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 4px; padding: 0.2rem 0.6rem; cursor: pointer; }
+.viz-embed-btn:hover, .viz-embed-btn[aria-expanded='true'] { background: var(--paper-2); }
+.viz-embed-btn:focus-visible, .viz-embed-copy:focus-visible { outline: 2px solid var(--v-main); outline-offset: 2px; }
+.viz-embed { margin-top: 0.7rem; padding-top: 0.7rem; border-top: 1px solid var(--line); }
+.viz-embed[hidden] { display: none; }
+.viz-embed-top { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; margin-bottom: 0.4rem; font-size: 0.84rem; color: var(--ink-soft); }
+.viz-embed-copy { font: inherit; font-size: 0.78rem; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 4px; padding: 0.2rem 0.7rem; cursor: pointer; }
+.viz-embed pre { margin: 0; padding: 0.7rem 0.8rem; background: var(--paper-2); border: 1px solid var(--line); border-radius: 4px; font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; user-select: all; }

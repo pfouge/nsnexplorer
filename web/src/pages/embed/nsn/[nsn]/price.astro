@@ -1,0 +1,51 @@
+---
+// /embed/nsn/<dashed>/price/ — the NSN page's price history chart on its own,
+// for use in an iframe. Rendered on request with the same loader, validation
+// and edge cache as /nsn/<dashed>/; plain-text 404 for an unknown NSN or an
+// item with too few priced awards for the chart.
+import EmbedLayout from '../../../../layouts/EmbedLayout.astro';
+import NsnPriceHistory from '../../../../components/viz/NsnPriceHistory.astro';
+import { SITE_URL } from '../../../../consts';
+import { toDashedNsn, undashNsn, withSpikeRatios } from '../../../../lib/shared';
+import { loadNsnPage, openSql } from '../../../../lib/nsn-page';
+import { databaseUrlFrom } from '../../../../lib/runtime-env';
+import { buildPriceHistory } from '../../../../lib/viz-nsn-price';
+
+export const prerender = false;
+
+const notFound = () =>
+  new Response('Not found', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'public, s-maxage=300' } });
+
+const dashedParam = Astro.params.nsn ?? '';
+const nsnCode = undashNsn(dashedParam);
+// One URL per item: bare 13-digit codes redirect to the dashed form.
+if (/^\d{13}$/.test(dashedParam)) {
+  return Astro.redirect(`/embed/nsn/${toDashedNsn(dashedParam)}/price/`, 301);
+}
+
+const databaseUrl = databaseUrlFrom(Astro);
+if (!databaseUrl) {
+  return new Response('Database is not configured for this environment.', { status: 503 });
+}
+const sql = openSql(databaseUrl);
+let page;
+try {
+  page = await loadNsnPage(sql, nsnCode);
+} finally {
+  await sql.end({ timeout: 1 }).catch(() => {});
+}
+if (!page) return notFound();
+
+const now = new Date();
+const todayIso = now.toISOString().slice(0, 10);
+const model = buildPriceHistory(withSpikeRatios(page.pricePoints), todayIso);
+if (!model) return notFound();
+
+Astro.response.headers.set('Cache-Control', 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400');
+
+const dashed = toDashedNsn(page.nsn.nsn);
+const label = page.nsn.itemName ? `${dashed} ${page.nsn.itemName}` : dashed;
+---
+<EmbedLayout title={`${label}: price history`} pageUrl={`${SITE_URL}/nsn/${dashed}/`} updated={now}>
+  <NsnPriceHistory model={model} bare />
+</EmbedLayout>
