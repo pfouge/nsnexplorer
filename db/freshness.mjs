@@ -187,6 +187,46 @@ export function evaluateSource(source, row, now = new Date()) {
   };
 }
 
+/**
+ * Upserts today's headline counts into pub.daily_stats (migration 0008) so
+ * the site can draw trend lines. Same definitions the site's headline tiles
+ * use: "open" means status open and not past its return-by date; product
+ * solicitations only (4-digit class or uncoded), service notices counted
+ * separately. A failure here is logged and never fails the freshness run.
+ */
+export async function recordDailyStats(pool) {
+  try {
+    await pool.query(
+      `INSERT INTO pub.daily_stats
+         (day, open_solicitations, posted, closing_7d, award_dollars_7d, open_service_notices)
+       SELECT CURRENT_DATE,
+         (SELECT count(*) FROM pub.solicitations s
+            WHERE s.status = 'open' AND (s.return_by IS NULL OR s.return_by >= CURRENT_DATE)
+              AND (s.fsc IS NULL OR s.fsc ~ '^[0-9]{4}$')),
+         (SELECT count(*) FROM pub.solicitations s
+            WHERE s.issued_on = (SELECT max(issued_on) FROM pub.solicitations WHERE source = 'dibbs_rfq')
+              AND s.source = 'dibbs_rfq'),
+         (SELECT count(*) FROM pub.solicitations s
+            WHERE s.status = 'open' AND s.return_by >= CURRENT_DATE AND s.return_by < CURRENT_DATE + 7
+              AND (s.fsc IS NULL OR s.fsc ~ '^[0-9]{4}$')),
+         (SELECT coalesce(sum(obligation), 0) FROM pub.contract_actions
+            WHERE award_uid LIKE 'DIBBS-%' AND action_date >= CURRENT_DATE - 7),
+         (SELECT count(*) FROM pub.solicitations s
+            WHERE s.source = 'sam_gov' AND s.status = 'open'
+              AND (s.return_by IS NULL OR s.return_by >= CURRENT_DATE) AND s.fsc ~ '^[A-Za-z]')
+       ON CONFLICT (day) DO UPDATE SET
+         open_solicitations = EXCLUDED.open_solicitations,
+         posted = EXCLUDED.posted,
+         closing_7d = EXCLUDED.closing_7d,
+         award_dollars_7d = EXCLUDED.award_dollars_7d,
+         open_service_notices = EXCLUDED.open_service_notices,
+         recorded_at = now()`
+    );
+  } catch (err) {
+    console.error(`freshness: could not record daily stats (${err.code || err.message})`);
+  }
+}
+
 async function main() {
   const argv = process.argv.slice(2);
   const outIdx = argv.indexOf('--out');
@@ -218,6 +258,8 @@ async function main() {
     `SELECT f.render_depth, count(DISTINCT f.fsc) AS classes, count(n.nsn) AS nsns
      FROM pub.fsc f LEFT JOIN pub.nsns n ON n.fsc = f.fsc GROUP BY 1 ORDER BY 1`
   );
+
+  await recordDailyStats(pool);
 
   await closePool();
 

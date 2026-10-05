@@ -1,0 +1,37 @@
+---
+// Viz.astro — the frame every chart sits in: title, the question it answers,
+// an optional legend, the chart (default slot), and an optional one-line
+// reading. Keeps the anatomy identical across pages.
+interface LegendItem {
+  /** one of: main, alt, warn, neutral, flag, ink, band */
+  key: string;
+  label: string;
+  /** optional shape modifier: 'diamond' | 'ring' */
+  shape?: string;
+}
+interface Props {
+  title: string;
+  question?: string;
+  legend?: LegendItem[];
+  note?: string;
+  full?: boolean;
+  panel?: boolean;
+  id?: string;
+}
+const { title, question, legend = [], note, full = false, panel = true, id } = Astro.props;
+---
+<figure class:list={['viz', { full, 'viz-panel': panel }]} id={id}>
+  <figcaption>
+    <div class="viz-head"><h3 class="viz-title">{title}</h3><slot name="actions" /></div>
+    {question && <p class="viz-q">{question}</p>}
+  </figcaption>
+  {legend.length >= 2 && (
+    <ul class="viz-legend">
+      {legend.map((l) => (
+        <li><i class:list={[`k-${l.key}`, l.shape && `k-${l.shape}`]}></i>{l.label}</li>
+      ))}
+    </ul>
+  )}
+  <slot />
+  {note && <p class="viz-note">{note}</p>}
+</figure>

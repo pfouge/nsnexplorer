@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import '../styles/viz.css';
 import SEO from '../components/SEO.astro';
 import { SITE_NAME } from '../consts';
 
@@ -162,6 +163,9 @@ const year = new Date().getFullYear();
           sync();
         });
       })();
+    </script>
+      <script>
+      import '../scripts/viz.ts';
     </script>
   </body>
 </html>

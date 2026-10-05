@@ -1,0 +1,115 @@
+/* viz.css — styling for the server-rendered charts built with lib/viz.ts.
+   Chart colors are their own tokens (validated for color-vision separation
+   on both card surfaces), not the page accent, so the dark theme gets
+   properly stepped values rather than a flip. */
+:root {
+  --v-main: #0E7C4D;
+  --v-alt: #1D4AAE;
+  --v-warn: #B45309;
+  --v-neutral: #A8A498;
+  --v-flag: #C0392B;
+  --v-on: #FFFFFF;
+  --v-grid: rgba(17, 17, 20, 0.09);
+  --v-axis: rgba(17, 17, 20, 0.3);
+  --v-band: rgba(17, 17, 20, 0.07);
+}
+[data-theme='dark'] {
+  --v-main: #18A65B;
+  --v-alt: #5B8DEF;
+  --v-warn: #C27A1F;
+  --v-neutral: #6F6E68;
+  --v-flag: #E2604F;
+  --v-on: #0E0F10;
+  --v-grid: rgba(242, 240, 234, 0.1);
+  --v-axis: rgba(242, 240, 234, 0.34);
+  --v-band: rgba(242, 240, 234, 0.09);
+}
+
+.viz { margin: 0 0 1.6rem; min-width: 0; }
+.viz-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3rem 0.8rem; margin-bottom: 0.2rem; }
+.viz-title { font-family: var(--font-display); font-size: 1.12rem; font-weight: 600; letter-spacing: -0.01em; margin: 0; color: var(--ink); }
+.viz-q { color: var(--ink-soft); font-size: 0.9rem; margin: 0 0 0.6rem; max-width: 70ch; }
+.viz-note { color: var(--ink-soft); font-size: 0.84rem; margin: 0.5rem 0 0; max-width: 78ch; }
+.viz-panel { background: var(--card); border: 1px solid var(--line); border-radius: 4px; padding: 1rem 1.1rem; min-width: 0; }
+.viz-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.viz-grid > .viz { margin: 0; }
+.viz-grid > .viz.full { grid-column: 1 / -1; }
+.viz-split { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 1.1rem; align-items: start; }
+@media (max-width: 820px) { .viz-grid, .viz-split { grid-template-columns: 1fr; } }
+
+.viz-svg { display: block; overflow: visible; max-width: 100%; height: auto; }
+.viz-svg text { font-family: var(--font-sans); font-size: 11px; fill: var(--ink-soft); }
+.viz-svg text.vt-ink { fill: var(--ink); }
+.viz-svg text.vt-b { font-weight: 600; }
+.viz-svg text.vt-mono { font-family: var(--font-mono); }
+.viz-svg text.vt-on { fill: var(--v-on); font-weight: 600; }
+.viz-svg a { cursor: pointer; }
+.viz-svg [data-tip] { cursor: default; }
+.viz-svg a [data-tip], .viz-svg a[data-tip] { cursor: pointer; }
+
+.vf-main { fill: var(--v-main); } .vf-alt { fill: var(--v-alt); } .vf-warn { fill: var(--v-warn); }
+.vf-neutral { fill: var(--v-neutral); } .vf-flag { fill: var(--v-flag); } .vf-ink { fill: var(--ink); }
+.vf-card { fill: var(--card); } .vf-band { fill: var(--v-band); } .vf-none { fill: none; } .vf-clear { fill: transparent; }
+.vs-main { stroke: var(--v-main); } .vs-alt { stroke: var(--v-alt); } .vs-warn { stroke: var(--v-warn); }
+.vs-ink { stroke: var(--ink); } .vs-grid { stroke: var(--v-grid); } .vs-axis { stroke: var(--v-axis); }
+.vring { stroke: var(--card); stroke-width: 2; }
+
+.viz-legend { display: flex; flex-wrap: wrap; gap: 0.2rem 0.9rem; font-size: 0.8rem; color: var(--ink-soft); margin: 0 0 0.5rem; padding: 0; list-style: none; }
+.viz-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.viz-legend i.k-main { background: var(--v-main); } .viz-legend i.k-alt { background: var(--v-alt); }
+.viz-legend i.k-warn { background: var(--v-warn); } .viz-legend i.k-neutral { background: var(--v-neutral); }
+.viz-legend i.k-flag { background: var(--v-flag); } .viz-legend i.k-ink { background: var(--ink); } .viz-legend i.k-band { background: var(--v-band); border: 1px solid var(--line); }
+.viz-legend i.k-diamond { transform: rotate(45deg) scale(0.85); border-radius: 1px; }
+.viz-legend i.k-ring { background: transparent; border: 2px solid var(--v-alt); border-radius: 50%; }
+
+.viz-seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; margin: 0 0 0.5rem; }
+.viz-seg button { font: inherit; font-size: 0.8rem; border: 0; background: var(--card); color: var(--ink-soft); padding: 0.25rem 0.7rem; cursor: pointer; }
+.viz-seg button[aria-pressed='true'] { background: var(--inv-bg); color: var(--inv-text); }
+.viz-seg button:focus-visible { outline: 2px solid var(--v-main); outline-offset: -2px; }
+
+#viz-tip { position: fixed; z-index: 60; pointer-events: none; background: var(--inv-bg); color: var(--inv-text); font-size: 0.8rem; line-height: 1.35; padding: 7px 9px; border-radius: 4px; max-width: 260px; opacity: 0; transition: opacity 0.08s; white-space: pre-line; }
+#viz-tip b { font-weight: 600; display: block; }
+
+.viz-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.75rem; }
+.viz-tile { border: 1px solid var(--line); border-radius: 4px; padding: 0.75rem 0.9rem; background: var(--card); min-width: 0; }
+.viz-tile .k { font-size: 0.8rem; color: var(--ink-soft); }
+.viz-tile .v { font-family: var(--font-display); font-size: 1.7rem; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.viz-tile .d { font-size: 0.8rem; color: var(--ink-soft); }
+@media (max-width: 820px) { .viz-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.viz-table-wrap { overflow-x: auto; }
+table.viz-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; font-variant-numeric: tabular-nums; }
+table.viz-table th { font-family: var(--font-mono); font-size: 0.68rem; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); background: transparent; position: static; white-space: nowrap; }
+table.viz-table td { padding: 5px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.viz-table .r { text-align: right; }
+table.viz-table tr.inc td { background: color-mix(in srgb, var(--v-main) 12%, transparent); }
+
+.viz-steps { display: grid; gap: 0.5rem; }
+.viz-steps > div { border: 1px solid var(--line); border-radius: 4px; padding: 0.5rem 0.7rem; background: var(--paper); display: flex; justify-content: space-between; align-items: baseline; gap: 0.7rem; }
+.viz-steps .k { font-size: 0.78rem; color: var(--ink-soft); }
+.viz-steps .v { font-family: var(--font-display); font-size: 1.1rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.viz-pill { font-size: 0.7rem; border: 1px solid var(--line); border-radius: 999px; padding: 0 7px; color: var(--ink-soft); white-space: nowrap; }
+.viz-pill.yes { border-color: color-mix(in srgb, var(--v-main) 45%, transparent); color: var(--v-main); background: color-mix(in srgb, var(--v-main) 10%, transparent); }
+.viz-dots { display: flex; gap: 4px; flex-wrap: wrap; }
+.viz-dots i { width: 12px; height: 12px; border-radius: 50%; background: var(--v-main); }
+.viz-dots i.old { background: var(--v-neutral); }
+
+.viz-tape { overflow: hidden; background: var(--inv-bg); color: var(--inv-text); white-space: nowrap; }
+.viz-tape .run { display: inline-block; padding: 0.45rem 0; animation: viz-tape 80s linear infinite; }
+.viz-tape:hover .run, .viz-tape:focus-within .run { animation-play-state: paused; }
+.viz-tape a { color: inherit; margin: 0 1.3rem; font-size: 0.82rem; }
+.viz-tape em { font-style: normal; font-family: var(--font-mono); font-weight: 600; }
+.viz-tape .new { color: #6FD6A6; } .viz-tape .soon { color: #F0B45E; } .viz-tape small { color: var(--inv-soft); }
+@keyframes viz-tape { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .viz-tape .run { animation: none; } .viz-tape { overflow-x: auto; } }
+
+.viz-fresh { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.6rem; }
+.viz-fresh > div { border: 1px solid var(--line); border-radius: 4px; padding: 0.55rem 0.7rem; min-width: 0; }
+.viz-fresh .n { font-weight: 600; font-size: 0.82rem; }
+.viz-fresh .a { font-family: var(--font-mono); font-size: 0.74rem; color: var(--ink-soft); margin: 2px 0 6px; }
+.viz-fresh .m { height: 6px; border-radius: 3px; background: var(--v-band); overflow: hidden; }
+.viz-fresh .m i { display: block; height: 100%; border-radius: 3px; background: var(--v-main); }
+.viz-fresh .late .m i { background: var(--v-warn); }
+.viz-fresh .s { font-size: 0.74rem; color: var(--ink-soft); margin-top: 5px; }
+@media (max-width: 820px) { .viz-fresh { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
