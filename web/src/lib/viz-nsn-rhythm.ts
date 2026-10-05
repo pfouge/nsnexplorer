@@ -140,7 +140,7 @@ export function buildBuyingRhythm(sols: SolIn[], awards: AwardEvent[], todayIso:
   const legend: LegendItem[] = [{ key: 'alt', shape: 'ring', label: 'Solicitation posted' }];
   if (awards.length > 0) legend.push({ key: 'main', label: 'Award made' });
   return {
-    svg: svg(W, H, `Timeline of ${buys.length} solicitation rounds and ${awards.length} awards for this item`, parts),
+    svg: svg(W, H, `Timeline of ${buys.length} solicitation rounds and ${awards.length} awards for this item`, parts, { latestAtEnd: true }),
     legend,
     question: 'How often does the government buy this item, and how long since the last time? Every solicitation and award on one line.',
     note: 'Dot size shows quantity. A faint bar joins a solicitation to the award made against it.',

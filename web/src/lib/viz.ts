@@ -44,10 +44,13 @@ export function text(x: number, y: number, str: unknown, attrs: Attrs = {}): str
 }
 
 /** Root <svg>; width is 100% of its container, height follows the viewBox. */
-export function svg(w: number, h: number, label: string, children: string | string[]): string {
+export function svg(w: number, h: number, label: string, children: string | string[], opts: { latestAtEnd?: boolean } = {}): string {
   // viz-wide charts keep a readable minimum width on phones and scroll
   // sideways inside their frame (see .viz-body in viz.css).
-  return el('svg', { viewBox: `0 0 ${w} ${h}`, width: '100%', role: 'img', 'aria-label': label, class: w > 700 ? 'viz-svg viz-wide' : 'viz-svg' }, children);
+  return el('svg', { viewBox: `0 0 ${w} ${h}`, width: '100%', role: 'img', 'aria-label': label, class: w > 700 ? 'viz-svg viz-wide' : 'viz-svg',
+    // Time series put the newest data at the right; on a phone the frame
+    // scrolls there first (scripts/viz.ts).
+    'data-latest': opts.latestAtEnd ? 'end' : null }, children);
 }
 
 export function round(n: number, dp = 1): number {

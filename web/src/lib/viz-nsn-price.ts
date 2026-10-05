@@ -36,7 +36,11 @@ export function buildPriceHistory(points: AwardIn[], todayIso: string): PriceHis
   const q1 = quantile(sortedPrices, 0.25);
   const med = quantile(sortedPrices, 0.5);
   const q3 = quantile(sortedPrices, 0.75);
-  const axis = axisFor(sortedPrices[sortedPrices.length - 1] || 1);
+  // Scale to the ordinary awards. A flagged award far above them would
+  // otherwise squash everything else into a thin strip at the bottom, so any
+  // flagged award beyond the axis is pinned to the top edge with its price.
+  const ordinary = pts.filter((p) => p.spikeRatio === null).map((p) => p.unitPrice);
+  const axis = axisFor((ordinary.length ? Math.max(...ordinary) : sortedPrices[sortedPrices.length - 1]) || 1);
   const left = Math.max(56, Math.max(...axis.values.map((v) => fmtAxisPrice(v, axis.step).length)) * 6.6 + 14);
   const right = 20;
   const topPad = 24;
@@ -59,7 +63,8 @@ export function buildPriceHistory(points: AwardIn[], todayIso: string): PriceHis
   // The label goes at the first spot (above the band, then higher, then below it) where no dot overlaps it.
   const labelText = `median ${money(med)}, middle half shaded`;
   const lw = labelText.length * 6.4 + 8;
-  const px = pts.map((p) => ({ cx: x(isoMs(p.awardedOn)), cy: y(p.unitPrice), r: dotRadius(p.quantity) }));
+  const yOf = (p: AwardIn): number => (p.unitPrice > axis.top ? topPad - 8 : y(p.unitPrice));
+  const px = pts.map((p) => ({ cx: x(isoMs(p.awardedOn)), cy: yOf(p), r: dotRadius(p.quantity) }));
   const blocked = (lx: number, ly: number): boolean => px.some((d) => d.cx + d.r > lx && d.cx - d.r < lx + lw && d.cy + d.r > ly - 12 && d.cy - d.r < ly + 4);
   const ys = [bandTop - 7, bandTop - 24, bandTop + bandH + 16].filter((v) => v >= 12 && v <= base - 6);
   let labelX = left + 4;
@@ -88,9 +93,10 @@ export function buildPriceHistory(points: AwardIn[], todayIso: string): PriceHis
   const labels: string[] = [];
   for (const p of draw) {
     const cx = x(isoMs(p.awardedOn));
-    const cy = y(p.unitPrice);
+    const cy = yOf(p);
     const r = dotRadius(p.quantity);
     const flagged = p.spikeRatio !== null;
+    const over = p.unitPrice > axis.top;
     const when = monthYear(p.awardedOn);
     const lines = [
       `${money(p.unitPrice)} each`,
@@ -99,7 +105,9 @@ export function buildPriceHistory(points: AwardIn[], todayIso: string): PriceHis
       flagged && `${p.spikeRatio!.toFixed(1)}× the median`,
     ];
     const href = safeUrl(p.sourceUrl);
-    const circle = el('circle', { cx, cy, r, class: `${flagged ? 'vf-flag' : 'vf-main'} vring`, 'fill-opacity': 0.85 });
+    const circle = over
+      ? el('path', { d: `M${cx},${cy - 7}l7,12h-14z`, class: 'vf-flag vring' })
+      : el('circle', { cx, cy, r, class: `${flagged ? 'vf-flag' : 'vf-main'} vring`, 'fill-opacity': 0.85 });
     const a: Attrs = { 'data-tip': tip(...lines), 'aria-label': lines.filter(Boolean).join(', ') };
     parts.push(
       href
@@ -109,7 +117,7 @@ export function buildPriceHistory(points: AwardIn[], todayIso: string): PriceHis
     if (labelled.has(p.id)) {
       const flip = cx > W - 130;
       labels.push(
-        text(flip ? cx - r - 5 : cx + r + 5, cy + 4, `${p.spikeRatio!.toFixed(1)}× median`, { class: 'vt-ink vt-b vt-halo', 'text-anchor': flip ? 'end' : null })
+        text(flip ? cx - (over ? 7 : r) - 5 : cx + (over ? 7 : r) + 5, cy + 4, over ? `${money(p.unitPrice)} · ${p.spikeRatio!.toFixed(1)}× median` : `${p.spikeRatio!.toFixed(1)}× median`, { class: 'vt-ink vt-b vt-halo', 'text-anchor': flip ? 'end' : null })
       );
     }
   }
@@ -123,12 +131,13 @@ export function buildPriceHistory(points: AwardIn[], todayIso: string): PriceHis
   const first = monthYear(pts[0].awardedOn);
   const last = monthYear(pts[pts.length - 1].awardedOn);
   return {
-    svg: svg(W, H, `Unit price of each of ${pts.length} awards, ${first} to ${last}`, parts),
+    svg: svg(W, H, `Unit price of each of ${pts.length} awards, ${first} to ${last}`, parts, { latestAtEnd: true }),
     legend,
     question: `What has the government paid for this item, and was any award out of line? Every award as a dot, ${first} to today.`,
     note:
       `Most awards fall between ${money(q1)} and ${money(q3)}.` +
-      (nFlag > 0 ? ` ${nFlag} ${plural(nFlag, 'award')} ran well above that range and ${nFlag === 1 ? 'is' : 'are'} marked.` : ''),
+      (nFlag > 0 ? ` ${nFlag} ${plural(nFlag, 'award')} ran well above that range and ${nFlag === 1 ? 'is' : 'are'} marked.` : '') +
+      (pts.some((p) => p.unitPrice > axis.top) ? ' A triangle at the top edge is an award above the scale, labelled with its price.' : ''),
     q1,
     median: med,
     q3,

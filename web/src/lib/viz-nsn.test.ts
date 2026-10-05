@@ -51,7 +51,7 @@ test('chart 12: below minimum renders nothing; dots, band and flagged labels', (
   assert.equal(count(m.svg, /× median</g), 2);
   assert.match(m.svg, /target="_blank" rel="nofollow noopener"/);
   assert.match(m.svg, /median \$[\d.]+, middle half shaded/);
-  assert.match(m.note, /^Most awards fall between \$[\d.,]+ and \$[\d.,]+\. 2 awards ran well above that range and are marked\.$/);
+  assert.match(m.note, /^Most awards fall between \$[\d.,]+ and \$[\d.,]+\. 2 awards ran well above that range and are marked\.( A triangle at the top edge is an award above the scale, labelled with its price\.)?$/);
   assert.deepEqual(m.legend.map((l) => l.key), ['main', 'flag', 'band']);
   assert.ok(m.q1 <= m.median && m.median <= m.q3);
 });
@@ -65,7 +65,7 @@ test('chart 12: no flagged award means no flag legend or sentence; labels capped
   const m2 = buildPriceHistory(many, TODAY)!;
   assert.equal(count(m2.svg, /× median</g), 3);
   assert.match(m2.note, /4 awards ran well above/);
-  assert.match(buildPriceHistory([...pts, aw('2026-01-01', 30, 10, { spikeRatio: 9 })], TODAY)!.note, / 1 award ran well above that range and is marked\.$/);
+  assert.match(buildPriceHistory([...pts, aw('2026-01-01', 30, 10, { spikeRatio: 9 })], TODAY)!.note, / 1 award ran well above that range and is marked\.( A triangle at the top edge is an award above the scale, labelled with its price\.)?$/);
 });
 
 test('chart 12: supplier text is escaped, hostile links are not linked, radius follows log quantity', () => {
@@ -148,4 +148,14 @@ test('chart 14: rows, options, statistics', () => {
   assert.match(rangeBarSvg(r3, 2), /weighted average/);
   assert.equal(count(rangeBarSvg(r3, 2), /vf-card vs-main/g), 2);
   assert.match(rangeBarSvg(r3.map((r) => ({ ...r, qty: null })), 2), />average</);
+});
+
+test('chart 12: the scale follows ordinary awards and an award above it is pinned to the top edge', () => {
+  const base = Array.from({ length: 8 }, (_, i) => aw(`2025-0${i + 1}-01`, 3 + i * 0.1, 100));
+  const m = buildPriceHistory([...base, aw('2025-09-01', 40, 10, { spikeRatio: 12 })], TODAY)!;
+  // Axis tops out near the ordinary prices, not at $40.
+  assert.ok(!/>\$40</.test(m.svg));
+  assert.match(m.svg, /<path d="M[\d.]+,[\d.]+l7,12h-14z" class="vf-flag vring"/);
+  assert.match(m.svg, /\$40\.00 · 12\.0× median/);
+  assert.match(m.note, /A triangle at the top edge is an award above the scale/);
 });

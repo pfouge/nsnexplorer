@@ -82,3 +82,13 @@ document.addEventListener('click', (e) => {
     p.hidden = p.id !== show;
   });
 });
+
+// 3. A time series that scrolls sideways on a phone starts at its newest end.
+function scrollLatest(): void {
+  document.querySelectorAll<SVGElement>('.viz-svg[data-latest="end"]').forEach((svgEl) => {
+    const box = svgEl.closest<HTMLElement>('.viz-body');
+    if (box && box.scrollWidth > box.clientWidth) box.scrollLeft = box.scrollWidth;
+  });
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scrollLatest);
+else scrollLatest();

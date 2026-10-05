@@ -52,7 +52,7 @@ weeks.forEach((w, i) =>
     })
   )
 );
-const chart = svg(W, H, `Solicitations posted per week, last ${weeks.length} complete weeks`, parts);
+const chart = svg(W, H, `Solicitations posted per week, last ${weeks.length} complete weeks`, parts, { latestAtEnd: true });
 ---
 <Viz
   title="Demand trend"
