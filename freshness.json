@@ -1,35 +1,35 @@
 {
-  "at": "2026-10-05T02:10:50.553Z",
+  "at": "2026-10-06T01:58:33.113Z",
   "ok": true,
   "problems": [],
   "sources": [
     {
       "source": "dibbs_rfq",
       "label": "DIBBS open solicitations (rfq-fast, rfq-reconcile)",
-      "last_landed": "2026-10-04T18:41:44.474Z",
-      "age_hours": 7.5,
+      "last_landed": "2026-10-05T21:30:28.210Z",
+      "age_hours": 4.5,
       "max_age_hours": 48,
       "newest_record": "2026-10-03",
       "rows": 77689,
-      "open_rows": 10657,
+      "open_rows": 10797,
       "status": "ok"
     },
     {
       "source": "sam_gov",
       "label": "SAM.gov solicitations (sam-daily)",
-      "last_landed": "2026-10-04T18:00:16.576Z",
-      "age_hours": 8.2,
+      "last_landed": "2026-10-05T15:02:24.730Z",
+      "age_hours": 10.9,
       "max_age_hours": 48,
-      "newest_record": "2026-10-04",
-      "rows": 4666,
-      "open_rows": 3306,
+      "newest_record": "2026-10-05",
+      "rows": 4755,
+      "open_rows": 3386,
       "status": "ok"
     },
     {
       "source": "dibbs_awards",
       "label": "DIBBS award totals (ingest-daily)",
       "last_landed": "2026-10-03T14:22:18.945Z",
-      "age_hours": 35.8,
+      "age_hours": 59.6,
       "max_age_hours": 120,
       "newest_record": "2026-10-02",
       "rows": 59087,
@@ -38,33 +38,33 @@
     {
       "source": "price_points",
       "label": "Unit prices from award/solicitation join (ingest-daily, rfq-award-join)",
-      "last_landed": "2026-10-05T00:04:13.175Z",
-      "age_hours": 2.1,
+      "last_landed": "2026-10-05T03:25:58.971Z",
+      "age_hours": 22.5,
       "max_age_hours": 120,
       "newest_record": "2026-10-02",
-      "rows": 20143,
+      "rows": 20807,
       "status": "ok"
     },
     {
       "source": "usaspending",
       "label": "USAspending contract actions (ingest-daily)",
-      "last_landed": "2026-10-04T18:05:18.005Z",
-      "age_hours": 8.1,
+      "last_landed": "2026-10-05T17:23:14.886Z",
+      "age_hours": 8.6,
       "max_age_hours": 336,
       "newest_record": "2027-03-22",
-      "rows": 97655,
+      "rows": 97656,
       "status": "ok"
     },
     {
       "source": "publog",
       "label": "PUB LOG / FLIS enrichment (publog-nightly)",
-      "last_landed": "2026-10-04T18:42:54.150Z",
-      "age_hours": 7.5,
+      "last_landed": "2026-10-05T21:30:09.543Z",
+      "age_hours": 4.5,
       "max_age_hours": 48,
       "newest_record": null,
       "rows": 80195,
-      "with_item_name": 80186,
-      "with_characteristics": 71090,
+      "with_item_name": 80192,
+      "with_characteristics": 71096,
       "status": "ok"
     },
     {
@@ -118,49 +118,49 @@
     {
       "check": "sam_open_services",
       "label": "Open SAM.gov service notices (letter service code; listed under /services/)",
-      "count": 728,
+      "count": 752,
       "status": "info"
     },
     {
       "check": "sam_open_equipment_services",
       "label": "Open SAM.gov equipment-service notices tied to a supply group (H, J, K, L, N, W)",
-      "count": 129,
+      "count": 137,
       "status": "info"
     },
     {
       "check": "sam_open_uncoded",
       "label": "Open SAM.gov notices with no code at all",
-      "count": 1761,
+      "count": 1799,
       "status": "info"
     },
     {
       "check": "sam_open_unclassified",
       "label": "Open SAM.gov notices with no product supply class (services or uncoded)",
-      "count": 2558,
+      "count": 2620,
       "status": "info"
     },
     {
       "check": "nsns_without_item_name",
       "label": "NSNs with no item name yet",
-      "count": 9,
+      "count": 3,
       "status": "info"
     },
     {
       "check": "suppliers_without_name",
       "label": "Supplier CAGE stubs awaiting PUB LOG name/address",
-      "count": 1213,
+      "count": 1218,
       "status": "info"
     }
   ],
   "classes_by_render_depth": [
     {
       "render_depth": "deep",
-      "classes": 485,
+      "classes": 487,
       "nsns": 80195
     },
     {
       "render_depth": "excluded",
-      "classes": 378,
+      "classes": 382,
       "nsns": 0
     }
   ]
