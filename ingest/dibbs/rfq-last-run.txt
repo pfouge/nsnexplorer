@@ -1,58 +1,55 @@
-at: 2026-10-07T19:19:42Z  sha: 1beef004ad65e3ffa8577f21268a207dda86d100
+at: 2026-10-08T17:18:55Z  sha: d71483022bd217c6b1bff9067e7dc1c45ed0501c
 == fetch log tail ==
-fetch.mjs: wrote /tmp/rfq/rfq-09-02-2026-p34.html
-fetch.mjs: wrote /tmp/rfq/rfq-09-02-2026-p35.html
-fetch.mjs: wrote /tmp/rfq/rfq-09-02-2026-p36.html
-fetch.mjs: wrote /tmp/rfq/rfq-09-02-2026-p37.html
-fetch.mjs: wrote /tmp/rfq/rfq-09-02-2026-p38.html
-fetch.mjs: wrote /tmp/rfq/rfq-09-02-2026-p39.html
-fetch.mjs: wrote /tmp/rfq/rfq-09-02-2026-p40.html
-fetch.mjs: wrote /tmp/rfq/rfq-09-02-2026-p41.html
-fetch.mjs: wrote /tmp/rfq/rfq-09-02-2026-p42.html
-fetch.mjs: wrote /tmp/rfq/rfq-09-02-2026-p43.html
-fetch.mjs: wrote /tmp/rfq/rfq-09-02-2026-p44.html
-fetch.mjs: wrote /tmp/rfq/rfq-09-02-2026-p45.html
-fetch.mjs: wrote /tmp/rfq/rfq-09-02-2026-p46.html
-fetch.mjs: wrote /tmp/rfq/rfq-09-02-2026-p47.html
-fetch.mjs: wrote /tmp/rfq/rfq-09-02-2026-p48.html
-fetch.mjs: wrote /tmp/rfq/rfq-09-02-2026-p49.html
-fetch.mjs: wrote /tmp/rfq/rfq-09-02-2026-p50.html
-fetch.mjs: wrote /tmp/rfq/rfq-09-02-2026-p51.html
-fetch.mjs: wrote /tmp/rfq/rfq-09-02-2026-p52.html
-fetch.mjs: 25/25 dates fetched
+fetch.mjs: wrote /tmp/rfq/rfq-09-09-2026-p10.html
+fetch.mjs: wrote /tmp/rfq/rfq-09-09-2026-p11.html
+fetch.mjs: wrote /tmp/rfq/rfq-09-08-2026-p1.html
+jarFetch attempt 1 failed for https://www.dibbs.bsm.dla.mil/Rfq/RfqRecs.aspx?category=post&TypeSrch=dt&Value=09-08-2026 (ECONNRESET); retrying in 20s
+jarFetch attempt 2 failed for https://www.dibbs.bsm.dla.mil/Rfq/RfqRecs.aspx?category=post&TypeSrch=dt&Value=09-08-2026 (ECONNRESET); retrying in 40s
+jarFetch attempt 3 failed for https://www.dibbs.bsm.dla.mil/Rfq/RfqRecs.aspx?category=post&TypeSrch=dt&Value=09-08-2026 (ECONNRESET); retrying in 60s
+fetch.mjs: 09-08-2026 failed (ENOTFOUND: fetch failed); continuing
+jarFetch attempt 1 failed for https://www.dibbs.bsm.dla.mil/Rfq/RfqRecs.aspx?category=post&TypeSrch=dt&Value=09-07-2026 (ENOTFOUND); retrying in 20s
+jarFetch attempt 2 failed for https://www.dibbs.bsm.dla.mil/Rfq/RfqRecs.aspx?category=post&TypeSrch=dt&Value=09-07-2026 (ENOTFOUND); retrying in 40s
+jarFetch attempt 3 failed for https://www.dibbs.bsm.dla.mil/Rfq/RfqRecs.aspx?category=post&TypeSrch=dt&Value=09-07-2026 (ECONNRESET); retrying in 60s
+fetch.mjs: 09-07-2026 failed (ENOTFOUND: fetch failed); continuing
+jarFetch attempt 1 failed for https://www.dibbs.bsm.dla.mil/Rfq/RfqRecs.aspx?category=post&TypeSrch=dt&Value=09-04-2026 (ENOTFOUND); retrying in 20s
+jarFetch attempt 2 failed for https://www.dibbs.bsm.dla.mil/Rfq/RfqRecs.aspx?category=post&TypeSrch=dt&Value=09-04-2026 (ENOTFOUND); retrying in 40s
+jarFetch attempt 3 failed for https://www.dibbs.bsm.dla.mil/Rfq/RfqRecs.aspx?category=post&TypeSrch=dt&Value=09-04-2026 (ENOTFOUND); retrying in 60s
+fetch.mjs: 09-04-2026 failed (ENOTFOUND: fetch failed); continuing
+jarFetch attempt 1 failed for https://www.dibbs.bsm.dla.mil/Rfq/RfqRecs.aspx?category=post&TypeSrch=dt&Value=09-03-2026 (ENOTFOUND); retrying in 20s
+jarFetch attempt 2 failed for https://www.dibbs.bsm.dla.mil/Rfq/RfqRecs.aspx?category=post&TypeSrch=dt&Value=09-03-2026 (ENOTFOUND); retrying in 40s
+jarFetch attempt 3 failed for https://www.dibbs.bsm.dla.mil/Rfq/RfqRecs.aspx?category=post&TypeSrch=dt&Value=09-03-2026 (ENOTFOUND); retrying in 60s
+fetch.mjs: 09-03-2026 failed (ENOTFOUND: fetch failed); continuing
+fetch.mjs: 21/25 dates fetched; FAILED: 09-08-2026, 09-07-2026, 09-04-2026, 09-03-2026
 == load log tail ==
-loadRfqSolicitations: 45444 loaded, 1896 skipped {"non-nsn":1896}
-reconcileOpenSolicitations: 0 expired, 1 cancelled (mode=full)
-pipeline.mjs: 1066 files, 52625 parsed records, 45444 loaded, 1896 skipped {"non-nsn":1896}
-pipeline.mjs: reconcile (mode=full) — 0 expired, 1 cancelled
+no load log
 == fetched files ==
-total 409324
-drwxr-xr-x  2 runner runner  53248 Oct  7 19:18 .
-drwxrwxrwt 16 root   root     4096 Oct  7 19:18 ..
--rw-r--r--  1 runner runner 347803 Oct  7 19:10 rfq-09-02-2026-p1.html
--rw-r--r--  1 runner runner 381748 Oct  7 19:12 rfq-09-02-2026-p10.html
--rw-r--r--  1 runner runner 399269 Oct  7 19:12 rfq-09-02-2026-p11.html
--rw-r--r--  1 runner runner 407766 Oct  7 19:12 rfq-09-02-2026-p12.html
--rw-r--r--  1 runner runner 378050 Oct  7 19:12 rfq-09-02-2026-p13.html
--rw-r--r--  1 runner runner 372972 Oct  7 19:12 rfq-09-02-2026-p14.html
--rw-r--r--  1 runner runner 408862 Oct  7 19:12 rfq-09-02-2026-p15.html
--rw-r--r--  1 runner runner 393095 Oct  7 19:13 rfq-09-02-2026-p16.html
--rw-r--r--  1 runner runner 380515 Oct  7 19:13 rfq-09-02-2026-p17.html
--rw-r--r--  1 runner runner 379935 Oct  7 19:13 rfq-09-02-2026-p18.html
--rw-r--r--  1 runner runner 378458 Oct  7 19:13 rfq-09-02-2026-p19.html
--rw-r--r--  1 runner runner 347792 Oct  7 19:10 rfq-09-02-2026-p2.html
--rw-r--r--  1 runner runner 398542 Oct  7 19:13 rfq-09-02-2026-p20.html
--rw-r--r--  1 runner runner 381237 Oct  7 19:13 rfq-09-02-2026-p21.html
--rw-r--r--  1 runner runner 391176 Oct  7 19:14 rfq-09-02-2026-p22.html
--rw-r--r--  1 runner runner 388913 Oct  7 19:14 rfq-09-02-2026-p23.html
--rw-r--r--  1 runner runner 372589 Oct  7 19:14 rfq-09-02-2026-p24.html
--rw-r--r--  1 runner runner 342698 Oct  7 19:14 rfq-09-02-2026-p25.html
--rw-r--r--  1 runner runner 359340 Oct  7 19:14 rfq-09-02-2026-p26.html
--rw-r--r--  1 runner runner 352928 Oct  7 19:14 rfq-09-02-2026-p27.html
--rw-r--r--  1 runner runner 383715 Oct  7 19:14 rfq-09-02-2026-p28.html
--rw-r--r--  1 runner runner 384978 Oct  7 19:15 rfq-09-02-2026-p29.html
--rw-r--r--  1 runner runner 354584 Oct  7 19:10 rfq-09-02-2026-p3.html
--rw-r--r--  1 runner runner 383358 Oct  7 19:15 rfq-09-02-2026-p30.html
--rw-r--r--  1 runner runner 376138 Oct  7 19:15 rfq-09-02-2026-p31.html
--rw-r--r--  1 runner runner 388157 Oct  7 19:15 rfq-09-02-2026-p32.html
--rw-r--r--  1 runner runner 396496 Oct  7 19:15 rfq-09-02-2026-p33.html
+total 355128
+drwxr-xr-x  2 runner runner  40960 Oct  8 17:10 .
+drwxrwxrwt 16 root   root     4096 Oct  8 17:09 ..
+-rw-r--r--  1 runner runner 335331 Oct  8 17:10 rfq-09-08-2026-p1.html
+-rw-r--r--  1 runner runner 365690 Oct  8 17:10 rfq-09-09-2026-p1.html
+-rw-r--r--  1 runner runner  33559 Oct  8 17:10 rfq-09-09-2026-p10.html
+-rw-r--r--  1 runner runner  33559 Oct  8 17:10 rfq-09-09-2026-p11.html
+-rw-r--r--  1 runner runner 328992 Oct  8 17:10 rfq-09-09-2026-p2.html
+-rw-r--r--  1 runner runner 341806 Oct  8 17:10 rfq-09-09-2026-p3.html
+-rw-r--r--  1 runner runner 339199 Oct  8 17:10 rfq-09-09-2026-p4.html
+-rw-r--r--  1 runner runner 346297 Oct  8 17:10 rfq-09-09-2026-p5.html
+-rw-r--r--  1 runner runner 335462 Oct  8 17:10 rfq-09-09-2026-p6.html
+-rw-r--r--  1 runner runner  33559 Oct  8 17:10 rfq-09-09-2026-p7.html
+-rw-r--r--  1 runner runner  33559 Oct  8 17:10 rfq-09-09-2026-p8.html
+-rw-r--r--  1 runner runner  33559 Oct  8 17:10 rfq-09-09-2026-p9.html
+-rw-r--r--  1 runner runner 345310 Oct  8 17:04 rfq-09-10-2026-p1.html
+-rw-r--r--  1 runner runner 380873 Oct  8 17:04 rfq-09-10-2026-p10.html
+-rw-r--r--  1 runner runner 400175 Oct  8 17:04 rfq-09-10-2026-p11.html
+-rw-r--r--  1 runner runner 404696 Oct  8 17:04 rfq-09-10-2026-p12.html
+-rw-r--r--  1 runner runner 405516 Oct  8 17:04 rfq-09-10-2026-p13.html
+-rw-r--r--  1 runner runner 392681 Oct  8 17:04 rfq-09-10-2026-p14.html
+-rw-r--r--  1 runner runner 400047 Oct  8 17:04 rfq-09-10-2026-p15.html
+-rw-r--r--  1 runner runner 406737 Oct  8 17:05 rfq-09-10-2026-p16.html
+-rw-r--r--  1 runner runner 397386 Oct  8 17:05 rfq-09-10-2026-p17.html
+-rw-r--r--  1 runner runner 370064 Oct  8 17:05 rfq-09-10-2026-p18.html
+-rw-r--r--  1 runner runner 390897 Oct  8 17:05 rfq-09-10-2026-p19.html
+-rw-r--r--  1 runner runner 353626 Oct  8 17:04 rfq-09-10-2026-p2.html
+-rw-r--r--  1 runner runner 394208 Oct  8 17:05 rfq-09-10-2026-p20.html
+-rw-r--r--  1 runner runner 362796 Oct  8 17:05 rfq-09-10-2026-p21.html
+-rw-r--r--  1 runner runner 368826 Oct  8 17:05 rfq-09-10-2026-p22.html
