@@ -1,0 +1,2 @@
+utc,status,db_error
+2026-10-10T19:29:52Z,503,PostgresError | 58000 | Usage limit for account exceeded usage renews at 2026-10-11
