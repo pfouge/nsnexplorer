@@ -1,161 +1,175 @@
 {
-  "at": "2026-09-27T00:34:58.368Z",
+  "at": "2026-10-10T19:06:36.851Z",
   "counts": {
-    "pub.nsns": 35577,
-    "pub.contract_actions": 95059,
-    "pub.price_points": 0,
-    "pub.part_numbers": 128837,
-    "pub.suppliers": 13523,
-    "pub.solicitations": 42499,
+    "pub.nsns": 88677,
+    "pub.contract_actions": 172343,
+    "pub.price_points": 25480,
+    "pub.part_numbers": 317594,
+    "pub.suppliers": 23484,
+    "pub.solicitations": 93006,
     "actionsByPrefix": [
       {
         "src": "CONT_",
-        "count": "95059"
+        "count": "98437"
+      },
+      {
+        "src": "DIBBS",
+        "count": "73906"
       }
     ],
     "openNsnCharacteristicsByFsc": [
       {
-        "fsc": "4820",
-        "open_nsns": 594,
-        "with_chars": 549
+        "fsc": "5340",
+        "open_nsns": 505,
+        "with_chars": 358
       },
       {
-        "fsc": "5340",
-        "open_nsns": 577,
-        "with_chars": 498
+        "fsc": "4820",
+        "open_nsns": 448,
+        "with_chars": 349
       },
       {
         "fsc": "5330",
-        "open_nsns": 420,
-        "with_chars": 324
-      },
-      {
-        "fsc": "6515",
-        "open_nsns": 388,
-        "with_chars": 388
-      },
-      {
-        "fsc": "5320",
-        "open_nsns": 367,
-        "with_chars": 351
-      },
-      {
-        "fsc": "4730",
-        "open_nsns": 307,
-        "with_chars": 284
-      },
-      {
-        "fsc": "5305",
-        "open_nsns": 296,
+        "open_nsns": 392,
         "with_chars": 270
       },
       {
         "fsc": "5935",
-        "open_nsns": 280,
-        "with_chars": 271
+        "open_nsns": 358,
+        "with_chars": 326
       },
       {
-        "fsc": "5306",
-        "open_nsns": 277,
-        "with_chars": 258
-      },
-      {
-        "fsc": "5310",
-        "open_nsns": 252,
-        "with_chars": 217
-      },
-      {
-        "fsc": "5930",
-        "open_nsns": 233,
-        "with_chars": 200
+        "fsc": "4730",
+        "open_nsns": 357,
+        "with_chars": 286
       },
       {
         "fsc": "4720",
-        "open_nsns": 211,
-        "with_chars": 199
+        "open_nsns": 303,
+        "with_chars": 211
       },
       {
-        "fsc": "5325",
-        "open_nsns": 199,
-        "with_chars": 175
+        "fsc": "5305",
+        "open_nsns": 236,
+        "with_chars": 183
       },
       {
-        "fsc": "5315",
-        "open_nsns": 168,
-        "with_chars": 151
-      },
-      {
-        "fsc": "5331",
-        "open_nsns": 148,
-        "with_chars": 124
+        "fsc": "5310",
+        "open_nsns": 221,
+        "with_chars": 163
       },
       {
         "fsc": "3040",
-        "open_nsns": 140,
-        "with_chars": 130
+        "open_nsns": 199,
+        "with_chars": 150
       },
       {
-        "fsc": "4810",
-        "open_nsns": 130,
-        "with_chars": 121
+        "fsc": "4330",
+        "open_nsns": 199,
+        "with_chars": 162
       },
       {
-        "fsc": "1560",
-        "open_nsns": 125,
-        "with_chars": 116
+        "fsc": "5930",
+        "open_nsns": 170,
+        "with_chars": 132
       },
       {
-        "fsc": "2540",
-        "open_nsns": 118,
+        "fsc": "5306",
+        "open_nsns": 154,
+        "with_chars": 125
+      },
+      {
+        "fsc": "4320",
+        "open_nsns": 150,
         "with_chars": 109
       },
       {
-        "fsc": "5360",
-        "open_nsns": 117,
-        "with_chars": 88
+        "fsc": "5995",
+        "open_nsns": 146,
+        "with_chars": 90
+      },
+      {
+        "fsc": "6150",
+        "open_nsns": 133,
+        "with_chars": 90
+      },
+      {
+        "fsc": "2540",
+        "open_nsns": 131,
+        "with_chars": 83
+      },
+      {
+        "fsc": "5945",
+        "open_nsns": 121,
+        "with_chars": 101
+      },
+      {
+        "fsc": "4710",
+        "open_nsns": 118,
+        "with_chars": 85
+      },
+      {
+        "fsc": "2530",
+        "open_nsns": 116,
+        "with_chars": 93
+      },
+      {
+        "fsc": "1560",
+        "open_nsns": 113,
+        "with_chars": 89
       }
     ],
     "contractActions": {
-      "n": 95059,
-      "with_obligation": 95059,
-      "sum_obligation": 309445613.51,
-      "with_raw_nsn": 7,
-      "psc_in_fsc": 95059,
-      "nsn_in_nsns": 7
+      "n": 172343,
+      "with_obligation": 172343,
+      "sum_obligation": 9050710243.34,
+      "with_raw_nsn": 73920,
+      "psc_in_fsc": 172343,
+      "nsn_in_nsns": 73920
     },
     "contractActionRawKeys": [
-      "Start Date:95059",
-      "Award Amount:95059",
-      "Award ID:95059",
-      "Awarding Agency:95059",
-      "Awarding Sub Agency:95059",
-      "awarding_agency_id:95059",
-      "Description:95059",
-      "generated_internal_id:95059",
-      "internal_id:95059",
-      "agency_slug:95059",
-      "Recipient Name:95059",
-      "nsn:7"
+      "agency_slug:98437",
+      "Award Amount:98437",
+      "Award ID:98437",
+      "Awarding Agency:98437",
+      "Awarding Sub Agency:98437",
+      "awarding_agency_id:98437",
+      "Description:98437",
+      "generated_internal_id:98437",
+      "internal_id:98437",
+      "Recipient Name:98437",
+      "Start Date:98437",
+      "nsn:73920",
+      "solicitation:73906",
+      "nomenclature:73906",
+      "awardDate:73906",
+      "nsnRaw:73906",
+      "postedDate:73906",
+      "awardNumber:73906",
+      "cage:73906",
+      "deliveryOrder:73906",
+      "total:73906",
+      "purchaseRequest:73906"
     ],
     "contractActionSample": [
       {
-        "award_uid": "CONT_AWD_SPE7L126V7236_9700_-NONE-_-NONE-",
-        "psc": "5330",
-        "obligation": "375",
-        "nsn": null,
-        "raw": "{\"Award ID\": \"SPE7L126V7236\", \"Start Date\": \"2026-03-27\", \"Description\": \"8512007949!GASKET\", \"agency_slug\": \"department-of-defense\", \"internal_id\": 359725270, \"Award Amount\": 375, \"Recipient Name\": \"PIONEER INDUSTRIES, LLC\", \"Awarding Agency\": \"Department of Defense\", \"awarding_agency_id\": 1173, \"A"
+        "award_uid": "DIBBS-SPRPA121G001W-SPE4A527F0269-7017741623",
+        "psc": "1680",
+        "obligation": "9368.32",
+        "nsn": "1680015763929",
+        "raw": "{\"nsn\": \"1680015763929\", \"cage\": \"97499\", \"total\": 9368.32, \"nsnRaw\": \"1680015763929\", \"awardDate\": \"2026-10-08\", \"postedDate\": \"2026-10-08\", \"awardNumber\": \"SPRPA121G001W\", \"nomenclature\": \"BUFFER, AIRCRAFT, MAT\", \"solicitation\": \"SPE4A526T324K\", \"deliveryOrder\": \"SPE4A527F0269\", \"purchaseRequest\":"
       },
       {
-        "award_uid": "CONT_AWD_SPE7L126V7237_9700_-NONE-_-NONE-",
-        "psc": "5330",
-        "obligation": "81.45",
-        "nsn": null,
-        "raw": "{\"Award ID\": \"SPE7L126V7237\", \"Start Date\": \"2026-03-27\", \"Description\": \"8512008048!GASKET\", \"agency_slug\": \"department-of-defense\", \"internal_id\": 359725271, \"Award Amount\": 81.45, \"Recipient Name\": \"HOOSIER INDUSTRIAL SUPPLY, INC\", \"Awarding Agency\": \"Department of Defense\", \"awarding_agency_id\":"
+        "award_uid": "DIBBS-SPRPA121G001W-SPE4A627F0020-7015954892",
+        "psc": "1680",
+        "obligation": "38393.38",
+        "nsn": "1680014756460",
+        "raw": "{\"nsn\": \"1680014756460\", \"cage\": \"97499\", \"total\": 38393.38, \"nsnRaw\": \"1680014756460\", \"awardDate\": \"2026-10-08\", \"postedDate\": \"2026-10-08\", \"awardNumber\": \"SPRPA121G001W\", \"nomenclature\": \"COUPLING ASSY, AIRCR\", \"solicitation\": \"SPE4A526T021V\", \"deliveryOrder\": \"SPE4A627F0020\", \"purchaseRequest\":"
       }
     ],
     "nsnsWithCharacteristics": {
-      "total": 35577,
-      "with_chars": 31764
+      "total": 88677,
+      "with_chars": 77083
     }
   }
 }
