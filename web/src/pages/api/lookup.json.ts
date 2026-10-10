@@ -3,7 +3,7 @@
 // /search-index.json, which would be several megabytes at full catalog size.
 // Runs on the Pages Function; results are edge-cached for an hour.
 import type { APIRoute } from 'astro';
-import { openSql } from '../../lib/nsn-page';
+import { dbErrorTag, openSql } from '../../lib/nsn-page';
 import { databaseUrlFrom } from '../../lib/runtime-env';
 import { toDashedNsn } from '../../lib/shared';
 
@@ -35,10 +35,15 @@ export const GET: APIRoute = async (ctx) => {
   const databaseUrl = databaseUrlFrom(ctx);
   if (!databaseUrl) return json({ ok: false, kind: 'invalid', matches: [], error: 'Lookup is not configured.' }, 503, 'no-store');
 
-  const unavailable = (): Response =>
+  const unavailable = (tag = ''): Response =>
     new Response(JSON.stringify({ error: 'temporarily unavailable' }), {
       status: 503,
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store',
+        'Access-Control-Allow-Origin': '*',
+        ...(tag ? { 'x-nsn-db-error': tag } : {}),
+      },
     });
 
   const sql = openSql(databaseUrl);
@@ -63,8 +68,10 @@ export const GET: APIRoute = async (ctx) => {
       );
     }
     return json({ ok: true, kind, matches: rows.map((r) => toDashedNsn(r.nsn)) }, 200, 'public, max-age=0, s-maxage=3600');
-  } catch {
-    return unavailable();
+  } catch (err) {
+    const tag = dbErrorTag(err);
+    console.error('lookup db error:', tag);
+    return unavailable(tag);
   } finally {
     await sql.end({ timeout: 1 }).catch(() => {});
   }

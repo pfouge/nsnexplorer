@@ -46,6 +46,24 @@ export interface NsnPageData {
 type Sql = ReturnType<typeof postgres>;
 
 /** Opens a single short-lived connection through Hyperdrive (or DATABASE_URL locally). */
+/**
+ * Short, secret-free label for a failed database call (driver error name,
+ * Postgres/Node error code, first 60 characters of the message with anything
+ * that looks like a host or credential removed). Logged to the Worker log and
+ * sent in an x-nsn-db-error header on the JSON endpoints so an outage can be
+ * diagnosed without dashboard access.
+ */
+export function dbErrorTag(err: unknown): string {
+  const e = (err ?? {}) as { name?: string; code?: string; message?: string };
+  const msg = String(e.message ?? '')
+    .replace(/[a-z0-9.-]+\.(com|net|co|io|supabase\.[a-z]+)\S*/gi, '<host>')
+    .replace(/user "[^"]*"/gi, 'user "<u>"')
+    .replace(/postgres(ql)?:\/\/\S+/gi, '<url>')
+    .replace(/\s+/g, ' ')
+    .slice(0, 60);
+  return [e.name, e.code, msg].filter(Boolean).join(' | ');
+}
+
 export function openSql(connectionString: string): Sql {
   return postgres(connectionString, { prepare: false, max: 1, fetch_types: false });
 }
