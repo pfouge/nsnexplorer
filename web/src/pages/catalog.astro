@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { SITE_URL } from '../consts';
+import CiteThis from '../components/CiteThis.astro';
 import { loadSiteData } from '../lib/data';
 import { buildDepartments } from '../lib/browse';
 
@@ -110,6 +111,10 @@ const faq = [
 
   <section>
     <h2 class="section-title">Departments</h2>
+    <ul class="chips wrap-wide" aria-label="Free downloads">
+      <li><a class="chip outline" href="/data/classes.csv" download>Download classes CSV</a></li>
+      <li><a class="chip outline" href="/data/groups.csv" download>Download groups CSV</a></li>
+    </ul>
     {departments.length === 0 ? (
       <p class="gloss">No departments are indexed yet.</p>
     ) : (
@@ -136,4 +141,6 @@ const faq = [
       </>
     ))}
   </section>
+
+  <CiteThis title={h1} url={canonicalUrl} asOf={data.viz.today} />
 </BaseLayout>

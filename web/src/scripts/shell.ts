@@ -54,6 +54,10 @@ interface LookupResult {
   matches: string[];
   error?: string;
 }
+interface SupplierSearchResult {
+  ok: boolean;
+  suppliers: { cage: string; name: string | null; city: string | null; state: string | null; awards: number }[];
+}
 interface Hit {
   href: string;
   code?: string;
@@ -161,6 +165,26 @@ if (form && input && out) {
     }
   };
 
+  // Suppliers with indexed awards, by name or CAGE code. Only for queries of
+  // three or more characters with a letter in them; a failed fetch shows nothing.
+  const searchSuppliers = async (q: string): Promise<Hit[]> => {
+    if (q.length < 3 || !/[A-Za-z]/.test(q)) return [];
+    try {
+      const res = await fetch(`/api/suppliers.json?q=${encodeURIComponent(q)}`);
+      if (!res.ok) return [];
+      const body = (await res.json()) as SupplierSearchResult;
+      if (!body.ok || !Array.isArray(body.suppliers)) return [];
+      return body.suppliers.slice(0, 8).map<Hit>((s) => ({
+        href: `/supplier/${s.cage}/`,
+        code: `CAGE ${s.cage}`,
+        name: s.name ?? `CAGE ${s.cage}`,
+        meta: `${fmt(s.awards)} ${s.awards === 1 ? 'award' : 'awards'}`,
+      }));
+    } catch {
+      return [];
+    }
+  };
+
   const render = async (submitted: boolean): Promise<void> => {
     const q = input.value.trim();
     const mine = ++seq;
@@ -168,6 +192,7 @@ if (form && input && out) {
       out.innerHTML = idle;
       return;
     }
+    const suppliers = searchSuppliers(q); // runs alongside the index and lookup requests
     const ix = await loadIndex();
     if (mine !== seq) return;
     const groups = ix ? localHits(ix, q) : [];
@@ -191,9 +216,13 @@ if (form && input && out) {
       }
     }
 
+    const supplierHits = await suppliers;
+    if (mine !== seq) return;
+
     frag.append(section('National stock numbers', nsnHits));
     for (const g of groups) frag.append(section(g.title, g.hits));
-    const total = nsnHits.length + groups.reduce((n, g) => n + g.hits.length, 0);
+    frag.append(section('Suppliers', supplierHits));
+    const total = nsnHits.length + supplierHits.length + groups.reduce((n, g) => n + g.hits.length, 0);
     if (note) frag.prepend(note);
     else if (total === 0) frag.append(message(`Nothing matches “${q}”. Try a 13-digit NSN, a part number, or a category name.`));
     out.replaceChildren(frag);
@@ -261,7 +290,7 @@ document.querySelectorAll<HTMLElement>('nav.tabs').forEach((nav) => {
 });
 
 /* ---------- folded introductions (phones) ---------- */
-document.querySelectorAll<HTMLElement>('p.lede:not(:has(~ p.lede)), section.intro > p.gloss').forEach((el) => {
+document.querySelectorAll<HTMLElement>('p.lede:not(.answer):not(:has(~ p.lede)), section.intro > p.gloss').forEach((el) => {
   if (el.scrollHeight <= el.clientHeight + 4) return; // fits, or not folded at this width
   const b = document.createElement('button');
   b.type = 'button';

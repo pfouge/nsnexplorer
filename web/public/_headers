@@ -24,3 +24,9 @@
 
 /fsc/*.md
   Content-Type: text/markdown; charset=utf-8
+
+/data/*.csv
+  # Prerendered CSV endpoints lose their response headers in the static build,
+  # so the download behaviour is declared here.
+  Content-Type: text/csv; charset=utf-8
+  Content-Disposition: attachment

@@ -2,6 +2,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { loadSiteData } from '../lib/data';
 import { SITE_URL } from '../consts';
+import CiteThis from '../components/CiteThis.astro';
 
 const data = await loadSiteData();
 // Ranked by total obligations (same dollar figure the agency page shows),
@@ -97,6 +98,10 @@ const faq = [
   {rows.length === 0 ? (
     <p class="gloss">No agencies indexed yet.</p>
   ) : (
+    <>
+    <ul class="chips wrap-wide" aria-label="Free downloads">
+      <li><a class="chip outline" href="/data/agencies.csv" download>Download CSV</a></li>
+    </ul>
     <div class="table-wrap">
       <table>
         <thead>
@@ -115,6 +120,7 @@ const faq = [
         </tbody>
       </table>
     </div>
+    </>
   )}
 
   <section class="faq">
@@ -126,4 +132,6 @@ const faq = [
       </>
     ))}
   </section>
+
+  <CiteThis title={h1} url={canonicalUrl} asOf={data.viz.today} />
 </BaseLayout>

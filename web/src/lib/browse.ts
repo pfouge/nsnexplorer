@@ -3,6 +3,7 @@
 // already-loaded SiteData; no I/O here.
 
 import {
+  competitionOf,
   parseCharacteristics,
   toDashedNsn,
   type CharacteristicEntry,
@@ -205,11 +206,7 @@ export function competitionFromAmscAmc(
   nsn: Pick<NsnRecord, 'amsc' | 'amc'> | undefined
 ): ProductCard['competition'] {
   if (!nsn) return 'unknown';
-  return nsn.amsc === 'G' || nsn.amsc === 'Z' || nsn.amc === '1' || nsn.amc === '2'
-    ? 'open'
-    : nsn.amsc || nsn.amc
-      ? 'restricted'
-      : 'unknown';
+  return competitionOf(nsn.amc, nsn.amsc);
 }
 
 /** Combines priced purchases (price_points) and NSN-attached contract

@@ -1,0 +1,102 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { SITE_URL } from '../../consts';
+
+const title = 'Guides to Selling Parts to the U.S. Government';
+const description =
+  "Plain-English guides for new government suppliers: NSNs, supply classes, AMC and AMSC codes, CAGE codes, DIBBS bidding and a glossary. Free, with sources.";
+const canonicalUrl = `${SITE_URL}/guides/`;
+
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  { name: 'Guides', url: canonicalUrl },
+];
+
+const guides = [
+  {
+    tag: 'NSN',
+    href: '/guides/what-is-an-nsn/',
+    title: 'What is an NSN?',
+    summary: 'How the 13-digit national stock number is built, who assigns it, and how to look one up.',
+  },
+  {
+    tag: 'FSC',
+    href: '/guides/federal-supply-class-fsc/',
+    title: 'Federal supply class (FSC) and group (FSG)',
+    summary: 'What the first digits of an NSN mean, with examples, and how classes appear in solicitations.',
+  },
+  {
+    tag: 'AMC',
+    href: '/guides/amc-amsc-codes/',
+    title: 'AMC and AMSC codes',
+    summary: 'Every acquisition method code and suffix code in plain English, and what a combination says about competition.',
+  },
+  {
+    tag: 'CAGE',
+    href: '/guides/cage-code/',
+    title: 'What is a CAGE code?',
+    summary: 'Who issues it, how it relates to SAM.gov and your Unique Entity ID, and where it appears on awards.',
+  },
+  {
+    tag: 'DIBBS',
+    href: '/guides/how-to-bid-on-dibbs/',
+    title: 'How to bid on DIBBS',
+    summary: 'The prerequisites in order, how to find a solicitation, where quotes go, and what happens next.',
+  },
+  {
+    tag: 'A to Z',
+    href: '/guides/glossary/',
+    title: 'Glossary',
+    summary: 'Short definitions of the terms you will see on a solicitation, an award or an item record.',
+  },
+];
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  pageType="CollectionPage"
+  canonicalUrl={canonicalUrl}
+  breadcrumbs={breadcrumbs}
+  itemList={{ name: 'NSN Explorer guides', items: guides.map((g) => ({ name: g.title, url: g.href })) }}
+>
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a> › Guides
+  </nav>
+
+  <h1>Guides for new government suppliers</h1>
+  <p class="lede answer">
+    Short, sourced explainers for manufacturers, distributors, journalists and researchers who
+    are new to U.S. government parts purchasing. Each one answers a single question and links to
+    the official instructions and to the live data.
+  </p>
+
+  <div class="index-list">
+    {guides.map((g) => (
+      <a class="index-row" href={g.href}>
+        <span class="num">{g.tag}</span>
+        <div>
+          <h3>{g.title}</h3>
+          <p>{g.summary}</p>
+        </div>
+        <span class="go" aria-hidden="true">›</span>
+      </a>
+    ))}
+  </div>
+
+  <section>
+    <h2 class="section-title">Looking for the full path?</h2>
+    <p>
+      The <a href="/suppliers/">supplier guide</a> walks through the whole process, from
+      registration to a quote. To see what the government is buying right now, go to
+      <a href="/open/">Open demand</a>. For how every number on this site is sourced, read the
+      <a href="/methodology/">methodology</a>.
+    </p>
+  </section>
+
+  <div class="note">
+    These guides describe how the systems work and point to the official instructions. They are
+    general information, not legal advice. NSN Explorer is independent and is not affiliated with
+    the U.S. government.
+  </div>
+</BaseLayout>

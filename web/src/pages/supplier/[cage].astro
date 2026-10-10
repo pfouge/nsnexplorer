@@ -1,0 +1,230 @@
+---
+// supplier/[cage].astro — one supplier, identified by CAGE code, with the
+// awards NSN Explorer has indexed for it. Rendered ON REQUEST like the NSN
+// pages (see nsn/[nsn].astro): the catalog of suppliers is far larger than
+// Cloudflare Pages' 20,000-file cap, so one server route reads a single CAGE
+// from Postgres through Hyperdrive and the response is edge-cached for an hour.
+//
+// Stance: a public-records page. Every sentence is a plain statement of what
+// the records show; no street address is read or shown (name and City, ST only).
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import CiteThis from '../../components/CiteThis.astro';
+import { SITE_URL } from '../../consts';
+import { formatDate, formatUsd, formatUsdPrecise, toDashedNsn } from '../../lib/shared';
+import { databaseUrlFrom } from '../../lib/runtime-env';
+import { openSql } from '../../lib/nsn-page';
+import { loadSupplierPage, SUPPLIER_AWARD_ROWS } from '../../lib/supplier-page';
+import {
+  parseCageParam,
+  schemaText,
+  supplierDescription,
+  supplierLede,
+  supplierPlace,
+  supplierTitle,
+} from '../../lib/entity';
+
+export const prerender = false;
+
+const parsed = parseCageParam(Astro.params.cage ?? '');
+// One canonical URL per supplier: lower-case spellings redirect to upper case.
+if (parsed.kind === 'redirect') return Astro.redirect(`/supplier/${parsed.cage}/`, 301);
+const notFound = (): Response => {
+  return new Response(null, { status: 404, headers: { 'Cache-Control': 'public, s-maxage=300' } });
+};
+if (parsed.kind === 'invalid') return notFound();
+
+const databaseUrl = databaseUrlFrom(Astro);
+if (!databaseUrl) {
+  return new Response('Database is not configured for this environment.', { status: 503 });
+}
+const sql = openSql(databaseUrl);
+let page;
+try {
+  page = await loadSupplierPage(sql, parsed.cage);
+} finally {
+  await sql.end({ timeout: 1 }).catch(() => {});
+}
+if (!page) return notFound();
+Astro.response.headers.set('Cache-Control', 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400');
+
+const { cage, name, awards, classRows } = page;
+const heading = name ?? `CAGE ${cage}`;
+const place = supplierPlace(page.city, page.state);
+const copy = { cage, name, awards, classes: page.classes, latest: page.latestAward };
+const lede = supplierLede(copy);
+const title = supplierTitle(name, cage);
+const description = supplierDescription(copy);
+const canonicalUrl = `${SITE_URL}/supplier/${cage}/`;
+const capped = awards > page.rows.length;
+
+const orgSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  '@id': `${canonicalUrl}#supplier`,
+  name: schemaText(heading),
+  identifier: { '@type': 'PropertyValue', propertyID: 'CAGE', value: cage },
+  url: canonicalUrl,
+  ...(page.city || page.state
+    ? {
+        address: {
+          '@type': 'PostalAddress',
+          ...(page.city ? { addressLocality: schemaText(page.city) } : {}),
+          ...(page.state ? { addressRegion: schemaText(page.state) } : {}),
+        },
+      }
+    : {}),
+};
+// "Suppliers" has no page of its own, so the machine-readable trail is Home > supplier.
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  { name: schemaText(heading), url: canonicalUrl },
+];
+
+const fmtInt = (n: number): string => n.toLocaleString('en-US');
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  pageType="ProfilePage"
+  canonicalUrl={canonicalUrl}
+  breadcrumbs={breadcrumbs}
+  extraSchema={[orgSchema]}
+>
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a> › <span>Suppliers</span> › {heading}
+  </nav>
+
+  <header class="hero">
+    <h1>{heading}</h1>
+    <p class="ident">
+      <span class="code">CAGE {cage}</span>
+      {place && <span>{place}</span>}
+    </p>
+    <p class="lede">{lede}</p>
+  </header>
+
+  <nav class="tabs" aria-label="On this page">
+    <a href="#overview">Overview</a>
+    <a href="#awards">Awards</a>
+    <a href="#classes">Supply classes</a>
+    <a href="#about">About this data</a>
+  </nav>
+
+  <section id="overview">
+    <h2 class="section-title" style="margin-top:1.5rem;">Overview</h2>
+    <div class="stat-strip">
+      <div class="stat">
+        <div class="value">{fmtInt(awards)}</div>
+        <div class="label">Awards on record</div>
+      </div>
+      <div class="stat">
+        <div class="value">{page.valuedAwards > 0 ? formatUsd(page.dollars) : '—'}</div>
+        <div class="label">Award dollars</div>
+      </div>
+      <div class="stat">
+        <div class="value">{fmtInt(page.nsns)}</div>
+        <div class="label">Distinct NSNs</div>
+      </div>
+      <div class="stat">
+        <div class="value">{fmtInt(page.classes)}</div>
+        <div class="label">Supply classes</div>
+      </div>
+      <div class="stat">
+        <div class="value">{formatDate(page.firstAward)}</div>
+        <div class="label">First award</div>
+      </div>
+      <div class="stat">
+        <div class="value">{formatDate(page.latestAward)}</div>
+        <div class="label">Latest award</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="awards">
+    <h2 class="section-title">Awards</h2>
+    <div class="table-wrap">
+      <table>
+        <caption>
+          {capped
+            ? `Showing the latest ${fmtInt(SUPPLIER_AWARD_ROWS)} of ${fmtInt(awards)}`
+            : `${fmtInt(awards)} award${awards === 1 ? '' : 's'} on record`}
+        </caption>
+        <thead>
+          <tr>
+            <th>NSN</th>
+            <th>Awarded</th>
+            <th>Item</th>
+            <th class="num">Qty</th>
+            <th class="num">Unit price</th>
+            <th class="num">Total</th>
+            <th>Agency</th>
+            <th>Source</th>
+          </tr>
+        </thead>
+        <tbody>
+          {page.rows.map((r) => (
+            <tr>
+              <td class="mono"><a href={`/nsn/${toDashedNsn(r.nsn)}/`}>{toDashedNsn(r.nsn)}</a></td>
+              <td class="mono">{formatDate(r.awardedOn)}</td>
+              <td>{r.itemName ?? '—'}</td>
+              <td class="num mono">{r.quantity !== null ? r.quantity.toLocaleString('en-US') : '—'}</td>
+              <td class="num price">{formatUsdPrecise(r.unitPrice)}</td>
+              <td class="num mono">{r.total !== null ? formatUsd(r.total) : '—'}</td>
+              <td>
+                {r.agencySlug && r.agencyName ? <a href={`/agency/${r.agencySlug}/`}>{r.agencyName}</a> : (r.agencyName ?? '—')}
+              </td>
+              <td><a href={r.sourceUrl} target="_blank" rel="nofollow noopener">Source ↗</a></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="classes">
+    <h2 class="section-title">Supply classes</h2>
+    <p class="gloss">Federal supply classes of the NSNs in this supplier's indexed awards, with the number of awards in each.</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Class</th>
+            <th>Name</th>
+            <th class="num">Awards</th>
+          </tr>
+        </thead>
+        <tbody>
+          {classRows.map((c) => (
+            <tr>
+              <td class="mono">
+                {c.link === 'fsc' ? (
+                  <a href={`/fsc/${c.fsc}/`}>FSC {c.fsc}</a>
+                ) : c.link === 'open' ? (
+                  <a href={`/open/${c.fsc}/`}>FSC {c.fsc}</a>
+                ) : (
+                  <span class="code">FSC {c.fsc}</span>
+                )}
+              </td>
+              <td>{c.name ?? '—'}</td>
+              <td class="num mono">{fmtInt(c.awards)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card" id="about" style="margin-top:2.5rem;">
+    <h2>About this data</h2>
+    <ul class="gloss">
+      <li>Awards come from DLA DIBBS award records and other indexed award records; each row links to its source.</li>
+      <li>The supplier's name and location come from the public CAGE file in DLA's PUB LOG. Only the city and state are shown.</li>
+      <li>This list covers the awards NSN Explorer has indexed, not everything this supplier has won.</li>
+      <li>Award dollars add each award's recorded total, or unit price times quantity when no total is recorded; awards with neither are not counted{page.valuedAwards < awards ? ` (${fmtInt(awards - page.valuedAwards)} of ${fmtInt(awards)} here)` : ''}.</li>
+      {page.refreshedOn && <li>Data last refreshed: {page.refreshedOn}.</li>}
+      <li><a href="/methodology/">Full methodology →</a></li>
+    </ul>
+    <CiteThis title={heading} url={canonicalUrl} asOf={new Date().toISOString().slice(0, 10)} />
+  </section>
+</BaseLayout>

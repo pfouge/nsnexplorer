@@ -318,7 +318,7 @@ main { padding-block: 1.5rem 4rem; }
 
 /* Long introductions fold to three lines on phones; "More" opens them (scripts/shell.ts). */
 @media (max-width: 767px) {
-  p.lede:not(:has(~ p.lede)):not(.open), section.intro > p.gloss:not(.open) { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+  p.lede:not(.answer):not(:has(~ p.lede)):not(.open), section.intro > p.gloss:not(.open) { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
 }
 .clamp-more { display: inline-block; margin: -0.5rem 0 0.75rem; padding: 4px 0; border: 0; background: none; color: var(--ink); font: inherit; font-size: 0.9375rem; font-weight: 600; cursor: pointer; }
 .clamp-more::after { content: " ›"; }
@@ -594,3 +594,24 @@ button.copy, .copy-btn { font: inherit; font-size: 0.8125rem; font-weight: 600; 
 @media (max-width: 899px) { .filter-count { order: -1; margin: 0; padding: 0 4px 0 0; } }
 .drawer-group a { padding-block: 8px; }
 .product-card:not(:has(.product-thumb)) .product-signals { justify-content: flex-start; margin: 2px 0; }
+
+/* --- guides --- */
+/* Table cells that hold a sentence wrap instead of forcing a long sideways scroll. */
+.guide-table td.wrap, .table-wrap td.wrap { white-space: normal; min-width: 15rem; max-width: 34rem; height: auto; padding-block: 10px; line-height: 1.4; }
+.gloss-entry { padding: 0.9rem 0; border-bottom: 1px solid var(--line); scroll-margin-top: calc(var(--header-h) + 12px); }
+.gloss-entry h3 a { color: inherit; }
+.gloss-entry p { margin: 0.25rem 0 0; color: var(--ink-soft); font-size: 0.9375rem; max-width: 78ch; }
+.gloss-group > h2 { scroll-margin-top: calc(var(--header-h) + 12px); }
+.guide-sources ul { padding-left: 1.2rem; }
+.guide-sources li { margin: 0.25rem 0; overflow-wrap: anywhere; }
+
+/* --- consent bar and form consent line --- */
+.consent-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 20px; padding: 12px var(--gutter); background: var(--card); border-top: 1px solid var(--line); box-shadow: 0 -8px 24px rgba(17, 17, 20, 0.12); font-size: 0.9375rem; }
+.consent-bar p { margin: 0; }
+.consent-bar a { text-decoration: underline; }
+.consent-bar div { display: flex; gap: 8px; }
+.signup-form .consent { margin: 0.6rem 0 0; font-size: 0.8125rem; color: var(--ink-soft); }
+.signup-form .consent a { text-decoration: underline; }
+/* Sticky cells inside tinted panels take the panel's background (beats the page-table rule). */
+.panel .table-wrap th, .panel .table-wrap td:first-child, .card .table-wrap th, .card .table-wrap td:first-child { background: var(--card); }
+.open-panel .table-wrap th, .open-panel .table-wrap td:first-child { background: var(--paper-2); }

@@ -19,4 +19,8 @@ const { hook, fscInterest = null, title, description, cta } = Astro.props;
     <input type="email" name="email" placeholder="you@example.com" required aria-label="Email address" />
     <button type="submit">{cta}</button>
   </div>
+  <p class="consent">
+    By signing up you agree to receive these emails from NSN Explorer. You can unsubscribe at any
+    time. <a href="/privacy/">Privacy policy</a>
+  </p>
 </form>

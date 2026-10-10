@@ -16,6 +16,7 @@ import {
 } from './shared';
 import { compareByClosing, mapServiceNotice, type ServiceNotice, type ServiceNoticeRow } from './services';
 import { nomen } from './seo-copy';
+import { CAGE_RE, SOL_NUMBER_RE } from './entity';
 import { foldCalendarRows } from './viz-open';
 import type { DailyStatRow, FreshnessSource, GroupDemandRow, TapeItem, TileInput } from './viz-site';
 import type { RepeatRow, StateCount, WeekCount, WinnerRow } from './viz-class';
@@ -155,6 +156,40 @@ export function loadNsnSitemapCodes(): Promise<string[]> {
     })();
   }
   return cachedNsnCodes;
+}
+
+let cachedEntityPaths: Promise<string[]> | null = null;
+
+/**
+ * Canonical paths of the on-demand entity pages that belong in a sitemap:
+ * /supplier/<CAGE>/ for every supplier with at least one indexed award, and
+ * /solicitation/<number>/ for every solicitation that is open today. Suppliers
+ * first (by CAGE), then solicitations (by number). Only the entity sitemap
+ * files read it.
+ */
+export function loadEntitySitemapPaths(): Promise<string[]> {
+  if (!cachedEntityPaths) {
+    cachedEntityPaths = (async () => {
+      const pool = await openPool();
+      try {
+        const [sup, sols] = await Promise.all([
+          pool.query<{ cage: string }>(`SELECT DISTINCT cage FROM pub.price_points WHERE cage IS NOT NULL ORDER BY cage`),
+          pool.query<{ sol_number: string }>(
+            `SELECT sol_number FROM pub.solicitations
+             WHERE status = 'open' AND (return_by IS NULL OR return_by >= CURRENT_DATE)
+             ORDER BY sol_number`
+          ),
+        ]);
+        return [
+          ...sup.rows.filter((r) => CAGE_RE.test(r.cage)).map((r) => `/supplier/${r.cage}/`),
+          ...sols.rows.filter((r) => SOL_NUMBER_RE.test(r.sol_number)).map((r) => `/solicitation/${r.sol_number}/`),
+        ];
+      } finally {
+        await pool.end();
+      }
+    })();
+  }
+  return cachedEntityPaths;
 }
 
 let cached: Promise<SiteData> | null = null;

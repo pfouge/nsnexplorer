@@ -289,14 +289,81 @@ export function formatDate(iso: string): string {
   return new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' }).format(d);
 }
 
+/* Acquisition method codes, as defined in DFARS PGI 217.7506 (spare parts
+   breakout program). One table for the whole site: the part page, the class
+   lists, the compare tool and the markdown twins all read from here. */
+export type Competition = 'open' | 'restricted' | 'unknown';
+
+export const AMC_MEANING: Record<string, string> = {
+  '0': 'not established: the part has not completed screening',
+  '1': 'suitable for competitive acquisition, second or later time',
+  '2': 'suitable for competitive acquisition, first time',
+  '3': 'buy directly from the actual manufacturer, second or later time',
+  '4': 'buy directly from the actual manufacturer, first time',
+  '5': 'buy from a sole-source contractor that is not the actual manufacturer',
+};
+
+export const AMSC_MEANING: Record<string, string> = {
+  A: "the government's right to use the technical data it holds is in doubt",
+  B: 'must be bought from the sources named on a source control or selected item drawing',
+  C: 'needs engineering source approval; other sources must qualify first',
+  D: 'the data needed to compete the part is unavailable or cannot be obtained economically',
+  G: 'the government has a complete data package and the rights to use it',
+  H: 'the government lacks sufficient, accurate or legible data to buy from other sources',
+  K: 'must be made from class 1 castings or similar controlled forgings',
+  L: 'annual buy value is below the screening threshold',
+  M: 'making the part needs master or coordinated tooling',
+  N: 'making the part needs special test or inspection facilities',
+  O: 'no suffix code assigned: the part has not completed screening',
+  P: 'the government does not own the rights to the data needed for more sources',
+  Q: 'the government lacks adequate data or rights, but breakout to competition is expected',
+  R: 'the government owns neither the data nor the rights, and obtaining them is judged uneconomical',
+  S: 'restricted to government-approved sources because the item involves sensitive technology',
+  T: 'handled under qualified products list procedures',
+  U: 'the cost of breaking out and competing the part exceeds the projected savings',
+  V: 'a high-reliability part in a formal reliability program',
+  Y: 'the design is unstable and major changes are expected',
+  Z: 'a commercial, nondevelopmental or off-the-shelf item',
+};
+
+/** AMC 1 or 2 is coded as suitable for competitive acquisition; AMC 3, 4 or 5
+ *  is coded to a named source. With no usable AMC, only AMSC G (complete data
+ *  and rights) says anything about competition. */
+export function competitionOf(amc: string | null | undefined, amsc: string | null | undefined): Competition {
+  if (amc === '1' || amc === '2') return 'open';
+  if (amc === '3' || amc === '4' || amc === '5') return 'restricted';
+  return amsc === 'G' ? 'open' : 'unknown';
+}
+
+export const COMPETITION_BADGE: Record<Competition, string> = {
+  open: 'Coded for competition',
+  restricted: 'Coded for a named source',
+  unknown: 'Not coded',
+};
+
+/** One factual sentence for the part page. Describes the code on record, never a solicitation. */
+export function competitionSentence(amc: string | null | undefined, amsc: string | null | undefined): string {
+  if (!amc && !amsc) return 'No acquisition method code is on record for this item.';
+  switch (competitionOf(amc, amsc)) {
+    case 'open':
+      return amc === '1' || amc === '2'
+        ? `This item is coded as suitable for competitive acquisition (AMC ${amc}).`
+        : 'This item is coded AMSC G: the government has a complete data package and the rights to use it.';
+    case 'restricted':
+      return amc === '5'
+        ? 'This item is coded to be bought from a sole-source contractor that is not the actual manufacturer (AMC 5).'
+        : `This item is coded to be bought directly from the actual manufacturer (AMC ${amc}).`;
+    default:
+      return 'The codes on record do not say whether this item is competed or bought from a named source.';
+  }
+}
+
+export function amcGloss(amc: string | null): string | null {
+  if (!amc) return null;
+  return AMC_MEANING[amc] ? `AMC ${amc}: ${AMC_MEANING[amc]}.` : `AMC ${amc}`;
+}
+
 export function amscGloss(amsc: string | null): string | null {
   if (!amsc) return null;
-  const table: Record<string, string> = {
-    G: 'AMSC G — open competition: the government owns the data needed to make this part.',
-    C: 'AMSC C — sole source: the government says it lacks the technical data to compete this part.',
-    D: 'AMSC D — sole source: item requires source control or qualification.',
-    H: 'AMSC H — sole source: acquisition restricted pending data rights review.',
-    Z: 'AMSC Z — sole source: no competition action taken.',
-  };
-  return table[amsc] ?? `AMSC ${amsc}`;
+  return AMSC_MEANING[amsc] ? `AMSC ${amsc}: ${AMSC_MEANING[amsc]}.` : `AMSC ${amsc}`;
 }

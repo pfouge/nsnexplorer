@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { SITE_NAME, SITE_URL } from '../../consts';
+import CiteThis from '../../components/CiteThis.astro';
 import { loadSiteData, toDashedNsn, formatDate, formatUsdPrecise, formatUsd, type AgencyRecord } from '../../lib/data';
 
 export async function getStaticPaths() {
@@ -102,4 +103,6 @@ const breadcrumbSchema = {
       </div>
     )}
   </section>
+
+  <CiteThis title={agency.abbreviation ? `${agency.name} (${agency.abbreviation})` : agency.name} url={canonicalUrl} asOf={data.viz.today} />
 </BaseLayout>

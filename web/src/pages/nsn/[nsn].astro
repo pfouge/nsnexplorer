@@ -7,6 +7,7 @@ import NsnBuyingRhythm from '../../components/viz/NsnBuyingRhythm.astro';
 import NsnTimeToAward from '../../components/viz/NsnTimeToAward.astro';
 import NsnWhoWins from '../../components/viz/NsnWhoWins.astro';
 import SignupForm from '../../components/SignupForm.astro';
+import CiteThis from '../../components/CiteThis.astro';
 import { SITE_URL } from '../../consts';
 import { buildDiagram } from '../../lib/diagram';
 import {
@@ -18,6 +19,10 @@ import {
   formatUsd,
   formatUsdPrecise,
   amscGloss,
+  amcGloss,
+  competitionOf,
+  competitionSentence,
+  COMPETITION_BADGE,
   solicitationLinkLabel,
   parseCharacteristics,
 } from '../../lib/shared';
@@ -33,6 +38,7 @@ import { buildBuyingRhythm, type AwardEvent } from '../../lib/viz-nsn-rhythm';
 import { buildTimeToAward } from '../../lib/viz-nsn-timing';
 import { buildWinners, type WinAward } from '../../lib/viz-nsn-winners';
 import { supplierLabel } from '../../lib/viz-nsn-common';
+import { solicitationPath, supplierPath } from '../../lib/entity';
 
 // Rendered ON REQUEST by the Cloudflare Pages Function, not at build time.
 // Cloudflare Pages caps a deployment at 20,000 files and the catalog is far
@@ -99,8 +105,8 @@ const latestAction = [...contractActions]
   .at(-1);
 // AMSC G/Z and AMC 1/2 indicate competitive acquisition; others lean
 // restricted. Unknown stays neutral.
-const competitionOpen =
-  nsn.amsc === 'G' || nsn.amsc === 'Z' || nsn.amc === '1' || nsn.amc === '2';
+const competition = competitionOf(nsn.amc, nsn.amsc);
+const competitionOpen = competition === 'open';
 const dibbsRfqUrl = `https://www.dibbs.bsm.dla.mil/RFQ/RFQNsn.aspx?value=${nsn.nsn}&category=nsn`;
 const dibbsAwardUrl = `https://www.dibbs.bsm.dla.mil/Awards/AwdRecs.aspx?category=awdnsn&TypeSrch=cq&Value=${nsn.nsn}`;
 
@@ -176,6 +182,8 @@ const description = nsnDescription(copyInput);
 const summary = nsnSummary(copyInput);
 
 const canonicalUrl = `${SITE_URL}/nsn/${dashed}/`;
+// This page is rendered on request, so "data as of" is the request date.
+const citeAsOf = new Date().toISOString().slice(0, 10);
 // The price history's Embed control.
 const priceEmbed = {
   src: `${SITE_URL}${nsnEmbedPath(dashed)}`,
@@ -293,7 +301,13 @@ const datasetSchema = {
               const badge = openSolBadge(s.returnBy);
               return (
                 <tr>
-                  <td class="mono"><a href={s.sourceUrl} target="_blank" rel="nofollow noopener">{s.solNumber}</a></td>
+                  <td class="mono">
+                    {solicitationPath(s.solNumber) ? (
+                      <a href={solicitationPath(s.solNumber)!}>{s.solNumber}</a>
+                    ) : (
+                      <a href={s.sourceUrl} target="_blank" rel="nofollow noopener">{s.solNumber}</a>
+                    )}
+                  </td>
                   <td class="num mono">{s.quantity !== null ? s.quantity.toLocaleString('en-US') : '—'}</td>
                   <td><span class={`badge ${badge.cls}`}>{badge.text}</span></td>
                   <td><a href={s.sourceUrl} target="_blank" rel="nofollow noopener">Bid →</a></td>
@@ -316,42 +330,37 @@ const datasetSchema = {
     </section>
   )}
 
-  <!-- 2. Can you win it? — the eligibility signal: open competition or approved sources only. -->
+  <!-- 2. Can you win it? — the acquisition method codes on record (DFARS PGI 217.7506). -->
   <section class="card" id="competition">
     <h2 class="section-title" style="margin-top:0;">Can you win it?</h2>
-    <p class="gloss">
-      {competitionOpen
-        ? 'Open to any qualified supplier — DLA has this NSN flagged for competitive acquisition.'
-        : 'Restricted — approved sources only, based on the latest AMSC/AMC on record.'}
-    </p>
+    <p class="gloss">{competitionSentence(nsn.amc, nsn.amsc)}</p>
     <div class="datastrip" style="margin-top:0.9rem;">
       <div class="cell">
-        <div class="k">AMSC / AMC</div>
-        <div class="v">
-          {nsn.amsc ? (
-            <span class={`badge ${nsn.amsc === 'G' ? 'green' : 'amber'}`} title={amscGloss(nsn.amsc) ?? ''}>
-              {nsn.amsc}
-            </span>
-          ) : (
-            '—'
-          )}
-          {nsn.amc && <span class="mono gloss" style="font-size:0.85rem; margin-left:0.5rem;">AMC {nsn.amc}</span>}
-        </div>
+        <div class="k">Acquisition method (AMC)</div>
+        <div class="v">{nsn.amc ? <span class="badge">{nsn.amc}</span> : '—'}</div>
+      </div>
+      <div class="cell">
+        <div class="k">Suffix (AMSC)</div>
+        <div class="v">{nsn.amsc ? <span class="badge">{nsn.amsc}</span> : '—'}</div>
       </div>
       <div class="cell">
         <div class="k">Competition</div>
         <div class="v">
-          {nsn.amsc || nsn.amc ? (
-            <span class={`badge ${competitionOpen ? 'green' : 'amber'}`}>
-              {competitionOpen ? 'Open competition' : 'Restricted'}
-            </span>
-          ) : (
+          {competition === 'unknown' ? (
             '—'
+          ) : (
+            <span class={`badge ${competitionOpen ? 'green' : 'amber'}`}>{COMPETITION_BADGE[competition]}</span>
           )}
         </div>
       </div>
     </div>
-    {nsn.amsc && <p class="gloss" style="margin-top:0.9rem;">{amscGloss(nsn.amsc)}</p>}
+    {(nsn.amc || nsn.amsc) && (
+      <p class="gloss" style="margin-top:0.9rem;">
+        {[amcGloss(nsn.amc), amscGloss(nsn.amsc)].filter(Boolean).join(' ')}{' '}
+        The codes describe the item's status on record, not any one solicitation.{' '}
+        <a href="/guides/amc-amsc-codes/">What the codes mean</a>
+      </p>
+    )}
     {openSetAsides.length > 0 && (
       <p class="gloss" style="margin-top:0.6rem;">
         Set-aside on open solicitation{openSetAsides.length === 1 ? '' : 's'}: {openSetAsides.join(', ')}
@@ -544,7 +553,7 @@ const datasetSchema = {
                 </td>
                 <td class="num mono">{p.totalValue !== null ? formatUsd(p.totalValue) : '—'}</td>
                 <td>
-                  {p.supplierName ?? 'Unknown'} {p.cage && <span class="cage">({p.cage})</span>}
+                  {supplierPath(p.cage) ? <a href={supplierPath(p.cage)!}>{p.supplierName ?? 'Unknown'}</a> : (p.supplierName ?? 'Unknown')} {p.cage && <span class="cage">({p.cage})</span>}
                 </td>
                 <td>
                   {p.agencyId !== null && agencySlugById.has(p.agencyId) ? (
@@ -636,7 +645,9 @@ const datasetSchema = {
               const badge = historyStatusBadge(s.status);
               return (
                 <tr>
-                  <td class="mono">{s.solNumber}</td>
+                  <td class="mono">
+                    {solicitationPath(s.solNumber) ? <a href={solicitationPath(s.solNumber)!}>{s.solNumber}</a> : s.solNumber}
+                  </td>
                   <td class="mono">{s.issuedOn ? formatDate(s.issuedOn) : '—'}</td>
                   <td class="mono">{s.returnBy ? formatDate(s.returnBy) : '—'}</td>
                   <td class="num mono">{s.quantity !== null ? s.quantity.toLocaleString('en-US') : '—'}</td>
@@ -678,5 +689,6 @@ const datasetSchema = {
       {lastUpdated && <li>Data last refreshed: {new Date(lastUpdated).toISOString().slice(0, 10)}.</li>}
       <li><a href="/methodology/">Full methodology →</a></li>
     </ul>
+    <CiteThis title={itemLabel} url={canonicalUrl} asOf={citeAsOf} />
   </section>
 </BaseLayout>

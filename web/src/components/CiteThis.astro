@@ -1,0 +1,170 @@
+---
+// CiteThis.astro — a quiet "Cite this page" disclosure: one-line citation plus
+// the bare link, each with a Copy button. Place it once per page. The
+// "Accessed" date comes from the viewer's clock in the browser; the
+// server-rendered text leaves that sentence out.
+import { citationBase } from '../lib/cite';
+
+interface Props {
+  /** The page's visible h1 text. */
+  title: string;
+  /** Canonical URL of the page. */
+  url: string;
+  /** ISO date the data is current to (build date, or request date for on-demand pages). */
+  asOf: string;
+}
+const { title, url, asOf } = Astro.props;
+const base = citationBase(title, url, asOf);
+---
+<details class="cite">
+  <summary>Cite this page</summary>
+  <div class="cite-body">
+    <div class="cite-row">
+      <span class="cite-label">Citation</span>
+      <p class="cite-text" data-cite-text="citation"><span>{base}</span><span data-cite-accessed></span></p>
+      <button type="button" class="copy" data-cite-copy="citation" aria-label="Copy citation">Copy</button>
+    </div>
+    <div class="cite-row">
+      <span class="cite-label">Link</span>
+      <p class="cite-text" data-cite-text="link">{url}</p>
+      <button type="button" class="copy" data-cite-copy="link" aria-label="Copy link">Copy</button>
+    </div>
+    <span class="sr-only" role="status" data-cite-status></span>
+  </div>
+</details>
+
+<style>
+  .cite {
+    margin: 1.5rem 0 0;
+    font-size: 0.875rem;
+  }
+  .cite > summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+    list-style: none;
+    color: var(--ink-soft);
+    border-radius: 4px;
+  }
+  .cite > summary::-webkit-details-marker {
+    display: none;
+  }
+  .cite > summary::after {
+    content: '';
+    width: 6px;
+    height: 6px;
+    margin-top: -3px;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: rotate(45deg);
+    transition: transform 0.15s ease;
+  }
+  .cite[open] > summary::after {
+    margin-top: 2px;
+    transform: rotate(-135deg);
+  }
+  .cite > summary:hover {
+    color: var(--ink);
+    text-decoration: underline;
+  }
+  .cite-body {
+    margin-top: 0.6rem;
+    padding: 0.75rem 0.9rem;
+    background: var(--paper-2);
+    border-radius: 8px;
+    font-size: 0.875rem;
+    color: var(--ink);
+  }
+  .cite-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.25rem 0.75rem;
+  }
+  .cite-row + .cite-row {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--line);
+  }
+  .cite-label {
+    flex: 0 0 100%;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .cite-text {
+    flex: 1 1 16rem;
+    min-width: 0;
+    margin: 0;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+    user-select: text;
+  }
+  .cite .copy {
+    flex: none;
+    background: var(--card);
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+  .cite .copy:hover {
+    box-shadow: inset 0 0 0 1px var(--ink-soft);
+  }
+</style>
+
+<script>
+  // One delegated listener for the page (the component appears once per page).
+  // Copy uses the Clipboard API; without it the text is selected so Ctrl/Cmd+C works.
+  import { accessedSentence } from '../lib/cite';
+
+  const fillAccessed = () => {
+    const sentence = accessedSentence(new Date());
+    document.querySelectorAll<HTMLElement>('[data-cite-accessed]').forEach((el) => {
+      el.textContent = sentence;
+    });
+  };
+  fillAccessed();
+
+  const select = (node: Element) => {
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    const sel = window.getSelection();
+    sel?.removeAllRanges();
+    sel?.addRange(range);
+  };
+
+  const flash = (btn: HTMLButtonElement, label: string) => {
+    const prev = btn.dataset.label ?? btn.textContent ?? 'Copy';
+    btn.dataset.label = prev;
+    btn.textContent = label;
+    const status = btn.closest('.cite')?.querySelector('[data-cite-status]');
+    if (status) status.textContent = label === 'Copied' ? 'Copied to clipboard' : '';
+    window.setTimeout(() => {
+      btn.textContent = prev;
+      if (status) status.textContent = '';
+    }, 1500);
+  };
+
+  document.addEventListener('click', async (e) => {
+    const from = e.target instanceof Element ? e.target : null;
+    const btn = from?.closest<HTMLButtonElement>('[data-cite-copy]');
+    if (!btn) return;
+    const box = btn.closest('.cite');
+    const target = box?.querySelector(`[data-cite-text="${btn.dataset.citeCopy}"]`);
+    if (!target) return;
+    fillAccessed(); // a tab left open overnight still cites today's date
+    const text = (target.textContent ?? '').trim();
+    try {
+      await navigator.clipboard.writeText(text);
+      flash(btn, 'Copied');
+    } catch {
+      select(target);
+      try {
+        flash(btn, document.execCommand('copy') ? 'Copied' : 'Press Ctrl+C');
+      } catch {
+        flash(btn, 'Press Ctrl+C');
+      }
+    }
+  });
+</script>

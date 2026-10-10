@@ -98,10 +98,14 @@ const faq = [
   <section>
     <h2>AMSC / AMC — <code class="mono">pub.amsc_observations</code></h2>
     <p class="gloss">
-      The Acquisition Method Suffix Code tells you whether a part is open to competition (AMSC G)
-      or sole-source because the government says it lacks the technical data package (AMSC C, D,
-      H, Z). We show the most recently observed value with the date and source solicitation it
-      was observed on.
+      The Acquisition Method Code (AMC) records whether a part is coded as suitable for
+      competitive acquisition (AMC 1 or 2) or to be bought from the actual manufacturer or a
+      sole-source contractor (AMC 3, 4 or 5). The suffix code (AMSC) records the reason, such as
+      a complete government data package with rights (G) or a need for engineering source
+      approval (C). The definitions are those in DFARS PGI 217.7506. We show the most recent
+      value on record with its date and source; the main source is DLA's public PUB LOG file.
+      The codes describe the item, not any one solicitation.
+      See <a href="/guides/amc-amsc-codes/">the guide to AMC and AMSC codes</a>.
     </p>
   </section>
 
@@ -145,6 +149,29 @@ const faq = [
       {formatUsd(data.stats.totalDollars + data.stats.totalObligated)} in indexed spend.
       Government-wide long-tail coverage (millions of NSNs) is on the roadmap; see
       <a href="/browse/">/browse/</a> for the current list.
+    </p>
+  </section>
+
+  <hr class="rule" />
+
+  <section id="downloads">
+    <h2>Downloads</h2>
+    <p class="gloss">
+      These CSV files are free to download. They hold the site's own totals and USAspending
+      records, and they are rebuilt with the site every day.
+    </p>
+    <ul class="gloss">
+      <li><a href="/data/classes.csv">classes.csv</a>: one row per federal supply class in the catalog, with its group, NSNs tracked, open solicitations, solicitations closing within 7 days, and the count and dollar total of priced purchases.</li>
+      <li><a href="/data/groups.csv">groups.csv</a>: one row per federal supply group, with its number of classes, NSNs tracked and open solicitations.</li>
+      <li><a href="/data/agencies.csv">agencies.csv</a>: one row per agency, with its indexed purchase count and dollar total.</li>
+      <li>contract-actions-&lt;fsc&gt;.csv, such as <code>contract-actions-5330.csv</code>: the USAspending contract actions recorded against one class, with date, award number, PSC, NAICS, description, obligation, agency, recipient and a link to the USAspending record. Each class page links to its file when one exists.</li>
+    </ul>
+    <p class="gloss">
+      The <code>as_of</code> column in the first three files is the date of the site build that wrote
+      the file. It is the same on every row and changes when the site is rebuilt. Contract-action
+      files carry each record's own action date instead. Text that begins with =, +, - or @ is
+      written with a leading apostrophe so spreadsheets read it as text. Row-level solicitation
+      and award files are not offered yet.
     </p>
   </section>
 

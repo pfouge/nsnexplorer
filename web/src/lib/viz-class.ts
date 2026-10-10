@@ -25,7 +25,7 @@ export interface CompetitionRow extends CompetitionInput {
   segments: { key: 'open' | 'restricted' | 'unknown'; label: string; count: number; pct: number }[];
 }
 
-export const COMPETITION_LABELS = { open: 'Open competition', restricted: 'Restricted to listed sources', unknown: 'Not coded' } as const;
+export const COMPETITION_LABELS = { open: 'Coded for competition', restricted: 'Coded for a named source', unknown: 'Not coded' } as const;
 export const COMPETITION_OTHER_CLASSES = 5;
 
 /**

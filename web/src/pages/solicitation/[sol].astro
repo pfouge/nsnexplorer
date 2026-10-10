@@ -1,45 +1,61 @@
 ---
 // solicitation/[sol].astro — per-solicitation detail page. Deep-link/SEO
-// target for one open government solicitation: a public procurement notice,
+// target for one government solicitation: a public procurement notice,
 // not a sale, so no Offer/Product commerce schema — consistent with the
 // site's "not commerce" stance.
+//
+// Rendered ON REQUEST (like nsn/[nsn].astro) for every status (open, awarded,
+// expired, ...) and both sources (dibbs_rfq, sam_gov), so the "closes in N
+// days" countdown is computed per request, not at build time.
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import CiteThis from '../../components/CiteThis.astro';
 import { SITE_URL } from '../../consts';
-import { toDashedNsn, formatDate, type SolicitationRecord } from '../../lib/data';
+import { toDashedNsn, formatDate, formatUsdPrecise } from '../../lib/shared';
+import { databaseUrlFrom } from '../../lib/runtime-env';
+import { openSql } from '../../lib/nsn-page';
+import { loadSolicitationPage } from '../../lib/solicitation-page';
+import { countdownBadge, daysUntilClose, isSolNumber, statusBadge, supplierPath } from '../../lib/entity';
 
-export async function getStaticPaths() {
-  // Bounded out under Cloudflare's 20k-file limit. Restore as on-demand SSR
-  // (prerender=false) in the edge-render pivot — see HANDOFF.
-  return [];
+export const prerender = false;
+
+const solParam = Astro.params.sol ?? '';
+const notFound = (): Response => {
+  return new Response(null, { status: 404, headers: { 'Cache-Control': 'public, s-maxage=300' } });
+};
+// RFQ and notice numbers are letters, digits and dashes; anything else cannot exist.
+if (!isSolNumber(solParam)) return notFound();
+
+const databaseUrl = databaseUrlFrom(Astro);
+if (!databaseUrl) {
+  return new Response('Database is not configured for this environment.', { status: 503 });
 }
+const sql = openSql(databaseUrl);
+let page;
+try {
+  page = await loadSolicitationPage(sql, solParam);
+} finally {
+  await sql.end({ timeout: 1 }).catch(() => {});
+}
+if (!page) return notFound();
+// Shorter edge cache than NSN pages: the countdown and status change daily.
+Astro.response.headers.set('Cache-Control', 'public, max-age=0, s-maxage=600, stale-while-revalidate=3600');
 
-const { sol } = Astro.props as { sol: SolicitationRecord };
-
+const { sol, awards, fscName, hasOpenPage } = page;
+const isOpen = sol.status === 'open';
 const dashed = sol.nsn ? toDashedNsn(sol.nsn) : null;
 const itemLabel = sol.nomenclature ?? sol.itemName ?? sol.solNumber;
+const sourceName = sol.source === 'sam_gov' ? 'SAM.gov' : 'DIBBS';
 
-// Build-date baseline for the countdown badge — this page is static, so the
-// countdown is accurate as of the last build.
-const now = new Date();
-const todayMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-const daysUntilClose = sol.returnBy
-  ? Math.ceil((new Date(`${sol.returnBy}T00:00:00Z`).getTime() - todayMs) / 86400000)
-  : null;
-const countdown =
-  daysUntilClose === null
-    ? { text: 'Close date unknown', cls: '' as const }
-    : daysUntilClose <= 0
-      ? { text: 'Closes today', cls: 'amber' as const }
-      : daysUntilClose <= 2
-        ? { text: `Closes in ${daysUntilClose} day${daysUntilClose === 1 ? '' : 's'}`, cls: 'amber' as const }
-        : { text: `Closes in ${daysUntilClose} days`, cls: 'green' as const };
+const status = statusBadge(sol.status);
+const countdown = isOpen ? countdownBadge(daysUntilClose(sol.returnBy, new Date())) : null;
 
-const title = `${itemLabel} — Open solicitation ${sol.solNumber}`;
-const description = `Open government solicitation ${sol.solNumber}${
+const qty = sol.quantity !== null ? ` quantity ${sol.quantity.toLocaleString('en-US')}` : '';
+const title = `${itemLabel} — ${isOpen ? 'Open solicitation' : 'Solicitation'} ${sol.solNumber}`;
+const description = `${isOpen ? 'Open government' : 'Government'} solicitation ${sol.solNumber}${
   sol.nomenclature ? ` for ${sol.nomenclature}` : ''
-}${sol.quantity !== null ? `, quantity ${sol.quantity.toLocaleString('en-US')}` : ''}${
-  sol.returnBy ? `, closes ${formatDate(sol.returnBy)}` : ''
-} — bid via the official DIBBS record.`;
+}${qty ? `,${qty}` : ''}${
+  sol.returnBy ? `, ${isOpen ? 'closes' : 'closed'} ${formatDate(sol.returnBy)}` : ''
+} — ${isOpen ? 'bid via' : 'see'} the official ${sourceName} record.`;
 const canonicalUrl = `${SITE_URL}/solicitation/${sol.solNumber}/`;
 
 const breadcrumbSchema = {
@@ -51,6 +67,12 @@ const breadcrumbSchema = {
     { '@type': 'ListItem', position: 3, name: sol.solNumber, item: canonicalUrl },
   ],
 };
+
+const primaryLabel = isOpen
+  ? sol.source === 'sam_gov'
+    ? 'View this notice at SAM.gov →'
+    : 'View & bid on this RFQ at DIBBS →'
+  : `View the official record at ${sourceName} →`;
 ---
 
 <BaseLayout
@@ -64,14 +86,14 @@ const breadcrumbSchema = {
     <a href="/">Home</a> › <a href="/open/">Open demand</a> › {sol.solNumber}
   </nav>
 
-  <p class="eyebrow">Open solicitation <span class="x">×</span> {sol.solNumber}</p>
+  <p class="eyebrow">{isOpen ? 'Open solicitation' : 'Solicitation'} <span class="x">×</span> {sol.solNumber}</p>
 
   <header class="hero">
     <h1>{itemLabel}</h1>
-    <p style="margin-top:0.5rem;">
-      <span class:list={['badge', countdown.cls]} style="font-size:0.95rem; padding:0.3rem 0.7rem;">
-        {countdown.text}
-      </span>
+    <p class="ident">
+      <span class="code">{sol.solNumber}</span>
+      <span class:list={['badge', status.cls]}>{status.text}</span>
+      {countdown && <span class:list={['badge', countdown.cls]}>{countdown.text}</span>}
     </p>
   </header>
 
@@ -89,43 +111,87 @@ const breadcrumbSchema = {
     </div>
     <div class="stat">
       <div class="value">{sol.returnBy ? formatDate(sol.returnBy) : '—'}</div>
-      <div class="label">Closes</div>
+      <div class="label">Return by</div>
     </div>
-    <div class="stat">
-      <div class="value">
-        {dashed ? <a class="mono" href={`/nsn/${dashed}/`}>{dashed}</a> : '—'}
+    {dashed && (
+      <div class="stat">
+        <div class="value"><a class="mono" href={`/nsn/${dashed}/`}>{dashed}</a></div>
+        <div class="label">NSN</div>
       </div>
-      <div class="label">NSN</div>
-    </div>
+    )}
+    {sol.setaside && (
+      <div class="stat">
+        <div class="value">{sol.setaside}</div>
+        <div class="label">Set-aside</div>
+      </div>
+    )}
+    {sol.buyerOffice && (
+      <div class="stat">
+        <div class="value">{sol.buyerOffice}</div>
+        <div class="label">Buyer office</div>
+      </div>
+    )}
   </div>
 
-  {(sol.buyerOffice || sol.setaside) && (
-    <p class="gloss" style="margin-top:0.9rem;">
-      {sol.buyerOffice && <>Buying office: {sol.buyerOffice}</>}
-      {sol.buyerOffice && sol.setaside && ' · '}
-      {sol.setaside && <>Set-aside: {sol.setaside}</>}
-    </p>
-  )}
-
   <p style="margin:1.25rem 0 0; display:flex; gap:0.75rem; flex-wrap:wrap;">
-    <a class="btn" href={sol.sourceUrl} target="_blank" rel="nofollow noopener">
-      View &amp; bid on this RFQ at DIBBS →
-    </a>
+    <a class="btn" href={sol.sourceUrl} target="_blank" rel="nofollow noopener">{primaryLabel}</a>
     {dashed && (
       <a class="btn btn-ghost" href={`/nsn/${dashed}/`}>
         See price history &amp; specs for this part →
       </a>
     )}
+    {hasOpenPage && sol.fsc && (
+      <a class="btn btn-ghost" href={`/open/${sol.fsc}/`}>
+        Solicitations in FSC {sol.fsc}{fscName ? ` ${fscName}` : ''} →
+      </a>
+    )}
   </p>
+
+  {awards.length > 0 && (
+    <section id="awards">
+      <h2 class="section-title">Awards on this solicitation</h2>
+      <div class="table-wrap">
+        <table>
+          <caption>{awards.length} award{awards.length === 1 ? '' : 's'} on record that cite {sol.solNumber}</caption>
+          <thead>
+            <tr>
+              <th>Awarded</th>
+              <th>Supplier</th>
+              <th class="num">Unit price</th>
+              <th class="num">Qty</th>
+            </tr>
+          </thead>
+          <tbody>
+            {awards.map((a) => {
+              const href = supplierPath(a.cage);
+              return (
+                <tr>
+                  <td class="mono">{formatDate(a.awardedOn)}</td>
+                  <td>
+                    {href ? <a href={href}>{a.supplierName ?? `CAGE ${a.cage}`}</a> : (a.supplierName ?? 'Unknown')}
+                    {a.cage && a.supplierName && <span class="cage"> ({a.cage})</span>}
+                  </td>
+                  <td class="num price">{formatUsdPrecise(a.unitPrice)}</td>
+                  <td class="num mono">{a.quantity !== null ? a.quantity.toLocaleString('en-US') : '—'}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )}
 
   <section class="card" style="margin-top:2rem;">
     <h2>About this data / source</h2>
     <ul class="gloss">
       <li>
-        Solicitation record: <a href={sol.sourceUrl} target="_blank" rel="nofollow noopener">{sol.source}</a>.
+        Solicitation record: <a href={sol.sourceUrl} target="_blank" rel="nofollow noopener">{sourceName}</a>.
       </li>
-      <li>Status and close date reflect the last time our crawler observed this record — always confirm current status on DIBBS before bidding.</li>
+      <li>Status and close date reflect the last time our crawler observed this record — always confirm current status on {sourceName} before bidding.</li>
+      {awards.length > 0 && <li>Awards listed here are indexed award records that cite this solicitation number; each links to its supplier page.</li>}
       <li><a href="/methodology/">Full methodology →</a></li>
     </ul>
+    <CiteThis title={`${itemLabel}, solicitation ${sol.solNumber}`} url={canonicalUrl} asOf={new Date().toISOString().slice(0, 10)} />
   </section>
 </BaseLayout>

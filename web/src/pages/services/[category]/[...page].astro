@@ -13,6 +13,7 @@ import { setasideMix, stateModel } from '../../../lib/viz-services';
 import SetasideMix from '../../../components/viz/SetasideMix.astro';
 import StateMap from '../../../components/viz/StateMap.astro';
 import { fitDescription } from '../../../lib/seo-copy';
+import { solicitationPath } from '../../../lib/entity';
 import { pageCount, pageItems, pageNumbers, pageParam, pageRange, pageUrl, rangeLabel, pagedDescriptionPrefix, pagedTitle } from '../../../lib/paginate';
 
 // /services/<letter>/ is page 1; /services/<letter>/page/<n>/ holds the next PAGE_SIZE notices.
@@ -217,7 +218,11 @@ const stateMapModel = showCharts ? stateModel(allNotices) : null;
                 <div class="product-signals" style="margin-top:0;">
                   <span class={`badge ${label.cls}`}>{label.text}</span>
                   {x.psc && <span class="signal mono">{x.psc}</span>}
-                  <span class="signal mono">{x.solNumber}</span>
+                  {solicitationPath(x.solNumber) ? (
+                    <a class="signal mono" href={solicitationPath(x.solNumber)!}>{x.solNumber}</a>
+                  ) : (
+                    <span class="signal mono">{x.solNumber}</span>
+                  )}
                 </div>
                 <p class="gloss" style="margin:0.35rem 0 0; font-size:0.78rem;">
                   {x.agency ?? 'Unknown agency'}{x.office ? ` · ${x.office}` : ''}

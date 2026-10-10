@@ -1,0 +1,176 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import GuideFooter from '../../components/GuideFooter.astro';
+import { SITE_URL } from '../../consts';
+
+const title = 'What Is a CAGE Code? Who Issues It and Why It Matters';
+const description =
+  "A CAGE code is a 5-character ID for a facility in federal business. See who issues it, how it ties to SAM.gov and your UEI, and where it shows on awards.";
+const canonicalUrl = `${SITE_URL}/guides/cage-code/`;
+
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  { name: 'Guides', url: '/guides/' },
+  { name: 'What is a CAGE code?', url: canonicalUrl },
+];
+
+const faq = [
+  {
+    question: 'What does CAGE stand for?',
+    answer:
+      'Commercial and Government Entity. A CAGE code is a unique identifier given to government suppliers, agencies and other organizations.',
+  },
+  {
+    question: 'Who issues a CAGE code?',
+    answer:
+      'For U.S. entities, the DLA CAGE Program Office assigns it. Most companies receive theirs automatically when they register in SAM.gov.',
+  },
+  {
+    question: 'Is a CAGE code the same as a Unique Entity ID?',
+    answer:
+      'No. SAM.gov generates the Unique Entity ID (UEI), and GSA says it does not affect CAGE codes. The FAR also treats the two as separate identifiers.',
+  },
+  {
+    question: 'How do I look up a company\'s CAGE code?',
+    answer:
+      'DLA runs CAGE Public at cage.dla.mil, where codes can be searched. DLA\'s PUB LOG data also links CAGE codes to NSNs and part numbers.',
+  },
+  {
+    question: 'How often does SAM.gov registration have to be renewed?',
+    answer:
+      'Every 365 days. DLA recommends starting the renewal and validation 45 days before it expires so a review does not cause a lapse.',
+  },
+];
+
+const sources = [
+  { label: 'DLA: CAGE Code, Commercial and Government Entity Code', url: 'https://www.dla.mil/Working-With-DLA/Applications/Details/Article/2920893/cage-code-commercial-and-government-entity-code/' },
+  { label: 'DLA: Registration, renewal and CAGE creation in SAM', url: 'https://www.dla.mil/Working-With-DLA/Applications/Details/Article/3606127/registration-renewal-and-cage-creation-in-system-for-award-management-sam/' },
+  { label: 'CAGE Public (DLA CAGE site)', url: 'https://cage.dla.mil/' },
+  { label: 'SAM.gov: Entity registration checklist (PDF)', url: 'https://sam.gov/sites/default/files/2024-11/entity-checklist.pdf' },
+  { label: 'SAM.gov: Get started with registration and the Unique Entity ID', url: 'https://sam.gov/entity-registration' },
+  { label: 'GSA: Unique Entity ID is here', url: 'https://www.gsa.gov/about-us/organization/federal-acquisition-service/integrated-award-environment-iae/iae-systems-information-kit/unique-entity-id-is-here' },
+  { label: 'acquisition.gov: FAR Subpart 4.18, Commercial and Government Entity Code reporting', url: 'https://www.acquisition.gov/far/subpart-4.18' },
+  { label: 'DLA: DIBBS vendor registration', url: 'https://www.dla.mil/Vendor-Information-Hub/Table-of-Contents/Details/Article/3746012/dla-internet-bid-board-system-dibbs-vendor-registration/' },
+  { label: 'DLA: PUB LOG, public logistics data', url: 'https://www.dla.mil/Information-Operations/Services/Applications/PUB-LOG/' },
+];
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  ogType="article"
+  pageType="Article"
+  canonicalUrl={canonicalUrl}
+  breadcrumbs={breadcrumbs}
+  faq={faq}
+>
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a> › <a href="/guides/">Guides</a> › What is a CAGE code?
+  </nav>
+
+  <h1>What is a CAGE code?</h1>
+  <p class="lede answer">
+    A Commercial and Government Entity (CAGE) code is a five-character identifier for a business
+    facility that deals with the federal government. The DLA CAGE Program Office assigns it, and
+    U.S. companies usually get theirs during SAM.gov registration.
+  </p>
+
+  <section>
+    <h2 class="section-title">What a CAGE code identifies</h2>
+    <p>
+      DLA describes the code as a standardized way to identify a facility at a specific
+      location. It is used for suppliers, government agencies and other organizations. On
+      solicitations and awards it is how the government names the company that makes, supplies or
+      wins an item, which is why you see it next to <a href="/guides/what-is-an-nsn/">NSNs</a>
+      and part numbers.
+    </p>
+  </section>
+
+  <section>
+    <h2 class="section-title">How it relates to SAM.gov and the UEI</h2>
+    <p>
+      The <a href="/guides/glossary/#sam">System for Award Management (SAM.gov)</a> is where a
+      company registers to do business with the government. Registration is free. Two identifiers
+      come out of it:
+    </p>
+    <ul>
+      <li>
+        <strong>Unique Entity ID (UEI).</strong> SAM.gov generates it after it validates your
+        legal business name and physical address. It is the first step of registration.
+      </li>
+      <li>
+        <strong>CAGE code.</strong> It is requested in the Core Data section of the registration.
+        A U.S. entity that does not have one answers no, and SAM.gov assigns one after the
+        registration is submitted. An entity that already has one has its record updated.
+      </li>
+    </ul>
+    <p>
+      The two are separate. GSA states that the UEI does not affect CAGE codes, and the FAR
+      calls the unique entity identifier a separate identifier from the CAGE code. DLA says CAGE
+      processing can take up to 10 business days, and it names a Check Entity Status Tool for
+      following progress.
+    </p>
+    <p>
+      Entities outside the United States use an NCAGE code, the NATO version. SAM.gov's checklist
+      says non-U.S. entities must request one before starting a registration.
+    </p>
+  </section>
+
+  <section>
+    <h2 class="section-title">Where the code shows up</h2>
+    <ul>
+      <li>
+        <strong>On contracts.</strong> The FAR says an offeror must give the contracting officer
+        the CAGE code for its location before an award above the micro-purchase threshold, when
+        the solicitation requires SAM registration or a UEI. The contracting officer puts the code
+        in the contract and in the electronic data sent to other systems. If the offeror is owned
+        or controlled by another entity, that entity's CAGE code and legal name are also
+        required.
+      </li>
+      <li>
+        <strong>On DIBBS.</strong> A DIBBS user ID is the company's CAGE code followed by 01, and
+        you can search solicitations by an approved manufacturer's CAGE code. See
+        <a href="/guides/how-to-bid-on-dibbs/">how to bid on DIBBS</a>.
+      </li>
+      <li>
+        <strong>On item records.</strong> DLA's PUB LOG data links CAGE codes to NSNs and part
+        numbers, so you can see which CAGE codes are tied to an item.
+      </li>
+    </ul>
+  </section>
+
+  <section>
+    <h2 class="section-title">How to look one up or request one</h2>
+    <p>
+      DLA's <a href="https://cage.dla.mil/" target="_blank" rel="noopener">CAGE Public</a> site lets
+      you search for codes and also has sections to request or update one. For a new U.S.
+      business, DLA's guidance is that the code is created as part of SAM registration, so the
+      registration is the route to follow.
+    </p>
+    <p>
+      SAM.gov registration must be renewed every 365 days. Updating contacts does not renew it.
+      DLA recommends starting the renewal 45 days before expiration.
+    </p>
+  </section>
+
+  <section>
+    <h2 class="section-title">On NSN Explorer</h2>
+    <p>
+      NSN pages on this site list part numbers with their CAGE codes and show the supplier on
+      each past award, with a link back to the official record. Browse <a href="/open/">open solicitations</a>,
+      look up an item through the <a href="/">home page search</a>, or read the
+      <a href="/suppliers/">supplier guide</a> for the whole path from registration to quote.
+    </p>
+  </section>
+
+  <GuideFooter
+    faq={faq}
+    sources={sources}
+    reviewed="October 2026"
+    next={[
+      { href: '/guides/how-to-bid-on-dibbs/', label: 'How to bid on DIBBS' },
+      { href: '/guides/what-is-an-nsn/', label: 'What is an NSN?' },
+      { href: '/guides/glossary/', label: 'Glossary of government parts purchasing terms' },
+    ]}
+  />
+</BaseLayout>

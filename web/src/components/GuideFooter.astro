@@ -1,0 +1,48 @@
+---
+// GuideFooter — the common ending of every beginner guide: FAQ block,
+// official sources, a standing "not legal advice" note and the review date.
+// The same `faq` array should also be passed to BaseLayout so FAQ schema is emitted.
+interface Props {
+  faq: { question: string; answer: string }[];
+  sources: { label: string; url: string }[];
+  reviewed: string;
+  next?: { href: string; label: string }[];
+}
+const { faq, sources, reviewed, next = [] } = Astro.props;
+---
+
+<section class="faq">
+  <h2 class="section-title">Common questions</h2>
+  {faq.map((f) => (
+    <>
+      <h3>{f.question}</h3>
+      <p class="gloss">{f.answer}</p>
+    </>
+  ))}
+</section>
+
+<section class="guide-sources">
+  <h2 class="section-title">Sources</h2>
+  <p class="gloss">Official pages used for this guide. Rules and web pages change, so check them before you act.</p>
+  <ul>
+    {sources.map((s) => (
+      <li><a href={s.url} target="_blank" rel="noopener">{s.label}</a></li>
+    ))}
+  </ul>
+</section>
+
+{next.length > 0 && (
+  <section>
+    <h2 class="section-title">Keep reading</h2>
+    <ul>
+      {next.map((n) => <li><a href={n.href}>{n.label}</a></li>)}
+    </ul>
+  </section>
+)}
+
+<div class="note">
+  This guide describes how the system works and points to the official instructions. It is
+  general information, not legal advice, and it does not recommend bidding on anything. NSN
+  Explorer is an independent site and is not affiliated with the U.S. government.
+</div>
+<p class="updated">Last reviewed {reviewed}.</p>

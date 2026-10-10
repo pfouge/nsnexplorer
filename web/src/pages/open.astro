@@ -5,6 +5,7 @@
 // catalog). Audience is the supplier/manufacturer deciding what to bid on;
 // this is not commerce — every link routes to the official DIBBS record.
 import BaseLayout from '../layouts/BaseLayout.astro';
+import CiteThis from '../components/CiteThis.astro';
 import { fscLabel, listedFscName } from '../lib/seo-copy';
 import { SITE_URL } from '../consts';
 import { loadSiteData, toDashedNsn, solicitationLinkLabel } from '../lib/data';
@@ -14,6 +15,7 @@ import DemandMap from '../components/viz/DemandMap.astro';
 import ClosingCalendar from '../components/viz/ClosingCalendar.astro';
 import { buildDemandTiles, buildTiles } from '../lib/viz-site';
 import { buildCalendar } from '../lib/viz-open';
+import { solicitationPath } from '../lib/entity';
 
 const data = await loadSiteData();
 const departments = buildOpenDepartments(data);
@@ -173,6 +175,7 @@ const buildDate = now.toLocaleDateString('en-US', { year: 'numeric', month: 'lon
           <table>
             <thead>
               <tr>
+                <th>Solicitation</th>
                 <th>NSN</th>
                 <th>Item</th>
                 <th class="num">Qty</th>
@@ -185,6 +188,9 @@ const buildDate = now.toLocaleDateString('en-US', { year: 'numeric', month: 'lon
                 const label = closesLabel(daysUntil(s.returnBy));
                 return (
                   <tr>
+                    <td class="mono">
+                      {solicitationPath(s.solNumber) ? <a href={solicitationPath(s.solNumber)!}>{s.solNumber}</a> : '—'}
+                    </td>
                     <td class="mono">
                       {s.nsn ? (
                         data.nsnByNsn.has(s.nsn) || data.openNsnByNsn.has(s.nsn) ? (
@@ -281,4 +287,6 @@ const buildDate = now.toLocaleDateString('en-US', { year: 'numeric', month: 'lon
       </>
     ))}
   </section>
+
+  <CiteThis title={h1} url={canonicalUrl} asOf={data.viz.today} />
 </BaseLayout>

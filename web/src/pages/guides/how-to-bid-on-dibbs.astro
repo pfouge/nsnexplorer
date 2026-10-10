@@ -1,0 +1,196 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import GuideFooter from '../../components/GuideFooter.astro';
+import { SITE_URL } from '../../consts';
+
+const title = 'How to Bid on DIBBS: Registration to Quote';
+const description =
+  'How to bid on DIBBS, DLA\'s bid board for parts: the prerequisites in order, how to find a solicitation, where quotes go, and what happens after you submit.';
+const canonicalUrl = `${SITE_URL}/guides/how-to-bid-on-dibbs/`;
+
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  { name: 'Guides', url: '/guides/' },
+  { name: 'How to bid on DIBBS', url: canonicalUrl },
+];
+
+const faq = [
+  {
+    question: 'What is DIBBS?',
+    answer:
+      'DIBBS is the DLA Internet Bid Board System. Vendors use it to search for and view requests for quotation, requests for proposal, invitations for bid and awards on DLA items, and to submit secure quotes.',
+  },
+  {
+    question: 'What do I need before I can bid on DIBBS?',
+    answer:
+      'An active SAM.gov registration, a CAGE code, and a DIBBS account. DIBBS takes your company name and address from your SAM.gov profile.',
+  },
+  {
+    question: 'Are solicitations posted anywhere besides DIBBS?',
+    answer:
+      'Yes. DLA says most DoD and federal procurements above $25,000, including its own, are posted on SAM.gov. DLA advises confirming that a requirement is still open before you prepare a quote.',
+  },
+  {
+    question: 'How do I submit a quote?',
+    answer:
+      'Find the solicitation in DIBBS, select the quote button, complete the quote form, review the summary and submit. DIBBS also supports batch quoting from a prepared file.',
+  },
+  {
+    question: 'Can I change a quote after I submit it?',
+    answer:
+      'DLA\'s guide says you can view your submitted quote until the contract is awarded or canceled, and that a revised quote for the same requirement replaces the earlier one.',
+  },
+];
+
+const sources = [
+  { label: 'DLA: DIBBS vendor registration', url: 'https://www.dla.mil/Vendor-Information-Hub/Table-of-Contents/Details/Article/3746012/dla-internet-bid-board-system-dibbs-vendor-registration/' },
+  { label: 'DLA: DIBBS pocket guide', url: 'https://www.dla.mil/Portals/104/Documents/SmallBusiness/DIBBS%20Pocket%20Guide.pdf' },
+  { label: 'DLA Small Business: Vendor opportunities', url: 'https://www.dla.mil/Small-Business/Vendor-Opportunities' },
+  { label: 'DLA: Registration, renewal and CAGE creation in SAM', url: 'https://www.dla.mil/Working-With-DLA/Applications/Details/Article/3606127/registration-renewal-and-cage-creation-in-system-for-award-management-sam/' },
+  { label: 'SAM.gov: Get started with registration and the Unique Entity ID', url: 'https://sam.gov/entity-registration' },
+  { label: 'DLA briefing: DIBBS solicitation types and quoting (NDIA, 2024)', url: 'https://ndia.dtic.mil/wp-content/uploads/2024/dla/Tue_Breakout_DIBBS.pdf' },
+];
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  ogType="article"
+  pageType="Article"
+  canonicalUrl={canonicalUrl}
+  breadcrumbs={breadcrumbs}
+  faq={faq}
+>
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a> › <a href="/guides/">Guides</a> › How to bid on DIBBS
+  </nav>
+
+  <h1>How to bid on DIBBS</h1>
+  <p class="lede answer">
+    DIBBS is the Defense Logistics Agency's online bid board, where suppliers find solicitations
+    for parts and submit quotes. To bid you need an active SAM.gov registration, a CAGE code and
+    a DIBBS account, in that order.
+  </p>
+
+  <section>
+    <h2 class="section-title">What DIBBS is and what appears there</h2>
+    <p>
+      DIBBS stands for DLA Internet Bid Board System. DLA says vendors use it to search for and
+      respond to requests for quotation (<a href="/guides/glossary/#rfq">RFQs</a>), requests for
+      proposal (<a href="/guides/glossary/#rfp">RFPs</a>), invitations for bid
+      (<a href="/guides/glossary/#ifb">IFBs</a>) and awards. Requests for quotation can be searched by
+      <a href="/guides/what-is-an-nsn/">NSN</a>.
+    </p>
+    <p>
+      DIBBS is not the only place DLA posts. DLA says most DoD and federal procurements above
+      $25,000, including its own, are posted on SAM.gov. It also advises checking that a
+      requirement is still open before preparing a quote, because a solicitation can be awarded
+      or canceled after it is published.
+    </p>
+  </section>
+
+  <section>
+    <h2 class="section-title">The prerequisites, in order</h2>
+    <ol>
+      <li>
+        <strong>An active SAM.gov registration.</strong> Registration is free and also creates
+        your Unique Entity ID. DIBBS pulls your company name and business address from SAM.gov
+        and does not let you change them, so a wrong address has to be fixed in SAM.gov first.
+        Start with
+        <a href="https://sam.gov/entity-registration" target="_blank" rel="noopener">SAM.gov's registration page</a>
+        and DLA's
+        <a href="https://www.dla.mil/Working-With-DLA/Applications/Details/Article/3606127/registration-renewal-and-cage-creation-in-system-for-award-management-sam/" target="_blank" rel="noopener">SAM registration guidance</a>.
+      </li>
+      <li>
+        <strong>A CAGE code.</strong> A U.S. company that does not have one receives it through
+        the SAM registration. See <a href="/guides/cage-code/">what a CAGE code is</a>.
+      </li>
+      <li>
+        <strong>A DIBBS account.</strong> You register from DIBBS itself, starting with the
+        vendor registration option and your CAGE code. DLA's published steps include confirming
+        the address from SAM.gov, naming one administrator for the CAGE (DLA calls this person
+        the Super User), verifying the physical address by mail, accepting the user agreement,
+        and choosing your supplier preferences, including which notification emails you want.
+        Follow DLA's current
+        <a href="https://www.dla.mil/Vendor-Information-Hub/Table-of-Contents/Details/Article/3746012/dla-internet-bid-board-system-dibbs-vendor-registration/" target="_blank" rel="noopener">DIBBS vendor registration instructions</a>,
+        because the individual steps change.
+      </li>
+    </ol>
+    <p class="gloss">
+      The DIBBS help desk and log-on support contacts are listed on DLA's registration page.
+    </p>
+  </section>
+
+  <section>
+    <h2 class="section-title">Finding a solicitation</h2>
+    <p>
+      In <a href="https://www.dibbs.bsm.dla.mil" target="_blank" rel="noopener">DIBBS</a> you can
+      search requests for quotation by:
+    </p>
+    <ul>
+      <li>Federal Supply Class, the first four digits of the NSN (see <a href="/guides/federal-supply-class-fsc/">FSC explained</a>)</li>
+      <li>NSN</li>
+      <li>Solicitation number</li>
+      <li>Purchase request number</li>
+      <li>Nomenclature, the item's common name</li>
+      <li>Approved part number or approved CAGE</li>
+    </ul>
+    <p>
+      Listings can carry flags, such as small business set-asides, qualified products list items
+      and available technical documents. DLA warns that a listing may not show all relevant data,
+      so read the full solicitation. The <a href="/guides/amc-amsc-codes/">AMC and AMSC codes</a>
+      on an item record tell you how the item has been acquired. They do not replace reading
+      the solicitation.
+    </p>
+  </section>
+
+  <section>
+    <h2 class="section-title">Where quotes are submitted</h2>
+    <p>
+      Quotes go through DIBBS. DLA's guide describes the flow: log in, find the solicitation,
+      select the quote button, complete the quote form, review the summary and submit. You then
+      see a message saying whether the submission succeeded. Quotes can also be prepared offline
+      in a prescribed comma-delimited format and uploaded in a batch.
+    </p>
+    <p>
+      Larger purchases are handled differently. A DLA briefing says RFPs appear on DIBBS but
+      are answered with an uploaded proposal rather than the quote form. The price, product and
+      contract representations you give are explained in the FAR, DFARS and DLA acquisition
+      directive resources that DLA links from its guide.
+    </p>
+  </section>
+
+  <section>
+    <h2 class="section-title">What happens after you submit</h2>
+    <ul>
+      <li>You can view your submitted quote until the contract is awarded or canceled.</li>
+      <li>A revised quote for the same requirement replaces the earlier one.</li>
+      <li>Awards are visible in DIBBS, and the registration process lets you choose to receive award and solicitation emails.</li>
+      <li>Past awards from DIBBS and USAspending feed the <a href="/browse/">price history</a> on this site.</li>
+    </ul>
+    <p>
+      The <a href="/suppliers/">supplier guide</a> covers how the pieces fit together, and the
+      <a href="/guides/glossary/">glossary</a> defines the terms you will meet on a solicitation.
+    </p>
+  </section>
+
+  <section>
+    <h2 class="section-title">On NSN Explorer</h2>
+    <p>
+      <a href="/open/">Open demand</a> lists solicitations that are open for bid now, organized by
+      supply class, and each links to its DIBBS record. NSN pages show past awards and prices
+      for the same item. You still submit quotes in DIBBS, not here.
+    </p>
+  </section>
+
+  <GuideFooter
+    faq={faq}
+    sources={sources}
+    reviewed="October 2026"
+    next={[
+      { href: '/guides/cage-code/', label: 'What is a CAGE code?' },
+      { href: '/guides/federal-supply-class-fsc/', label: 'Federal Supply Class (FSC) codes explained' },
+      { href: '/guides/glossary/', label: 'Glossary of government parts purchasing terms' },
+    ]}
+  />
+</BaseLayout>

@@ -69,7 +69,7 @@ async function load(entry: string): Promise<Panel> {
       .sort((a, b) => a.iso.localeCompare(b.iso))
       .map((p) => ({ ...p, t: Date.parse(`${p.iso}T00:00:00Z`) }));
     const n = j.nsn;
-    const competition = n.amsc === 'G' || n.amsc === 'Z' || n.amc === '1' || n.amc === '2' ? 'open competition' : n.amsc || n.amc ? 'restricted' : 'competition not recorded';
+    const competition = n.amc === '1' || n.amc === '2' || (!['3', '4', '5'].includes(n.amc ?? '') && n.amsc === 'G') ? 'coded for competition' : ['3', '4', '5'].includes(n.amc ?? '') ? 'coded for a named source' : 'competition not coded';
     return {
       kind: 'item',
       dashed,

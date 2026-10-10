@@ -41,10 +41,10 @@ const chart = svg(W, rows.length * ROW + 8, 'Share of items by competition statu
 ---
 <Viz
   title="Competition mix"
-  question="Can a new supplier win work in this class, or is it locked to listed sources? Share of items by acquisition code."
+  question="How many items in this class are coded for competition, and how many for a named source? Share of items by acquisition method code."
   legend={[
-    { key: 'main', label: 'Open competition' },
-    { key: 'alt', label: 'Restricted to listed sources' },
+    { key: 'main', label: 'Coded for competition' },
+    { key: 'alt', label: 'Coded for a named source' },
     { key: 'neutral', label: 'Not coded' },
   ]}
   note="From the acquisition method codes on each item record."

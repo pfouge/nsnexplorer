@@ -1,0 +1,231 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import GuideFooter from '../../components/GuideFooter.astro';
+import { SITE_URL } from '../../consts';
+
+const title = 'AMC and AMSC Codes: What Each Value Means';
+const description =
+  'AMC and AMSC codes show how the government plans to buy a spare part. Every value from DFARS PGI 217.7506 in plain English, and how to read a combination.';
+const canonicalUrl = `${SITE_URL}/guides/amc-amsc-codes/`;
+
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  { name: 'Guides', url: '/guides/' },
+  { name: 'AMC and AMSC codes', url: canonicalUrl },
+];
+
+const faq = [
+  {
+    question: 'What is an AMSC code?',
+    answer:
+      'The Acquisition Method Suffix Code is a one-letter code that explains why a part has its Acquisition Method Code. It records things like whether the government owns the technical data, or whether a source must be approved first.',
+  },
+  {
+    question: 'Which AMSC means full and open competition?',
+    answer:
+      'AMSC G. DFARS PGI 217.7506 calls it the only suffix code that implies full and open competition. It means the government has a complete data package and the rights to use it, with no restrictions.',
+  },
+  {
+    question: 'What do AMC 1 and AMC 2 mean?',
+    answer:
+      'Both mean the part is suitable for competitive acquisition. AMC 2 is for the first time it is competed, and AMC 1 is for the second or later time.',
+  },
+  {
+    question: 'Does an AMC or AMSC code guarantee a solicitation is open to everyone?',
+    answer:
+      'No. The code describes the item\'s acquisition status on record. Each solicitation sets its own requirements, so read the solicitation itself.',
+  },
+  {
+    question: 'Who assigns these codes?',
+    answer:
+      'Only DoD activities assign them, based on a technical review called screening. Contractors can supply technical information, but they do not assign the codes.',
+  },
+];
+
+const amc = [
+  ['0', 'The part never got an AMC of 1 to 5 and never completed screening. Allowed but discouraged.'],
+  ['1', 'Suitable for competitive acquisition, second or later time.'],
+  ['2', 'Suitable for competitive acquisition, first time.'],
+  ['3', 'Buy directly from the actual manufacturer, second or later time.'],
+  ['4', 'Buy directly from the actual manufacturer, first time.'],
+  ['5', 'Buy from a sole-source contractor that is not the actual manufacturer.'],
+];
+
+// Plain-English paraphrases of DFARS PGI 217.7506, paragraph 2-201.2.
+// `valid` is the AMC digits Exhibit I allows with each suffix.
+const amsc: { code: string; meaning: string; valid: string }[] = [
+  { code: 'A', valid: '1 to 5', meaning: 'The government\'s right to use the technical data it holds is in doubt. Temporary, while rights are reviewed.' },
+  { code: 'B', valid: '1 to 5', meaning: 'Must be bought from the sources named on a source control or selected item drawing. Data or rights for other sources are not available.' },
+  { code: 'C', valid: '1 to 5', meaning: 'Needs engineering source approval to protect quality. Other sources must qualify first.' },
+  { code: 'D', valid: '3, 4, 5', meaning: 'Data needed to compete the part is unavailable or cannot be obtained economically, and adequate specifications cannot be written.' },
+  { code: 'E', valid: 'none listed', meaning: 'Reserved.' },
+  { code: 'F', valid: 'none listed', meaning: 'Reserved.' },
+  { code: 'G', valid: '1, 2', meaning: 'The government has a complete data package and the rights to use it, with no restrictions. The only suffix that implies full and open competition.' },
+  { code: 'H', valid: '1 to 5', meaning: 'The government lacks sufficient, accurate or legible data to buy from other sources. Temporary, while under review.' },
+  { code: 'I', valid: 'none listed', meaning: 'Not authorized.' },
+  { code: 'J', valid: 'none listed', meaning: 'Reserved.' },
+  { code: 'K', valid: '1 to 5', meaning: 'Must be made from class 1 castings and similar forgings controlled under MIL-STD-2175.' },
+  { code: 'L', valid: '1 to 5', meaning: 'Annual buy value is below the screening threshold. The part was checked for other known sources but not screened further.' },
+  { code: 'M', valid: '1 to 5', meaning: 'Making the part needs master or coordinated tooling. Competition depends on whether the tooling can be made available to more than one source.' },
+  { code: 'N', valid: '1 to 5', meaning: 'Making the part needs special test or inspection facilities for ultra-precision quality. Competition depends on whether more than one source can use them.' },
+  { code: 'O', valid: '0 only', meaning: 'The part never got a suffix code and never completed screening. Discouraged.' },
+  { code: 'P', valid: '1 to 5', meaning: 'The government does not own the rights to the data needed for more sources and cannot obtain them. Reverse engineering is uneconomical.' },
+  { code: 'Q', valid: '1 to 5', meaning: 'The government lacks adequate data or rights, but breakout to competition is expected from ongoing efforts.' },
+  { code: 'R', valid: '1 to 5', meaning: 'The government owns neither the data nor the rights. Buying them or reverse engineering the part has been judged uneconomical.' },
+  { code: 'S', valid: '1 to 5', meaning: 'Restricted to government-approved sources because the item involves unclassified but militarily sensitive technology.' },
+  { code: 'T', valid: '1, 2', meaning: 'Handled under qualified products list (QPL) procedures. Competition is limited to listed or qualifiable sources.' },
+  { code: 'U', valid: '1 to 5', meaning: 'The cost of breaking out and competing the part is more than the projected savings over its life.' },
+  { code: 'V', valid: '1 to 5', meaning: 'A high-reliability part in a formal reliability program. Reliability limits cannot be defined through data or specifications.' },
+  { code: 'W', valid: 'none listed', meaning: 'Reserved.' },
+  { code: 'X', valid: 'none listed', meaning: 'Not authorized.' },
+  { code: 'Y', valid: '1 to 5', meaning: 'The design is unstable and major changes are expected. Limited buys from the current source are anticipated.' },
+  { code: 'Z', valid: '1 to 5', meaning: 'A commercial, nondevelopmental or off-the-shelf item.' },
+];
+
+const sources = [
+  { label: 'acquisition.gov: PGI 217.7506, Spare parts breakout program (AMC and AMSC definitions)', url: 'https://www.acquisition.gov/dfarspgi/pgi-217.7506-spare-parts-breakout-program' },
+  { label: 'acquisition.gov: DFARS Subpart 217.75, Acquisition of replenishment parts', url: 'https://www.acquisition.gov/dfars/subpart-217.75-acquisition-replenishment-parts' },
+  { label: 'DLA: DIBBS pocket guide (review the full solicitation)', url: 'https://www.dla.mil/Portals/104/Documents/SmallBusiness/DIBBS%20Pocket%20Guide.pdf' },
+];
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  ogType="article"
+  pageType="Article"
+  canonicalUrl={canonicalUrl}
+  breadcrumbs={breadcrumbs}
+  faq={faq}
+>
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a> › <a href="/guides/">Guides</a> › AMC and AMSC codes
+  </nav>
+
+  <h1>AMC and AMSC codes explained</h1>
+  <p class="lede answer">
+    The Acquisition Method Code (AMC) and Acquisition Method Suffix Code (AMSC) are two short
+    codes the Department of Defense gives each spare part to record how it plans to buy it:
+    competitively, from the actual manufacturer, or from a single source. The suffix letter
+    explains why, and only AMSC G implies full and open competition.
+  </p>
+
+  <section>
+    <h2 class="section-title">What the codes are for</h2>
+    <p>
+      DFARS 217.75 covers replenishment parts, which are repairable or consumable parts bought
+      after the first round of provisioning. The policy there is to compete these purchases
+      fully and openly when the government has adequate drawings and the right to use them.
+      When it does not, the codes record why.
+    </p>
+    <p>
+      The details sit in DFARS PGI 217.7506, the spare parts breakout program. Breakout means
+      moving a part from a single source toward competition or direct purchase from the actual
+      manufacturer. A technical review called screening decides the codes. Only DoD activities
+      assign them, and contracting officers use them to choose a buying method and sources.
+    </p>
+    <p>
+      The two codes are written together. A part coded 2G has AMC 2 and AMSC G.
+    </p>
+  </section>
+
+  <section>
+    <h2 class="section-title">Acquisition method codes (AMC)</h2>
+    <p class="gloss">
+      The AMC is a single digit. Digits 1 and 2 point to competition. Digits 3, 4 and 5 point to
+      buying from one source.
+    </p>
+    <div class="table-wrap guide-table">
+      <table>
+        <thead><tr><th>AMC</th><th>Meaning in plain English</th></tr></thead>
+        <tbody>
+          {amc.map(([c, m]) => (
+            <tr><td>{c}</td><td class="wrap">{m}</td></tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="section-title">Acquisition method suffix codes (AMSC)</h2>
+    <p class="gloss">
+      The AMSC is one letter. It refines the AMC by recording the reason. The last column shows
+      which AMC digits PGI 217.7506 allows with each letter.
+    </p>
+    <div class="table-wrap guide-table">
+      <table>
+        <thead><tr><th>AMSC</th><th>Meaning in plain English</th><th>Valid AMC</th></tr></thead>
+        <tbody>
+          {amsc.map((r) => (
+            <tr id={`amsc-${r.code.toLowerCase()}`}><td>{r.code}</td><td class="wrap">{r.meaning}</td><td>{r.valid}</td></tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="section-title">Reading a combination</h2>
+    <ul>
+      <li>
+        <strong>The AMC digit is the headline.</strong> For most suffix letters, the AMC depends
+        on how many sources exist. With one approved or available source the digit is 3, 4 or 5.
+        With two or more it is 1 or 2.
+      </li>
+      <li>
+        <strong>1G and 2G</strong> are the clearest signal of competition: the government has the
+        data and rights and the part is suitable for competition.
+      </li>
+      <li>
+        <strong>1T and 2T</strong> point to competition limited to sources on a qualified
+        products list.
+      </li>
+      <li>
+        <strong>3D, 4D and 5D</strong> record that the data needed to compete the part is not
+        available, so the part is bought from one source.
+      </li>
+      <li>
+        <strong>A and H are temporary.</strong> They apply while data rights or data quality
+        are under review.
+      </li>
+      <li>
+        <strong>1G, 2G, 1K, 2K, 1M, 2M, 1N, 2N, 1T, 2T, 1Z and 2Z</strong> are the combinations
+        PGI 217.7506 says generally cannot be improved by further breakout work.
+      </li>
+    </ul>
+  </section>
+
+  <section>
+    <h2 class="section-title">What the code does not tell you</h2>
+    <div class="note">
+      The code describes the item's acquisition status on record. It is not a guarantee about
+      any solicitation. A solicitation can carry its own conditions, such as an approved-source
+      list, a set-aside or quality requirements. DLA advises reviewing the full solicitation,
+      because a listing may not show everything that matters.
+    </div>
+  </section>
+
+  <section>
+    <h2 class="section-title">On NSN Explorer</h2>
+    <p>
+      NSN pages show the codes on the item record, with the date they were last observed, where
+      the record has them. Where an item has no codes on record, the site does not show a
+      competition status. Browse items by <a href="/catalog/">supply class</a>, check what is
+      open at <a href="/open/">Open demand</a>, and read the
+      <a href="/guides/glossary/#sole-source">glossary entry for sole source</a>. New to the
+      overall process? Start with the <a href="/suppliers/">supplier guide</a>.
+    </p>
+  </section>
+
+  <GuideFooter
+    faq={faq}
+    sources={sources}
+    reviewed="October 2026"
+    next={[
+      { href: '/guides/what-is-an-nsn/', label: 'What is an NSN?' },
+      { href: '/guides/federal-supply-class-fsc/', label: 'Federal Supply Class (FSC) codes explained' },
+      { href: '/guides/glossary/', label: 'Glossary of government parts purchasing terms' },
+    ]}
+  />
+</BaseLayout>

@@ -13,6 +13,12 @@
 //   P_CAGE.CSV       "CAGE_CODE","CAGE_STATUS","TYPE","CAO","COMPANY","CITY",
 //                    "STATE_PROVINCE","ZIP_POSTAL_ZONE","COUNTRY"
 //                    -> upsert pub.suppliers
+//   V_MOE_RULE.CSV   (from MOE_RULE.zip) one row per NIIN per managing service. DLA documents
+//                    the layout by position only (1 NIIN, 2 MOE rule no., 3 MOE code, 4 AMC,
+//                    5 AMSC, 6 NIMSC, 7 date assigned, ..., last ROW_OBS_DT); the literal
+//                    header names are unconfirmed, so columns are resolved by name first and
+//                    by position second (see resolveMoeColumns)
+//                    -> INSERT pub.amsc_observations (source='flis')
 //
 // DESIGN RULE (do not remove): PUB LOG is a bulk dump of the *entire*
 // federal catalog (~80k+ NSNs). This project only ever builds static pages
@@ -43,7 +49,9 @@ export const PUBLOG_SOURCE_URL =
 
 const BATCH_SIZE = 2000;
 
-const KNOWN_FILENAMES = ['P_FLIS_NSN.CSV', 'V_FLIS_PART.CSV', 'P_CAGE.CSV'];
+const MOE_RULE_FILENAME = 'V_MOE_RULE.CSV';
+
+const KNOWN_FILENAMES = ['P_FLIS_NSN.CSV', 'V_FLIS_PART.CSV', 'P_CAGE.CSV', MOE_RULE_FILENAME];
 
 // ---------------------------------------------------------------------------
 // CSV line splitting
@@ -631,6 +639,348 @@ export async function loadCharacteristicsFile(filePath, trackedByNiin) {
 }
 
 // ---------------------------------------------------------------------------
+// MOE rule (AMC / AMSC) -> pub.amsc_observations
+// ---------------------------------------------------------------------------
+
+const MON = {
+  JAN: 1, FEB: 2, MAR: 3, APR: 4, MAY: 5, JUN: 6,
+  JUL: 7, AUG: 8, SEP: 9, OCT: 10, NOV: 11, DEC: 12,
+};
+
+function isoDate(y, m, d) {
+  if (!(y >= 1900 && y <= 2100 && m >= 1 && m <= 12 && d >= 1 && d <= 31)) return null;
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) return null;
+  return dt.toISOString().slice(0, 10);
+}
+
+/**
+ * Parses a ROW_OBS_DT-style value to 'YYYY-MM-DD', or null when it is not a
+ * recognisable calendar date. The real format is unconfirmed (11 characters
+ * per DLA's layout, which fits DD-MON-YYYY), so several shapes are accepted:
+ * DD-MON-YYYY, YYYY-MM-DD (optionally followed by a time), YYYYMMDD and
+ * MM/DD/YYYY. Dates after `maxDate` (when given) are treated as unparseable
+ * so a junk future date can never shadow later observations.
+ *
+ * @param {string} raw
+ * @param {string} [maxDate] 'YYYY-MM-DD'
+ * @returns {string|null}
+ */
+export function parseObsDate(raw, maxDate) {
+  const t = (raw || '').trim();
+  if (!t) return null;
+  let out = null;
+  let m;
+  if ((m = /^(\d{1,2})-([A-Za-z]{3})[A-Za-z]*-(\d{4})(?:\D.*)?$/.exec(t))) {
+    const mon = MON[m[2].toUpperCase()];
+    out = mon ? isoDate(Number(m[3]), mon, Number(m[1])) : null;
+  } else if ((m = /^(\d{4})-(\d{2})-(\d{2})(?:\D.*)?$/.exec(t))) {
+    out = isoDate(Number(m[1]), Number(m[2]), Number(m[3]));
+  } else if ((m = /^(\d{4})(\d{2})(\d{2})$/.exec(t))) {
+    out = isoDate(Number(m[1]), Number(m[2]), Number(m[3]));
+  } else if ((m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\D.*)?$/.exec(t))) {
+    out = isoDate(Number(m[3]), Number(m[1]), Number(m[2]));
+  }
+  if (out && maxDate && out > maxDate) return null;
+  return out;
+}
+
+/** AMC must be a single character 0-5; anything else is blank (null). */
+export function normalizeAmc(raw) {
+  const t = (raw || '').trim();
+  return /^[0-5]$/.test(t) ? t : null;
+}
+
+/** AMSC must be a single letter or digit (uppercased); anything else is blank (null). */
+export function normalizeAmsc(raw) {
+  const t = (raw || '').trim();
+  return /^[A-Za-z0-9]$/.test(t) ? t.toUpperCase() : null;
+}
+
+/**
+ * Resolves the V_MOE_RULE.CSV columns we need from the header row. Name match
+ * first (case-insensitive, exact): NIIN; MOE_CD / MOE_CODE / MOE; AMC; AMSC;
+ * any header containing ROW_OBS. When a name is not found, falls back to DLA's
+ * documented positions: NIIN col 1, MOE code col 3, AMC col 4, AMSC col 5
+ * (0-based 0, 2, 3, 4) and the last column for ROW_OBS_DT. `via` records which
+ * strategy produced each index so the run can log it.
+ *
+ * @param {string[]} headers
+ * @returns {{niin: number, moe: number, amc: number, amsc: number, obs: number,
+ *            via: Record<string, 'header'|'position'>}}
+ */
+export function resolveMoeColumns(headers) {
+  const via = {};
+  const byName = (key, candidates, fallback) => {
+    const idx = findColumnIndex(headers, candidates);
+    via[key] = idx !== -1 ? 'header' : 'position';
+    return idx !== -1 ? idx : fallback;
+  };
+  const niin = byName('niin', ['NIIN'], 0);
+  const moe = byName('moe', ['MOE_CD', 'MOE_CODE', 'MOE'], 2);
+  const amc = byName('amc', ['AMC'], 3);
+  const amsc = byName('amsc', ['AMSC'], 4);
+  const obsIdx = headers.findIndex((h) => h.trim().toUpperCase().includes('ROW_OBS'));
+  via.obs = obsIdx !== -1 ? 'header' : 'position';
+  const obs = obsIdx !== -1 ? obsIdx : Math.max(headers.length - 1, 0);
+  return { niin, moe, amc, amsc, obs, via };
+}
+
+/**
+ * Maps one V_MOE_RULE.CSV row to a candidate observation, or null when the
+ * NIIN is not tracked or both AMC and AMSC are blank/invalid after
+ * normalisation. Never creates NSNs (enrich-only, see the top of this file).
+ *
+ * @param {{niin: string, moe: string, amc: string, amsc: string, obs: string}} row
+ * @param {Map<string,string>} trackedByNiin
+ * @param {{today?: string}} [opts]
+ * @returns {{nsn: string, moe: string, amc: string|null, amsc: string|null,
+ *            date: string|null, amcRejected: boolean, amscRejected: boolean}|null}
+ */
+export function mapMoeRuleRow(row, trackedByNiin, opts = {}) {
+  const niin = (row.niin || '').trim();
+  if (!NIIN_RE.test(niin)) return null;
+  const nsn = trackedByNiin.get(niin);
+  if (!nsn) return null;
+
+  const amc = normalizeAmc(row.amc);
+  const amsc = normalizeAmsc(row.amsc);
+  if (amc === null && amsc === null) return null;
+
+  return {
+    nsn,
+    moe: (row.moe || '').trim().toUpperCase(),
+    amc,
+    amsc,
+    date: parseObsDate(row.obs, opts.today),
+    amcRejected: amc === null && (row.amc || '').trim() !== '',
+    amscRejected: amsc === null && (row.amsc || '').trim() !== '',
+  };
+}
+
+/**
+ * True when `cand` should replace `cur` as the one kept row for an NSN:
+ * a DS (DLA) rule beats any other; within the same rank the later ROW_OBS_DT
+ * wins; a row with a parseable date beats one without; with no dates on
+ * either side the last row seen wins.
+ */
+export function isBetterMoeRow(cur, cand) {
+  if (!cur) return true;
+  const cr = cur.moe === 'DS' ? 1 : 0;
+  const nr = cand.moe === 'DS' ? 1 : 0;
+  if (nr !== cr) return nr > cr;
+  if (cur.date && cand.date) return cand.date >= cur.date;
+  if (cur.date || cand.date) return Boolean(cand.date);
+  return true;
+}
+
+/**
+ * Cheap pre-filter for the 17M-row file: when the NIIN is the first field and
+ * the line has the expected 9-char shape, returns whether it is tracked
+ * without splitting the whole line. Returns null if the shape is unexpected
+ * (caller then falls back to the full parse), so this can never wrongly drop
+ * a row.
+ */
+function quickNiinTracked(line, trackedByNiin) {
+  if (line.charCodeAt(0) === 34) {
+    if (line.charCodeAt(10) !== 34) return null;
+    return trackedByNiin.has(line.slice(1, 10));
+  }
+  if (line.charCodeAt(9) !== 44) return null;
+  return trackedByNiin.has(line.slice(0, 9));
+}
+
+/**
+ * Streams V_MOE_RULE.CSV and keeps ONE best row per tracked NSN (see
+ * isBetterMoeRow). Memory is bounded by the number of tracked NSNs. No DB
+ * access here. Logs the header line and the resolved column mapping.
+ *
+ * @param {string} filePath
+ * @param {Map<string,string>} trackedByNiin
+ * @param {{log?: (msg: string) => void, today?: string}} [opts]
+ */
+export async function collectMoeRule(filePath, trackedByNiin, opts = {}) {
+  const log = opts.log || ((m) => console.log(m));
+  const today = opts.today || new Date().toISOString().slice(0, 10);
+  const best = new Map(); // nsn -> mapped row
+  const stats = {
+    scanned: 0, matched: 0, kept: 0, blankSkipped: 0,
+    amcRejected: 0, amscRejected: 0, undatedKept: 0,
+  };
+  let cols = null;
+  let columnsLog = null;
+
+  const rl = createInterface({
+    input: createReadStream(filePath, { encoding: 'utf8' }),
+    crlfDelay: Infinity,
+  });
+
+  const handleFields = (fields) => {
+    stats.scanned += 1;
+    const mapped = mapMoeRuleRow(
+      {
+        niin: fields[cols.niin],
+        moe: fields[cols.moe],
+        amc: fields[cols.amc],
+        amsc: fields[cols.amsc],
+        obs: fields[cols.obs],
+      },
+      trackedByNiin,
+      { today }
+    );
+    if (!mapped) {
+      // Distinguish "tracked NIIN but both codes blank" for the log.
+      const niin = (fields[cols.niin] || '').trim();
+      if (trackedByNiin.has(niin)) {
+        stats.matched += 1;
+        stats.blankSkipped += 1;
+      }
+      return;
+    }
+    stats.matched += 1;
+    if (mapped.amcRejected) stats.amcRejected += 1;
+    if (mapped.amscRejected) stats.amscRejected += 1;
+    if (isBetterMoeRow(best.get(mapped.nsn), mapped)) best.set(mapped.nsn, mapped);
+  };
+
+  try {
+    for await (const line of rl) {
+      if (line === '') continue;
+      if (!cols) {
+        const fields = splitCsvLine(line);
+        const looksLikeData = NIIN_RE.test((fields[0] || '').trim());
+        log(`load.mjs: ${MOE_RULE_FILENAME} first line: ${line.slice(0, 500)}`);
+        if (looksLikeData) {
+          cols = resolveMoeColumns([]);
+          cols.obs = Math.max(fields.length - 1, 0);
+          log(`load.mjs: ${MOE_RULE_FILENAME} has no header row (first field is a NIIN); using positional columns`);
+        } else {
+          cols = resolveMoeColumns(fields);
+        }
+        columnsLog =
+          `niin=${cols.niin}(${cols.via.niin}) moe=${cols.moe}(${cols.via.moe}) ` +
+          `amc=${cols.amc}(${cols.via.amc}) amsc=${cols.amsc}(${cols.via.amsc}) ` +
+          `obs=${cols.obs}(${cols.via.obs}) of ${fields.length} column(s)` +
+          (looksLikeData ? '' : ` [headers: ${fields.join(', ')}]`);
+        log(`load.mjs: ${MOE_RULE_FILENAME} resolved columns (0-based): ${columnsLog}`);
+        if (looksLikeData) handleFields(fields);
+        continue;
+      }
+      if (cols.niin === 0) {
+        const tracked = quickNiinTracked(line, trackedByNiin);
+        if (tracked === false) {
+          stats.scanned += 1;
+          continue;
+        }
+      }
+      handleFields(splitCsvLine(line));
+    }
+  } finally {
+    rl.close();
+  }
+
+  stats.kept = best.size;
+  for (const r of best.values()) if (!r.date) stats.undatedKept += 1;
+  return { best, stats, columns: columnsLog };
+}
+
+function distribution(values) {
+  const d = {};
+  for (const v of values) d[v ?? '-'] = (d[v ?? '-'] || 0) + 1;
+  return Object.entries(d).sort(([a], [b]) => a.localeCompare(b)).map(([k, n]) => `${k}:${n}`).join(' ');
+}
+
+/**
+ * Writes the kept observations to pub.amsc_observations in batches. An NSN
+ * whose latest existing 'flis' observation already has the same amc/amsc is
+ * skipped (no new dated row for an unchanged value). Idempotent via
+ * ON CONFLICT on the table's UNIQUE (nsn, observed_on, source, source_ref).
+ *
+ * @param {Map<string, {nsn: string, amc: string|null, amsc: string|null, date: string|null}>} best
+ * @param {string} today 'YYYY-MM-DD'
+ * @returns {Promise<{written: number, unchanged: number}>}
+ */
+async function flushMoeObservations(best, today) {
+  const rows = [...best.values()];
+  let written = 0;
+  let unchanged = 0;
+  for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+    const chunk = rows.slice(i, i + BATCH_SIZE);
+    const res = await tx(async (client) => {
+      const latest = await client.query(
+        `SELECT DISTINCT ON (nsn) nsn, amc, amsc
+         FROM pub.amsc_observations
+         WHERE source = 'flis' AND nsn = ANY($1::text[])
+         ORDER BY nsn, observed_on DESC, id DESC`,
+        [chunk.map((r) => r.nsn)]
+      );
+      const cur = new Map(latest.rows.map((r) => [r.nsn, r]));
+      const todo = chunk.filter((r) => {
+        const c = cur.get(r.nsn);
+        return !(c && (c.amc ?? null) === r.amc && (c.amsc ?? null) === r.amsc);
+      });
+      if (todo.length > 0) {
+        await client.query(
+          `INSERT INTO pub.amsc_observations (nsn, amc, amsc, observed_on, source, source_ref, source_url)
+           SELECT nsn, amc, amsc, observed_on::date, 'flis', $5, $6
+           FROM unnest($1::text[], $2::text[], $3::text[], $4::text[])
+             AS t(nsn, amc, amsc, observed_on)
+           ON CONFLICT (nsn, observed_on, source, source_ref) DO UPDATE SET
+             amc = EXCLUDED.amc,
+             amsc = EXCLUDED.amsc,
+             source_url = EXCLUDED.source_url`,
+          [
+            todo.map((r) => r.nsn),
+            todo.map((r) => r.amc),
+            todo.map((r) => r.amsc),
+            todo.map((r) => r.date || today),
+            MOE_RULE_FILENAME,
+            PUBLOG_SOURCE_URL,
+          ]
+        );
+      }
+      return { written: todo.length, unchanged: chunk.length - todo.length };
+    });
+    written += res.written;
+    unchanged += res.unchanged;
+  }
+  return { written, unchanged };
+}
+
+/**
+ * Streams V_MOE_RULE.CSV and records AMC/AMSC for tracked NSNs in
+ * pub.amsc_observations (source='flis'). Enrich-only: never inserts pub.nsns.
+ *
+ * @param {string} filePath
+ * @param {Map<string,string>} trackedByNiin
+ * @param {{log?: (msg: string) => void, today?: string}} [opts]
+ * @returns {Promise<{loaded: number, scanned: number, matched: number, kept: number, unchanged: number}>}
+ */
+export async function loadMoeRule(filePath, trackedByNiin, opts = {}) {
+  const log = opts.log || ((m) => console.log(m));
+  const today = opts.today || new Date().toISOString().slice(0, 10);
+  const { best, stats } = await collectMoeRule(filePath, trackedByNiin, { ...opts, log, today });
+  log(
+    `load.mjs: ${MOE_RULE_FILENAME}: ${stats.scanned} rows scanned, ${stats.matched} on tracked NIINs, ` +
+      `${stats.blankSkipped} skipped (AMC and AMSC both blank), ${stats.amcRejected} invalid AMC and ` +
+      `${stats.amscRejected} invalid AMSC treated as blank, ${stats.kept} NSN(s) with a kept row ` +
+      `(${stats.undatedKept} without a parseable date)`
+  );
+  log(
+    `load.mjs: ${MOE_RULE_FILENAME} kept AMC distribution: ${distribution([...best.values()].map((r) => r.amc))}`
+  );
+  log(
+    `load.mjs: ${MOE_RULE_FILENAME} kept AMSC distribution: ${distribution([...best.values()].map((r) => r.amsc))}`
+  );
+  if (stats.scanned > 0 && stats.matched > 0 && stats.kept === 0) {
+    log(`load.mjs: WARNING ${MOE_RULE_FILENAME}: tracked NIINs matched but no usable AMC/AMSC; check the resolved columns above`);
+  }
+  const { written, unchanged } = await flushMoeObservations(best, today);
+  log(`load.mjs: ${MOE_RULE_FILENAME}: ${written} observation(s) written, ${unchanged} unchanged (latest flis value identical)`);
+  return { loaded: written, scanned: stats.scanned, matched: stats.matched, kept: stats.kept, unchanged };
+}
+
+// ---------------------------------------------------------------------------
 // CLI
 // ---------------------------------------------------------------------------
 
@@ -686,6 +1036,22 @@ async function main() {
     report(characteristicsFile.filename, result);
   } else {
     console.log(`load.mjs: no characteristics CSV found in ${args.dir}, skipping`);
+  }
+
+  // AMC/AMSC ("Can you win it?"). Optional enrichment from an unconfirmed
+  // layout: a missing file is skipped, and a failure is logged loudly but does
+  // not fail the run (it would otherwise block the chained deploy).
+  const moeFile = findFile(filesOnDisk, MOE_RULE_FILENAME);
+  if (moeFile) {
+    try {
+      const result = await loadMoeRule(path.join(args.dir, moeFile), trackedByNiin);
+      report(MOE_RULE_FILENAME, result);
+    } catch (err) {
+      console.error(err);
+      console.log(`::warning::load.mjs: ${MOE_RULE_FILENAME} load failed (${err.message}); continuing`);
+    }
+  } else {
+    console.log(`load.mjs: ${MOE_RULE_FILENAME} not found in ${args.dir} (MOE_RULE.zip missing?), skipping AMC/AMSC load`);
   }
 
   const cageFile = findFile(filesOnDisk, 'P_CAGE.CSV');

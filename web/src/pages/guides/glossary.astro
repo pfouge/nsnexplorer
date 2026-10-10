@@ -1,0 +1,183 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import GuideFooter from '../../components/GuideFooter.astro';
+import { SITE_URL } from '../../consts';
+
+const title = 'Government Parts Purchasing Glossary: NSN, CAGE, FSC';
+const description =
+  'Plain-English definitions of 38 terms used in U.S. government parts purchasing, from NSN, NIIN and FSC to CAGE, UEI, DIBBS, RFQ, AMSC and set-aside.';
+const canonicalUrl = `${SITE_URL}/guides/glossary/`;
+
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  { name: 'Guides', url: '/guides/' },
+  { name: 'Glossary', url: canonicalUrl },
+];
+
+const faq = [
+  {
+    question: 'What is the difference between an NSN and a NIIN?',
+    answer:
+      'An NSN is the full 13-digit national stock number. The NIIN is its last nine digits, the country code plus the item number, without the 4-digit supply class.',
+  },
+  {
+    question: 'What is the difference between an RFQ and an RFP?',
+    answer:
+      'An RFQ asks suppliers for a quotation, and an RFP asks for proposals. The FAR says that replies to requests for quotations under simplified acquisition are quotations, while negotiated replies are proposals.',
+  },
+  {
+    question: 'How are SAM.gov, the UEI and the CAGE code related?',
+    answer:
+      'SAM.gov is the registration system. Registering gives a company a Unique Entity ID, and a U.S. company without a CAGE code is assigned one through the registration. The UEI and the CAGE code are separate identifiers.',
+  },
+];
+
+type Entry = { term: string; id: string; def: string; sort?: string };
+
+// Each definition is paraphrased from the official sources listed below.
+const entries: Entry[] = [
+  { term: 'Acquisition Method Code (AMC)', id: 'amc', def: 'A one-digit code (0 to 5) recording how the Department of Defense plans to buy a spare part: competitively, from the actual manufacturer, or from a sole source. See <a href="/guides/amc-amsc-codes/">AMC and AMSC codes</a>.' },
+  { term: 'Acquisition Method Suffix Code (AMSC)', id: 'amsc', def: 'A one-letter code that explains the reason behind a part\'s AMC, such as who owns the technical data. Only AMSC G implies full and open competition. See <a href="/guides/amc-amsc-codes/">AMC and AMSC codes</a>.' },
+  { term: 'Approved source', id: 'approved-source', def: 'A supplier the government has named or accepted as a source for an item. DIBBS lets you search by approved part number or approved CAGE, and some AMSC values limit buying to approved or qualified sources.' },
+  { term: 'Award', id: 'award', def: 'The outcome of a solicitation: the contract or order the government places with the chosen supplier. DIBBS shows awards, and NSN Explorer builds price history from them.' },
+  { term: 'Breakout', id: 'breakout', def: 'In the DoD spare parts program, moving a part away from single-source buying toward competition or direct purchase from the actual manufacturer. A technical review called screening decides what is possible.' },
+  { term: 'CAGE code', id: 'cage', def: 'Commercial and Government Entity code. A five-character identifier for a business facility that deals with the government, assigned by DLA. See <a href="/guides/cage-code/">what is a CAGE code</a>.' },
+  { term: 'Contracting officer', id: 'contracting-officer', def: 'A government employee with authority to enter into, administer or end contracts and to make related decisions, within the limits of the authority delegated to them.' },
+  { term: 'DIBBS', id: 'dibbs', def: 'The DLA Internet Bid Board System, where vendors search for DLA solicitations and awards and submit quotes. See <a href="/guides/how-to-bid-on-dibbs/">how to bid on DIBBS</a>.' },
+  { term: 'DLA', id: 'dla', def: 'The Defense Logistics Agency. It manages the defense supply chain from raw materials to disposal and buys and distributes goods for the military services and other customers.' },
+  { term: 'Federal Logistics Information System (FLIS)', id: 'flis', sort: 'Federal Logistics', def: 'The government\'s catalog of NSN and cataloging data, managed by DLA Logistics Information Services. DLA says it holds more than 7 million active NSNs.' },
+  { term: 'Federal Supply Class (FSC)', id: 'fsc', sort: 'Federal Supply Class', def: 'The first four digits of an NSN. It groups similar items, for example 5310 for nuts and washers. See <a href="/guides/federal-supply-class-fsc/">FSC explained</a>.' },
+  { term: 'Federal Supply Group (FSG)', id: 'fsg', sort: 'Federal Supply Group', def: 'The first two digits of an NSN. It is the broad category that holds a number of classes, for example 84 for clothing.' },
+  { term: 'Full and open competition', id: 'full-and-open-competition', def: 'A contract action in which all responsible sources are permitted to compete, as the FAR defines it.' },
+  { term: 'Invitation for bid (IFB)', id: 'ifb', def: 'A solicitation for sealed bids. Under the FAR, replies to an invitation for bid are called bids.' },
+  { term: 'NAICS code', id: 'naics', def: 'North American Industry Classification System code. It classifies a business by industry and is used by federal statistical agencies. SAM.gov registration asks which NAICS codes apply to your business.' },
+  { term: 'NCAGE code', id: 'ncage', def: 'The NATO version of the CAGE code, used for entities outside the United States. SAM.gov says non-U.S. entities must request one before starting a registration.' },
+  { term: 'NCB code', id: 'ncb', def: 'National codification bureau code. The two digits after the supply class in an NSN, showing which country assigned it. DLA lists 00 and 01 for the United States.' },
+  { term: 'NIIN', id: 'niin', def: 'National Item Identification Number. The last nine digits of an NSN: the country code plus the seven-digit item number. See <a href="/guides/what-is-an-nsn/">what is an NSN</a>.' },
+  { term: 'Nomenclature', id: 'nomenclature', def: 'The common name of an item. DIBBS lets you search solicitations by nomenclature.' },
+  { term: 'NSN', id: 'nsn', def: 'National Stock Number. A 13-digit code that identifies one item in the federal supply system: a 4-digit class, a 2-digit country code and a 7-digit item number. See <a href="/guides/what-is-an-nsn/">what is an NSN</a>.' },
+  { term: 'Part number', id: 'part-number', def: 'The identifier a manufacturer or other source uses for its own product. An NSN record lists known part numbers with the CAGE codes of their sources.' },
+  { term: 'PIID', id: 'piid', def: 'Procurement instrument identifier. A unique identifier of 13 to 17 letters and digits that agencies assign to each solicitation, contract, order and similar instrument. It stays unique across the government.' },
+  { term: 'PSC (Product and Service Code)', id: 'psc', sort: 'Product and Service Code', def: 'A code on federal contract records that describes what was bought. The PSC Manual says the code is based on the predominant product or service in the action. It is separate from the FSC and from NAICS.' },
+  { term: 'PUB LOG', id: 'pub-log', def: 'DLA\'s free public logistics data product. It includes searchable NSN records and cross-references between NSNs, part numbers and CAGE codes, and it is updated monthly.' },
+  { term: 'Qualified products list (QPL)', id: 'qpl', def: 'A list of products or sources that have met qualification requirements. When an item falls under QPL procedures, competition is limited to listed or qualifiable sources. DIBBS can flag QPL items.' },
+  { term: 'Quotation', id: 'quotation', def: 'A supplier\'s reply to a request for quotation. The FAR says that in simplified acquisition the replies are quotations rather than offers.' },
+  { term: 'Replenishment parts', id: 'replenishment-parts', def: 'Repairable or consumable parts bought after the initial provisioning process. DFARS subpart 217.75 sets the rules that apply to them.' },
+  { term: 'Request for proposal (RFP)', id: 'rfp', sort: 'Request for proposal', def: 'A solicitation where replies are called proposals. A DLA briefing says RFPs appear on DIBBS but are answered with an uploaded proposal rather than the quote form.' },
+  { term: 'Request for quotation (RFQ)', id: 'rfq', sort: 'Request for quotation', def: 'A solicitation that asks suppliers to quote a price and delivery for an item. On DIBBS, RFQs can be searched by class, NSN, solicitation number and more.' },
+  { term: 'SAM.gov', id: 'sam', def: 'The System for Award Management, the government\'s platform for doing business with federal agencies. Registration is free, issues your UEI, and must be renewed every 365 days.' },
+  { term: 'Set-aside', id: 'set-aside', def: 'A purchase reserved exclusively for small business concerns. Some set-asides are open to all small businesses and others are limited to groups such as 8(a), HUBZone, service-disabled veteran-owned, women-owned or small disadvantaged businesses.' },
+  { term: 'Small business concern', id: 'small-business', def: 'An independently owned and operated firm, with its affiliates, that is not dominant in its field and meets the Small Business Administration\'s size standards.' },
+  { term: 'Sole source', id: 'sole-source', def: 'Buying from only one supplier. The FAR lets an agency skip full and open competition when only one responsible source can meet the need, with written justification and approval. In DoD spare parts codes, AMC 3, 4 and 5 point to single-source buying.' },
+  { term: 'Solicitation', id: 'solicitation', def: 'The government\'s published request for suppliers to offer to sell something. On DIBBS the main kinds are RFQs, RFPs and IFBs, and each has a solicitation number.' },
+  { term: 'Unique Entity ID (UEI)', id: 'uei', def: 'The identifier for doing business with the federal government. SAM.gov generates it. GSA says the DUNS number has been removed and is no longer valid for identifying federal awards. The UEI is separate from the CAGE code.' },
+  { term: 'Unit of issue', id: 'unit-of-issue', def: 'The unit in which an item is issued, such as EA for each. A unit pack of 25 nuts with a unit of issue of EA is labeled 25 EA.' },
+  { term: 'USAspending', id: 'usaspending', def: 'The public website where federal agencies report spending data under the DATA Act. It covers contract and grant awards, with contract data drawn from the Federal Procurement Data System.' },
+  { term: 'WebFLIS', id: 'webflis', def: 'DLA\'s web interface to FLIS data, which DLA says is updated several times a day. The same cataloging data is available free through PUB LOG.' },
+];
+
+const key = (e: Entry) => (e.sort ?? e.term).replace(/[^A-Za-z]/g, '').toUpperCase();
+entries.sort((a, b) => key(a).localeCompare(key(b)));
+
+const letters = [...new Set(entries.map((e) => key(e)[0]))];
+const byLetter = letters.map((l) => ({ letter: l, items: entries.filter((e) => key(e)[0] === l) }));
+
+const definedTermSet = {
+  '@context': 'https://schema.org',
+  '@type': 'DefinedTermSet',
+  '@id': `${canonicalUrl}#terms`,
+  name: 'Government parts purchasing glossary',
+  url: canonicalUrl,
+  hasDefinedTerm: entries.map((e) => ({
+    '@type': 'DefinedTerm',
+    name: e.term,
+    url: `${canonicalUrl}#${e.id}`,
+    description: e.def.replace(/<[^>]+>/g, ''),
+    inDefinedTermSet: `${canonicalUrl}#terms`,
+  })),
+};
+
+const sources = [
+  { label: 'acquisition.gov: PGI 217.7506 (AMC, AMSC, breakout, QPL procedures)', url: 'https://www.acquisition.gov/dfarspgi/pgi-217.7506-spare-parts-breakout-program' },
+  { label: 'acquisition.gov: DFARS subpart 217.75 (replenishment parts)', url: 'https://www.acquisition.gov/dfars/subpart-217.75-acquisition-replenishment-parts' },
+  { label: 'acquisition.gov: FAR 2.101 definitions', url: 'https://www.acquisition.gov/far/2.101' },
+  { label: 'acquisition.gov: FAR 4.16, procurement instrument identifiers', url: 'https://www.acquisition.gov/far/subpart-4.16' },
+  { label: 'acquisition.gov: FAR 6.302-1, only one responsible source', url: 'https://www.acquisition.gov/far/6.302-1' },
+  { label: 'acquisition.gov: Product and Service Code Manual', url: 'https://acquisition.gov/sites/default/files/manual/PSC%20Manual%20April%202024.pdf' },
+  { label: 'DLA: About DLA', url: 'https://www.dla.mil/About-DLA/' },
+  { label: 'DLA: NSN booklet', url: 'https://www.dla.mil/Portals/104/Documents/J3LogisticOperations/Brochures/J3_NSNBook_20230913.pdf' },
+  { label: 'DLA Disposition Services: National Stock Number', url: 'https://www.dla.mil/Disposition-Services/DDSR/Quick-Links/NSNs/' },
+  { label: 'DLA: PUB LOG', url: 'https://www.dla.mil/Information-Operations/Services/Applications/PUB-LOG/' },
+  { label: 'DLA: DIBBS pocket guide', url: 'https://www.dla.mil/Portals/104/Documents/SmallBusiness/DIBBS%20Pocket%20Guide.pdf' },
+  { label: 'DLA: DIBBS vendor registration', url: 'https://www.dla.mil/Vendor-Information-Hub/Table-of-Contents/Details/Article/3746012/dla-internet-bid-board-system-dibbs-vendor-registration/' },
+  { label: 'DLA: CAGE Code', url: 'https://www.dla.mil/Working-With-DLA/Applications/Details/Article/2920893/cage-code-commercial-and-government-entity-code/' },
+  { label: 'DLA briefing: DIBBS (NDIA, 2024)', url: 'https://ndia.dtic.mil/wp-content/uploads/2024/dla/Tue_Breakout_DIBBS.pdf' },
+  { label: 'DLA briefing: packaging, unit of issue (NDIA, 2024)', url: 'https://ndia.dtic.mil/wp-content/uploads/2024/dla/Wed_Breakout_Packaging.pdf' },
+  { label: 'SAM.gov: Get started with registration and the UEI', url: 'https://sam.gov/entity-registration' },
+  { label: 'SAM.gov: Entity registration checklist (PDF)', url: 'https://sam.gov/sites/default/files/2024-11/entity-checklist.pdf' },
+  { label: 'GSA: Unique Entity ID is here', url: 'https://www.gsa.gov/about-us/organization/federal-acquisition-service/integrated-award-environment-iae/iae-systems-information-kit/unique-entity-id-is-here' },
+  { label: 'SBA: What is a small business set-aside', url: 'https://www.sba.gov/contracting/government-contracting-programs/what-small-business-set-aside' },
+  { label: 'U.S. Census Bureau: Understanding NAICS', url: 'https://www.census.gov/programs-surveys/economic-census/year/2022/guidance/understanding-naics.html' },
+  { label: 'USAspending.gov: About the data (PDF)', url: 'https://www.usaspending.gov/data/about-the-data-download.pdf' },
+];
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  ogType="article"
+  pageType="Article"
+  canonicalUrl={canonicalUrl}
+  breadcrumbs={breadcrumbs}
+  faq={faq}
+  extraSchema={[definedTermSet]}
+>
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a> › <a href="/guides/">Guides</a> › Glossary
+  </nav>
+
+  <h1>Glossary of government parts purchasing terms</h1>
+  <p class="lede answer">
+    This glossary defines {entries.length} terms you will meet when you look up a national stock
+    number, read a DLA solicitation or register to sell to the government. Each entry has its own
+    link, so you can point to one term directly.
+  </p>
+
+  <ul class="chips wrap-wide" aria-label="Jump to letter">
+    {letters.map((l) => (
+      <li><a class="chip" href={`#letter-${l.toLowerCase()}`}>{l}</a></li>
+    ))}
+  </ul>
+
+  {byLetter.map((g) => (
+    <section class="gloss-group">
+      <h2 class="section-title" id={`letter-${g.letter.toLowerCase()}`}>{g.letter}</h2>
+      {g.items.map((e) => (
+        <div class="gloss-entry" id={e.id}>
+          <h3><a href={`#${e.id}`}>{e.term}</a></h3>
+          <p set:html={e.def} />
+        </div>
+      ))}
+    </section>
+  ))}
+
+  <section>
+    <h2 class="section-title">On NSN Explorer</h2>
+    <p>
+      Try the terms on live records. Look up an item from the <a href="/">home page</a>, browse
+      the <a href="/catalog/">catalog of supply classes</a>, or see what is open for bid at
+      <a href="/open/">Open demand</a>. The <a href="/methodology/">methodology page</a> explains
+      where each figure comes from.
+    </p>
+  </section>
+
+  <GuideFooter
+    faq={faq}
+    sources={sources}
+    reviewed="October 2026"
+    next={[
+      { href: '/guides/what-is-an-nsn/', label: 'What is an NSN?' },
+      { href: '/guides/how-to-bid-on-dibbs/', label: 'How to bid on DIBBS' },
+    ]}
+  />
+</BaseLayout>

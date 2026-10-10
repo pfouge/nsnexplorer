@@ -1,0 +1,185 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import GuideFooter from '../../components/GuideFooter.astro';
+import { SITE_URL } from '../../consts';
+
+const title = 'What Is an NSN? National Stock Number Explained';
+const description =
+  'An NSN is the 13-digit code that identifies one item in the federal supply system. See how it is built, who assigns it, and how to look one up for free.';
+const canonicalUrl = `${SITE_URL}/guides/what-is-an-nsn/`;
+
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  { name: 'Guides', url: '/guides/' },
+  { name: 'What is an NSN?', url: canonicalUrl },
+];
+
+const faq = [
+  {
+    question: 'What does NSN stand for?',
+    answer:
+      'NSN stands for National Stock Number. It is a 13-digit code that identifies one item that the federal government stocks, stores and issues.',
+  },
+  {
+    question: 'How many digits are in an NSN?',
+    answer:
+      'Thirteen. The first four digits are the Federal Supply Class, the next two are a country code, and the last seven are an item number. The last nine digits together are the NIIN.',
+  },
+  {
+    question: 'Who assigns NSNs?',
+    answer:
+      'DLA Logistics Information Services assigns them. Requests come from the military services, certain federal agencies and allied countries, not from individual suppliers.',
+  },
+  {
+    question: 'Is an NSN the same as a part number?',
+    answer:
+      'No. A part number is the identifier a manufacturer or other source uses for its own product. An NSN is the government identifier for the item, and the NSN record lists the part numbers and CAGE codes of known sources.',
+  },
+  {
+    question: 'Can I get an NSN for my product?',
+    answer:
+      'Not directly. DLA says only a government sponsor can request an NSN, and the request has to include accurate technical data. Check whether your part number already links to an NSN first.',
+  },
+];
+
+const sources = [
+  { label: 'DLA Disposition Services: National Stock Number', url: 'https://www.dla.mil/Disposition-Services/DDSR/Quick-Links/NSNs/' },
+  { label: 'DLA: NSN booklet (structure, who assigns, FLIS, WebFLIS)', url: 'https://www.dla.mil/Portals/104/Documents/J3LogisticOperations/Brochures/J3_NSNBook_20230913.pdf' },
+  { label: 'DLA news: What is a National Stock Number?', url: 'https://www.dla.mil/About-DLA/News/News-Article-View/Article/1933320/what-is-a-national-stock-number/' },
+  { label: 'DLA Small Business: National Stock Number guidance', url: 'https://www.dla.mil/Small-Business/Resource-Center/Training-Resources/Details/Article/4511312/national-stock-number-guidance/' },
+  { label: 'DLA: PUB LOG, public logistics data', url: 'https://www.dla.mil/Information-Operations/Services/Applications/PUB-LOG/' },
+];
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  ogType="article"
+  pageType="Article"
+  canonicalUrl={canonicalUrl}
+  breadcrumbs={breadcrumbs}
+  faq={faq}
+>
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a> › <a href="/guides/">Guides</a> › What is an NSN?
+  </nav>
+
+  <h1>What is a National Stock Number (NSN)?</h1>
+  <p class="lede answer">
+    A National Stock Number (NSN) is a 13-digit code that identifies one item in the federal
+    supply system. It is made of a 4-digit supply class, a 2-digit country code and a 7-digit
+    item number, and DLA Logistics Information Services assigns it.
+  </p>
+
+  <section>
+    <h2 class="section-title">How an NSN is built</h2>
+    <p class="gloss">
+      DLA's example is 6240-00-357-7976. The hyphens split the 13 digits into groups of 4, 2 and
+      7.
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Part</th><th>Digits</th><th>In the example</th><th>What it tells you</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Federal Supply Class</td><td>4</td><td>6240</td>
+            <td class="wrap">The kind of item. 6240 is electric lamps. <a href="/guides/federal-supply-class-fsc/">More on classes</a>.</td>
+          </tr>
+          <tr>
+            <td>Country code</td><td>2</td><td>00</td>
+            <td class="wrap">Which national codification bureau assigned the number. DLA lists 00 and 01 as codes for the United States.</td>
+          </tr>
+          <tr>
+            <td>Item number</td><td>7</td><td>357-7976</td>
+            <td class="wrap">Assigned in sequence so that each NSN is unique.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      The last nine digits, the country code plus the item number, are the
+      <a href="/guides/glossary/#niin">National Item Identification Number (NIIN)</a>. Here that
+      is 00-357-7976. DLA's PUB LOG tool, for example, lists its results by NIIN.
+    </p>
+  </section>
+
+  <section>
+    <h2 class="section-title">Who assigns an NSN</h2>
+    <p>
+      DLA says its Logistics Information Services office in Battle Creek, Michigan, is the only
+      organization authorized to assign NSNs. Requests come from the military services, certain
+      federal and civilian agencies and international partners.
+    </p>
+    <p>
+      Manufacturers and suppliers cannot ask for an NSN on their own. DLA describes two common
+      triggers: a new weapon system that needs spare parts, or an item that a service or agency
+      keeps ordering without an NSN, typically twice within six months. DLA also notes that some
+      items are bought locally or listed on FedMall with a CAGE code and part number, so an NSN
+      is not always required to sell something.
+    </p>
+  </section>
+
+  <section>
+    <h2 class="section-title">NSN, NIIN and part number</h2>
+    <ul>
+      <li><strong>NSN</strong> is the full 13 digits, including the supply class.</li>
+      <li><strong>NIIN</strong> is the last nine digits. It identifies the item without the class.</li>
+      <li>
+        <strong>Part number</strong> is the label a manufacturer or other source uses for its
+        own product. It is one data element on an NSN record, next to the
+        <a href="/guides/cage-code/">CAGE codes</a> of the companies that make or supply it.
+      </li>
+    </ul>
+    <p>
+      DLA's PUB LOG data product cross-references NSNs, part numbers and CAGE codes, which is how
+      you can move from a part number to the NSN the government uses for it.
+    </p>
+  </section>
+
+  <section>
+    <h2 class="section-title">How to look up an NSN</h2>
+    <ul>
+      <li>
+        <strong>On NSN Explorer.</strong> Use the search box on the <a href="/">home page</a>. It
+        accepts an NSN, a dashed NSN or a NIIN. To browse instead, start at the
+        <a href="/catalog/">catalog of supply classes</a>.
+      </li>
+      <li>
+        <strong>PUB LOG.</strong> DLA publishes this logistics data free. It includes searchable
+        NSN records and the part number and CAGE cross-references.
+      </li>
+      <li>
+        <strong>WebFLIS and DIBBS.</strong> DLA points to WebFLIS and to the NSN lookup tool in
+        DIBBS for checking whether a part number already has an NSN.
+      </li>
+    </ul>
+    <p>
+      All of these draw on the Federal Logistics Information System (FLIS), the government's
+      catalog of NSN data, which DLA says holds more than 7 million active NSNs.
+    </p>
+  </section>
+
+  <section>
+    <h2 class="section-title">On NSN Explorer</h2>
+    <p>
+      Every NSN page on this site collects the open solicitations, past awards and prices for
+      one item, with a link to the official record behind each figure. Find an item through the
+      <a href="/">home page search</a> or the <a href="/catalog/">catalog</a>, or see what is
+      open for bid right now at <a href="/open/">Open demand</a>. If you are new to selling to
+      the government, the <a href="/suppliers/">supplier guide</a> covers the full path.
+    </p>
+  </section>
+
+  <GuideFooter
+    faq={faq}
+    sources={sources}
+    reviewed="October 2026"
+    next={[
+      { href: '/guides/federal-supply-class-fsc/', label: 'Federal Supply Class (FSC) codes explained' },
+      { href: '/guides/amc-amsc-codes/', label: 'AMC and AMSC codes explained' },
+      { href: '/guides/glossary/', label: 'Glossary of government parts purchasing terms' },
+    ]}
+  />
+</BaseLayout>

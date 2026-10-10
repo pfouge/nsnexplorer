@@ -30,8 +30,8 @@ const noCodes = marks.every((m) => m.competition === 'unknown');
 const y = log10(1, top, YBASE, YTOP);
 
 const COMP = {
-  open: { label: 'Open competition', cls: 'vf-main vring', r: 5 },
-  restricted: { label: 'Restricted to listed sources', cls: 'vf-alt vring', r: 6 },
+  open: { label: 'Coded for competition', cls: 'vf-main vring', r: 5 },
+  restricted: { label: 'Coded for a named source', cls: 'vf-alt vring', r: 6 },
   unknown: { label: 'Not coded', cls: 'vf-neutral vring', r: 4 },
 } as const;
 const PLAIN = { label: '', cls: 'vf-main vring', r: 5 } as const;
@@ -73,8 +73,8 @@ const chart = svg(W, H, 'Open solicitations by days until they close and quantit
   title="Bid-window map"
   question="Which open solicitations are large, and how long is left? One mark per solicitation."
   legend={noCodes ? [] : [
-    { key: 'main', label: 'Open competition', shape: 'dot' },
-    { key: 'alt', label: 'Restricted to listed sources', shape: 'diamond' },
+    { key: 'main', label: 'Coded for competition', shape: 'dot' },
+    { key: 'alt', label: 'Coded for a named source', shape: 'diamond' },
     { key: 'neutral', label: 'Not coded', shape: 'dot' },
   ]}
   note={[capped && `Showing the ${fmtInt(marks.length)} soonest of ${fmtInt(total)}.`, noCodes && 'Acquisition method codes are not on record for these items, so competition status is not shown.'].filter(Boolean).join(' ') || undefined}

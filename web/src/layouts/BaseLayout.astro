@@ -50,6 +50,7 @@ const NAV = [
   {
     title: 'About',
     links: [
+      { href: '/guides/', label: 'Guides', note: 'NSNs, CAGE codes and bidding, explained', primary: false },
       { href: '/methodology/', label: 'Methodology', note: 'Where every number comes from', primary: false },
       { href: '/about/', label: 'About', note: 'Who runs NSN Explorer', primary: false },
     ],
@@ -83,14 +84,67 @@ const secondary = allLinks.filter((l) => !l.primary);
 
     <SEO {...seoProps} />
 
-    <!-- Google Analytics 4 (gtag.js). Loads for all visitors; a cookie
-         consent banner / consent mode can be layered on later. -->
-    <script is:inline async src="https://www.googletagmanager.com/gtag/js?id=G-V0L6VYP0B4"></script>
+    <!-- Google Analytics 4. Loads straight away where no consent is required. Visitors in
+         the EEA, the UK and Switzerland (told apart by /api/region.json) are asked first, and
+         a Global Privacy Control signal counts as "no". The choice is kept in localStorage. -->
     <script is:inline>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'G-V0L6VYP0B4');
+      (() => {
+        const ID = 'G-V0L6VYP0B4';
+        const get = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
+        const set = (k, v) => { try { localStorage.setItem(k, v); } catch { /* private mode */ } };
+        const load = () => {
+          if (window.__gaLoaded) return;
+          window.__gaLoaded = true;
+          const s = document.createElement('script');
+          s.async = true;
+          s.src = 'https://www.googletagmanager.com/gtag/js?id=' + ID;
+          document.head.appendChild(s);
+          window.dataLayer = window.dataLayer || [];
+          window.gtag = function () { window.dataLayer.push(arguments); };
+          window.gtag('js', new Date());
+          window.gtag('config', ID);
+        };
+        const ask = () => {
+          const show = () => {
+            if (document.getElementById('consent-bar')) return;
+            const bar = document.createElement('div');
+            bar.id = 'consent-bar';
+            bar.className = 'consent-bar';
+            bar.setAttribute('role', 'region');
+            bar.setAttribute('aria-label', 'Analytics choice');
+            const p = document.createElement('p');
+            p.append('We would like to use Google Analytics to count visits. ');
+            const a = document.createElement('a');
+            a.href = '/privacy/#analytics';
+            a.textContent = 'Details';
+            p.append(a);
+            const yes = document.createElement('button');
+            yes.type = 'button'; yes.className = 'btn'; yes.textContent = 'Allow analytics';
+            const no = document.createElement('button');
+            no.type = 'button'; no.className = 'btn btn-ghost'; no.textContent = 'No thanks';
+            yes.addEventListener('click', () => { set('analytics', 'granted'); bar.remove(); load(); });
+            no.addEventListener('click', () => { set('analytics', 'denied'); bar.remove(); });
+            const row = document.createElement('div');
+            row.append(yes, no);
+            bar.append(p, row);
+            document.body.appendChild(bar);
+          };
+          if (document.body) show(); else document.addEventListener('DOMContentLoaded', show);
+        };
+        // The privacy page offers a way to choose again.
+        window.nsnAnalyticsChoice = () => { try { localStorage.removeItem('analytics'); } catch { /* nothing stored */ } ask(); };
+        const choice = get('analytics');
+        if (choice === 'granted') return load();
+        if (choice === 'denied') return;
+        if (navigator.globalPrivacyControl === true) return;
+        const region = get('analytics-region');
+        if (region === 'free') return load();
+        if (region === 'ask') return ask();
+        fetch('/api/region.json')
+          .then((r) => r.json())
+          .then((d) => { set('analytics-region', d.consent ? 'ask' : 'free'); if (d.consent) ask(); else load(); })
+          .catch(ask); // region unknown: ask rather than assume
+      })();
     </script>
   </head>
   <body>
@@ -201,6 +255,7 @@ const secondary = allLinks.filter((l) => !l.primary);
           <a href="/suppliers/">For Suppliers</a>
           <a href="/browse/">Browse deep categories</a>
           <a href="/agencies/">Agencies</a>
+          <a href="/guides/">Guides</a>
           <a href="/methodology/">Methodology</a>
           <a href="/compare/">Compare items</a>
           <a href="/about/">About</a>

@@ -4,6 +4,7 @@
 // access, which is exactly what lets them be tested without a database.
 
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import {
   splitCsvLine,
@@ -12,6 +13,13 @@ import {
   mapPartRow,
   mapCageRow,
   mapCharacteristicsRow,
+  parseObsDate,
+  normalizeAmc,
+  normalizeAmsc,
+  resolveMoeColumns,
+  mapMoeRuleRow,
+  isBetterMoeRow,
+  collectMoeRule,
   PUBLOG_SOURCE_URL,
 } from './load.mjs';
 
@@ -227,4 +235,150 @@ test('mapCharacteristicsRow: skips rows with no MRC code', () => {
 
 test('PUBLOG_SOURCE_URL points at the DLA PUB LOG FOIA page', () => {
   assert.match(PUBLOG_SOURCE_URL, /^https:\/\/www\.dla\.mil\//);
+});
+
+// ---------------------------------------------------------------------------
+// V_MOE_RULE.CSV (AMC / AMSC)
+// ---------------------------------------------------------------------------
+
+const fixture = (name) =>
+  fileURLToPath(new URL(`../test/fixtures/moe/${name}`, import.meta.url));
+
+const moeTracked = new Map(
+  [1, 2, 3, 4, 5].map((i) => [String(i).padStart(9, '0'), `5331${String(i).padStart(9, '0')}`])
+);
+const quiet = { log: () => {}, today: '2026-10-10' };
+
+test('resolveMoeColumns: resolves by header name, case-insensitively', () => {
+  const cols = resolveMoeColumns(['junk', 'moe_code', 'niin', 'Amsc', 'AMC', 'x', 'ROW_OBS_DT', 'y']);
+  assert.deepEqual(
+    { niin: cols.niin, moe: cols.moe, amc: cols.amc, amsc: cols.amsc, obs: cols.obs },
+    { niin: 2, moe: 1, amc: 4, amsc: 3, obs: 6 }
+  );
+  assert.ok(Object.values(cols.via).every((v) => v === 'header'));
+  assert.equal(resolveMoeColumns(['NIIN', 'MOE', 'AMC', 'AMSC', 'LAST_ROW_OBS_DT']).obs, 4);
+  assert.equal(resolveMoeColumns(['NIIN', 'MOE_CD', 'AMC', 'AMSC']).moe, 1);
+});
+
+test('resolveMoeColumns: falls back to positions 0, 2, 3, 4 and the last column', () => {
+  const headers = Array.from({ length: 15 }, (_, i) => `COL_${i}`);
+  const cols = resolveMoeColumns(headers);
+  assert.deepEqual(
+    { niin: cols.niin, moe: cols.moe, amc: cols.amc, amsc: cols.amsc, obs: cols.obs },
+    { niin: 0, moe: 2, amc: 3, amsc: 4, obs: 14 }
+  );
+  assert.ok(Object.values(cols.via).every((v) => v === 'position'));
+});
+
+test('resolveMoeColumns: mixes name matches with positional fallback per column', () => {
+  const cols = resolveMoeColumns(['NIIN', 'X', 'Y', 'AMC_X', 'AMSC', 'Z']);
+  assert.equal(cols.amsc, 4);
+  assert.equal(cols.via.amsc, 'header');
+  assert.equal(cols.amc, 3);
+  assert.equal(cols.via.amc, 'position');
+  assert.equal(cols.obs, 5);
+});
+
+test('normalizeAmc / normalizeAmsc: reject anything but the documented shapes', () => {
+  assert.equal(normalizeAmc(' 2 '), '2');
+  assert.equal(normalizeAmc('0'), '0');
+  for (const bad of ['6', '9', 'A', '12', '', null, undefined, ' ']) assert.equal(normalizeAmc(bad), null);
+  assert.equal(normalizeAmsc('g'), 'G');
+  assert.equal(normalizeAmsc('7'), '7');
+  for (const bad of ['GG', '?', '', null, undefined, ' ', '-']) assert.equal(normalizeAmsc(bad), null);
+});
+
+test('parseObsDate: accepts the plausible shapes, rejects junk and future dates', () => {
+  assert.equal(parseObsDate('15-SEP-2026'), '2026-09-15');
+  assert.equal(parseObsDate('5-Jan-2025'), '2025-01-05');
+  assert.equal(parseObsDate('2026-09-15'), '2026-09-15');
+  assert.equal(parseObsDate('2026-09-15 10:11:12'), '2026-09-15');
+  assert.equal(parseObsDate('20260915'), '2026-09-15');
+  assert.equal(parseObsDate('09/15/2026'), '2026-09-15');
+  for (const bad of ['', null, undefined, 'not a date', '31-FEB-2026', '2026-13-01', '99999999']) {
+    assert.equal(parseObsDate(bad), null);
+  }
+  assert.equal(parseObsDate('01-JAN-2099', '2026-10-10'), null);
+});
+
+test('mapMoeRuleRow: skips untracked NIINs and rows where AMC and AMSC are both blank', () => {
+  const base = { niin: '000000001', moe: 'af', amc: '1', amsc: 'z', obs: '01-JUN-2026' };
+  assert.deepEqual(mapMoeRuleRow(base, moeTracked), {
+    nsn: '5331000000001', moe: 'AF', amc: '1', amsc: 'Z', date: '2026-06-01',
+    amcRejected: false, amscRejected: false,
+  });
+  assert.equal(mapMoeRuleRow({ ...base, niin: '999999999' }, moeTracked), null);
+  assert.equal(mapMoeRuleRow({ ...base, niin: 'bad' }, moeTracked), null);
+  assert.equal(mapMoeRuleRow({ ...base, amc: '', amsc: ' ' }, moeTracked), null);
+});
+
+test('mapMoeRuleRow: invalid codes become blank; a row with one valid code is kept', () => {
+  const base = { niin: '000000001', moe: 'AF', amc: '1', amsc: 'Z', obs: '' };
+  const badAmc = mapMoeRuleRow({ ...base, amc: '9' }, moeTracked);
+  assert.equal(badAmc.amc, null);
+  assert.equal(badAmc.amsc, 'Z');
+  assert.equal(badAmc.amcRejected, true);
+  const badAmsc = mapMoeRuleRow({ ...base, amsc: '?' }, moeTracked);
+  assert.equal(badAmsc.amsc, null);
+  assert.equal(badAmsc.amc, '1');
+  assert.equal(mapMoeRuleRow({ ...base, amc: '9', amsc: '?' }, moeTracked), null);
+});
+
+test('isBetterMoeRow: DS wins; then the later date; then last seen when undated', () => {
+  const row = (moe, date) => ({ moe, date });
+  assert.equal(isBetterMoeRow(null, row('AF', null)), true);
+  assert.equal(isBetterMoeRow(row('AF', '2026-09-01'), row('DS', '2020-01-01')), true);
+  assert.equal(isBetterMoeRow(row('DS', '2020-01-01'), row('AF', '2026-09-01')), false);
+  assert.equal(isBetterMoeRow(row('DS', '2020-01-01'), row('DS', '2021-01-01')), true);
+  assert.equal(isBetterMoeRow(row('AF', '2026-09-01'), row('NV', '2025-01-01')), false);
+  assert.equal(isBetterMoeRow(row('AF', null), row('NV', '2025-01-01')), true);
+  assert.equal(isBetterMoeRow(row('AF', '2025-01-01'), row('NV', null)), false);
+  assert.equal(isBetterMoeRow(row('AF', null), row('NV', null)), true);
+});
+
+test('collectMoeRule: sample fixture with named headers (DS pref, date fallback, blanks, invalid codes)', async () => {
+  const lines = [];
+  const { best, stats, columns } = await collectMoeRule(fixture('V_MOE_RULE.sample.csv'), moeTracked, {
+    ...quiet,
+    log: (m) => lines.push(m),
+  });
+  const pick = (n) => {
+    const r = best.get(`5331${n}`);
+    return r && { amc: r.amc, amsc: r.amsc, date: r.date, moe: r.moe };
+  };
+  // DS beats a later non-DS row.
+  assert.deepEqual(pick('000000001'), { amc: '2', amsc: 'G', date: '2026-09-15', moe: 'DS' });
+  // No DS: latest ROW_OBS_DT wins even though it appears later in the file.
+  assert.deepEqual(pick('000000002'), { amc: '2', amsc: 'D', date: '2026-06-01', moe: 'NV' });
+  // Both codes blank: ignored entirely.
+  assert.equal(pick('000000003'), undefined);
+  // Invalid AMC (9) -> blank, AMSC kept; the older NV row's '?' AMSC is blank, AMC 3 kept but older.
+  assert.deepEqual(pick('000000004'), { amc: null, amsc: 'G', date: '2026-06-01', moe: 'AF' });
+  // Two DS rows with unparseable dates: last seen wins.
+  assert.deepEqual(pick('000000005'), { amc: '1', amsc: 'Z', date: null, moe: 'DS' });
+  assert.equal(best.size, 4);
+  assert.equal(stats.scanned, 10);
+  assert.equal(stats.blankSkipped, 1);
+  assert.equal(stats.amcRejected, 1);
+  assert.equal(stats.amscRejected, 1);
+  assert.match(columns, /niin=0\(header\) moe=2\(header\) amc=3\(header\) amsc=4\(header\) obs=14\(header\)/);
+  assert.ok(lines.some((l) => l.includes('first line:') && l.includes('"NIIN","MOE_RULE_NBR"')));
+});
+
+test('collectMoeRule: unknown header names use the positional fallback', async () => {
+  const { best, columns } = await collectMoeRule(fixture('V_MOE_RULE.alt-headers.csv'), moeTracked, quiet);
+  assert.match(columns, /niin=0\(position\) moe=2\(position\) amc=3\(position\) amsc=4\(position\) obs=14\(position\)/);
+  // Rule type column is positional MOE code, so the DS row wins over the newer AF row.
+  assert.deepEqual(
+    [best.get('5331000000001').amc, best.get('5331000000001').amsc, best.get('5331000000001').moe],
+    ['2', 'G', 'DS']
+  );
+  assert.equal(best.get('5331000000002').amc, '1');
+});
+
+test('collectMoeRule: a file with no header row is read positionally and keeps its first row', async () => {
+  const { best, columns } = await collectMoeRule(fixture('V_MOE_RULE.noheader.csv'), moeTracked, quiet);
+  assert.match(columns, /niin=0\(position\)/);
+  assert.equal(best.get('5331000000001').amsc, 'Z');
+  assert.equal(best.get('5331000000002').moe, 'DS');
 });

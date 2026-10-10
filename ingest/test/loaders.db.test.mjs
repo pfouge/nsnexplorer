@@ -8,6 +8,10 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const url = process.env.TEST_DATABASE_URL;
 if (url) process.env.DATABASE_URL = url;
@@ -19,6 +23,7 @@ const {
   loadPricePointsFromAwards,
 } = await import('../dibbs/load.mjs');
 const { evaluateSource } = await import('../../db/freshness.mjs');
+const { loadMoeRule, buildTrackedNiinMap } = await import('../publog/load.mjs');
 
 test('withRetry: retries a deadlock, gives up on a real error', async () => {
   let calls = 0;
@@ -163,6 +168,96 @@ dbTest('loaders against a real database', async (t) => {
     }
     const { rows } = await pool.query(`SELECT count(*)::int AS n FROM pub.nsns`);
     assert.equal(rows[0].n, n);
+  });
+
+  await closePool();
+});
+
+dbTest('PUB LOG MOE rule load into pub.amsc_observations', async (t) => {
+  const pool = getPool();
+  await pool.query(`TRUNCATE pub.amsc_observations, pub.price_points, pub.contract_actions, pub.solicitations,
+                             pub.part_numbers, ops.targets, pub.nsns, pub.suppliers, pub.fsc CASCADE`);
+  await pool.query(`INSERT INTO pub.fsc (fsc, name, render_depth) VALUES ('5331', 'O-Ring', 'deep')`);
+  for (let i = 1; i <= 5; i += 1) {
+    await pool.query(`INSERT INTO pub.nsns (nsn, fsc) VALUES ($1, '5331')`, [nsnOf(i)]);
+  }
+  const fixtureDir = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures', 'moe');
+  const fixture = path.join(fixtureDir, 'V_MOE_RULE.sample.csv');
+  const opts = { log: () => {}, today: '2026-10-10' };
+  const tracked = await buildTrackedNiinMap();
+
+  await t.test('loads one observation per tracked NSN with provenance, never inserting NSNs', async () => {
+    const r = await loadMoeRule(fixture, tracked, opts);
+    assert.equal(r.loaded, 4);
+    const { rows } = await pool.query(
+      `SELECT nsn, amc, amsc, observed_on::text AS d, source, source_ref, source_url
+       FROM pub.amsc_observations ORDER BY nsn`
+    );
+    assert.equal(rows.length, 4);
+    const by = Object.fromEntries(rows.map((x) => [x.nsn.trim(), x]));
+    assert.deepEqual(
+      [by[nsnOf(1)].amc, by[nsnOf(1)].amsc, by[nsnOf(1)].d], ['2', 'G', '2026-09-15']
+    );
+    assert.deepEqual([by[nsnOf(2)].amc, by[nsnOf(2)].amsc], ['2', 'D']);
+    assert.deepEqual([by[nsnOf(4)].amc, by[nsnOf(4)].amsc], [null, 'G']);
+    assert.equal(by[nsnOf(5)].d, '2026-10-10'); // unparseable ROW_OBS_DT -> today (UTC)
+    assert.ok(rows.every((x) => x.source === 'flis' && x.source_ref === 'V_MOE_RULE.CSV'));
+    assert.ok(rows.every((x) => x.source_url.startsWith('https://www.dla.mil/')));
+    assert.equal(by[nsnOf(3)], undefined); // both codes blank
+    const n = await pool.query(`SELECT count(*)::int AS n FROM pub.nsns`);
+    assert.equal(n.rows[0].n, 5);
+  });
+
+  await t.test('rerunning is idempotent, including on a later day', async () => {
+    const again = await loadMoeRule(fixture, tracked, opts);
+    assert.equal(again.loaded, 0);
+    assert.equal(again.unchanged, 4);
+    // NSN 5 has an unparseable date, so a later day would otherwise add a new dated row.
+    await loadMoeRule(fixture, tracked, { ...opts, today: '2026-10-11' });
+    const { rows } = await pool.query(`SELECT count(*)::int AS n FROM pub.amsc_observations`);
+    assert.equal(rows[0].n, 4);
+  });
+
+  await t.test('a changed value is recorded; same-date reruns update in place', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'moe-'));
+    const changed = path.join(dir, 'V_MOE_RULE.CSV');
+    const text = readFileSync(fixture, 'utf8')
+      .replace('"000000002","0002","NV","2","D"', '"000000002","0002","NV","2","E"') // same date, new AMSC
+      .replace('"000000001","0001","DS","2","G"', '"000000001","0001","DS","1","Z"')
+      .replace('"15-SEP-2026"\n"000000001"', '"25-SEP-2026"\n"000000001"'); // newer date for NSN 1
+    writeFileSync(changed, text);
+    const r = await loadMoeRule(changed, tracked, opts);
+    assert.equal(r.loaded, 2);
+    const { rows } = await pool.query(
+      `SELECT nsn, amc, amsc, observed_on::text AS d FROM pub.amsc_observations
+       WHERE nsn IN ($1, $2) ORDER BY nsn, observed_on`,
+      [nsnOf(1), nsnOf(2)]
+    );
+    assert.equal(rows.filter((x) => x.nsn.trim() === nsnOf(1)).length, 2); // new dated row
+    const two = rows.filter((x) => x.nsn.trim() === nsnOf(2));
+    assert.equal(two.length, 1); // updated in place
+    assert.equal(two[0].amsc, 'E');
+    const total = await pool.query(`SELECT count(*)::int AS n FROM pub.amsc_observations`);
+    assert.equal(total.rows[0].n, 5);
+  });
+
+  await t.test('the web read (NSN_WITH_AMSC_SELECT) returns the latest values', async () => {
+    const src = readFileSync(
+      path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'web', 'src', 'lib', 'shared.ts'),
+      'utf8'
+    );
+    const m = /export const NSN_WITH_AMSC_SELECT = `([\s\S]*?)`;/.exec(src);
+    assert.ok(m, 'NSN_WITH_AMSC_SELECT not found in web/src/lib/shared.ts');
+    const { rows } = await pool.query(`${m[1]} WHERE n.nsn = ANY($1) ORDER BY n.nsn`, [
+      [nsnOf(1), nsnOf(3), nsnOf(4)],
+    ]);
+    const by = Object.fromEntries(rows.map((x) => [x.nsn.trim(), x]));
+    assert.equal(by[nsnOf(1)].amc, '1');
+    assert.equal(by[nsnOf(1)].amsc, 'Z');
+    assert.equal(new Date(by[nsnOf(1)].amsc_observed_on).toISOString().slice(0, 10), '2026-09-25');
+    assert.ok(by[nsnOf(1)].amsc_source_url.startsWith('https://www.dla.mil/'));
+    assert.equal(by[nsnOf(3)].amsc, null); // no observation -> dashes
+    assert.equal(by[nsnOf(4)].amsc, 'G');
   });
 
   await closePool();

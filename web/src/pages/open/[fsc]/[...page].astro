@@ -6,6 +6,7 @@
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import SignupForm from '../../../components/SignupForm.astro';
 import Pager from '../../../components/Pager.astro';
+import CiteThis from '../../../components/CiteThis.astro';
 import { SITE_URL } from '../../../consts';
 import { loadSiteData, formatDate, toDashedNsn } from '../../../lib/data';
 import { buildSolicitationCards, competitionFromAmscAmc, fsgName, isPlaceholderFscName, UNLISTED_FSC_NAME, type ProductCard } from '../../../lib/browse';
@@ -269,8 +270,8 @@ const breadcrumbSchema = {
           <div class="filter-group" role="radiogroup" aria-labelledby="f-competition-label">
             <span class="filter-label" id="f-competition-label">Competition</span>
             <label><input type="radio" name="f-competition" value="all" checked /> All</label>
-            <label><input type="radio" name="f-competition" value="open" /> Open</label>
-            <label><input type="radio" name="f-competition" value="restricted" /> Restricted</label>
+            <label><input type="radio" name="f-competition" value="open" /> Competed</label>
+            <label><input type="radio" name="f-competition" value="restricted" /> Named source</label>
           </div>
 
           <div class="filter-group">
@@ -338,7 +339,7 @@ const breadcrumbSchema = {
                     <span class="signal mono">{c.openQuantity !== null ? c.openQuantity.toLocaleString('en-US') : '—'} units</span>
                     {c.competition !== 'unknown' && (
                       <span class={`badge ${c.competition === 'open' ? 'green' : 'amber'}`}>
-                        {c.competition === 'open' ? 'Open' : 'Restricted'}
+                        {c.competition === 'open' ? 'Competed' : 'Named source'}
                       </span>
                     )}
                   </div>
@@ -518,4 +519,6 @@ const breadcrumbSchema = {
     description={`Get an email when a new RFQ opens for competition in ${displayName}.`}
     cta="Sign up"
   />
+
+  <CiteThis title={`${displayName} FSC ${fscCode}`} url={canonicalUrl} asOf={data.viz.today} />
 </BaseLayout>

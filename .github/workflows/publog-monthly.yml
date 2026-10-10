@@ -54,6 +54,9 @@ jobs:
       # FLIS bulk exports change ~monthly. Cache the unzipped files by
       # year-month so only the first nightly run of the month downloads them;
       # the rest reuse the cache and just re-scan to enrich new NSNs.
+      # The key carries a version (v2 = MOE_RULE.zip added to the download
+      # set): bump it whenever fetch.mjs's default file list changes so a
+      # month cached without the new zip re-downloads instead of skipping it.
       - name: cache key (year-month)
         id: ym
         run: echo "ym=$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
@@ -62,10 +65,13 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /tmp/publog
-          key: publog-flis-${{ steps.ym.outputs.ym }}
+          key: publog-flis-v2-${{ steps.ym.outputs.ym }}
       - name: fetch + unzip PUB LOG bulk exports
         if: steps.publog-cache.outputs.cache-hit != 'true'
-        run: node ingest/publog/fetch.mjs --out /tmp/publog
+        run: |
+          node ingest/publog/fetch.mjs --out /tmp/publog
+          # The CSVs are what the loader reads; dropping the zips keeps the monthly cache smaller.
+          rm -f /tmp/publog/*.zip
 
       - name: load (enrich existing NSNs, incl. open-solicitation set)
         run: set -o pipefail; node ingest/publog/load.mjs --dir /tmp/publog 2>&1 | tee /tmp/load-output.txt
@@ -83,6 +89,13 @@ jobs:
                 echo
               fi
             done
+            echo '== V_MOE_RULE.CSV (first 2 lines, 1000 chars each) =='
+            moe=$(find /tmp/publog -maxdepth 1 -iname 'V_MOE_RULE.CSV' | head -1)
+            if [ -n "$moe" ]; then
+              head -2 "$moe" | cut -c1-1000 || true
+            else
+              echo 'V_MOE_RULE.CSV not found in /tmp/publog (MOE_RULE.zip missing or empty?)'
+            fi
             echo '== load output (tail) =='
             tail -40 /tmp/load-output.txt
           } > ingest/publog/last-run-diagnostics.txt
@@ -95,7 +108,7 @@ jobs:
             const c = new pg.Client({ connectionString: process.env.DATABASE_URL });
             await c.connect();
             const counts = {};
-            for (const t of ['pub.nsns', 'pub.part_numbers', 'pub.suppliers']) {
+            for (const t of ['pub.nsns', 'pub.part_numbers', 'pub.suppliers', 'pub.amsc_observations']) {
               const r = await c.query('SELECT count(*) FROM ' + t);
               counts[t] = Number(r.rows[0].count);
             }
@@ -103,6 +116,8 @@ jobs:
             counts['pub.nsns with item_name'] = Number(named.rows[0].count);
             const chars = await c.query(\"SELECT count(*) FROM pub.nsns WHERE characteristics IS NOT NULL\");
             counts['pub.nsns with characteristics'] = Number(chars.rows[0].count);
+            const amsc = await c.query(\"SELECT count(DISTINCT nsn) FROM pub.amsc_observations\");
+            counts['pub.nsns with amsc observation'] = Number(amsc.rows[0].count);
             await c.end();
             writeFileSync('ingest/publog/last-run.json', JSON.stringify({ at: new Date().toISOString(), counts }, null, 2) + '\n');
           "

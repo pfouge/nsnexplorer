@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // ingest/publog/fetch.mjs
 // Downloads the PUB LOG bulk data ZIPs (IDENTIFICATION.zip, REFERENCE.zip,
-// CAGE.zip, CHARACTERISTICS.zip) and unzips them for load.mjs to read. Run
+// CAGE.zip, CHARACTERISTICS.zip, MOE_RULE.zip) and unzips them for load.mjs to read. Run
 // monthly from GitHub Actions (US runners).
 //
 // CLI:
@@ -23,6 +23,7 @@ export const DEFAULT_FILES = [
   'REFERENCE.zip',
   'CAGE.zip',
   'CHARACTERISTICS.zip',
+  'MOE_RULE.zip',
 ];
 
 function parseArgs(argv) {

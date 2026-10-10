@@ -2,6 +2,7 @@
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import SignupForm from '../../../components/SignupForm.astro';
 import Pager from '../../../components/Pager.astro';
+import CiteThis from '../../../components/CiteThis.astro';
 import { SITE_URL } from '../../../consts';
 import { loadSiteData, formatUsd, formatDate, type FscConfig } from '../../../lib/data';
 import { buildProductCards, competitionFromAmscAmc, fscDisplayName as classDisplayName, fsgName, isPlaceholderFscName, UNLISTED_FSC_NAME, type ProductCard } from '../../../lib/browse';
@@ -14,6 +15,7 @@ import { buildCompetitionRows, buildRepeat, buildStateMap, buildWeekly, buildWin
 import { pageCount, pageItems, pageNumbers, pageParam, pageRange, pageUrl, rangeLabel, pagedDescriptionPrefix, pagedTitle } from '../../../lib/paginate';
 import { memo, release } from '../../../lib/paged-cache';
 import { fscDescription, fscTitle } from '../../../lib/seo-copy';
+import { contractActionsPath, usaspendingActionsByFsc } from '../../../lib/csv-tables';
 import { fscEmbedPath } from '../../../lib/embed';
 
 // /fsc/<code>/ is page 1; /fsc/<code>/page/<n>/ holds the next PAGE_SIZE cards.
@@ -51,6 +53,8 @@ const fscActions = [...(data.contractActionsByFsc.get(fsc.fsc) ?? [])].sort((a, 
 );
 const fscActionsObligated = fscActions.reduce((sum, a) => sum + (a.obligation ?? 0), 0);
 const recentActions = fscActions.slice(0, 25);
+// The CSV holds this class's USAspending records only, and exists only when there are some.
+const hasActionsCsv = usaspendingActionsByFsc(data).has(fsc.fsc);
 
 const totalPurchases = allCards.reduce((sum, c) => sum + c.purchaseRecords, 0) + fscActions.length;
 const totalDollars = allCards.reduce((sum, c) => sum + c.totalDemand, 0) + fscActionsObligated;
@@ -193,8 +197,8 @@ const breadcrumbSchema = {
           <div class="filter-group" role="radiogroup" aria-labelledby="f-competition-label">
             <span class="filter-label" id="f-competition-label">Competition</span>
             <label><input type="radio" name="f-competition" value="all" checked /> All</label>
-            <label><input type="radio" name="f-competition" value="open" /> Open</label>
-            <label><input type="radio" name="f-competition" value="restricted" /> Restricted</label>
+            <label><input type="radio" name="f-competition" value="open" /> Competed</label>
+            <label><input type="radio" name="f-competition" value="restricted" /> Named source</label>
           </div>
 
           <div class="filter-group">
@@ -269,7 +273,7 @@ const breadcrumbSchema = {
                   <span class="signal mono">{c.perYear.toFixed(1)}/yr</span>
                   {c.competition !== 'unknown' && (
                     <span class={`badge ${c.competition === 'open' ? 'green' : 'amber'}`}>
-                      {c.competition === 'open' ? 'Open' : 'Restricted'}
+                      {c.competition === 'open' ? 'Competed' : 'Named source'}
                     </span>
                   )}
                   <span class="signal mono">{formatUsd(c.totalDemand)}</span>
@@ -416,6 +420,12 @@ const breadcrumbSchema = {
       {formatUsd(fscActionsObligated)} where the public description doesn't identify a specific
       part. Newest first; every row links to its official USAspending record.
     </p>
+    {hasActionsCsv && (
+      <ul class="chips wrap-wide" aria-label="Free downloads">
+        <li><a class="chip outline" href={contractActionsPath(fsc.fsc)} download>Download CSV</a></li>
+        <li class="gloss" style="align-self:center; margin:0;">USAspending records only.</li>
+      </ul>
+    )}
     {fscActions.length === 0 ? (
       <p class="gloss">No category-level awards indexed yet.</p>
     ) : (
@@ -470,4 +480,6 @@ const breadcrumbSchema = {
     description={`Get an email when an AMSC changes from sole-source to open competition in ${fscDisplayName} (FSC ${fsc.fsc}).`}
     cta="Sign up"
   />
+
+  <CiteThis title={`${fscDisplayName} FSC ${fsc.fsc}`} url={canonicalUrl} asOf={data.viz.today} />
 </BaseLayout>

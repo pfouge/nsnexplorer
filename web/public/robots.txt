@@ -21,3 +21,4 @@ Allow: /
 
 Sitemap: https://nsnexplorer.com/sitemap-index.xml
 Sitemap: https://nsnexplorer.com/sitemap-nsn-index.xml
+Sitemap: https://nsnexplorer.com/sitemap-entities.xml

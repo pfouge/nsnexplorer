@@ -1,0 +1,169 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import GuideFooter from '../../components/GuideFooter.astro';
+import { SITE_URL } from '../../consts';
+
+const title = 'Federal Supply Class (FSC) and Group (FSG) Explained';
+const description =
+  "The Federal Supply Class is the 4-digit category in an NSN. See how classes differ from groups, with real examples, and how they show up in solicitations.";
+const canonicalUrl = `${SITE_URL}/guides/federal-supply-class-fsc/`;
+
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  { name: 'Guides', url: '/guides/' },
+  { name: 'Federal supply class (FSC)', url: canonicalUrl },
+];
+
+const faq = [
+  {
+    question: 'What is a Federal Supply Class (FSC)?',
+    answer:
+      'It is the 4-digit code at the start of a national stock number that says what kind of item it is. For example, 5310 is nuts and washers.',
+  },
+  {
+    question: 'What is the difference between an FSG and an FSC?',
+    answer:
+      'The Federal Supply Group (FSG) is the first two digits and names a broad category. The Federal Supply Class (FSC) is all four digits and narrows it to a specific class within that group.',
+  },
+  {
+    question: 'How do I find the FSC for my product?',
+    answer:
+      'The class is part of an item\'s NSN, which DLA assigns. DLA\'s class lists now live in its FED LOG and PUB LOG data products, and the NSNs already on record for similar items show which class they sit in.',
+  },
+  {
+    question: 'Is an FSC the same as a PSC or a NAICS code?',
+    answer:
+      'No. An FSC classifies supply items. A Product and Service Code (PSC) describes what a contract bought, and a NAICS code classifies a business by industry. They are separate systems.',
+  },
+];
+
+const sources = [
+  { label: 'DLA Disposition Services: National Stock Number (FSG and FSC)', url: 'https://www.dla.mil/Disposition-Services/DDSR/Quick-Links/NSNs/' },
+  { label: 'DLA: NSN booklet (example NSN with class 6240)', url: 'https://www.dla.mil/Portals/104/Documents/J3LogisticOperations/Brochures/J3_NSNBook_20230913.pdf' },
+  { label: 'DLA: Federal Supply Class assignments to DLA and GSA (class titles)', url: 'https://www.dla.mil/Portals/104/Documents/Aviation/AviationEngineering/Engineering/AV_FSCClassAssignment._151007.pdf' },
+  { label: 'DLA: H2 Federal Supply Classification directory (now merged into FED LOG and PUB LOG)', url: 'https://www.dla.mil/What-DLA-Offers/Federal-and-International-Cataloging/H2/' },
+  { label: 'DLA: DIBBS pocket guide (searching by FSC)', url: 'https://www.dla.mil/Portals/104/Documents/SmallBusiness/DIBBS%20Pocket%20Guide.pdf' },
+  { label: 'DLA: DIBBS vendor registration (notifications by FSC)', url: 'https://www.dla.mil/Vendor-Information-Hub/Table-of-Contents/Details/Article/3746012/dla-internet-bid-board-system-dibbs-vendor-registration/' },
+  { label: 'acquisition.gov: Product and Service Code Manual', url: 'https://acquisition.gov/sites/default/files/manual/PSC%20Manual%20April%202024.pdf' },
+];
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  ogType="article"
+  pageType="Article"
+  canonicalUrl={canonicalUrl}
+  breadcrumbs={breadcrumbs}
+  faq={faq}
+>
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a> › <a href="/guides/">Guides</a> › Federal supply class (FSC)
+  </nav>
+
+  <h1>Federal supply class (FSC) and federal supply group (FSG)</h1>
+  <p class="lede answer">
+    A Federal Supply Class (FSC) is the 4-digit category at the start of a national stock number,
+    such as 5310 for nuts and washers. The first two digits of the class are the Federal Supply
+    Group (FSG), the broader category the class belongs to.
+  </p>
+
+  <section>
+    <h2 class="section-title">Group versus class</h2>
+    <p>
+      Every <a href="/guides/what-is-an-nsn/">NSN</a> starts with four digits that say what kind
+      of item it is. DLA splits those digits in two. The first two are the group. All four are the
+      class. A group holds many classes, and a class holds many items.
+    </p>
+    <p>
+      DLA's own example is the NSN 8415-01-530-2157. Group 84 is clothing. Class 8415 is special
+      purpose clothing.
+    </p>
+  </section>
+
+  <section>
+    <h2 class="section-title">Examples</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Class (FSC)</th><th>Group digits (FSG)</th><th>Class title</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>5305</td><td>53</td><td class="wrap">Screws</td></tr>
+          <tr><td>5310</td><td>53</td><td class="wrap">Nuts and Washers</td></tr>
+          <tr><td>5330</td><td>53</td><td class="wrap">Packing and Gasket Materials</td></tr>
+          <tr><td>6240</td><td>62</td><td class="wrap">Electric lamps (DLA's NSN booklet uses this class for lamps such as fluorescent and incandescent)</td></tr>
+          <tr><td>8415</td><td>84</td><td class="wrap">Special purpose clothing, in the clothing group</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="gloss">
+      Titles for 5305, 5310 and 5330 are from DLA's list of classes assigned to DLA and GSA.
+    </p>
+    <p>
+      Notice that screws, nuts and washers, and gaskets share the digits 53. That is the group.
+      Items in different classes of the same group are related, but each class is its own
+      category with its own list of items.
+    </p>
+  </section>
+
+  <section>
+    <h2 class="section-title">How classes show up in solicitations</h2>
+    <ul>
+      <li>
+        <strong>Searching.</strong> DLA's <a href="/guides/how-to-bid-on-dibbs/">DIBBS</a> bid board
+        lets you search requests for quotation by class, by full NSN, by solicitation number and
+        by other fields.
+      </li>
+      <li>
+        <strong>Alerts.</strong> When a company registers on DIBBS it can choose to get
+        notifications by class or by NSN.
+      </li>
+      <li>
+        <strong>Who manages the class.</strong> DLA publishes a list of the classes in which DLA
+        or GSA is the wholesale manager for consumable items.
+      </li>
+    </ul>
+    <p>
+      The class is a fast way to tell whether a solicitation is in a family of items you make or
+      stock. It does not say whether the item is open to competition. For that, see the
+      <a href="/guides/amc-amsc-codes/">AMC and AMSC codes</a>.
+    </p>
+  </section>
+
+  <section>
+    <h2 class="section-title">Where to find the full list</h2>
+    <p>
+      DLA used to publish the class and group list as a directory called H2. DLA now says H2 is
+      retired and its classification data lives in the FED LOG and PUB LOG data products. PUB LOG
+      is free. The <a href="/catalog/">NSN Explorer catalog</a> lists supply classes grouped by FSG.
+    </p>
+    <p>
+      Two other code sets look similar but are separate. A Product and Service Code (PSC)
+      describes what a contract action bought, and the PSC Manual says its codes follow the
+      predominant product or service. A NAICS code classifies a business by industry. See the
+      <a href="/guides/glossary/#psc">glossary</a> for both.
+    </p>
+  </section>
+
+  <section>
+    <h2 class="section-title">On NSN Explorer</h2>
+    <p>
+      The <a href="/catalog/">catalog</a> lists federal supply groups and the classes in each,
+      with counts of NSNs. Each class page shows its items, open solicitations and price history,
+      for example <a href="/fsc/5310/">class 5310</a> or <a href="/group/53/">group 53</a>. To see
+      only what is open for bid, go to <a href="/open/">Open demand</a> and pick a class.
+    </p>
+  </section>
+
+  <GuideFooter
+    faq={faq}
+    sources={sources}
+    reviewed="October 2026"
+    next={[
+      { href: '/guides/what-is-an-nsn/', label: 'What is an NSN?' },
+      { href: '/guides/amc-amsc-codes/', label: 'AMC and AMSC codes explained' },
+      { href: '/guides/how-to-bid-on-dibbs/', label: 'How to bid on DIBBS' },
+    ]}
+  />
+</BaseLayout>
