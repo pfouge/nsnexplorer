@@ -28,6 +28,10 @@ const EMBED_HEADERS: Record<string, string> = Object.fromEntries(
 // becomes a 503 with Retry-After instead of a blank 500.
 const DB_ROUTE = /^\/(nsn|supplier|solicitation)\/|^\/api\/(lookup|nsn\/|suppliers)/;
 
+// Crawlers turned away from database-backed routes (also Disallowed in
+// public/robots.txt). Keep the two lists in step.
+const BLOCKED_BOTS = /MJ12bot|AhrefsBot|PetalBot|Reflectionbot/i;
+
 const unavailablePage = (): Response =>
   new Response(
     '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
@@ -44,6 +48,12 @@ type Runtime = { ctx?: { waitUntil?: (p: Promise<unknown>) => void } };
 export const onRequest = defineMiddleware(async (ctx, next) => {
   const url = new URL(ctx.request.url);
   const dbRoute = ctx.request.method === 'GET' && DB_ROUTE.test(url.pathname);
+  if (dbRoute && BLOCKED_BOTS.test(ctx.request.headers.get('user-agent') ?? '')) {
+    return new Response('Crawling this site is not permitted for this user agent; see /robots.txt.', {
+      status: 403,
+      headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },
+    });
+  }
   const edge = dbRoute ? (globalThis as { caches?: { default?: Cache } }).caches?.default : undefined;
   const cacheKey = new Request(url.origin + url.pathname + url.search);
 

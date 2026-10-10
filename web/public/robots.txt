@@ -19,6 +19,22 @@ Allow: /
 User-agent: CCBot
 Allow: /
 
+# Crawlers that send many requests and have no search or answer-engine audience
+# for this site. Each page they fetch costs database queries (Hyperdrive's free
+# plan stops at 100,000 a day), so they are turned away here and with a 403 on
+# database-backed pages (src/middleware.ts).
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: PetalBot
+Disallow: /
+
+User-agent: Reflectionbot
+Disallow: /
+
 Sitemap: https://nsnexplorer.com/sitemap-index.xml
 Sitemap: https://nsnexplorer.com/sitemap-nsn-index.xml
 Sitemap: https://nsnexplorer.com/sitemap-entities.xml
