@@ -1,0 +1,50 @@
+name: hyperdrive-watch
+
+# Every 30 minutes, asks the live site for one cheap database-backed answer
+# (a single indexed NSN lookup) and appends the result to ops/hyperdrive-watch.csv.
+# Hyperdrive's free plan stops answering after 100,000 queries a day (resets
+# 00:00 UTC); the first "limit" row of a day shows when a normal day's traffic
+# used it up. db_error is the x-nsn-db-error header the lookup route sends.
+on:
+  schedule:
+    - cron: '7,37 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/hyperdrive-watch.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: hyperdrive-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Probe the live site
+        run: |
+          set -u
+          mkdir -p ops
+          [ -f ops/hyperdrive-watch.csv ] || echo 'utc,status,db_error' > ops/hyperdrive-watch.csv
+          ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          code=$(curl -sS -m 20 -D /tmp/h.txt -o /tmp/b.txt -w '%{http_code}' "https://nsnexplorer.com/api/lookup.json?q=3820010612362&cb=$(date +%s)" || echo 000)
+          err=$(grep -i '^x-nsn-db-error:' /tmp/h.txt 2>/dev/null | head -1 | cut -d: -f2- | tr -d '\r,"' | sed 's/^ *//' | cut -c1-90)
+          echo "$ts,$code,$err" >> ops/hyperdrive-watch.csv
+          echo "$ts $code $err"
+
+      - name: Commit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add ops/hyperdrive-watch.csv
+          git commit -m 'ops: hyperdrive watch [skip ci]' || exit 0
+          git pull --rebase --autostash origin main
+          git push origin HEAD:main
