@@ -53,8 +53,8 @@ Schema: `breadcrumbs=[{name:'Home', url:'/'}]`; `itemList` = the deep FSCs (name
 
 ## /open/ (open.astro)
 
-Title: `{S} Open Government Solicitations, DLA RFQs Open for Bid`
-Title fallback: `Open Government Solicitations: DLA RFQs Open for Bid`
+Title: `{S} Open DLA RFQs and Government Solicitations` (changed 2026-10-10: the old title passed 70 characters once the count reached five digits)
+Title fallback: `Open DLA RFQs and Government Solicitations`
 
 Description: `{S} open government solicitations from DLA DIBBS, updated daily and linked to the official RFQ. Browse by federal supply class. Free, no account needed.`
 Description fallback: `Open government solicitations from DLA DIBBS, updated daily and linked to the official RFQ. Browse open demand by federal supply class. Free, no account needed.`

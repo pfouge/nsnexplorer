@@ -32,8 +32,8 @@ const S = data.stats.openSolicitationsCount;
 const hasS = S > 0;
 
 const title = hasS
-  ? `${fmtInt(S)} Open Government Solicitations, DLA RFQs Open for Bid`
-  : 'Open Government Solicitations: DLA RFQs Open for Bid';
+  ? `${fmtInt(S)} Open DLA RFQs and Government Solicitations`
+  : 'Open DLA RFQs and Government Solicitations';
 const description = hasS
   ? `${fmtInt(S)} open government solicitations from DLA DIBBS, updated daily and linked to the official RFQ. Browse by federal supply class. Free, no account needed.`
   : 'Open government solicitations from DLA DIBBS, updated daily and linked to the official RFQ. Browse open demand by federal supply class. Free, no account needed.';

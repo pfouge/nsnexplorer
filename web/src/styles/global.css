@@ -316,13 +316,10 @@ main { padding-block: 1.5rem 4rem; }
 .hero.home .lede { max-width: 54ch; }
 @media (min-width: 900px) { .hero.home { padding-block: 3rem 2rem; } }
 
-/* Long introductions fold to three lines on phones; "More" opens them (scripts/shell.ts). */
-@media (max-width: 767px) {
-  p.lede:not(.answer):not(:has(~ p.lede)):not(.open), section.intro > p.gloss:not(.open) { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
-}
+/* Long introductions fold to three lines; "More" opens them (scripts/shell.ts). The full text stays in the page. */
+p.lede:not(.answer):not(:has(~ p.lede)):not(.open), section.intro > p.gloss:not(.open) { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
 .clamp-more { display: inline-block; margin: -0.5rem 0 0.75rem; padding: 4px 0; border: 0; background: none; color: var(--ink); font: inherit; font-size: 0.9375rem; font-weight: 600; cursor: pointer; }
 .clamp-more::after { content: " ›"; }
-@media (min-width: 768px) { .clamp-more { display: none; } }
 
 /* ---- Key stats: label over value, no boxes ---- */
 .datastrip, .stat-strip {

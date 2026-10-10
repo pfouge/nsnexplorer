@@ -26,6 +26,9 @@
 // CLI:
 //   node fetch.mjs --type awd --days 3 --out dir/   (default type: awd)
 //   node fetch.mjs --type rfq --days 3 --out dir/
+//   node fetch.mjs --type awd --dates 04-15-2026,01-15-2026 --max-pages 1 --out dir/
+//     (explicit posting dates instead of the last N business days; --max-pages
+//      caps the pages fetched per date, used by the depth probe)
 //
 // Writes one file per date+page: dir/awd-MM-DD-YYYY-pN.html or
 // dir/rfq-MM-DD-YYYY-pN.html depending on --type.
@@ -68,16 +71,22 @@ const GRID_TYPES = {
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function parseArgs(argv) {
-  const args = { days: undefined, out: undefined, type: 'awd' };
+  const args = { days: undefined, out: undefined, type: 'awd', dates: undefined, maxPages: MAX_PAGES_PER_DATE };
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
     if (a === '--days') args.days = Number(argv[++i]);
     else if (a === '--out') args.out = argv[++i];
     else if (a === '--type') args.type = argv[++i];
+    else if (a === '--dates') args.dates = argv[++i].split(',').map((d) => d.trim()).filter(Boolean);
+    else if (a === '--max-pages') args.maxPages = Number(argv[++i]);
   }
-  if (!Number.isInteger(args.days) || args.days < 1) {
+  if (args.dates) {
+    const bad = args.dates.filter((d) => !/^\d{2}-\d{2}-\d{4}$/.test(d));
+    if (bad.length > 0 || args.dates.length === 0) throw new Error(`fetch.mjs: --dates takes MM-DD-YYYY values, got '${bad.join(', ')}'`);
+  } else if (!Number.isInteger(args.days) || args.days < 1) {
     throw new Error('fetch.mjs: --days must be a positive integer');
   }
+  if (!Number.isInteger(args.maxPages) || args.maxPages < 1) throw new Error('fetch.mjs: --max-pages must be a positive integer');
   if (!args.out) throw new Error('fetch.mjs: --out is required');
   if (!Object.prototype.hasOwnProperty.call(GRID_TYPES, args.type)) {
     throw new Error(`fetch.mjs: --type must be one of ${Object.keys(GRID_TYPES).join(', ')}, got '${args.type}'`);
@@ -302,7 +311,7 @@ async function writePage(outDir, filePrefix, date, pageNum, html) {
  * pagination for newly visible Page$N values and keep going until none are
  * new.
  */
-async function fetchDate(jar, outDir, gridType, date) {
+async function fetchDate(jar, outDir, gridType, date, maxPages = MAX_PAGES_PER_DATE) {
   const { urlPath, gridId: defaultGridId, filePrefix } = GRID_TYPES[gridType];
   const gridUrl = `${BASE_URL}${urlPath}?category=post&TypeSrch=dt&Value=${date}`;
   const page1 = await getPage(jar, gridUrl);
@@ -321,8 +330,8 @@ async function fetchDate(jar, outDir, gridType, date) {
   let currentUrl = page1.url;
 
   while (queue.length > 0) {
-    if (visited.size >= MAX_PAGES_PER_DATE) {
-      console.error(`fetch.mjs: hit MAX_PAGES_PER_DATE (${MAX_PAGES_PER_DATE}) for ${date}; stopping pagination early`);
+    if (visited.size >= maxPages) {
+      if (maxPages >= MAX_PAGES_PER_DATE) console.error(`fetch.mjs: hit MAX_PAGES_PER_DATE (${MAX_PAGES_PER_DATE}) for ${date}; stopping pagination early`);
       break;
     }
 
@@ -381,7 +390,7 @@ async function main() {
   await mkdir(args.out, { recursive: true });
 
   const jar = new CookieJar();
-  const dates = businessDays(args.days);
+  const dates = args.dates ?? businessDays(args.days);
 
   // One bad date must not cost the other dates: record the failure, keep
   // going, and exit nonzero at the end so the workflow can decide whether a
@@ -389,7 +398,7 @@ async function main() {
   const failed = [];
   for (const date of dates) {
     try {
-      await fetchDate(jar, args.out, args.type, date);
+      await fetchDate(jar, args.out, args.type, date, args.maxPages);
     } catch (err) {
       failed.push(date);
       console.error(`fetch.mjs: ${date} failed (${err.cause?.code || err.name}: ${err.message}); continuing`);

@@ -1,0 +1,53 @@
+name: data-depth-probe
+
+# Measures how much more price data is reachable before any of it is loaded:
+# how far back DIBBS still serves award and RFQ grids, how many USAspending
+# awards each busy supply class has, and how big the tables are today. Read
+# only; the result is committed as ingest/probe/data-depth-report.json.
+#
+# The push trigger on this file / the script exists because the dev container
+# cannot dispatch workflows; editing is the dispatch.
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/data-depth-probe.yml'
+      - 'ingest/probe/data-depth.mjs'
+
+env:
+  DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: data-depth-probe
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: probe
+        run: node ingest/probe/data-depth.mjs
+      - name: commit report
+        if: always()
+        run: |
+          git config user.name "probe-bot"
+          git config user.email "noreply@anthropic.com"
+          git add ingest/probe/data-depth-report.json 2>/dev/null || true
+          if git diff --cached --quiet; then echo "no change"; else
+            git commit -m "probe: data depth report [skip ci]"
+            git pull --rebase --autostash origin main
+            git push origin main
+          fi
