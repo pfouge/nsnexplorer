@@ -246,6 +246,7 @@ const datasetSchema = {
   title={title}
   description={description}
   pageType="ItemPage"
+  ogImage={allSols.length > 0 || fsc ? `/og/class-${nsn.fsc}.png` : undefined}
   canonicalUrl={canonicalUrl}
   extraSchema={[breadcrumbSchema, datasetSchema]}
   headLinks={[{ rel: 'alternate', type: 'text/markdown', href: `${SITE_URL}/nsn/${dashed}.md` }]}
