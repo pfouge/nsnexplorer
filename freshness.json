@@ -1,35 +1,35 @@
 {
-  "at": "2026-10-09T01:32:54.762Z",
+  "at": "2026-10-10T01:23:43.096Z",
   "ok": true,
   "problems": [],
   "sources": [
     {
       "source": "dibbs_rfq",
       "label": "DIBBS open solicitations (rfq-fast, rfq-reconcile)",
-      "last_landed": "2026-10-08T16:32:09.814Z",
-      "age_hours": 9,
+      "last_landed": "2026-10-09T17:01:09.805Z",
+      "age_hours": 8.4,
       "max_age_hours": 48,
-      "newest_record": "2026-10-08",
-      "rows": 83901,
-      "open_rows": 11496,
+      "newest_record": "2026-10-09",
+      "rows": 85439,
+      "open_rows": 12166,
       "status": "ok"
     },
     {
       "source": "sam_gov",
       "label": "SAM.gov solicitations (sam-daily)",
-      "last_landed": "2026-10-08T13:46:31.613Z",
-      "age_hours": 11.8,
+      "last_landed": "2026-10-09T13:31:55.066Z",
+      "age_hours": 11.9,
       "max_age_hours": 48,
-      "newest_record": "2026-10-08",
-      "rows": 6840,
-      "open_rows": 4664,
+      "newest_record": "2026-10-09",
+      "rows": 7360,
+      "open_rows": 4944,
       "status": "ok"
     },
     {
       "source": "dibbs_awards",
       "label": "DIBBS award totals (ingest-daily)",
       "last_landed": "2026-10-08T16:25:19.234Z",
-      "age_hours": 9.1,
+      "age_hours": 33,
       "max_age_hours": 120,
       "newest_record": "2026-10-07",
       "rows": 68955,
@@ -39,7 +39,7 @@
       "source": "price_points",
       "label": "Unit prices from award/solicitation join (ingest-daily, rfq-award-join)",
       "last_landed": "2026-10-08T16:25:33.543Z",
-      "age_hours": 9.1,
+      "age_hours": 33,
       "max_age_hours": 120,
       "newest_record": "2026-10-07",
       "rows": 24216,
@@ -48,23 +48,23 @@
     {
       "source": "usaspending",
       "label": "USAspending contract actions (ingest-daily)",
-      "last_landed": "2026-10-08T15:58:11.012Z",
-      "age_hours": 9.6,
+      "last_landed": "2026-10-09T15:37:55.313Z",
+      "age_hours": 9.8,
       "max_age_hours": 336,
       "newest_record": "2027-03-22",
-      "rows": 98111,
+      "rows": 98310,
       "status": "ok"
     },
     {
       "source": "publog",
       "label": "PUB LOG / FLIS enrichment (publog-nightly)",
-      "last_landed": "2026-10-08T17:03:56.884Z",
-      "age_hours": 8.5,
+      "last_landed": "2026-10-09T17:01:02.963Z",
+      "age_hours": 8.4,
       "max_age_hours": 48,
       "newest_record": null,
-      "rows": 86296,
-      "with_item_name": 86293,
-      "with_characteristics": 75350,
+      "rows": 87341,
+      "with_item_name": 87338,
+      "with_characteristics": 76096,
       "status": "ok"
     },
     {
@@ -118,25 +118,25 @@
     {
       "check": "sam_open_services",
       "label": "Open SAM.gov service notices (letter service code; listed under /services/)",
-      "count": 921,
+      "count": 1011,
       "status": "info"
     },
     {
       "check": "sam_open_equipment_services",
       "label": "Open SAM.gov equipment-service notices tied to a supply group (H, J, K, L, N, W)",
-      "count": 162,
+      "count": 182,
       "status": "info"
     },
     {
       "check": "sam_open_uncoded",
       "label": "Open SAM.gov notices with no code at all",
-      "count": 2682,
+      "count": 2763,
       "status": "info"
     },
     {
       "check": "sam_open_unclassified",
       "label": "Open SAM.gov notices with no product supply class (services or uncoded)",
-      "count": 3685,
+      "count": 3863,
       "status": "info"
     },
     {
@@ -148,19 +148,19 @@
     {
       "check": "suppliers_without_name",
       "label": "Supplier CAGE stubs awaiting PUB LOG name/address",
-      "count": 1283,
+      "count": 1282,
       "status": "info"
     }
   ],
   "classes_by_render_depth": [
     {
       "render_depth": "deep",
-      "classes": 501,
-      "nsns": 86296
+      "classes": 503,
+      "nsns": 87341
     },
     {
       "render_depth": "excluded",
-      "classes": 414,
+      "classes": 432,
       "nsns": 0
     }
   ]
