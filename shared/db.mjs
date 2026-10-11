@@ -31,7 +31,11 @@ let _pool;
 export function getPool() {
   if (!_pool) {
     const connectionString = process.env.DATABASE_URL || DEFAULT_LOCAL_URL;
-    _pool = new Pool({ connectionString, ssl: sslFor(connectionString) });
+    // Supabase's session pooler allows 15 connections per user+db for the whole
+    // project (website builds, every ingest lane, Hyperdrive). pg's default of
+    // 10 per pool let two jobs exhaust it (EMAXCONNSESSION, 2026-10-11), so
+    // each process takes at most 3 unless DB_POOL_MAX says otherwise.
+    _pool = new Pool({ connectionString, ssl: sslFor(connectionString), max: Number(process.env.DB_POOL_MAX) || 3 });
   }
   return _pool;
 }

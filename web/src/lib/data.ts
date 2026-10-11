@@ -30,7 +30,9 @@ export type { ServiceNotice } from './services';
 // calls fetchSiteData).
 async function openPool(): Promise<pgTypes.Pool> {
   const { default: pg } = await import('pg');
-  return new pg.Pool({ connectionString: DATABASE_URL, ssl: sslFor(DATABASE_URL) });
+  // At most 4 connections: the session pooler's 15 are shared with the ingest
+  // lanes and Hyperdrive (see shared/db.mjs).
+  return new pg.Pool({ connectionString: DATABASE_URL, ssl: sslFor(DATABASE_URL), max: Number(process.env.DB_POOL_MAX) || 4 });
 }
 
 const DATABASE_URL =
