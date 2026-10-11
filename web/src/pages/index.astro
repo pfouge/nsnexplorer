@@ -23,7 +23,10 @@ const fmtInt = (n: number) => n.toLocaleString('en-US');
 const fmtUsd = (n: number) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
 
-const N = data.openNsnByNsn.size;
+// Every NSN the site has a page for (non-excluded classes): the same count as llms.txt,
+// the methodology page and the NSN sitemaps. Not openNsnByNsn, which holds only NSNs
+// that have appeared in a DLA solicitation.
+const N = stats.totalNsns;
 const hasN = N > 0;
 
 const title = hasN
@@ -126,7 +129,7 @@ const itemList = {
   <div class="datastrip">
     <div class="cell">
       <div class="k">Parts indexed</div>
-      <div class="v">{fmtInt(data.openNsnByNsn.size)}</div>
+      <div class="v">{fmtInt(N)}</div>
     </div>
     <div class="cell">
       <div class="k">Open for bid now</div>
