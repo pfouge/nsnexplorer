@@ -82,6 +82,11 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
 
+      # Fails the deploy if pages no longer load the shell script (search, menu, tabs),
+      # which a build can drop without any error (2026-10-11).
+      - name: Check pages load the shell script
+        run: node web/scripts/verify-shell-script.mjs web/dist
+
       - name: Deploy to Cloudflare Pages
         id: deploy
         uses: cloudflare/wrangler-action@v3

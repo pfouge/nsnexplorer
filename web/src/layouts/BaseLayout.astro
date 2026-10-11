@@ -302,7 +302,10 @@ const secondary = allLinks.filter((l) => !l.primary);
       import '../scripts/tape.ts';
       import '../scripts/freshness.ts';
       import '../scripts/shell.ts';
+      // Always bundled; it does nothing while ACCOUNTS_ENABLED is false. A <script> inside
+      // {condition && ...} is not supported by Astro's script bundling: it swapped the page's
+      // script for this one and left the shell (search, menu, tabs) out of every page.
+      import '../scripts/account.ts';
     </script>
-    {ACCOUNTS_ENABLED && <script>import '../scripts/account.ts';</script>}
   </body>
 </html>
