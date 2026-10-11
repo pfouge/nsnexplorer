@@ -10,6 +10,7 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import CiteThis from '../../components/CiteThis.astro';
 import Follow from '../../components/Follow.astro';
+import { ACCOUNTS_ENABLED } from '../../lib/account';
 import { SITE_URL } from '../../consts';
 import { formatDate, formatUsd, formatUsdPrecise, toDashedNsn } from '../../lib/shared';
 import { databaseUrlFrom } from '../../lib/runtime-env';
@@ -103,8 +104,12 @@ const fmtInt = (n: number): string => n.toLocaleString('en-US');
       {place && <span>{place}</span>}
     </p>
     <p class="lede">{lede}</p>
-    <Follow kind="supplier" entity={cage} label={heading} textOff="Follow wins" textOn="Following wins" />
-    {page.makesParts && <Follow kind="manufacturer" entity={cage} label={heading} textOff="Follow as maker" textOn="Following as maker" />}
+    {ACCOUNTS_ENABLED && (
+      <div class="follow-row">
+        <Follow kind="supplier" entity={cage} label={heading} textOff="Follow wins" textOn="Following wins" />
+        {page.makesParts && <Follow kind="manufacturer" entity={cage} label={heading} textOff="Follow as maker" textOn="Following as maker" />}
+      </div>
+    )}
   </header>
 
   <nav class="tabs" aria-label="On this page">

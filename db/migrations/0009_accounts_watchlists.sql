@@ -25,7 +25,7 @@
 -- Everything is in `public`, which Supabase's PostgREST exposes. `pub` is NOT exposed, so the
 -- select grants on pub tables below are usable only by the functions in this file.
 
-begin;
+-- db/migrate.mjs wraps this file in one transaction (no begin/commit here).
 
 do $$
 begin
@@ -804,5 +804,3 @@ grant execute on function
   account_delete(), public_watchlist(text), watch_cards(jsonb)
   to authenticated;
 grant execute on function public_watchlist(text), watch_cards(jsonb) to anon;
-
-commit;

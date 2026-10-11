@@ -625,8 +625,12 @@ button.copy, .copy-btn { font: inherit; font-size: 0.8125rem; font-weight: 600; 
 }
 .follow-btn, .save-search {
   display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border: 1px solid var(--ink); border-radius: 18px;
-  background: transparent; color: var(--ink); font: inherit; font-size: 0.9375rem; font-weight: 600; cursor: pointer; white-space: nowrap; margin: 0.35rem 0.5rem 0.35rem 0; vertical-align: middle;
+  background: transparent; color: var(--ink); font: inherit; font-size: 0.9375rem; font-weight: 600; cursor: pointer; white-space: nowrap; margin: 0.5rem 0 0; vertical-align: middle;
 }
+/* A Follow button sits on its own line under the introduction; two of them share a row. */
+.follow-btn { display: flex; width: max-content; }
+.follow-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 0.5rem; }
+.follow-row .follow-btn { margin: 0; }
 .follow-btn:hover, .save-search:hover { background: var(--hover); }
 .follow-btn[aria-pressed='true'], .save-search[aria-pressed='true'] { background: var(--ink); color: var(--paper); }
 .follow-btn[aria-pressed='true'] svg path { fill: currentColor; }

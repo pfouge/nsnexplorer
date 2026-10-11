@@ -99,7 +99,8 @@ async function setFollow(b: HTMLButtonElement, on: boolean): Promise<void> {
   try {
     const me = await api<Me>('follow', { kind: b.dataset.kind, key: b.dataset.key, label: b.dataset.label, on });
     setMe(me);
-    toast(on ? `Following ${b.dataset.label}. Changes will show on your watchlist.` : `Stopped following ${b.dataset.label}.`);
+    const what = b.dataset.kind === 'supplier' ? ' (awards won)' : b.dataset.kind === 'manufacturer' ? ' (as a manufacturer)' : '';
+    toast(on ? `Following ${b.dataset.label}${what}. Changes will show on your watchlist.` : `Stopped following ${b.dataset.label}${what}.`);
   } catch (e) {
     toast((e as Error).message);
   } finally { b.disabled = false; }

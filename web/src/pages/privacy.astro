@@ -5,6 +5,7 @@
 // the policy does not need updating as those features arrive.
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { SITE_NAME, CONTACT_EMAIL } from '../consts';
+import { ACCOUNTS_ENABLED } from '../lib/account';
 
 const updated = 'October 11, 2026';
 ---
@@ -96,6 +97,7 @@ const updated = 'October 11, 2026';
   </p>
 
   <h2 id="accounts">Accounts and watchlists</h2>
+  {!ACCOUNTS_ENABLED && <p><strong>Accounts are not switched on yet.</strong> This section describes how they will work when they are; until then no account data is collected.</p>}
   <p>
     An account is optional and free. It exists so you can follow parts (NSNs), suppliers,
     manufacturers, supply classes, solicitations and agencies, save an Open-demand search, and see

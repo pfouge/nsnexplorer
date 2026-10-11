@@ -42,7 +42,9 @@ export function eventText(kind: Kind, e: FeedEvent): string {
     case 'award': {
       const who = e.supplier ? `${e.supplier}${e.cage ? ` (CAGE ${e.cage})` : ''}` : e.cage ? `CAGE ${e.cage}` : 'supplier not named';
       const what = [itemPart.trim(), nsnPart.trim()].filter(Boolean).join(', ');
-      return `Awarded ${date(e.awarded_on)}${what ? ` for ${what}` : ''}: ${e.unit_price != null ? formatUsdPrecise(Number(e.unit_price)) : 'price not given'} each${e.quantity != null ? `, quantity ${num(e.quantity)}` : ''}, ${who}.`;
+      // On a followed supplier the winner is the supplier itself, so it is not repeated.
+      const winner = kind === 'supplier' ? '' : `, ${who}`;
+      return `Awarded ${date(e.awarded_on)}${what ? ` for ${what}` : ''}: ${e.unit_price != null ? formatUsdPrecise(Number(e.unit_price)) : 'price not given'} each${e.quantity != null ? `, quantity ${num(e.quantity)}` : ''}${winner}.`;
     }
     case 'contract_action': {
       const amount = e.obligation != null ? formatUsd(Number(e.obligation)) : 'amount not given';
