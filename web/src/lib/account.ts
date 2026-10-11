@@ -23,7 +23,7 @@ function forcedOn(): boolean {
  * it to true in this file. While false: no Follow buttons, no header link, /watchlist/ says
  * accounts are coming, and /auth/* answers 404.
  */
-export const ACCOUNTS_ENABLED: boolean = false || forcedOn();
+export const ACCOUNTS_ENABLED: boolean = true || forcedOn();
 
 export const COOKIE = 'nsn_session';
 export const SIGNED_IN = 'nsn_signed_in';

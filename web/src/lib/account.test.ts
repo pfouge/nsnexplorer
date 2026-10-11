@@ -7,8 +7,8 @@ import { isConfigured, readConfig } from './account-config.ts';
 import { filtersFromBar, parseSearchKey, searchKey, searchLabel } from './saved-search.ts';
 import { CSV_HEADERS, changeCount, countdown, eventText, headline, itemHref, itemName, watchCsv, type FeedItem, type NsnCard } from './watch-text.ts';
 
-test('the master switch is off in the committed source', () => {
-  assert.equal(ACCOUNTS_ENABLED, false);
+test('the master switch is on in the committed source (switched on 2026-10-11)', () => {
+  assert.equal(ACCOUNTS_ENABLED, true);
 });
 
 test('account paths are never cached', () => {
@@ -98,7 +98,9 @@ test('config: any missing setting means accounts are not available', () => {
   assert.equal(isConfigured(readConfig(full)), true);
   assert.equal(readConfig(full).supabaseUrl, 'https://p.supabase.co');
   assert.equal(isConfigured(readConfig({ ...full, WORKOS_COOKIE_PASSWORD: 'short' })), false);
-  assert.equal(isConfigured(readConfig({ ...full, SUPABASE_URL: '' })), false);
+  assert.equal(isConfigured(readConfig({ ...full, WORKOS_API_KEY: '' })), false);
+  // The public values fall back to the committed defaults; only the two secrets must come from Pages.
+  assert.equal(isConfigured(readConfig({ WORKOS_API_KEY: 'sk_x', WORKOS_COOKIE_PASSWORD: 'x'.repeat(32) })), true);
   assert.equal(readConfig(full).siteUrl, 'https://nsnexplorer.com');
 });
 

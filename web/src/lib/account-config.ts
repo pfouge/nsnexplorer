@@ -17,8 +17,16 @@ export interface AccountEnv {
   SITE_URL?: string;
 }
 
-/** Public values (safe to appear in a browser; here they never need to). Empty until set in Pages. */
-export const PUBLIC_DEFAULTS = { WORKOS_CLIENT_ID: '', SUPABASE_URL: '', SUPABASE_PUBLISHABLE_KEY: '' } as const;
+/**
+ * Public values (safe to appear in a browser; here they never need to). A Pages variable of the
+ * same name overrides each. WorkOS project `nsnexplorer`, Production; Supabase project
+ * slprnvtdgzmpeqsmemgq (its publishable key is public by design). Set 2026-10-11.
+ */
+export const PUBLIC_DEFAULTS = {
+  WORKOS_CLIENT_ID: 'client_01M4PC8N5HMV1RG6V8Z90HREGQ',
+  SUPABASE_URL: 'https://slprnvtdgzmpeqsmemgq.supabase.co',
+  SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_5KraCwbRJiJZrhTPLtMvBA_5Ki6sYRB',
+} as const;
 export const SITE_URL_DEFAULT = 'https://nsnexplorer.com';
 
 export interface AccountConfig {
