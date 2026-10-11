@@ -55,6 +55,7 @@
 }
 
 [data-theme='dark'] {
+  color-scheme: dark;
   --paper:    #0E0F10;
   --paper-2:  #1D1E21;
   --card:     #141518;
@@ -194,7 +195,7 @@ nav.site .menu a { border-radius: var(--radius-sm); font-weight: 400; }
 
 /* Below desktop width: hamburger, logo, search icon. Everything else lives in the drawer. */
 @media (max-width: 1099px) {
-  nav.site, header.site .theme-toggle { display: none; }
+  nav.site { display: none; }
   .search-pill { margin-left: auto; }
 }
 @media (min-width: 1100px) { .menu-btn { display: none; } }

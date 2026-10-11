@@ -67,14 +67,16 @@ const secondary = allLinks.filter((l) => !l.primary);
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="generator" content={Astro.generator} />
-    <meta name="theme-color" content="#FAF8F3" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0E0F10" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#FAF8F3" />
     <script is:inline>
-      // Set theme before first paint: explicit choice wins, else follow OS.
+      // Set theme before first paint. Light is the default for everyone; dark
+      // only when the visitor chose it with the header toggle (stored locally).
       (() => {
-        const saved = localStorage.getItem('theme');
-        const dark = saved ? saved === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+        let dark = false;
+        try { dark = localStorage.getItem('theme') === 'dark'; } catch {}
         if (dark) document.documentElement.dataset.theme = 'dark';
+        const m = document.querySelector('meta[name="theme-color"]');
+        if (m) m.setAttribute('content', dark ? '#0E0F10' : '#FAF8F3');
       })();
     </script>
     <link rel="icon" href="/favicon.ico" sizes="48x48" />
@@ -266,7 +268,7 @@ const secondary = allLinks.filter((l) => !l.primary);
       </div>
     </footer>
     <script is:inline>
-      // Theme switching: an explicit choice persists and stops OS-preference tracking.
+      // Theme switching: the visitor's choice persists in localStorage; the OS setting is not followed.
       (() => {
         const root = document.documentElement;
         const btns = document.querySelectorAll('[data-theme-toggle]');
@@ -282,16 +284,10 @@ const secondary = allLinks.filter((l) => !l.primary);
           const dark = root.dataset.theme !== 'dark';
           if (dark) root.dataset.theme = 'dark';
           else delete root.dataset.theme;
-          localStorage.setItem('theme', dark ? 'dark' : 'light');
+          try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch {}
+          document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#0E0F10' : '#FAF8F3');
           sync();
         }));
-        const mq = matchMedia('(prefers-color-scheme: dark)');
-        mq.addEventListener('change', (e) => {
-          if (localStorage.getItem('theme')) return;
-          if (e.matches) root.dataset.theme = 'dark';
-          else delete root.dataset.theme;
-          sync();
-        });
       })();
     </script>
     <script>
