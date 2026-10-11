@@ -7,7 +7,7 @@ export const SITE_CSP =
   "font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
   "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; " +
   "connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com; " +
-  "form-action 'self'; upgrade-insecure-requests";
+  "form-action 'self' https://api.workos.com; upgrade-insecure-requests";
 
 /** /embed/ pages may be framed by any site. */
 export const EMBED_CSP = SITE_CSP.replace("frame-ancestors 'none'", 'frame-ancestors *');

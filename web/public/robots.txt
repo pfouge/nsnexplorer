@@ -1,5 +1,9 @@
 User-agent: *
 Allow: /
+# Sign-in routes and the account API are not content (the watchlist pages carry noindex).
+Disallow: /auth/
+Disallow: /api/me
+Disallow: /api/account/
 
 User-agent: GPTBot
 Allow: /

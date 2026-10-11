@@ -4,6 +4,7 @@
 // the CSP in sync with public/_headers.
 import { defineMiddleware } from 'astro:middleware';
 import { EMBED_CSP, SITE_CSP, isEmbedPath } from './lib/csp';
+import { isAccountPath } from './lib/account';
 
 const SECURITY_HEADERS: Record<string, string> = {
   'X-Frame-Options': 'DENY',
@@ -28,6 +29,9 @@ const EMBED_HEADERS: Record<string, string> = Object.fromEntries(
 // becomes a 503 with Retry-After instead of a blank 500.
 const DB_ROUTE = /^\/(nsn|supplier|solicitation)\/|^\/api\/(lookup|nsn\/|suppliers)/;
 
+// Account routes (/auth/*, /api/me, /api/account/*) answer one visitor each: never put them in
+// the edge cache, and mark every answer private (src/lib/account.ts holds the path rule).
+
 // Crawlers turned away from database-backed routes (also Disallowed in
 // public/robots.txt). Keep the two lists in step.
 const BLOCKED_BOTS = /MJ12bot|AhrefsBot|PetalBot|Reflectionbot/i;
@@ -47,7 +51,8 @@ type Runtime = { ctx?: { waitUntil?: (p: Promise<unknown>) => void } };
 
 export const onRequest = defineMiddleware(async (ctx, next) => {
   const url = new URL(ctx.request.url);
-  const dbRoute = ctx.request.method === 'GET' && DB_ROUTE.test(url.pathname);
+  const accountRoute = isAccountPath(url.pathname);
+  const dbRoute = !accountRoute && ctx.request.method === 'GET' && DB_ROUTE.test(url.pathname);
   if (dbRoute && BLOCKED_BOTS.test(ctx.request.headers.get('user-agent') ?? '')) {
     return new Response('Crawling this site is not permitted for this user agent; see /robots.txt.', {
       status: 403,
@@ -70,6 +75,10 @@ export const onRequest = defineMiddleware(async (ctx, next) => {
   }
   if (dbRoute && res.status >= 500) {
     if (!res.headers.get('content-type')?.includes('json')) res = unavailablePage();
+  }
+  if (accountRoute) {
+    res.headers.set('Cache-Control', 'private, no-store');
+    res.headers.append('Vary', 'Cookie');
   }
   const embed = isEmbedPath(new URL(ctx.request.url).pathname);
   if (embed) res.headers.delete('X-Frame-Options');
