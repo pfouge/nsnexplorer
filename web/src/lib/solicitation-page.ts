@@ -32,36 +32,36 @@ export interface SolicitationPageData {
 const isoDate = (v: unknown): string | null =>
   v === null || v === undefined ? null : new Date(v as string).toISOString().slice(0, 10);
 
-/** Loads one solicitation by number, or null when the number is malformed or unknown. */
+/**
+ * One statement (one Hyperdrive round-trip): the solicitation row as ordinary
+ * columns plus its awards as a jsonb array. No row means no such solicitation.
+ */
+const SOLICITATION_PAGE_SQL = `
+SELECT s.sol_number, s.nsn, s.fsc, s.nomenclature, s.quantity, s.unit_of_issue,
+       s.issued_on, s.return_by,
+       -- Open means open today: a past-dated 'open' row is reported as 'expired'.
+       CASE WHEN s.status = 'open' AND s.return_by < CURRENT_DATE THEN 'expired' ELSE s.status END AS status,
+       s.setaside, s.buyer_office, s.source, s.source_url,
+       n.item_name, f.name AS fsc_name, f.render_depth AS fsc_depth,
+       (SELECT COALESCE(jsonb_agg(to_jsonb(a) ORDER BY a.awarded_on DESC, a.id DESC), '[]'::jsonb)
+          FROM (SELECT pp.id, pp.awarded_on, pp.cage, su.name AS supplier_name, pp.unit_price, pp.quantity
+                FROM pub.price_points pp
+                LEFT JOIN pub.suppliers su ON su.cage = pp.cage
+                WHERE pp.sol_number = s.sol_number
+                ORDER BY pp.awarded_on DESC, pp.id DESC
+                LIMIT 100) a) AS award_rows
+FROM pub.solicitations s
+LEFT JOIN pub.nsns n ON n.nsn = s.nsn
+LEFT JOIN pub.fsc f ON f.fsc = s.fsc
+WHERE s.sol_number = $1`;
+
+/** Loads one solicitation by number in a single round-trip, or null when the number is malformed or unknown. */
 export async function loadSolicitationPage(sql: Sql, solNumber: string): Promise<SolicitationPageData | null> {
   if (!isSolNumber(solNumber)) return null;
 
-  const [solRows, awardRows] = await Promise.all([
-    sql.unsafe(
-      // Open means open today: a past-dated 'open' row is reported as 'expired'.
-      `SELECT s.sol_number, s.nsn, s.fsc, s.nomenclature, s.quantity, s.unit_of_issue,
-              s.issued_on, s.return_by,
-              CASE WHEN s.status = 'open' AND s.return_by < CURRENT_DATE THEN 'expired' ELSE s.status END AS status,
-              s.setaside, s.buyer_office, s.source, s.source_url,
-              n.item_name, f.name AS fsc_name, f.render_depth AS fsc_depth
-       FROM pub.solicitations s
-       LEFT JOIN pub.nsns n ON n.nsn = s.nsn
-       LEFT JOIN pub.fsc f ON f.fsc = s.fsc
-       WHERE s.sol_number = $1`,
-      [solNumber]
-    ),
-    sql.unsafe(
-      `SELECT pp.awarded_on, pp.cage, su.name AS supplier_name, pp.unit_price, pp.quantity
-       FROM pub.price_points pp
-       LEFT JOIN pub.suppliers su ON su.cage = pp.cage
-       WHERE pp.sol_number = $1
-       ORDER BY pp.awarded_on DESC, pp.id DESC
-       LIMIT 100`,
-      [solNumber]
-    ),
-  ]);
-  const r = solRows[0];
+  const r = (await sql.unsafe(SOLICITATION_PAGE_SQL, [solNumber]))[0];
   if (!r) return null;
+  const awardRows = r.award_rows as Record<string, any>[]; // eslint-disable-line @typescript-eslint/no-explicit-any
 
   const fscName = typeof r.fsc_name === 'string' && r.fsc_name.trim() !== '' && r.fsc_name !== `FSC ${r.fsc}` ? r.fsc_name.trim() : null;
   const sol: SolicitationRecord = {

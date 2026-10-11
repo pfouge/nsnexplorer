@@ -45,6 +45,9 @@ export interface NsnPageData {
 
 type Sql = ReturnType<typeof postgres>;
 
+/** One element of a jsonb child array from the single-statement loaders (JSON-typed column values). */
+type JsonRow = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+
 /** Opens a single short-lived connection through Hyperdrive (or DATABASE_URL locally). */
 /**
  * Short, secret-free label for a failed database call (driver error name,
@@ -72,66 +75,80 @@ const isoDate = (v: unknown): string | null =>
   v === null || v === undefined ? null : new Date(v as string).toISOString().slice(0, 10);
 
 /**
- * Loads everything the NSN page renders for one 13-digit NSN code. Returns
- * null when the NSN is not in pub.nsns (the route answers 404).
+ * The whole NSN page in ONE statement (one Hyperdrive round-trip): the NSN row
+ * with its latest AMSC observation, plus the five child sets as jsonb arrays
+ * built by correlated sub-selects. Zero rows means the NSN does not exist.
+ *
+ * Why one statement: Hyperdrive's free plan stops after 100,000 queries a day
+ * and this page used to cost six. JSON changes the wire types (numerics, bigint
+ * and dates arrive as JSON numbers / strings, timestamps as ISO strings); every
+ * consumer below already normalises with Number(), isoDate() and
+ * new Date(...).toISOString(), which accept both the driver's text/Date values
+ * and the JSON ones, so the returned objects are unchanged.
+ *
+ * Orders carry an `id` tiebreaker (the old queries left equal dates in
+ * unspecified order); everything else is the previous predicate, ORDER BY and
+ * column list verbatim.
  */
-export async function loadNsnPage(sql: Sql, nsnCode: string): Promise<NsnPageData | null> {
-  if (!/^\d{13}$/.test(nsnCode)) return null;
-
-  const nsnRows = await sql.unsafe(`${NSN_WITH_AMSC_SELECT} WHERE n.nsn = $1`, [nsnCode]);
-  if (nsnRows.length === 0) return null;
-  const nsn = mapNsnRow(nsnRows[0] as unknown as Parameters<typeof mapNsnRow>[0]);
-
-  const [fscRows, ppRows, caRows, solRows, pnRows] = await Promise.all([
-    sql.unsafe(`SELECT fsc, name, fsg, render_depth FROM pub.fsc WHERE fsc = $1`, [nsn.fsc]),
-    sql.unsafe(
-      `SELECT pp.id, pp.nsn, pp.awarded_on, pp.unit_price, pp.quantity, pp.total_value,
-              pp.cage, s.name AS supplier_name, s.city AS supplier_city, s.state AS supplier_state,
-              pp.agency_id, ag.name AS agency_name, ag.abbreviation AS agency_abbr,
-              pp.sol_number, pp.award_ref, pp.source, pp.source_url, pp.ingested_at
-       FROM pub.price_points pp
-       LEFT JOIN pub.suppliers s ON s.cage = pp.cage
-       LEFT JOIN pub.agencies ag ON ag.agency_id = pp.agency_id
-       WHERE pp.nsn = $1
-       ORDER BY pp.awarded_on`,
-      [nsnCode]
-    ),
-    sql.unsafe(
-      `SELECT ca.id, ca.award_uid, ca.piid, ca.psc, ca.naics, ca.description, ca.action_date,
-              ca.obligation, ca.agency_id, ag.name AS agency_name, ca.recipient_name,
-              ca.recipient_uei, ca.source_url, ca.ingested_at,
-              NULLIF(btrim(ca.raw ->> 'cage'), '') AS cage
-       FROM pub.contract_actions ca
-       LEFT JOIN pub.agencies ag ON ag.agency_id = ca.agency_id
-       WHERE (ca.raw ->> 'nsn') = $1
-       ORDER BY ca.action_date`,
-      [nsnCode]
-    ),
-    sql.unsafe(
-      // Open means open today: past-dated 'open' rows are reported as 'expired'.
-      `SELECT s.sol_number, s.nsn, s.fsc, s.nomenclature, s.quantity, s.unit_of_issue,
+const NSN_PAGE_SQL = `
+SELECT base.*,
+  (SELECT to_jsonb(f)
+     FROM (SELECT fsc, name, fsg, render_depth FROM pub.fsc WHERE fsc = base.fsc) f) AS fsc_row,
+  (SELECT COALESCE(jsonb_agg(to_jsonb(p) ORDER BY p.awarded_on, p.id), '[]'::jsonb)
+     FROM (SELECT pp.id, pp.nsn, pp.awarded_on, pp.unit_price, pp.quantity, pp.total_value,
+                  pp.cage, s.name AS supplier_name, s.city AS supplier_city, s.state AS supplier_state,
+                  pp.agency_id, ag.name AS agency_name, ag.abbreviation AS agency_abbr,
+                  pp.sol_number, pp.award_ref, pp.source, pp.source_url, pp.ingested_at
+           FROM pub.price_points pp
+           LEFT JOIN pub.suppliers s ON s.cage = pp.cage
+           LEFT JOIN pub.agencies ag ON ag.agency_id = pp.agency_id
+           WHERE pp.nsn = base.nsn) p) AS price_points,
+  (SELECT COALESCE(jsonb_agg(to_jsonb(c) ORDER BY c.action_date, c.id), '[]'::jsonb)
+     FROM (SELECT ca.id, ca.award_uid, ca.piid, ca.psc, ca.naics, ca.description, ca.action_date,
+                  ca.obligation, ca.agency_id, ag.name AS agency_name, ca.recipient_name,
+                  ca.recipient_uei, ca.source_url, ca.ingested_at,
+                  NULLIF(btrim(ca.raw ->> 'cage'), '') AS cage
+           FROM pub.contract_actions ca
+           LEFT JOIN pub.agencies ag ON ag.agency_id = ca.agency_id
+           WHERE (ca.raw ->> 'nsn') = base.nsn::text) c) AS contract_actions,
+  (SELECT COALESCE(jsonb_agg(to_jsonb(q) ORDER BY COALESCE(q.return_by, q.issued_on) DESC NULLS LAST, q.sol_number), '[]'::jsonb)
+     FROM (
+       -- Open means open today: past-dated 'open' rows are reported as 'expired'.
+       SELECT s.sol_number, s.nsn, s.fsc, s.nomenclature, s.quantity, s.unit_of_issue,
               s.issued_on, s.return_by,
               CASE WHEN s.status = 'open' AND s.return_by < CURRENT_DATE THEN 'expired' ELSE s.status END AS status,
               s.setaside, s.buyer_office, s.source, s.source_url,
               n.item_name
        FROM pub.solicitations s
        LEFT JOIN pub.nsns n ON n.nsn = s.nsn
-       WHERE s.nsn = $1
-       ORDER BY COALESCE(s.return_by, s.issued_on) DESC NULLS LAST, s.sol_number`,
-      [nsnCode]
-    ),
-    sql.unsafe(
-      `SELECT pn.nsn, pn.part_number, pn.cage, pn.source, pn.source_url, s.name AS supplier_name
-       FROM pub.part_numbers pn
-       LEFT JOIN pub.suppliers s ON s.cage = pn.cage
-       WHERE pn.nsn = $1
-       ORDER BY pn.part_number`,
-      [nsnCode]
-    ),
-  ]);
+       WHERE s.nsn = base.nsn) q) AS solicitations,
+  (SELECT COALESCE(jsonb_agg(to_jsonb(r) ORDER BY r.part_number, r.cage, r.id), '[]'::jsonb)
+     FROM (SELECT pn.id, pn.nsn, pn.part_number, pn.cage, pn.source, pn.source_url, s.name AS supplier_name
+           FROM pub.part_numbers pn
+           LEFT JOIN pub.suppliers s ON s.cage = pn.cage
+           WHERE pn.nsn = base.nsn) r) AS part_numbers
+FROM (${NSN_WITH_AMSC_SELECT} WHERE n.nsn = $1) base`;
 
-  const fsc: FscConfig | null = fscRows[0]
-    ? { fsc: fscRows[0].fsc, name: fscRows[0].name, fsg: fscRows[0].fsg, renderDepth: fscRows[0].render_depth }
+/**
+ * Loads everything the NSN page renders for one 13-digit NSN code, in a single
+ * database round-trip. Returns null when the NSN is not in pub.nsns (the route
+ * answers 404).
+ */
+export async function loadNsnPage(sql: Sql, nsnCode: string): Promise<NsnPageData | null> {
+  if (!/^\d{13}$/.test(nsnCode)) return null;
+
+  const rows = await sql.unsafe(NSN_PAGE_SQL, [nsnCode]);
+  if (rows.length === 0) return null;
+  const row = rows[0];
+  const nsn = mapNsnRow(row as unknown as Parameters<typeof mapNsnRow>[0]);
+  const fscRow = row.fsc_row as { fsc: string; name: string; fsg: string; render_depth: string } | null;
+  const ppRows = row.price_points as JsonRow[];
+  const caRows = row.contract_actions as JsonRow[];
+  const solRows = row.solicitations as JsonRow[];
+  const pnRows = row.part_numbers as JsonRow[];
+
+  const fsc: FscConfig | null = fscRow
+    ? { fsc: fscRow.fsc, name: fscRow.name, fsg: fscRow.fsg, renderDepth: fscRow.render_depth }
     : null;
 
   const agencyMap = new Map<number, AgencyRecord>();

@@ -16,6 +16,9 @@ import { assertSourceUrl, slugify } from './shared';
 
 type Sql = ReturnType<typeof postgres>;
 
+/** One element of a jsonb child array from the single-statement loader (JSON-typed column values). */
+type JsonRow = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+
 /** Awards listed on the page; the headline numbers always cover every award. */
 export const SUPPLIER_AWARD_ROWS = 200;
 
@@ -75,49 +78,32 @@ const clean = (v: unknown): string | null => {
 const VALUE_SQL = 'COALESCE(pp.total_value, pp.unit_price * pp.quantity)';
 
 /**
- * Loads everything the supplier page renders for one CAGE code. Returns null
- * when the CAGE has no rows in pub.price_points (the route answers 404).
+ * The whole supplier page in ONE statement (one Hyperdrive round-trip). The
+ * headline aggregates are ordinary columns, typed by the driver exactly as the
+ * old stand-alone aggregate query returned them; the supplier row, the award
+ * list and the class list are jsonb sub-selects. The WHERE on the aggregate
+ * row makes "no awards" come back as zero rows (the route answers 404) and
+ * keeps the sub-selects from running for it.
  */
-export async function loadSupplierPage(sql: Sql, cage: string): Promise<SupplierPageData | null> {
-  if (!/^[A-Z0-9]{5}$/.test(cage)) return null;
-
-  const statRows = await sql.unsafe(
-    `SELECT count(*)::int AS awards,
-            COALESCE(sum(${VALUE_SQL}), 0) AS dollars,
-            count(${VALUE_SQL})::int AS valued,
-            count(DISTINCT pp.nsn)::int AS nsns,
-            count(DISTINCT n.fsc)::int AS classes,
-            min(pp.awarded_on) AS first_award,
-            max(pp.awarded_on) AS latest_award,
-            max(pp.ingested_at) AS refreshed,
-            EXISTS (SELECT 1 FROM pub.part_numbers pn WHERE pn.cage = $1) AS makes_parts
-     FROM pub.price_points pp
-     JOIN pub.nsns n ON n.nsn = pp.nsn
-     WHERE pp.cage = $1`,
-    [cage]
-  );
-  const st = statRows[0];
-  if (!st || Number(st.awards) === 0) return null;
-
-  const [supplierRows, awardRows, classRows] = await Promise.all([
-    sql.unsafe(`SELECT name, city, state FROM pub.suppliers WHERE cage = $1`, [cage]),
-    sql.unsafe(
-      `SELECT pp.awarded_on, pp.nsn, n.item_name, pp.quantity, pp.unit_price,
-              ${VALUE_SQL} AS total,
-              pp.agency_id, ag.name AS agency_name, pp.source, pp.source_url, pp.id
-       FROM pub.price_points pp
-       JOIN pub.nsns n ON n.nsn = pp.nsn
-       LEFT JOIN pub.agencies ag ON ag.agency_id = pp.agency_id
-       WHERE pp.cage = $1
-       ORDER BY pp.awarded_on DESC, pp.id DESC
-       LIMIT ${SUPPLIER_AWARD_ROWS}`,
-      [cage]
-    ),
-    sql.unsafe(
-      // Link rule per class: price-history page only for deep classes; else the
-      // open-demand page when the class is a 4-digit, non-excluded class that has
-      // any solicitation on record (the same set /open/<fsc>/ is built for).
-      `SELECT g.fsc, f.name, f.render_depth, g.awards,
+const SUPPLIER_PAGE_SQL = `
+SELECT st.*,
+  (SELECT to_jsonb(su) FROM (SELECT name, city, state FROM pub.suppliers WHERE cage = $1) su) AS supplier,
+  (SELECT COALESCE(jsonb_agg(to_jsonb(a) ORDER BY a.awarded_on DESC, a.id DESC), '[]'::jsonb)
+     FROM (SELECT pp.awarded_on, pp.nsn, n.item_name, pp.quantity, pp.unit_price,
+                  ${VALUE_SQL} AS total,
+                  pp.agency_id, ag.name AS agency_name, pp.source, pp.source_url, pp.id
+           FROM pub.price_points pp
+           JOIN pub.nsns n ON n.nsn = pp.nsn
+           LEFT JOIN pub.agencies ag ON ag.agency_id = pp.agency_id
+           WHERE pp.cage = $1
+           ORDER BY pp.awarded_on DESC, pp.id DESC
+           LIMIT ${SUPPLIER_AWARD_ROWS}) a) AS award_rows,
+  (SELECT COALESCE(jsonb_agg(to_jsonb(c) ORDER BY c.awards DESC, c.fsc), '[]'::jsonb)
+     FROM (
+       -- Link rule per class: price-history page only for deep classes; else the
+       -- open-demand page when the class is a 4-digit, non-excluded class that has
+       -- any solicitation on record (the same set /open/<fsc>/ is built for).
+       SELECT g.fsc, f.name, f.render_depth, g.awards,
               (f.render_depth <> 'excluded' AND g.fsc ~ '^[0-9]{4}$'
                AND EXISTS (SELECT 1 FROM pub.solicitations s WHERE s.fsc = g.fsc)) AS has_open
        FROM (
@@ -127,13 +113,38 @@ export async function loadSupplierPage(sql: Sql, cage: string): Promise<Supplier
          WHERE pp.cage = $1
          GROUP BY n.fsc
        ) g
-       LEFT JOIN pub.fsc f ON f.fsc = g.fsc
-       ORDER BY g.awards DESC, g.fsc`,
-      [cage]
-    ),
-  ]);
+       LEFT JOIN pub.fsc f ON f.fsc = g.fsc) c) AS class_rows
+FROM (
+  SELECT count(*)::int AS awards,
+         COALESCE(sum(${VALUE_SQL}), 0) AS dollars,
+         count(${VALUE_SQL})::int AS valued,
+         count(DISTINCT pp.nsn)::int AS nsns,
+         count(DISTINCT n.fsc)::int AS classes,
+         min(pp.awarded_on) AS first_award,
+         max(pp.awarded_on) AS latest_award,
+         max(pp.ingested_at) AS refreshed,
+         EXISTS (SELECT 1 FROM pub.part_numbers pn WHERE pn.cage = $1) AS makes_parts
+  FROM pub.price_points pp
+  JOIN pub.nsns n ON n.nsn = pp.nsn
+  WHERE pp.cage = $1
+) st
+WHERE st.awards > 0`;
 
-  const sup = supplierRows[0];
+/**
+ * Loads everything the supplier page renders for one CAGE code, in a single
+ * database round-trip. Returns null when the CAGE has no rows in
+ * pub.price_points (the route answers 404).
+ */
+export async function loadSupplierPage(sql: Sql, cage: string): Promise<SupplierPageData | null> {
+  if (!/^[A-Z0-9]{5}$/.test(cage)) return null;
+
+  const res = await sql.unsafe(SUPPLIER_PAGE_SQL, [cage]);
+  const st = res[0];
+  if (!st || Number(st.awards) === 0) return null;
+
+  const sup = st.supplier as JsonRow | null;
+  const awardRows = st.award_rows as JsonRow[];
+  const classRows = st.class_rows as JsonRow[];
   const rows: SupplierAward[] = awardRows.map((r) => {
     const agencyName = clean(r.agency_name);
     return {

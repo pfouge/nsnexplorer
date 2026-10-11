@@ -8,6 +8,7 @@ import type { APIRoute } from 'astro';
 import { openSql } from '../../lib/nsn-page';
 import { databaseUrlFrom } from '../../lib/runtime-env';
 import { parseSupplierQuery } from '../../lib/entity';
+import { searchSupplierRows } from '../../lib/supplier-search';
 
 export const prerender = false;
 
@@ -31,23 +32,6 @@ const json = (body: SupplierSearchResult, status: number, cache: string): Respon
     headers: { 'Content-Type': 'application/json', 'Cache-Control': cache, 'Access-Control-Allow-Origin': '*' },
   });
 
-const BY_CAGE = `
-  SELECT s.cage, s.name, s.city, s.state, count(*)::int AS awards
-  FROM pub.suppliers s
-  JOIN pub.price_points pp ON pp.cage = s.cage
-  WHERE s.cage = $1
-  GROUP BY s.cage, s.name, s.city, s.state
-  LIMIT 8`;
-
-const BY_NAME = `
-  SELECT s.cage, s.name, s.city, s.state, count(*)::int AS awards
-  FROM pub.suppliers s
-  JOIN pub.price_points pp ON pp.cage = s.cage
-  WHERE s.name ILIKE $1 ESCAPE '\\'
-  GROUP BY s.cage, s.name, s.city, s.state
-  ORDER BY awards DESC, s.name, s.cage
-  LIMIT 8`;
-
 export const GET: APIRoute = async (ctx) => {
   const query = parseSupplierQuery(ctx.url.searchParams.get('q') ?? '');
   if (query.kind === 'none') {
@@ -59,14 +43,7 @@ export const GET: APIRoute = async (ctx) => {
 
   const sql = openSql(databaseUrl);
   try {
-    let rows =
-      query.kind === 'cage'
-        ? await sql.unsafe(BY_CAGE, [query.cage])
-        : await sql.unsafe(BY_NAME, [query.pattern]);
-    // An all-letter five-character query may be a name fragment rather than a CAGE.
-    if (query.kind === 'cage' && rows.length === 0 && query.nameFallback) {
-      rows = await sql.unsafe(BY_NAME, [query.nameFallback]);
-    }
+    const rows = await searchSupplierRows(sql, query);
     const suppliers: SupplierHit[] = rows.map((r) => ({
       cage: String(r.cage),
       name: r.name ?? null,
