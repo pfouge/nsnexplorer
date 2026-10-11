@@ -60,6 +60,8 @@ export interface SupplierPageData {
   classRows: SupplierClass[];
   /** Most recent ingest timestamp across this supplier's awards (ISO), for "last refreshed". */
   refreshedOn: string | null;
+  /** True when the CAGE is listed as a maker on pub.part_numbers (the "Follow as manufacturer" toggle). */
+  makesParts: boolean;
 }
 
 const isoDate = (v: unknown): string => new Date(v as string).toISOString().slice(0, 10);
@@ -87,7 +89,8 @@ export async function loadSupplierPage(sql: Sql, cage: string): Promise<Supplier
             count(DISTINCT n.fsc)::int AS classes,
             min(pp.awarded_on) AS first_award,
             max(pp.awarded_on) AS latest_award,
-            max(pp.ingested_at) AS refreshed
+            max(pp.ingested_at) AS refreshed,
+            EXISTS (SELECT 1 FROM pub.part_numbers pn WHERE pn.cage = $1) AS makes_parts
      FROM pub.price_points pp
      JOIN pub.nsns n ON n.nsn = pp.nsn
      WHERE pp.cage = $1`,
@@ -170,6 +173,7 @@ export async function loadSupplierPage(sql: Sql, cage: string): Promise<Supplier
         link: r.render_depth === 'deep' ? 'fsc' : r.has_open ? 'open' : null,
       };
     }),
+    makesParts: st.makes_parts === true,
     refreshedOn: st.refreshed ? new Date(st.refreshed).toISOString().slice(0, 10) : null,
   };
 }

@@ -1,0 +1,34 @@
+---
+// /watchlist/ — a signed-in visitor's lists and what changed on the pages they follow. A static
+// shell: src/scripts/watchlist.ts fills it from /api/me and /api/account/*. noindex, and left out
+// of the sitemap (astro.config.mjs). While ACCOUNTS_ENABLED is false it only says accounts are
+// coming.
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import '../../styles/watchlist.css';
+import { ACCOUNTS_ENABLED } from '../../lib/account';
+---
+<BaseLayout title="Your watchlist" description="Follow parts, suppliers, supply classes, solicitations and agencies and see which public records were added since you last looked." noindex={true}>
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a> › Watchlist
+  </nav>
+  <h1>Your watchlist</h1>
+  {ACCOUNTS_ENABLED ? (
+    <div data-watchlist>
+      <div data-wl-msg></div>
+      <div data-wl-signed-out hidden>
+        <p class="lede">Follow a part, supplier, supply class, solicitation or agency, or save an Open-demand search, and the records added since you last looked show up here.</p>
+        <p data-wl-off hidden class="note">Accounts are not switched on yet. Check back soon.</p>
+        <p><a class="btn" data-wl-signin href="/auth/login?return=%2Fwatchlist%2F">Sign in or create a free account</a></p>
+        <p class="gloss">Sign in with a code sent to your email, or with your Google, Microsoft or GitHub account. No password, no payment. You can share a list with a link, or delete your account and everything in it at any time. See the <a href="/privacy/#accounts">privacy policy</a> for what an account keeps.</p>
+      </div>
+      <div data-wl-body hidden></div>
+      <noscript><p class="note">Watchlists need JavaScript.</p></noscript>
+    </div>
+    <script>
+      import '../../scripts/watchlist.ts';
+    </script>
+  ) : (
+    <p class="lede">Watchlists are coming. You will be able to follow a part, supplier, supply class, solicitation or agency and see which public records were added since you last looked.</p>
+    <p class="note">Accounts are not switched on yet. Check back soon.</p>
+  )}
+</BaseLayout>

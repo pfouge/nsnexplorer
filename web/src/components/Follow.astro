@@ -1,0 +1,17 @@
+---
+// "Follow" button for an NSN, supplier, manufacturer, supply class, solicitation or agency page.
+// Static markup so the page stays edge-cacheable: it is hidden until src/scripts/account.ts knows
+// accounts are on, then shows "Following" for a signed-in visitor who follows it. A signed-out
+// click sends the visitor to sign in and follows on their return. Renders nothing while
+// ACCOUNTS_ENABLED is false.
+import { ACCOUNTS_ENABLED, normKey, type Kind } from '../lib/account';
+interface Props { kind: Kind; entity: string; label: string; textOff?: string; textOn?: string }
+const { kind, entity, label, textOff = 'Follow', textOn = 'Following' } = Astro.props;
+const key = normKey(kind, entity);
+---
+{ACCOUNTS_ENABLED && key && (
+  <button type="button" class="follow-btn" data-follow data-kind={kind} data-key={key} data-label={label.slice(0, 200)} data-text-off={textOff} data-text-on={textOn} aria-pressed="false" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z" /></svg>
+    <span data-follow-text>{textOff}</span>
+  </button>
+)}

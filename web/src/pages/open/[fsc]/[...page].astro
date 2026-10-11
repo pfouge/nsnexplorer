@@ -7,6 +7,8 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
 import SignupForm from '../../../components/SignupForm.astro';
 import Pager from '../../../components/Pager.astro';
 import CiteThis from '../../../components/CiteThis.astro';
+import Follow from '../../../components/Follow.astro';
+import SaveSearch from '../../../components/SaveSearch.astro';
 import { SITE_URL } from '../../../consts';
 import { loadSiteData, formatDate, toDashedNsn } from '../../../lib/data';
 import { buildSolicitationCards, competitionFromAmscAmc, fsgName, isPlaceholderFscName, UNLISTED_FSC_NAME, type ProductCard } from '../../../lib/browse';
@@ -195,6 +197,7 @@ const breadcrumbSchema = {
       recorded as they closed. Nothing here gets deleted when it expires: this category's demand
       history grows every time an RFQ closes.
     </p>
+    <Follow kind="fsc" entity={fscCode} label={displayName} />
   </header>
 
   <nav class="tabs" aria-label="On this page">
@@ -286,6 +289,10 @@ const breadcrumbSchema = {
               <option value="qty">Highest quantity</option>
               <option value="name">Item name</option>
             </select>
+          </div>
+
+          <div class="filter-group">
+            <SaveSearch fsc={fscCode} fscName={displayName} />
           </div>
 
           <p class="filter-count" id="filter-count" aria-live="polite">{firstPaintCount} of {totalOpen.toLocaleString('en-US')} shown</p>

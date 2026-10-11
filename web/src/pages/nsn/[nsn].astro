@@ -7,6 +7,7 @@ import NsnBuyingRhythm from '../../components/viz/NsnBuyingRhythm.astro';
 import NsnTimeToAward from '../../components/viz/NsnTimeToAward.astro';
 import NsnWhoWins from '../../components/viz/NsnWhoWins.astro';
 import SignupForm from '../../components/SignupForm.astro';
+import Follow from '../../components/Follow.astro';
 import CiteThis from '../../components/CiteThis.astro';
 import { SITE_URL } from '../../consts';
 import { buildDiagram } from '../../lib/diagram';
@@ -267,6 +268,7 @@ const datasetSchema = {
       {fsc ? <a class="code" href={`/fsc/${fsc.fsc}/`}>FSC {fsc.fsc}</a> : <span class="code">FSC {nsn.fsc}</span>}
     </p>
     <p class="lede">{summary}</p>
+    <Follow kind="nsn" entity={nsn.nsn} label={itemLabel} />
   </header>
 
   <nav class="tabs" aria-label="On this page">

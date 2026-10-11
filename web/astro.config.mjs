@@ -23,7 +23,7 @@ export default defineConfig({
       // noindex, follow); .md twins are for LLMs, not search results; /embed/
       // pages are iframe content (noindex, canonical to the full page). NSN pages have their own prerendered sitemap files
       // (pages/sitemap-nsn-*.xml.ts), listed in robots.txt.
-      filter: (page) => !page.includes('/services/other/') && !page.includes('/embed/') && !page.endsWith('.md'),
+      filter: (page) => !page.includes('/services/other/') && !page.includes('/embed/') && !page.includes('/watchlist/') && !page.endsWith('.md'),
       // Freshness + crawl-priority signals on every entry.
       serialize(item) {
         const isOpenDemand = item.url.includes('/open/') || item.url.includes('/solicitation/');

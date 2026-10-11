@@ -613,3 +613,30 @@ button.copy, .copy-btn { font: inherit; font-size: 0.8125rem; font-weight: 600; 
 /* Sticky cells inside tinted panels take the panel's background (beats the page-table rule). */
 .panel .table-wrap th, .panel .table-wrap td:first-child, .card .table-wrap th, .card .table-wrap td:first-child { background: var(--card); }
 .open-panel .table-wrap th, .open-panel .table-wrap td:first-child { background: var(--paper-2); }
+
+/* ---- Accounts: header watchlist button, Follow button, toast ----
+   All of it stays hidden until src/scripts/account.ts knows accounts are on (ACCOUNTS_ENABLED). */
+.acct-btn { position: relative; }
+.acct-btn[hidden], .follow-btn[hidden], .acct-badge[hidden], .save-search[hidden] { display: none; }
+.acct-badge {
+  position: absolute; top: 2px; right: 0; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+  background: var(--red); color: #fff; font-size: 0.6875rem; font-weight: 700; line-height: 18px; text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.follow-btn, .save-search {
+  display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border: 1px solid var(--ink); border-radius: 18px;
+  background: transparent; color: var(--ink); font: inherit; font-size: 0.9375rem; font-weight: 600; cursor: pointer; white-space: nowrap; margin: 0.35rem 0.5rem 0.35rem 0; vertical-align: middle;
+}
+.follow-btn:hover, .save-search:hover { background: var(--hover); }
+.follow-btn[aria-pressed='true'], .save-search[aria-pressed='true'] { background: var(--ink); color: var(--paper); }
+.follow-btn[aria-pressed='true'] svg path { fill: currentColor; }
+.follow-btn[disabled], .save-search[disabled] { opacity: 0.6; cursor: progress; }
+.follow-btn svg { width: 18px; height: 18px; flex: none; }
+.follow-hint { margin: 0.25rem 0 0; font-size: 0.8125rem; color: var(--ink-soft); }
+.acct-toast {
+  position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); max-width: min(92vw, 520px); padding: 12px 18px;
+  border-radius: var(--radius); background: var(--ink); color: var(--paper); font-size: 0.9375rem; opacity: 0; pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s; z-index: 60;
+}
+.acct-toast.on { opacity: 1; transform: translate(-50%, 0); }
+@media (prefers-reduced-motion: reduce) { .acct-toast { transition: none; } }

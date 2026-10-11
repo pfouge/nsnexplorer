@@ -9,6 +9,7 @@
 // days" countdown is computed per request, not at build time.
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import CiteThis from '../../components/CiteThis.astro';
+import Follow from '../../components/Follow.astro';
 import { SITE_URL } from '../../consts';
 import { toDashedNsn, formatDate, formatUsdPrecise } from '../../lib/shared';
 import { databaseUrlFrom } from '../../lib/runtime-env';
@@ -95,6 +96,7 @@ const primaryLabel = isOpen
       <span class:list={['badge', status.cls]}>{status.text}</span>
       {countdown && <span class:list={['badge', countdown.cls]}>{countdown.text}</span>}
     </p>
+    <Follow kind="solicitation" entity={sol.solNumber} label={`${sol.solNumber} ${itemLabel}`.slice(0, 200)} />
   </header>
 
   <div class="stat-strip">

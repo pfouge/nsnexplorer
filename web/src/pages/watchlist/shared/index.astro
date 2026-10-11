@@ -1,0 +1,25 @@
+---
+// /watchlist/shared/#<slug> — a list someone chose to share. The slug is in the hash so it never
+// reaches a server log or an analytics page address; the script asks /api/account/public for the
+// list. noindex and out of the sitemap: these are visitors' lists, not site content.
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import '../../../styles/watchlist.css';
+import { ACCOUNTS_ENABLED } from '../../../lib/account';
+---
+<BaseLayout title="Shared watchlist" description="A watchlist of parts, suppliers, supply classes, solicitations and agencies shared by an NSN Explorer visitor." noindex={true}>
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a> › <a href="/watchlist/">Watchlist</a> › Shared
+  </nav>
+  <h1>Shared watchlist</h1>
+  {ACCOUNTS_ENABLED ? (
+    <div data-watchlist-shared>
+      <div data-wl-shared><p class="note">Loading…</p></div>
+      <noscript><p class="note">Shared watchlists need JavaScript.</p></noscript>
+    </div>
+    <script>
+      import '../../../scripts/watchlist.ts';
+    </script>
+  ) : (
+    <p class="note">Accounts are not switched on yet. Check back soon.</p>
+  )}
+</BaseLayout>

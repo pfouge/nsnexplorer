@@ -6,6 +6,7 @@
 // this is not commerce — every link routes to the official DIBBS record.
 import BaseLayout from '../layouts/BaseLayout.astro';
 import CiteThis from '../components/CiteThis.astro';
+import SaveSearch from '../components/SaveSearch.astro';
 import { fscLabel, listedFscName } from '../lib/seo-copy';
 import { SITE_URL } from '../consts';
 import { loadSiteData, toDashedNsn, solicitationLinkLabel } from '../lib/data';
@@ -131,6 +132,7 @@ const buildDate = now.toLocaleDateString('en-US', { year: 'numeric', month: 'lon
       closes, too — nothing gets deleted — so this index is also building a live, growing history
       of federal demand you can look back through.
     </p>
+    <SaveSearch />
   </header>
 
   <p class="gloss">Looking for service contracts rather than parts? See <a href="/services/">open service notices</a>.</p>

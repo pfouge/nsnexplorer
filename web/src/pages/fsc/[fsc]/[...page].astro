@@ -3,6 +3,7 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
 import SignupForm from '../../../components/SignupForm.astro';
 import Pager from '../../../components/Pager.astro';
 import CiteThis from '../../../components/CiteThis.astro';
+import Follow from '../../../components/Follow.astro';
 import { SITE_URL } from '../../../consts';
 import { loadSiteData, formatUsd, formatDate, type FscConfig } from '../../../lib/data';
 import { buildProductCards, competitionFromAmscAmc, fscDisplayName as classDisplayName, fsgName, isPlaceholderFscName, UNLISTED_FSC_NAME, type ProductCard } from '../../../lib/browse';
@@ -151,6 +152,7 @@ const breadcrumbSchema = {
       Every government purchase record we've indexed in Federal Supply Class {fsc.fsc}, with a
       link back to the source record for each one.
     </p>
+    <Follow kind="fsc" entity={fsc.fsc} label={fscDisplayName} />
   </header>
 
   <nav class="tabs" aria-label="On this page">

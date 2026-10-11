@@ -1,0 +1,18 @@
+---
+// "Save this search" for the Open-demand pages (/open/ and /open/<fsc>/). Saves the filter bar's
+// current state as a normalized string on the visitor's watchlist (see lib/saved-search.ts for
+// which filters are saved and why). Hidden until src/scripts/saved-search.ts knows accounts are
+// on; renders nothing while ACCOUNTS_ENABLED is false.
+import { ACCOUNTS_ENABLED } from '../lib/account';
+interface Props { fsc?: string; fscName?: string }
+const { fsc = '', fscName = '' } = Astro.props;
+---
+{ACCOUNTS_ENABLED && (
+  <>
+    <button type="button" class="save-search" data-save-search data-fsc={fsc} data-fsc-name={fscName} aria-pressed="false" hidden>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z" /></svg>
+      <span data-save-text>Save this search</span>
+    </button>
+    <script>import '../scripts/saved-search.ts';</script>
+  </>
+)}

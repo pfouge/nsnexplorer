@@ -1,0 +1,90 @@
+/* /watchlist/ and /watchlist/shared/: lists, cards and the "what changed" section.
+   Built on the site's tokens only (global.css, viz.css), so both themes and 390px work. */
+.btn-quiet {
+  display: inline-flex; align-items: center; min-height: 32px; padding: 0 10px; border: 0; border-radius: 16px;
+  background: transparent; color: var(--ink); font: inherit; font-size: 0.875rem; font-weight: 600; cursor: pointer; text-decoration: underline;
+  text-decoration-color: var(--line); text-underline-offset: 3px;
+}
+.btn-quiet:hover { background: var(--hover); }
+.btn-quiet.danger, .btn.danger { color: var(--red); }
+.btn.danger { border-color: var(--red); }
+.btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+.empty-reason { color: var(--ink-soft); font-size: 0.9375rem; margin: 0.75rem 0; max-width: 78ch; }
+
+.wl-sec-head, .wl-list-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; }
+.wl-sec-head h2, .wl-list-head h3 { margin: 0; }
+.wl-list-head h3 { display: flex; align-items: center; gap: 8px; margin-right: auto; }
+.wl-changes { margin-top: 1.5rem; }
+.wl-change-list { display: grid; gap: 12px; margin-top: 0.75rem; }
+.wl-change { background: var(--card); border: 1px solid var(--line); border-left: 3px solid var(--amber); border-radius: var(--radius); padding: 0.9rem 1.1rem; }
+.wl-change-head { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; }
+.wl-change-head .btn { margin-left: auto; min-height: 34px; }
+.wl-events { list-style: none; margin: 0.6rem 0 0; padding: 0; }
+.wl-events li, .wl-recs li { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr) auto; gap: 4px 12px; padding: 5px 0; border-top: 1px solid var(--line); font-size: 0.9375rem; }
+.wl-events li:first-child, .wl-recs li:first-child { border-top: 0; }
+.wl-recs { list-style: none; margin: 0.4rem 0 0; padding: 0; }
+.wl-recs li { grid-template-columns: 6.5rem minmax(0, 1fr) auto auto; font-size: 0.875rem; }
+.wl-events .when, .wl-recs .when { color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.wl-events .what, .wl-recs .what { min-width: 0; overflow-wrap: anywhere; }
+.wl-recs .amt { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.wl-tabs { margin-top: 0.75rem; }
+.wl-tabs .chip .badge { padding: 0 6px; font-size: 0.75rem; }
+.wl-list { margin: 1rem 0; }
+.wl-items { list-style: none; padding: 0; margin: 0.5rem 0 0; }
+.wl-row {
+  display: grid; grid-template-columns: minmax(170px, 0.9fr) minmax(220px, 300px) minmax(240px, 1.5fr); gap: 12px 20px;
+  align-items: start; padding: 16px 0; border-bottom: 1px solid var(--line);
+}
+.wl-row:last-child { border-bottom: 0; }
+.wl-row.has-changes .wl-name { text-decoration: underline; text-decoration-color: var(--amber); text-underline-offset: 3px; }
+.wl-main { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; }
+.wl-name { font-size: 1.0625rem; font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
+.wl-sub { font-size: 0.8125rem; color: var(--ink-soft); line-height: 1.35; overflow-wrap: anywhere; }
+.wl-kind { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; color: var(--ink-soft); }
+.wl-item-actions { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; }
+.wl-main .wl-item-actions { margin: 6px 0 0 -10px; }
+.wl-item-actions select, .wl-new-list input, .wl-rename input, .wl-note-edit input, .wl-delete input {
+  height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 18px; background: var(--card); color: var(--ink); font: inherit; font-size: 0.875rem;
+}
+.wl-item-actions select { height: 32px; padding: 0 8px; }
+.wl-visual, .wl-details { min-width: 0; }
+.wl-visual-chart, .wl-visual-text { border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--card); padding: 10px 10px 8px; min-height: 96px; }
+.wl-visual-text { display: flex; flex-direction: column; justify-content: center; }
+.wl-spark, .wl-bars { display: block; width: 100%; height: 56px; overflow: visible; }
+.wl-spark-line { stroke-width: 2; vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke-linecap: round; }
+.wl-spark-area { opacity: 0.14; }
+.wl-scale { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; font-size: 0.75rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.wl-visual .k, .wl-details .k, .wl-tile .k, .wl-stat .k { font-size: 0.8125rem; color: var(--ink-soft); }
+.wl-visual .v, .wl-tile .v { font-size: 1.25rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.wl-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
+.wl-tile { border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--card); padding: 8px 10px; min-width: 0; }
+.wl-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px 20px; }
+.wl-stat { min-width: 0; }
+.wl-stat .v { font-size: 0.9375rem; font-weight: 500; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.wl-none { color: var(--ink-soft); font-size: 0.875rem; margin: 0; }
+.wl-note { margin: 8px 0 0; font-size: 0.875rem; }
+.wl-note-edit, .wl-rename { display: flex; gap: 8px; margin: 8px 0 0; }
+.wl-note-edit input, .wl-rename input { flex: 1; min-width: 0; }
+.wl-note-edit[hidden], .wl-rename[hidden], .wl-delete[hidden] { display: none; }
+.share-link { display: flex; gap: 8px; margin: 10px 0 0; }
+.share-link input { flex: 1; min-width: 0; height: 40px; padding: 0 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--paper-2); color: var(--ink); font: inherit; font-size: 0.875rem; }
+.wl-new-list { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; margin: 1.25rem 0 0.5rem; }
+.wl-new-list input { min-width: min(100%, 300px); height: 40px; }
+.wl-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 12px; margin: 12px 0; }
+.wl-acct { margin-top: 2.5rem; }
+.wl-delete { margin-top: 12px; display: grid; gap: 8px; }
+.wl-delete .row { display: flex; gap: 8px; flex-wrap: wrap; }
+.wl-delete input { height: 40px; }
+
+@media (max-width: 899px) {
+  .wl-row { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+}
+@media (max-width: 640px) {
+  .wl-events li { grid-template-columns: minmax(0, 1fr) auto; }
+  .wl-events li .when { grid-column: 1 / -1; }
+  .wl-recs li { grid-template-columns: minmax(0, 1fr) auto; }
+  .wl-recs li .when { grid-column: 1 / -1; }
+  .wl-recs li > a { grid-column: 1 / -1; }
+  .wl-change-head .btn { margin-left: 0; }
+}
