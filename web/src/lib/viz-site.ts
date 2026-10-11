@@ -161,6 +161,8 @@ export interface FreshnessSource {
   lastLanded: string;
   limitHours: number;
   cadence: string;
+  /** false for internal lanes (supplier profiles) that are reported but not drawn in the strip */
+  customerFacing?: boolean;
 }
 
 export interface FreshnessView {

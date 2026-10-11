@@ -672,17 +672,28 @@ async function loadVizData(pool: pgTypes.Pool): Promise<SiteViz> {
     const r = await pool.query<{ t: Date | null }>(sql);
     return r.rows[0]?.t ? new Date(r.rows[0].t).toISOString() : null;
   };
-  const freshDefs: { key: string; label: string; limitHours: number; cadence: string; sql: string }[] = [
+  const freshDefs: { key: string; label: string; limitHours: number; cadence: string; customerFacing?: boolean; sql: string }[] = [
     { key: 'dibbs_rfq', label: 'DIBBS solicitations', limitHours: 48, cadence: 'updates daily', sql: `SELECT max(last_seen_at) AS t FROM pub.solicitations WHERE source = 'dibbs_rfq'` },
     { key: 'sam_gov', label: 'SAM.gov notices', limitHours: 48, cadence: 'updates daily', sql: `SELECT max(last_seen_at) AS t FROM pub.solicitations WHERE source = 'sam_gov'` },
     { key: 'dibbs_awards', label: 'DIBBS awards and prices', limitHours: 120, cadence: 'updates on business days', sql: `SELECT max(ingested_at) AS t FROM pub.contract_actions WHERE award_uid LIKE 'DIBBS-%'` },
     { key: 'publog', label: 'PUB LOG specs', limitHours: 48, cadence: 'updates nightly', sql: `SELECT max(updated_at) FILTER (WHERE characteristics IS NOT NULL) AS t FROM pub.nsns` },
     { key: 'usaspending', label: 'USAspending', limitHours: 336, cadence: 'publishes in bursts', sql: `SELECT max(ingested_at) AS t FROM pub.contract_actions WHERE award_uid NOT LIKE 'DIBBS-%'` },
+    // Supplier profile lanes: listed so /data/freshness.json carries them, but never drawn by the
+    // home/footer strip (FreshnessStrip only renders its own five keys) and never a failure.
+    { key: 'sam_entities', label: 'SAM.gov supplier registrations', limitHours: 24 * 40, cadence: 'updates monthly', customerFacing: false, sql: `SELECT max(synced_at) AS t FROM pub.supplier_sam` },
+    { key: 'supplier_web', label: 'Supplier website profiles', limitHours: 72, cadence: 'updates daily', customerFacing: false, sql: `SELECT max(fetched_at) AS t FROM pub.supplier_web` },
   ];
   const freshness: FreshnessSource[] = [];
   for (const d of freshDefs) {
-    const lastLanded = await fresh(d.sql);
-    if (lastLanded) freshness.push({ key: d.key, label: d.label, lastLanded, limitHours: d.limitHours, cadence: d.cadence });
+    let lastLanded: string | null = null;
+    try {
+      lastLanded = await fresh(d.sql);
+    } catch (err) {
+      // An internal lane's table may not exist yet on a database that has not run migration 0011;
+      // that must never fail a build. The customer-facing sources still throw.
+      if (d.customerFacing !== false) throw err;
+    }
+    if (lastLanded) freshness.push({ key: d.key, label: d.label, lastLanded, limitHours: d.limitHours, cadence: d.cadence, ...(d.customerFacing === false ? { customerFacing: false } : {}) });
   }
 
   const groups: GroupDemandRow[] = (

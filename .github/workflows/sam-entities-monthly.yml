@@ -1,0 +1,61 @@
+name: sam-entities-monthly
+
+# SAM.gov public V2 entity extract -> pub.supplier_sam (legal name, DBA, website, addresses,
+# registration dates, business types, NAICS, points of contact by name and title). See
+# ingest/sam-entities/. SAM publishes the monthly extract on the first Sunday of the month, so the
+# 8th is always after it. The Extracts API key allows 10 requests a day and a run uses at most 3.
+#
+# Like sam-daily.yml, a missing SAM_API_KEY makes the whole run a logged no-op, not a failure.
+
+on:
+  schedule:
+    - cron: '17 7 8 * *'
+  workflow_dispatch: {}
+
+concurrency:
+  group: sam-entities-monthly
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+  SAM_API_KEY: ${{ secrets.SAM_API_KEY }}
+
+jobs:
+  sam-entities:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: check SAM_API_KEY
+        id: check-key
+        run: |
+          if [ -z "$SAM_API_KEY" ]; then
+            echo "notice: SAM_API_KEY is not set — skipping this run (no-op) until the secret is configured."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.check-key.outputs.present == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.check-key.outputs.present == 'true'
+        with:
+          node-version: 22
+      - run: npm ci
+        if: steps.check-key.outputs.present == 'true'
+      - name: apply migrations
+        if: steps.check-key.outputs.present == 'true'
+        run: bash .github/scripts/retry-pool-full.sh /tmp/sam-entities-migrate.log node db/migrate.mjs
+      # At most 3 API requests (see fetch.mjs). Not retried at the workflow level: a second attempt
+      # would spend more of the 10-a-day budget.
+      - name: download the public monthly entity extract
+        if: steps.check-key.outputs.present == 'true'
+        run: set -o pipefail; node ingest/sam-entities/fetch.mjs --out /tmp/sam-entities 2>&1 | tee /tmp/sam-entities-fetch.log
+      - name: load into pub.supplier_sam
+        if: steps.check-key.outputs.present == 'true'
+        run: |
+          f=$(ls /tmp/sam-entities/*.ZIP /tmp/sam-entities/*.zip 2>/dev/null | head -1)
+          echo "loading $f"
+          bash .github/scripts/retry-pool-full.sh /tmp/sam-entities-load.log node ingest/sam-entities/load.mjs --file "$f"

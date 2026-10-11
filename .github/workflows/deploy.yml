@@ -74,6 +74,14 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
 
+      # Rebuilds pub.supplier_stats (totals and ranks) from pub.price_points so the /supplier/
+      # leaderboard, prerendered in the build below, always sees today's ranks.
+      - name: Refresh supplier stats
+        id: supplier-stats
+        run: bash .github/scripts/retry-pool-full.sh /tmp/step-supplier-stats.log node db/refresh-supplier-stats.mjs
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+
       - name: Build web
         id: build
         # Retries (up to 3 attempts, 2 min apart) only when Supabase's session pooler

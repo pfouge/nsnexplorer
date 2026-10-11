@@ -72,6 +72,25 @@ export const SOURCES = [
           FROM pub.nsns`,
   },
   {
+    key: 'sam_entities',
+    label: 'SAM.gov supplier registrations (sam-entities-monthly)',
+    maxAgeHours: 24 * 40,
+    warnOnly: true, // supplier profile data; monthly, and idle until SAM_API_KEY is set
+    customerFacing: false,
+    sql: `SELECT max(synced_at) AS last_landed, max(last_update_date)::text AS newest_record, count(*) AS rows
+          FROM pub.supplier_sam`,
+  },
+  {
+    key: 'supplier_web',
+    label: 'Supplier website profiles (supplier-web-daily)',
+    maxAgeHours: 72,
+    warnOnly: true, // supplier profile data; idle until SAM entities have landed
+    customerFacing: false,
+    sql: `SELECT max(fetched_at) AS last_landed, max(fetched_at)::date::text AS newest_record, count(*) AS rows,
+                 count(*) FILTER (WHERE status IN ('ok', 'ok_no_ai')) AS read_ok
+          FROM pub.supplier_web`,
+  },
+  {
     key: 'scoring',
     label: 'Target scoring (ingest-daily)',
     maxAgeHours: 72,
@@ -183,6 +202,7 @@ export function evaluateSource(source, row, now = new Date()) {
     newest_record: row?.newest_record ?? null,
     rows: Number(row?.rows ?? 0),
     ...extra,
+    ...(source.customerFacing === false ? { customer_facing: false } : {}),
     status: stale ? (source.warnOnly ? 'warn' : 'STALE') : 'ok',
   };
 }

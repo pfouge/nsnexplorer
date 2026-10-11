@@ -1,0 +1,6 @@
+BOF PUBLIC 20261004 20261004 0000000 0000001
+ABCDEFGH1234||0000|1ABC2||A|Z2|20120301|20271004|20260915|20261004|ACME FASTENERS INCORPORATED|ACME FASTENERS|||100 Industrial Pkwy|Building 4|Dayton|OH|45402|1234|USA|||19870615|1231|WWW.AcmeFasteners.com/Home?x=1  |2L|OH|USA|4|2X~MF~27~ZZ|332722|3|332722Y~332721N~423840E|2|5310~5305|||PO Box 77||Dayton|45401|0077|USA|OH|Jane|Q|Doe|President|100 Industrial Pkwy||Dayton|45402||USA|OH|John||Roe|Sales Manager|100 Industrial Pkwy||Dayton|45402||USA|OH|||||||||||||||||||||||Pat||Poe|Contracts|100 Industrial Pkwy||Dayton|45402||USA|OH||||||||||||||||2|A620300101~XX20290202||||||||||||||||||||||||!end
+MINIMAL00001|||3DEF4||E||20190101|20240101|20230101|20190102|BARE BONES MACHINE LLC||||9 Elm St||Erie|PA|16501||USA|||||no website listed|2K||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||!end
+BOF-NOT|THIS|IS|A|BROKEN|LINE|WITH|TOO|FEW|COLUMNS|!end
+NOTINDB00009|||99999||A||20200101|20270101|20260101|20200102|NOT A KNOWN SUPPLIER INC||||1 Main St||Austin|TX|73301||USA||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||!end
+EOF PUBLIC 20261004 20261004 0000000 0000001

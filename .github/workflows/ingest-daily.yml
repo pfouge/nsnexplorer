@@ -218,10 +218,28 @@ jobs:
       - run: npm ci
       - run: node scoring/score.mjs
 
+  # Totals and leaderboard ranks per supplier (pub.supplier_stats) from today's price points.
+  # deploy.yml refreshes them again right before its build; this keeps them current between deploys.
+  stats:
+    needs: [dibbs, dibbs-retry, dibbs-retry-2, scoring]
+    if: >-
+      always() && (needs.dibbs.result == 'success'
+      || needs.dibbs-retry.result == 'success'
+      || needs.dibbs-retry-2.result == 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: refresh supplier stats
+        run: bash .github/scripts/retry-pool-full.sh /tmp/supplier-stats.log node db/refresh-supplier-stats.mjs
+
   # Rebuild + deploy so the day's awards and prices go live (every other
   # lane already chains a deploy; this one used to wait for the next one).
   deploy:
-    needs: [dibbs, dibbs-retry, dibbs-retry-2, scoring]
+    needs: [dibbs, dibbs-retry, dibbs-retry-2, scoring, stats]
     if: >-
       always() && (needs.dibbs.result == 'success'
       || needs.dibbs-retry.result == 'success'

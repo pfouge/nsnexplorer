@@ -1,0 +1,58 @@
+name: supplier-web-daily
+
+# Reads each supplier's own website (the URL on its SAM.gov registration) politely and stores the
+# phone / email it publishes plus a short AI-written summary in pub.supplier_web.
+# See ingest/supplier-web/run.mjs for who is picked and ingest/supplier-web/crawl.mjs for the crawl
+# rules (NSNExplorerBot, robots.txt, 4 pages, 2 s between requests to a host).
+#
+# ANTHROPIC_API_KEY is optional: without it the sites are still read and stored as ok_no_ai
+# (contacts and the site's own meta description), and they are summarised on a later run once the key
+# exists. With no SAM entity data loaded yet there is nothing to pick and the run is a no-op.
+
+on:
+  schedule:
+    - cron: '42 11 * * *'
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: 'Maximum suppliers to read in this run'
+        type: string
+        default: '150'
+
+concurrency:
+  group: supplier-web-daily
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+
+jobs:
+  supplier-web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: check ANTHROPIC_API_KEY
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "notice: ANTHROPIC_API_KEY is not set — sites will be read without AI summaries (status ok_no_ai)."
+          fi
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: apply migrations
+        run: bash .github/scripts/retry-pool-full.sh /tmp/supplier-web-migrate.log node db/migrate.mjs
+      - name: read supplier websites
+        run: |
+          limit="${LIMIT_INPUT:-150}"
+          [ -n "$limit" ] || limit=150
+          bash .github/scripts/retry-pool-full.sh /tmp/supplier-web.log node ingest/supplier-web/run.mjs --limit "$limit" --max-minutes 45
+        env:
+          LIMIT_INPUT: ${{ inputs.limit }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
