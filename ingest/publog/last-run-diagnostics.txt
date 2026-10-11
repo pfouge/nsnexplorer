@@ -1,7 +1,7 @@
 == files ==
-total 9824088
+total 9824084
 drwxr-xr-x  2 runner runner       4096 Oct 10 18:39 .
-drwxrwxrwt 16 root   root         4096 Oct 10 18:39 ..
+drwxrwxrwt 16 root   root         4096 Oct 11 15:59 ..
 -rw-r--r--  1 runner runner  371183040 Sep 28 13:39 P_CAGE.CSV
 -rw-r--r--  1 runner runner  987210664 Sep 28 13:43 P_FLIS_NSN.CSV
 -rw-r--r--  1 runner runner    4798116 Sep 28 13:43 P_HELP.CSV
@@ -73,6 +73,6 @@ load.mjs: V_MOE_RULE.CSV resolved columns (0-based): niin=0(header) moe=2(header
 load.mjs: V_MOE_RULE.CSV: 18284387 rows scanned, 463788 on tracked NIINs, 293202 skipped (AMC and AMSC both blank), 0 invalid AMC and 0 invalid AMSC treated as blank, 86460 NSN(s) with a kept row (86460 without a parseable date)
 load.mjs: V_MOE_RULE.CSV kept AMC distribution: 0:727 1:37378 2:1173 3:45092 4:1323 5:767
 load.mjs: V_MOE_RULE.CSV kept AMSC distribution: 0:727 A:35 B:2330 C:11181 D:18427 G:23226 H:1652 K:8 L:5260 M:41 N:26 P:2535 Q:3418 R:5822 S:9 T:3819 U:28 V:21 Y:3 Z:7892
-load.mjs: V_MOE_RULE.CSV: 86460 observation(s) written, 0 unchanged (latest flis value identical)
-load.mjs: V_MOE_RULE.CSV: 86460 loaded, 18284387 rows scanned
+load.mjs: V_MOE_RULE.CSV: 0 observation(s) written, 86460 unchanged (latest flis value identical)
+load.mjs: V_MOE_RULE.CSV: 0 loaded, 18284387 rows scanned
 load.mjs: P_CAGE.CSV: 22165 loaded, 4158375 rows scanned
