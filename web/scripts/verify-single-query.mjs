@@ -13,6 +13,13 @@
 //               afterwards (unless --keep). The original database is only read
 //               (CREATE DATABASE ... TEMPLATE needs no other connection to it).
 //
+// The supplier loader also returns the profile sections added by migration 0011 (SAM record, website
+// profile, stats and ranks, opt-outs, awards by month, top NSNs, agencies, USAspending actions, parts the
+// supplier makes, open bids for them). Old-vs-new compares only the fields that existed before; every new
+// field is checked against independent, naive queries (checkSupplierProfile), opted-out suppliers are checked
+// for leaked contact data, and the whole page must still cost exactly one round-trip. With --seed the clone
+// gets migration 0011 (when missing) and web/scripts/supplier-seed.sql on top of the edge-case seed.
+//
 // What it checks, per sampled input, for each loader:
 //   1. OLD loader (copied verbatim below from the pre-change code) vs NEW loader
 //      (bundled straight from web/src/lib): assert.deepStrictEqual (types included:
@@ -406,6 +413,149 @@ async function oldSearchSupplierRows(sql, query) {
   return rows;
 }
 
+
+// ------------------------------------------- supplier profile: independent checks
+const isoD = (v) => (v === null || v === undefined ? null : new Date(v).toISOString().slice(0, 10));
+const cl = (v) => (typeof v === 'string' && v.trim() !== '' ? v.trim() : null);
+const numOrNull = (v) => (v === null || v === undefined ? null : Number(v));
+
+/**
+ * Checks the profile sections of loadSupplierPage(cage) against naive queries on a direct connection.
+ * `profile` collects which cases were exercised.
+ */
+async function checkSupplierProfile(db, cage, page, seen) {
+  const id = cage;
+  const eq = (label, actual, expected) => {
+    results.checks++;
+    try {
+      assert.deepStrictEqual(actual, expected);
+    } catch (e) {
+      fail('loadSupplierPage profile', id, `${label}: ${String(e.message).split('\n').slice(0, 14).join('\n')}`);
+    }
+  };
+  const q = (text, params = [cage]) => db.unsafe(text, params);
+  const value = 'coalesce(pp.total_value, pp.unit_price * pp.quantity)';
+
+  const [oo] = await q(`select hide_contact, hide_web from pub.supplier_optouts where cage = $1`);
+  const hideContact = oo?.hide_contact === true;
+  const hideWeb = oo?.hide_web === true;
+  eq('optout flags', page.optout, { hideContact, hideWeb });
+  if (oo) seen.optout++;
+  if (oo && !hideContact && hideWeb) seen.partialWeb++;
+  if (oo && hideContact && !hideWeb) seen.partialContact++;
+
+  // ---- SAM
+  const sam = (await q(`select to_jsonb(x) as j from pub.supplier_sam x where cage = $1`))[0]?.j;
+  const [sup] = await q(`select uei from pub.suppliers where cage = $1`);
+  eq('uei', page.uei, cl(sam?.uei) ?? cl(sup?.uei));
+  if (!sam) eq('sam absent', page.sam, null);
+  else {
+    seen.sam++;
+    const s = page.sam;
+    eq('sam scalars', [s.uei, s.legalName, s.dbaName, s.entityUrl, s.registrationStatus, s.registrationDate, s.expirationDate, s.lastUpdateDate, s.entityStartDate, s.entityStructure, s.stateOfIncorporation, s.primaryNaics, s.sourceFile],
+      [cl(sam.uei), cl(sam.legal_name), cl(sam.dba_name), cl(sam.entity_url), cl(sam.registration_status), cl(sam.registration_date), cl(sam.expiration_date), cl(sam.last_update_date), cl(sam.entity_start_date), cl(sam.entity_structure), cl(sam.state_of_incorporation), cl(sam.primary_naics), cl(sam.source_file)]);
+    eq('sam lists', [s.businessTypes, s.naics.map((n) => [n.code, n.small]), s.sbaCertifications.map((c) => c.label), s.psc],
+      [sam.business_types, sam.naics.map((n) => [n.code, typeof n.small === 'boolean' ? n.small : null]), sam.sba_certifications.map((c) => c.label), sam.psc]);
+    if (hideContact) {
+      eq('sam contact removed', [s.physical, s.mailing, s.pocs], [null, null, []]);
+    } else {
+      eq('sam physical', s.physical?.line1 ?? null, cl(sam.phys_line1));
+      eq('sam physical city', s.physical?.city ?? null, cl(sam.phys_city));
+      eq('sam mailing', s.mailing?.line1 ?? null, cl(sam.mail_line1));
+      eq('sam pocs', s.pocs.map((p) => [p.name, p.title, p.role]), sam.pocs.filter((p) => cl(p.name)).map((p) => [cl(p.name), cl(p.title), cl(p.role)]));
+    }
+  }
+
+  // ---- website profile
+  const web = (await q(`select to_jsonb(x) as j from pub.supplier_web x where cage = $1`))[0]?.j;
+  if (!web || (hideWeb && hideContact)) eq('web absent', page.web, null);
+  else {
+    seen.web++;
+    const w = page.web;
+    eq('web identity', [w.url, w.status, w.fetchedAt], [new URL(web.url).toString(), web.status, web.fetched_at]);
+    eq('web fetched_at instant', new Date(w.fetchedAt).getTime(), new Date(web.fetched_at).getTime());
+    if (hideWeb) eq('web profile removed', [w.summary, w.products, w.capabilities, w.certifications, w.founded, w.metaDescription, w.pages, w.model], [null, [], [], [], null, null, [], null]);
+    else eq('web profile', [w.summary, w.products, w.capabilities, w.certifications, w.founded, w.metaDescription, w.pages.map((p) => p.url), w.model],
+      [cl(web.summary), web.products, web.capabilities, web.certifications, numOrNull(web.founded), cl(web.meta_description), web.pages.map((p) => p.url), cl(web.model)]);
+    if (hideContact) eq('web contact removed', [w.phone, w.email, w.contactUrl], [null, null, null]);
+    else eq('web contact', [w.phone, w.email, w.contactUrl], [cl(web.phone), cl(web.email), cl(web.contact_url)]);
+  }
+
+  // ---- opted-out data must not appear anywhere in the page data
+  const blob = JSON.stringify(page);
+  const secrets = [];
+  if (hideContact) {
+    if (sam) secrets.push(sam.phys_line1, sam.mail_line1, ...sam.pocs.map((p) => p.name));
+    if (web) secrets.push(web.phone, web.email, web.contact_url);
+  }
+  if (hideWeb && web) secrets.push(web.summary, web.meta_description, ...web.products, ...web.capabilities);
+  for (const x of secrets.filter((v) => typeof v === 'string' && v.length > 3)) {
+    results.checks++;
+    if (blob.includes(x)) fail('loadSupplierPage profile', id, `opted-out value leaked into the page data: ${x}`);
+  }
+
+  // ---- stats row and its naive recomputation
+  const st = (await q(`select to_jsonb(x) as j from pub.supplier_stats x where cage = $1`))[0]?.j;
+  if (!st) eq('stats absent', page.stats, null);
+  else {
+    const t = page.stats;
+    eq('stats copy', [t.awardsAll, t.dollarsAll, t.awards12m, t.dollars12m, t.awardsPrior12m, t.dollarsPrior12m, t.nsns, t.fscs, t.agencies, t.firstAward, t.lastAward,
+      t.rankDollars12m, t.rankDollarsAll, t.rankWins12m, t.rankWinsAll, t.rankNsns, t.rankFscs, t.rankRising, t.risingDelta],
+      [st.awards_all, Number(st.dollars_all), st.awards_12m, Number(st.dollars_12m), st.awards_prior_12m, Number(st.dollars_prior_12m), st.nsns, st.fscs, st.agencies, cl(st.first_award), cl(st.last_award),
+        numOrNull(st.rank_dollars_12m), numOrNull(st.rank_dollars_all), numOrNull(st.rank_wins_12m), numOrNull(st.rank_wins_all), numOrNull(st.rank_nsns), numOrNull(st.rank_fscs), numOrNull(st.rank_rising), numOrNull(st.rising_delta)]);
+  }
+
+  // ---- awards by month (24 calendar months ending with this month)
+  const [{ today }] = await q(`select to_char(current_date, 'YYYY-MM-DD') as today`, []);
+  eq('today', page.today, today);
+  const monthRows = await q(`select to_char(pp.awarded_on, 'YYYY-MM') as m, count(*)::int as n, coalesce(sum(${value}), 0) as d from pub.price_points pp where pp.cage = $1 group by 1`);
+  const byM = new Map(monthRows.map((r) => [r.m, [r.n, Number(r.d)]]));
+  const expMonths = [];
+  for (let i = 23; i >= 0; i--) {
+    const d = new Date(Date.UTC(Number(today.slice(0, 4)), Number(today.slice(5, 7)) - 1 - i, 1));
+    const key = d.toISOString().slice(0, 7);
+    const [n, dol] = byM.get(key) ?? [0, 0];
+    expMonths.push({ month: key, awards: n, dollars: dol });
+  }
+  eq('months', page.months, expMonths);
+  if (page.months.some((m) => m.awards > 0)) seen.chart++;
+
+  // ---- top NSNs by award count
+  const top = await q(`select nsn, item_name, n, d, last from (
+      select pp.nsn, nn.item_name, count(*)::int n, coalesce(sum(${value}), 0) d, max(pp.awarded_on) last,
+             row_number() over (order by count(*) desc, max(pp.awarded_on) desc, pp.nsn) rn
+      from pub.price_points pp join pub.nsns nn on nn.nsn = pp.nsn where pp.cage = $1 group by pp.nsn, nn.item_name) x where rn <= 10 order by rn`);
+  eq('top nsns', page.topNsns, top.map((r) => ({ nsn: r.nsn, itemName: cl(r.item_name), awards: r.n, dollars: Number(r.d), lastAward: isoD(r.last) })));
+
+  // ---- agencies
+  const ag = await q(`select pp.agency_id, a.name, count(*)::int n, coalesce(sum(${value}), 0) d, max(pp.awarded_on) last
+      from pub.price_points pp join pub.agencies a on a.agency_id = pp.agency_id where pp.cage = $1 group by pp.agency_id, a.name
+      order by n desc, d desc, pp.agency_id limit 15`);
+  eq('agencies', page.agencyRows.map((a) => [a.name, a.awards, a.dollars, a.lastAward]), ag.map((r) => [cl(r.name) ?? `Agency ${r.agency_id}`, r.n, Number(r.d), isoD(r.last)]));
+
+  // ---- USAspending actions by UEI (DIBBS-derived rows excluded)
+  const uei = cl(sam?.uei) ?? cl(sup?.uei);
+  const usaAll = uei ? await q(`select ca.*, a.name as agency_name from pub.contract_actions ca left join pub.agencies a on a.agency_id = ca.agency_id where ca.recipient_uei = $1 and ca.award_uid not like 'DIBBS-%' order by ca.action_date desc nulls last, ca.id desc`, [uei]) : [];
+  eq('usa count/total', [page.usaspending.count, page.usaspending.total], [usaAll.length, usaAll.reduce((a, r) => a + Number(r.obligation ?? 0), 0)]);
+  eq('usa rows', page.usaspending.rows.map((r) => [r.actionDate, r.agencyName, r.psc, r.description, r.obligation, r.piid, r.sourceUrl]),
+    usaAll.slice(0, 25).map((r) => [isoD(r.action_date), cl(r.agency_name), cl(r.psc), cl(r.description), numOrNull(r.obligation), cl(r.piid), r.source_url]));
+  if (usaAll.length > 0) seen.usa++;
+
+  // ---- parts they make, and open bids for them (open = status open and return_by null or today or later)
+  const pn = await q(`select pn.nsn, nn.item_name, pn.part_number from pub.part_numbers pn join pub.nsns nn on nn.nsn = pn.nsn where pn.cage = $1 order by pn.nsn, pn.part_number`);
+  const [{ n: pnCount }] = await q(`select count(*)::int as n from pub.part_numbers where cage = $1`);
+  eq('parts', [page.parts.count, page.parts.rows.map((r) => [r.nsn, r.itemName, r.partNumber])], [pnCount, pn.slice(0, 50).map((r) => [r.nsn, cl(r.item_name), r.part_number])]);
+  if (pnCount > 0) seen.parts++;
+  const nsns = [...new Set((await q(`select nsn from pub.part_numbers where cage = $1`)).map((r) => r.nsn))];
+  const bids = nsns.length
+    ? await q(`select s.sol_number, s.nsn, nn.item_name, s.quantity, s.unit_of_issue, s.return_by, s.source, s.source_url from pub.solicitations s left join pub.nsns nn on nn.nsn = s.nsn
+        where s.nsn = any($1::char(13)[]) and s.status = 'open' and (s.return_by is null or s.return_by >= current_date) order by s.return_by asc nulls last, s.sol_number`, [`{${nsns.join(',')}}`])
+    : [];
+  eq('bids', [page.openBids.total, page.openBids.rows.map((r) => [r.solNumber, r.nsn, r.itemName, r.quantity, r.unitOfIssue, r.returnBy, r.source, r.sourceUrl])],
+    [bids.length, bids.slice(0, 25).map((r) => [r.sol_number, r.nsn, cl(r.item_name), numOrNull(r.quantity), cl(r.unit_of_issue), isoD(r.return_by), r.source, r.source_url])]);
+  if (bids.length > 0) seen.bids++;
+}
+
 // ------------------------------------------------------- counting TCP proxy
 const counts = { parse: 0, query: 0, sync: 0, bind: 0, connections: 0, statements: [] };
 const resetCounts = () => {
@@ -561,6 +711,11 @@ async function main() {
     psql(adminUrl, ['-c', `DROP DATABASE IF EXISTS ${cloneName}`, '-c', `CREATE DATABASE ${cloneName} TEMPLATE ${new URL(baseUrl).pathname.slice(1)}`]);
     dbUrl = withDb(baseUrl, cloneName);
     psql(dbUrl, ['-f', path.join(here, 'verify-single-query-seed.sql')]);
+    // Supplier profile tables (migration 0011) and their seed rows.
+    if (psql(dbUrl, ['-At', '-c', `select to_regclass('pub.supplier_sam') is not null`]).trim() !== 't') {
+      psql(dbUrl, ['-1', '-f', path.join(here, '../../db/migrations/0011_supplier_profiles.sql')]);
+    }
+    psql(dbUrl, ['-1', '-f', path.join(here, 'supplier-seed.sql')]);
     if (opt('--tz')) psql(adminUrl, ['-c', `ALTER DATABASE ${cloneName} SET timezone = '${opt('--tz').replace(/'/g, '')}'`]);
     console.log(`seeded clone ${cloneName}`);
   }
@@ -626,6 +781,9 @@ async function main() {
       { label: 'in part_numbers only, not a supplier', rows: await col(`select distinct p.cage from pub.part_numbers p where p.cage is not null and not exists (select 1 from pub.suppliers s where s.cage = p.cage) order by 1 limit 10`) },
       { label: 'most awards (200-row cap)', rows: await col(`select cage from pub.price_points where cage is not null group by cage order by count(*) desc, cage limit 3`) },
       { label: 'blank/null name or city', rows: await col(`select cage from pub.suppliers where name is null or btrim(name) = '' or city is null or btrim(city) = '' order by md5(cage) limit 10`) },
+      { label: 'supplier profile rows (sam/web/stats)', rows: await col(`select s.cage from pub.suppliers s where exists (select 1 from pub.price_points p where p.cage = s.cage) and (exists (select 1 from pub.supplier_sam x where x.cage = s.cage) or exists (select 1 from pub.supplier_web w where w.cage = s.cage)) order by md5(s.cage) limit 40`) },
+      { label: 'opted out (any flag)', rows: await col(`select cage from pub.supplier_optouts where exists (select 1 from pub.price_points p where p.cage = supplier_optouts.cage) order by cage`) },
+      { label: 'with USAspending actions by UEI', rows: await col(`select s.cage from pub.suppliers s where s.uei is not null and exists (select 1 from pub.contract_actions c where c.recipient_uei = s.uei) and exists (select 1 from pub.price_points p where p.cage = s.cage) order by cage limit 10`) },
     ];
     const supSet = new Set();
     for (const s of supStrata) s.rows.forEach((c) => supSet.add(c));
@@ -639,7 +797,26 @@ async function main() {
     for (const m of supMissing) if ((await col(`select cage from pub.price_points where cage = '${m}'`)).length === 0) supMissingChecked.push(m);
     console.log(`Supplier sample: ${supSample.length} existing + ${supMissingChecked.length} missing`);
     for (const s of supStrata) console.log(`   stratum "${s.label}": ${s.rows.length}`);
-    for (const c of supSample) await compare('loadSupplierPage', c, (s) => oldLoadSupplierPage(s, c), (s) => N.loadSupplierPage(s, c));
+    // Old-vs-new compares the fields the old loader returned (same keys, same order); the new profile
+    // sections are checked separately against independent queries.
+    const OLD_SUPPLIER_KEYS = ['cage', 'name', 'city', 'state', 'awards', 'dollars', 'valuedAwards', 'nsns', 'classes', 'firstAward', 'latestAward', 'rows', 'classRows', 'makesParts', 'refreshedOn'];
+    const sawProfile = { sam: 0, web: 0, optout: 0, partialWeb: 0, partialContact: 0, usa: 0, bids: 0, parts: 0, chart: 0 };
+    for (const c of supSample) {
+      let full = null;
+      await compare(
+        'loadSupplierPage',
+        c,
+        (s) => oldLoadSupplierPage(s, c),
+        (s) =>
+          N.loadSupplierPage(s, c).then((v) => {
+            full = v;
+            return v === null ? null : Object.fromEntries(OLD_SUPPLIER_KEYS.map((k) => [k, v[k]]));
+          })
+      );
+      if (full) await checkSupplierProfile(direct, c, full, sawProfile);
+    }
+    console.log('   profile cases seen:', JSON.stringify(sawProfile));
+    for (const [k, v] of Object.entries(sawProfile)) if (v === 0) fail('loadSupplierPage profile', k, 'no sampled supplier exercised this case');
     let sawNull = 0;
     for (const c of supMissingChecked) {
       const r = await compare('loadSupplierPage (missing)', c, (s) => oldLoadSupplierPage(s, c), (s) => N.loadSupplierPage(s, c));

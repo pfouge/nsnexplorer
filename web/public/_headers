@@ -30,3 +30,8 @@
   # so the download behaviour is declared here.
   Content-Type: text/csv; charset=utf-8
   Content-Disposition: attachment
+
+/supplier/*.csv
+  # Same as /data/*.csv: the prerendered leaderboard download keeps no response headers.
+  Content-Type: text/csv; charset=utf-8
+  Content-Disposition: attachment

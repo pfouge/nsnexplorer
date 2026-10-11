@@ -1,0 +1,54 @@
+---
+// SupplierMonthly.astro — a supplier's awards per month for the last 24
+// months (award dollars or awards won, segmented toggle). Server-rendered SVG.
+import Viz from './Viz.astro';
+import { el, linear, svg, text, tip, vbar } from '../../lib/viz';
+import { axisLabel, barTip, buildMonths, defaultMode, type MonthInput } from '../../lib/viz-supplier';
+interface Props {
+  months: MonthInput[];
+  /** makes the toggle and panel ids unique on the page */
+  id: string;
+  note?: string;
+}
+const { months, id, note } = Astro.props;
+
+const W = 1160;
+const H = 220;
+const X0 = 48;
+const BASE = 186;
+const TOP = 12;
+
+function chart(mode: 'dollars' | 'awards'): string {
+  const m = buildMonths(months, mode);
+  const bw = (W - X0 - 12) / m.bars.length;
+  const y = linear(0, m.top, BASE, TOP);
+  const parts: string[] = [];
+  for (const t of m.ticks) {
+    parts.push(el('line', { x1: X0, x2: W - 8, y1: y(t), y2: y(t), class: 'vs-grid' }));
+    parts.push(text(X0 - 6, y(t) + 4, axisLabel(mode, t), { 'text-anchor': 'end' }));
+  }
+  m.bars.forEach((b, i) => parts.push(vbar(X0 + i * bw + 2, BASE, bw - 4, BASE - y(b.value), 'vf-main')));
+  parts.push(el('line', { x1: X0, x2: W - 8, y1: BASE, y2: BASE, class: 'vs-axis' }));
+  for (const l of m.labels) parts.push(text(X0 + l.i * bw + bw / 2, BASE + 15, l.text, { 'text-anchor': 'middle' }));
+  m.bars.forEach((b, i) => {
+    const [t1, t2] = barTip(b);
+    parts.push(
+      el('rect', {
+        x: X0 + i * bw, y: TOP - 2, width: bw, height: BASE - TOP + 2, class: 'vf-clear', tabindex: 0,
+        'data-tip': tip(t1, t2), 'aria-label': `${t1}: ${t2}`,
+      })
+    );
+  });
+  return svg(W, H, mode === 'dollars' ? 'Award dollars per month, last 24 months' : 'Awards won per month, last 24 months', parts, { latestAtEnd: true });
+}
+const mode = defaultMode(months);
+const group = `supm-${id}`;
+---
+<Viz title="Awards by month" question="How much has this supplier been awarded each month? Last 24 months." note={note} full>
+  <div class="viz-seg" data-seg-group={group} role="group" aria-label="Measure">
+    <button type="button" aria-pressed={mode === 'dollars' ? 'true' : 'false'} data-seg-show={`${group}-dollars`}>Award dollars</button>
+    <button type="button" aria-pressed={mode === 'awards' ? 'true' : 'false'} data-seg-show={`${group}-awards`}>Awards won</button>
+  </div>
+  <div id={`${group}-dollars`} data-seg-panel={group} hidden={mode !== 'dollars'}><Fragment set:html={chart('dollars')} /></div>
+  <div id={`${group}-awards`} data-seg-panel={group} hidden={mode !== 'awards'}><Fragment set:html={chart('awards')} /></div>
+</Viz>

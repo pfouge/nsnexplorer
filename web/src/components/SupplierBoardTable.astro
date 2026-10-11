@@ -1,0 +1,73 @@
+---
+// One ranked list on /supplier/: rank, supplier (links to its page), place, the list's metric and
+// a secondary figure. Server-rendered table inside the site's .table-wrap; on phones the place
+// moves under the name so four columns fit without sideways scrolling.
+import { supplierPath, supplierPlace } from '../lib/entity';
+import { formatUsd } from '../lib/shared';
+import type { BoardSupplier, ListKey } from '../lib/supplier-board';
+import { LISTS } from '../lib/supplier-board';
+
+interface Props {
+  rows: BoardSupplier[];
+  kind: ListKey;
+  caption: string;
+}
+const { rows, kind, caption } = Astro.props;
+
+const int = (n: number) => n.toLocaleString('en-US');
+const usd = (n: number) => formatUsd(Math.round(n));
+const signed = (n: number) => (n > 0 ? '+' : n < 0 ? '-' : '') + formatUsd(Math.abs(Math.round(n)));
+const rankKey = LISTS.find((l) => l.key === kind)!.rank;
+
+interface Col { head: string; cell: (s: BoardSupplier) => string; cls?: string }
+const COLS: Record<ListKey, Col[]> = {
+  'dollars-12m': [{ head: 'Award dollars', cell: (s) => usd(s.dollars12m) }, { head: 'Awards', cell: (s) => int(s.awards12m) }],
+  'dollars-all': [{ head: 'Award dollars', cell: (s) => usd(s.dollarsAll) }, { head: 'Awards', cell: (s) => int(s.awardsAll) }],
+  'wins-12m': [{ head: 'Awards', cell: (s) => int(s.awards12m) }, { head: 'Award dollars', cell: (s) => usd(s.dollars12m) }],
+  'wins-all': [{ head: 'Awards', cell: (s) => int(s.awardsAll) }, { head: 'Award dollars', cell: (s) => usd(s.dollarsAll) }],
+  'breadth-nsns': [{ head: 'NSNs', cell: (s) => int(s.nsns) }, { head: 'Supply classes', cell: (s) => int(s.fscs) }],
+  'breadth-fscs': [{ head: 'Supply classes', cell: (s) => int(s.fscs) }, { head: 'NSNs', cell: (s) => int(s.nsns) }],
+  rising: [
+    { head: 'Change', cell: (s) => signed(s.risingDelta ?? s.dollars12m - s.dollarsPrior12m), cls: 'delta' },
+    { head: 'Last 12 months', cell: (s) => usd(s.dollars12m) },
+    { head: 'Prior 12 months', cell: (s) => usd(s.dollarsPrior12m) },
+  ],
+};
+const cols = COLS[kind];
+---
+<div class="table-wrap">
+  <table>
+    <caption class="sr-only">{caption}</caption>
+    <thead>
+      <tr>
+        <th class="rank">#</th>
+        <th>Supplier</th>
+        <th class="loc">Location</th>
+        {cols.map((c, i) => <th class={kind === 'rising' && i > 0 ? 'num hide-sm' : 'num'}>{c.head}</th>)}
+      </tr>
+    </thead>
+    <tbody>
+      {rows.map((s) => {
+        const href = supplierPath(s.cage);
+        const label = s.name ?? `CAGE ${s.cage}`;
+        const place = supplierPlace(s.city, s.state);
+        return (
+          <tr>
+            <td class="rank">{s[rankKey] as number}</td>
+            <td class="who">
+              {href ? <a href={href}>{label}</a> : label}
+              {place && <span class="sub">{place}</span>}
+            </td>
+            <td class="loc">{place ?? ''}</td>
+            {cols.map((c, i) => (
+              <td class={kind === 'rising' && i > 0 ? 'num mono hide-sm' : 'num mono'}>
+                {i === 0 ? <strong class={c.cls === 'delta' ? ((s.risingDelta ?? 0) >= 0 ? 'up' : 'down') : undefined}>{c.cell(s)}</strong> : c.cell(s)}
+                {i === 0 && kind === 'rising' && <span class="sub show-sm">{usd(s.dollars12m)} vs {usd(s.dollarsPrior12m)}</span>}
+              </td>
+            ))}
+          </tr>
+        );
+      })}
+    </tbody>
+  </table>
+</div>

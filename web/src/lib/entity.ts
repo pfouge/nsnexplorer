@@ -50,8 +50,8 @@ const int = (n: number): string => n.toLocaleString('en-US');
 const plural = (n: number, one: string, many: string = `${one}s`): string => `${int(n)} ${n === 1 ? one : many}`;
 const squash = (s: string): string => s.replace(/\s+/g, ' ').trim();
 
-/** Longest title (before the " · NSN Explorer" suffix the SEO component appends). */
-export const MAX_TITLE = 60;
+/** Longest title (before the " · NSN Explorer" suffix the SEO component appends): 55 + 15 = 70. */
+export const MAX_TITLE = 55;
 /** Longest meta description. */
 export const MAX_SUPPLIER_DESCRIPTION = 155;
 
@@ -75,11 +75,11 @@ const cleanName = (name: string | null | undefined): string | null => {
   return n === '' ? null : n;
 };
 
-/** `{Name} (CAGE 1ABC2): Government Parts Awards`, the name trimmed so the title is at most 60 characters. */
+/** `{Name} (CAGE 1ABC2): Parts Awards`, the name trimmed so the title is at most 55 characters (70 with the site suffix). */
 export function supplierTitle(name: string | null | undefined, cage: string): string {
   const n = cleanName(name);
   if (!n) return `CAGE ${cage}: Government Parts Awards`;
-  const tail = ` (CAGE ${cage}): Government Parts Awards`;
+  const tail = ` (CAGE ${cage}): Parts Awards`;
   return `${trimName(n, MAX_TITLE - tail.length)}${tail}`;
 }
 

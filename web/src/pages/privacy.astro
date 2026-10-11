@@ -171,6 +171,37 @@ const updated = 'October 11, 2026';
     <li>Opt out of personalized advertising from participating companies at the <a href="https://optout.aboutads.info" rel="nofollow noopener" target="_blank">Digital Advertising Alliance</a> and the <a href="https://optout.networkadvertising.org" rel="nofollow noopener" target="_blank">Network Advertising Initiative</a>.</li>
   </ul>
 
+  <h2 id="suppliers">Supplier information</h2>
+  <p>
+    Supplier pages describe companies, not visitors. For each company that appears as the awardee on a government parts award, we
+    show information from these sources:
+  </p>
+  <ul>
+    <li>
+      <strong>Public government records.</strong> The company name and location from the public CAGE file, award records from DLA
+      DIBBS and USAspending, and the registration data SAM.gov publishes about each entity: legal and trade name, business address,
+      mailing address, registration dates, business types, NAICS codes and the government and electronic business points of
+      contact (name, title and role only; we do not collect or show those contacts' phone numbers or email addresses).
+    </li>
+    <li>
+      <strong>The company's own website.</strong> Our crawler, NSNExplorerBot, reads up to four public pages of a company's
+      website, obeys <code>robots.txt</code>, and records the phone number and email address the company publishes there.
+      <a href="/about/#crawler">How the crawler behaves</a>.
+    </li>
+    <li>
+      <strong>Automatic summaries.</strong> A short description of what a company makes is written by an AI model from those pages
+      and is labelled as automatically written, with links to the pages read. It can be wrong, so each one points to the company's
+      own site.
+    </li>
+  </ul>
+  <p>
+    <strong>Correction and removal.</strong> If you represent a supplier, email
+    <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a> with the CAGE code and say what to change. On request we hide a
+    supplier's contact details (street and mailing address, points of contact, phone and email), its website summary, or both, and
+    stop collecting them; hiding takes effect when the page next refreshes, within about an hour. Award records and the company name
+    stay, because they are public government records.
+  </p>
+
   <h2>How we share information</h2>
   <p>We do not sell your personal information. We share information only as described here:</p>
   <ul>

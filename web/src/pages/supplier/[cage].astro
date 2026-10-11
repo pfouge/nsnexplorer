@@ -1,29 +1,51 @@
 ---
-// supplier/[cage].astro — one supplier, identified by CAGE code, with the
-// awards NSN Explorer has indexed for it. Rendered ON REQUEST like the NSN
-// pages (see nsn/[nsn].astro): the catalog of suppliers is far larger than
-// Cloudflare Pages' 20,000-file cap, so one server route reads a single CAGE
-// from Postgres through Hyperdrive and the response is edge-cached for an hour.
+// supplier/[cage].astro — one supplier, identified by CAGE code: its awards, ranks, SAM.gov
+// registration, what its own website says, and the open bids for parts it makes. Rendered ON
+// REQUEST like the NSN pages (see nsn/[nsn].astro): the catalog of suppliers is far larger than
+// Cloudflare Pages' 20,000-file cap, so one server route reads a single CAGE from Postgres
+// through Hyperdrive with ONE statement (lib/supplier-page.ts) and the response is edge-cached
+// for an hour.
 //
-// Stance: a public-records page. Every sentence is a plain statement of what
-// the records show; no street address is read or shown (name and City, ST only).
+// Stance: a public-records page. Every sentence is a plain statement of what the records show.
+// Contact details (street and mailing address, SAM points of contact, the phone and email the
+// company publishes on its own site) and the AI-written website summary are removed inside the
+// SQL statement when the supplier is in pub.supplier_optouts, so nothing here can leak them.
+import '../../styles/supplier.css';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import CiteThis from '../../components/CiteThis.astro';
 import Follow from '../../components/Follow.astro';
+import SupplierMonthly from '../../components/viz/SupplierMonthly.astro';
 import { ACCOUNTS_ENABLED } from '../../lib/account';
-import { SITE_URL } from '../../consts';
+import { CONTACT_EMAIL, SITE_URL } from '../../consts';
 import { formatDate, formatUsd, formatUsdPrecise, toDashedNsn } from '../../lib/shared';
 import { databaseUrlFrom } from '../../lib/runtime-env';
 import { openSql } from '../../lib/nsn-page';
-import { loadSupplierPage, SUPPLIER_AWARD_ROWS } from '../../lib/supplier-page';
+import { loadSupplierPage, safeHttpUrl, SUPPLIER_AWARD_ROWS, SUPPLIER_OPEN_ROWS, SUPPLIER_PART_ROWS, SUPPLIER_USA_ROWS } from '../../lib/supplier-page';
 import {
   parseCageParam,
   schemaText,
+  solicitationPath,
   supplierDescription,
   supplierLede,
   supplierPlace,
   supplierTitle,
 } from '../../lib/entity';
+import {
+  aboutMode,
+  addressLines,
+  allRanks,
+  changeSentence,
+  longDate,
+  mailHref,
+  rankBadges,
+  registrationBadge,
+  samEntityUrl,
+  sameAddress,
+  siteDomain,
+  telHref,
+} from '../../lib/supplier-view';
+import { chartable } from '../../lib/viz-supplier';
+import { isSmallBusiness } from '../../lib/supplier-board';
 
 export const prerender = false;
 
@@ -49,40 +71,133 @@ try {
 if (!page) return notFound();
 Astro.response.headers.set('Cache-Control', 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400');
 
-const { cage, name, awards, classRows } = page;
-const heading = name ?? `CAGE ${cage}`;
+const { cage, name, awards, classRows, sam, web, stats, optout, today } = page;
+// SAM's legal name is the company's own; the CAGE-file name is the fallback.
+const displayName = sam?.legalName ?? name;
+const heading = displayName ?? `CAGE ${cage}`;
 const place = supplierPlace(page.city, page.state);
-const copy = { cage, name, awards, classes: page.classes, latest: page.latestAward };
+const copy = { cage, name: displayName, awards, classes: page.classes, latest: page.latestAward };
 const lede = supplierLede(copy);
-const title = supplierTitle(name, cage);
+const title = supplierTitle(displayName, cage);
 const description = supplierDescription(copy);
 const canonicalUrl = `${SITE_URL}/supplier/${cage}/`;
 const capped = awards > page.rows.length;
+const fmtInt = (n: number): string => n.toLocaleString('en-US');
 
+// ---- header
+const website = safeHttpUrl(sam?.entityUrl) ?? safeHttpUrl(web?.finalUrl) ?? safeHttpUrl(web?.url);
+const siteName = siteDomain(website);
+const badge = registrationBadge(sam, today);
+const samUrl = samEntityUrl(page.uei);
+const ranks = rankBadges(stats);
+const small = sam ? isSmallBusiness(sam.businessTypes, sam.naics) : false;
+
+// ---- about
+const mode = aboutMode(web);
+const webDomain = siteDomain(web?.finalUrl ?? web?.url);
+const readOn = longDate(web?.fetchedAt);
+const pagesRead = (web?.pages ?? []).slice(0, 4).map((p) => {
+  let label = p.title ?? '';
+  if (!label) {
+    try {
+      label = new URL(p.url).pathname.replace(/\/$/, '') || 'Home page';
+    } catch {
+      label = p.url;
+    }
+  }
+  return { url: p.url, label: label.length > 48 ? `${label.slice(0, 47)}…` : label };
+});
+
+// ---- contact (all of it is absent from the data when the supplier opted out)
+const phys = sam?.physical ?? null;
+const mail = sam?.mailing ?? null;
+const showMail = !!mail && !sameAddress(phys, mail);
+const pocs = sam?.pocs ?? [];
+const phone = web?.phone ?? null;
+const email = web?.email ?? null;
+const contactSource = web?.contactUrl ?? null;
+const hasContact = !optout.hideContact && (!!phys || showMail || pocs.length > 0 || !!phone || !!email);
+const samUpdated = longDate(sam?.lastUpdateDate);
+
+// ---- registration
+const hasRegistration = !!sam;
+const naics = sam?.naics ?? [];
+const regRows: [string, string][] = sam
+  ? ([
+      ['Registered', sam.registrationDate ? formatDate(sam.registrationDate) : ''],
+      ['Expires', sam.expirationDate ? formatDate(sam.expirationDate) : ''],
+      ['Last updated', sam.lastUpdateDate ? formatDate(sam.lastUpdateDate) : ''],
+      ['Business started', sam.entityStartDate ? formatDate(sam.entityStartDate) : ''],
+      ['Structure', sam.entityStructure ?? ''],
+      ['State of incorporation', sam.stateOfIncorporation ?? ''],
+    ] as [string, string][]).filter(([, v]) => v !== '')
+  : [];
+
+// ---- performance
+const cmpRows =
+  stats === null
+    ? []
+    : [
+        { label: 'Last 12 months', awards: stats.awards12m, dollars: stats.dollars12m },
+        { label: 'Prior 12 months', awards: stats.awardsPrior12m, dollars: stats.dollarsPrior12m },
+      ];
+const dollarChange = stats ? changeSentence(stats.dollars12m, stats.dollarsPrior12m) : null;
+const rankList = allRanks(stats);
+const showChart = chartable(page.months);
+const haveSeries = page.valuedAwards > 0;
+
+// ---- other sections
+const { topNsns, agencyRows, usaspending: usa, parts, openBids } = page;
+const sections = [
+  { id: 'about', label: 'About', show: mode !== 'none' },
+  { id: 'contact', label: 'Contact', show: hasContact },
+  { id: 'registration', label: 'Registration', show: hasRegistration },
+  { id: 'performance', label: 'Performance', show: true },
+  { id: 'top-parts', label: 'Top parts', show: topNsns.length > 0 },
+  { id: 'agencies', label: 'Agencies', show: agencyRows.length > 0 },
+  { id: 'classes', label: 'Supply classes', show: classRows.length > 0 },
+  { id: 'bids', label: 'Open bids', show: parts.count > 0 },
+  { id: 'contracts', label: 'Contracts', show: usa.count > 0 },
+  { id: 'awards', label: 'Awards', show: true },
+].filter((s) => s.show);
+
+// ---- JSON-LD
+const orgAddress =
+  !optout.hideContact && phys && (phys.line1 || phys.city || phys.state)
+    ? {
+        '@type': 'PostalAddress',
+        ...(phys.line1 ? { streetAddress: schemaText([phys.line1, phys.line2].filter(Boolean).join(', ')) } : {}),
+        ...(phys.city ? { addressLocality: schemaText(phys.city) } : {}),
+        ...(phys.state ? { addressRegion: schemaText(phys.state) } : {}),
+        ...(phys.zip ? { postalCode: schemaText(phys.zip) } : {}),
+        ...(phys.country ? { addressCountry: schemaText(phys.country) } : {}),
+      }
+    : page.city || page.state
+      ? {
+          '@type': 'PostalAddress',
+          ...(page.city ? { addressLocality: schemaText(page.city) } : {}),
+          ...(page.state ? { addressRegion: schemaText(page.state) } : {}),
+        }
+      : null;
 const orgSchema = {
   '@context': 'https://schema.org',
   '@type': 'Organization',
   '@id': `${canonicalUrl}#supplier`,
   name: schemaText(heading),
-  identifier: { '@type': 'PropertyValue', propertyID: 'CAGE', value: cage },
-  url: canonicalUrl,
-  ...(page.city || page.state
-    ? {
-        address: {
-          '@type': 'PostalAddress',
-          ...(page.city ? { addressLocality: schemaText(page.city) } : {}),
-          ...(page.state ? { addressRegion: schemaText(page.state) } : {}),
-        },
-      }
-    : {}),
+  ...(sam?.dbaName ? { alternateName: schemaText(sam.dbaName) } : {}),
+  identifier: [
+    { '@type': 'PropertyValue', propertyID: 'CAGE', value: cage },
+    ...(page.uei ? [{ '@type': 'PropertyValue', propertyID: 'UEI', value: page.uei }] : []),
+  ],
+  url: website ?? canonicalUrl,
+  ...(orgAddress ? { address: orgAddress } : {}),
 };
-// "Suppliers" has no page of its own, so the machine-readable trail is Home > supplier.
 const breadcrumbs = [
   { name: 'Home', url: '/' },
+  { name: 'Suppliers', url: '/supplier/' },
   { name: schemaText(heading), url: canonicalUrl },
 ];
-
-const fmtInt = (n: number): string => n.toLocaleString('en-US');
+const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Supplier profile: CAGE ${cage}`)}`;
 ---
 
 <BaseLayout
@@ -94,15 +209,27 @@ const fmtInt = (n: number): string => n.toLocaleString('en-US');
   extraSchema={[orgSchema]}
 >
   <nav class="breadcrumb" aria-label="Breadcrumb">
-    <a href="/">Home</a> › <span>Suppliers</span> › {heading}
+    <a href="/">Home</a> › <a href="/supplier/">Suppliers</a> › {heading}
   </nav>
 
   <header class="hero">
     <h1>{heading}</h1>
-    <p class="ident">
+    <p class="ident sp-ident">
+      {sam?.dbaName && <span class="dba">Doing business as {sam.dbaName}</span>}
       <span class="code">CAGE {cage}</span>
+      {page.uei && <span class="code">UEI {page.uei}</span>}
       {place && <span>{place}</span>}
+      {badge && <span class={`badge ${badge.tone}`}>{badge.text}</span>}
+      {small && <span class="badge green">Small business</span>}
+      {website && siteName && (
+        <a class="site" href={website} target="_blank" rel="nofollow noopener">{siteName} ↗</a>
+      )}
     </p>
+    {ranks.length > 0 && (
+      <ul class="sp-rank" aria-label="Rankings">
+        {ranks.map((r) => <li><a href={r.href}>{r.text}</a></li>)}
+      </ul>
+    )}
     <p class="lede">{lede}</p>
     {ACCOUNTS_ENABLED && (
       <div class="follow-row">
@@ -113,21 +240,204 @@ const fmtInt = (n: number): string => n.toLocaleString('en-US');
   </header>
 
   <nav class="tabs" aria-label="On this page">
-    <a href="#overview">Overview</a>
-    <a href="#awards">Awards</a>
-    <a href="#classes">Supply classes</a>
-    <a href="#about">About this data</a>
+    {sections.map((s) => <a href={`#${s.id}`}>{s.label}</a>)}
+    <a href="#data-notes">About this data</a>
   </nav>
 
-  <section id="overview">
-    <h2 class="section-title" style="margin-top:1.5rem;">Overview</h2>
+  {mode !== 'none' && web && (
+    <section class="sp-sec" id="about">
+      <h2>About</h2>
+      {mode === 'summary' ? (
+        <>
+          <p class="sp-summary">{web.summary}</p>
+          {web.products.length > 0 && (
+            <>
+              <p class="sp-chip-label">Products</p>
+              <ul class="sp-chips">{web.products.map((c) => <li>{c}</li>)}</ul>
+            </>
+          )}
+          {web.capabilities.length > 0 && (
+            <>
+              <p class="sp-chip-label">Capabilities</p>
+              <ul class="sp-chips">{web.capabilities.map((c) => <li>{c}</li>)}</ul>
+            </>
+          )}
+          {web.certifications.length > 0 && (
+            <>
+              <p class="sp-chip-label">Certifications named on its site</p>
+              <ul class="sp-chips">{web.certifications.map((c) => <li>{c}</li>)}</ul>
+            </>
+          )}
+          {web.founded !== null && <p class="gloss" style="margin-top:0.5rem;">Founded {web.founded}, according to its website.</p>}
+          <p class="sp-prov">
+            Summary of {webDomain ? <a href={web.finalUrl ?? web.url} target="_blank" rel="nofollow noopener">{webDomain}</a> : 'the company’s site'} pages read{readOn ? ` ${readOn}` : ''}, written
+            automatically; check the company's site for details.
+            {pagesRead.length > 0 && (
+              <>
+                {' '}Pages read:{' '}
+                {pagesRead.map((p, i) => (
+                  <>{i > 0 && ', '}<a href={p.url} target="_blank" rel="nofollow noopener">{p.label}</a></>
+                ))}.
+              </>
+            )}
+          </p>
+        </>
+      ) : (
+        <>
+          <blockquote class="sp-quote">“{web.metaDescription}”</blockquote>
+          <p class="sp-prov">
+            The company's own description of itself, taken from the page description on{' '}
+            {webDomain ? <a href={web.finalUrl ?? web.url} target="_blank" rel="nofollow noopener">{webDomain}</a> : 'its site'}{readOn ? `, read ${readOn}` : ''}. It is the company's
+            wording, not ours.
+          </p>
+        </>
+      )}
+    </section>
+  )}
+
+  {hasContact && (
+    <section class="sp-sec" id="contact">
+      <h2>Contact</h2>
+      <dl class="sp-kv">
+        {phys && addressLines(phys).length > 0 && (
+          <div>
+            <dt>Address</dt>
+            <dd><address>{addressLines(phys).map((l, i) => <>{i > 0 && <br />}{l}</>)}</address></dd>
+          </div>
+        )}
+        {showMail && mail && (
+          <div>
+            <dt>Mailing address</dt>
+            <dd><address>{addressLines(mail).map((l, i) => <>{i > 0 && <br />}{l}</>)}</address></dd>
+          </div>
+        )}
+        {pocs.length > 0 && (
+          <div>
+            <dt>Points of contact in SAM.gov</dt>
+            <dd>
+              <ul class="sp-poc">
+                {pocs.map((p) => (
+                  <li>
+                    {p.name}{p.title ? `, ${p.title}` : ''}
+                    {p.role && <span class="role">{p.role}</span>}
+                  </li>
+                ))}
+              </ul>
+            </dd>
+          </div>
+        )}
+        {phone && (
+          <div>
+            <dt>Phone, from its website</dt>
+            <dd>
+              {telHref(phone) ? <a href={telHref(phone) as string}>{phone}</a> : phone}
+              {contactSource && <span class="src">from <a href={contactSource} target="_blank" rel="nofollow noopener">{siteDomain(contactSource) ?? 'its site'}</a></span>}
+            </dd>
+          </div>
+        )}
+        {email && (
+          <div>
+            <dt>Email, from its website</dt>
+            <dd>
+              {mailHref(email) ? <a href={mailHref(email) as string}>{email}</a> : email}
+              {contactSource && <span class="src">from <a href={contactSource} target="_blank" rel="nofollow noopener">{siteDomain(contactSource) ?? 'its site'}</a></span>}
+            </dd>
+          </div>
+        )}
+      </dl>
+      <p class="sp-prov">
+        {(phys || showMail || pocs.length > 0) && (
+          <>
+            Address and points of contact are the public record in SAM.gov{samUpdated ? `, last updated ${samUpdated}` : ''}
+            {samUrl && <> (<a href={samUrl} target="_blank" rel="nofollow noopener">view the SAM.gov entity page</a>)</>}.{' '}
+          </>
+        )}
+        {(phone || email) && 'Phone and email are as the company publishes them on its own website.'}
+      </p>
+    </section>
+  )}
+
+  {hasRegistration && sam && (
+    <section class="sp-sec" id="registration">
+      <h2>Registration</h2>
+      <dl class="sp-kv">
+        <div>
+          <dt>SAM.gov status</dt>
+          <dd>{sam.registrationStatus ?? 'Not stated'}{badge && badge.tone === 'amber' && <span class="sp-flag">{badge.text}</span>}</dd>
+        </div>
+        {regRows.map(([k, v]) => (
+          <div>
+            <dt>{k}</dt>
+            <dd>{v}</dd>
+          </div>
+        ))}
+        {sam.businessTypes.length > 0 && (
+          <div>
+            <dt>Business types</dt>
+            <dd><ul class="sp-chips">{sam.businessTypes.map((b) => <li>{b}</li>)}</ul></dd>
+          </div>
+        )}
+        {sam.sbaCertifications.length > 0 && (
+          <div>
+            <dt>SBA certifications</dt>
+            <dd>
+              <ul class="sp-poc">
+                {sam.sbaCertifications.map((c) => (
+                  <li>
+                    {c.label}
+                    {(c.entry || c.exit) && (
+                      <span class="role">
+                        {c.entry ? `since ${formatDate(c.entry)}` : ''}{c.entry && c.exit ? ', ' : ''}{c.exit ? `until ${formatDate(c.exit)}` : ''}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </dd>
+          </div>
+        )}
+        {sam.psc.length > 0 && (
+          <div>
+            <dt>Product and service codes registered</dt>
+            <dd><ul class="sp-chips">{sam.psc.map((c) => <li>{c}</li>)}</ul></dd>
+          </div>
+        )}
+      </dl>
+      {naics.length > 0 && (
+        <div class="table-wrap">
+          <table>
+            <caption>NAICS codes registered in SAM.gov</caption>
+            <thead>
+              <tr><th>NAICS</th><th>Primary</th><th>Size standard</th></tr>
+            </thead>
+            <tbody>
+              {naics.map((n) => (
+                <tr>
+                  <td class="mono">{n.code}</td>
+                  <td>{n.code === sam.primaryNaics ? 'Primary' : ''}</td>
+                  <td>{n.small === true ? 'Small' : n.small === false ? 'Not small' : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p class="sp-prov">
+        Source: SAM.gov public entity data{sam.sourceFile ? ` (${sam.sourceFile})` : ''}
+        {samUrl && <> · <a href={samUrl} target="_blank" rel="nofollow noopener">SAM.gov entity page ↗</a></>}
+      </p>
+    </section>
+  )}
+
+  <section class="sp-sec" id="performance">
+    <h2>Performance</h2>
     <div class="stat-strip">
       <div class="stat">
         <div class="value">{fmtInt(awards)}</div>
         <div class="label">Awards on record</div>
       </div>
       <div class="stat">
-        <div class="value">{page.valuedAwards > 0 ? formatUsd(page.dollars) : '—'}</div>
+        <div class="value">{haveSeries ? formatUsd(page.dollars) : '—'}</div>
         <div class="label">Award dollars</div>
       </div>
       <div class="stat">
@@ -147,10 +457,227 @@ const fmtInt = (n: number): string => n.toLocaleString('en-US');
         <div class="label">Latest award</div>
       </div>
     </div>
+
+    {(cmpRows.length > 0 || rankList.length > 0) && (
+      <div class="sp-two">
+        {cmpRows.length > 0 && (
+          <div>
+            <h3>Last 12 months against the 12 before</h3>
+            <div class="table-wrap">
+              <table class="sp-cmp">
+                <thead>
+                  <tr><th>Period</th><th class="num">Awards</th><th class="num">Award dollars</th></tr>
+                </thead>
+                <tbody>
+                  {cmpRows.map((r) => (
+                    <tr>
+                      <td>{r.label}</td>
+                      <td class="num mono">{fmtInt(r.awards)}</td>
+                      <td class="num mono">{r.dollars > 0 ? formatUsd(r.dollars) : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {dollarChange && <p class="gloss">{dollarChange}</p>}
+          </div>
+        )}
+        {rankList.length > 0 && (
+          <div>
+            <h3>Rank among suppliers</h3>
+            <ul class="sp-ranks">
+              {rankList.map((r) => <li><span>{r.label}</span><span>#{fmtInt(r.rank)}</span></li>)}
+            </ul>
+            <p class="gloss"><a href="/supplier/">See the top 100 lists →</a></p>
+          </div>
+        )}
+      </div>
+    )}
+
+    {showChart && (
+      <div style="margin-top:1.25rem;">
+        <SupplierMonthly months={page.months} id={cage} note="Months by award date. Dollars add each award's recorded total, or unit price times quantity." />
+      </div>
+    )}
   </section>
 
-  <section id="awards">
-    <h2 class="section-title">Awards</h2>
+  {topNsns.length > 0 && (
+    <section class="sp-sec" id="top-parts">
+      <h2>Top parts</h2>
+      <p class="gloss">The NSNs this supplier appears on most often in the indexed awards.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>NSN</th><th>Item</th><th class="num">Awards</th><th class="num">Award dollars</th><th>Latest award</th></tr>
+          </thead>
+          <tbody>
+            {topNsns.map((t) => (
+              <tr>
+                <td class="mono"><a href={`/nsn/${toDashedNsn(t.nsn)}/`}>{toDashedNsn(t.nsn)}</a></td>
+                <td>{t.itemName ?? '—'}</td>
+                <td class="num mono">{fmtInt(t.awards)}</td>
+                <td class="num mono">{t.dollars > 0 ? formatUsd(t.dollars) : '—'}</td>
+                <td class="mono">{formatDate(t.lastAward)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )}
+
+  {agencyRows.length > 0 && (
+    <section class="sp-sec" id="agencies">
+      <h2>Agencies</h2>
+      <p class="gloss">The agencies named as the buyer on this supplier's indexed awards.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Agency</th><th class="num">Awards</th><th class="num">Award dollars</th><th>Latest award</th></tr>
+          </thead>
+          <tbody>
+            {agencyRows.map((a) => (
+              <tr>
+                <td class="wrap"><a href={`/agency/${a.slug}/`}>{a.name}</a></td>
+                <td class="num mono">{fmtInt(a.awards)}</td>
+                <td class="num mono">{a.dollars > 0 ? formatUsd(a.dollars) : '—'}</td>
+                <td class="mono">{formatDate(a.lastAward)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )}
+
+  {classRows.length > 0 && (
+    <section class="sp-sec" id="classes">
+      <h2>Supply classes</h2>
+      <p class="gloss">Federal supply classes of the NSNs in this supplier's indexed awards, with the number of awards in each.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Class</th>
+              <th>Name</th>
+              <th class="num">Awards</th>
+            </tr>
+          </thead>
+          <tbody>
+            {classRows.map((c) => (
+              <tr>
+                <td class="mono">
+                  {c.link === 'fsc' ? (
+                    <a href={`/fsc/${c.fsc}/`}>FSC {c.fsc}</a>
+                  ) : c.link === 'open' ? (
+                    <a href={`/open/${c.fsc}/`}>FSC {c.fsc}</a>
+                  ) : (
+                    <span class="code">FSC {c.fsc}</span>
+                  )}
+                </td>
+                <td>{c.name ?? '—'}</td>
+                <td class="num mono">{fmtInt(c.awards)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )}
+
+  {parts.count > 0 && (
+    <section class="sp-sec" id="bids">
+      <h2>Open bids for parts they make</h2>
+      <p class="gloss">
+        {fmtInt(parts.count)} {parts.count === 1 ? 'part number is' : 'part numbers are'} listed for CAGE {cage} in the federal catalog (FLIS).
+        {openBids.total > 0
+          ? ` ${fmtInt(openBids.total)} open ${openBids.total === 1 ? 'solicitation covers' : 'solicitations cover'} those NSNs today.`
+          : ' None of those NSNs has an open solicitation today.'}
+      </p>
+      {openBids.rows.length > 0 && (
+        <div class="table-wrap">
+          <table>
+            <caption>
+              {openBids.total > openBids.rows.length
+                ? `Showing the ${fmtInt(SUPPLIER_OPEN_ROWS)} closing soonest of ${fmtInt(openBids.total)}`
+                : `${fmtInt(openBids.total)} open solicitation${openBids.total === 1 ? '' : 's'}`}
+            </caption>
+            <thead>
+              <tr><th>Solicitation</th><th>NSN</th><th>Item</th><th class="num">Quantity</th><th>Return by</th><th>Source</th></tr>
+            </thead>
+            <tbody>
+              {openBids.rows.map((b) => {
+                const href = solicitationPath(b.solNumber);
+                return (
+                  <tr>
+                    <td class="mono">{href ? <a class="sol-number" href={href}>{b.solNumber}</a> : b.solNumber}</td>
+                    <td class="mono"><a href={`/nsn/${toDashedNsn(b.nsn)}/`}>{toDashedNsn(b.nsn)}</a></td>
+                    <td>{b.itemName ?? '—'}</td>
+                    <td class="num mono">{b.quantity !== null ? `${fmtInt(b.quantity)}${b.unitOfIssue ? ` ${b.unitOfIssue}` : ''}` : '—'}</td>
+                    <td class="mono">{b.returnBy ? formatDate(b.returnBy) : 'Not stated'}</td>
+                    <td><a href={b.sourceUrl} target="_blank" rel="nofollow noopener">{b.source === 'sam_gov' ? 'SAM.gov ↗' : 'DIBBS ↗'}</a></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <details class="state-more">
+        <summary>Parts listed for this supplier ({fmtInt(parts.count)}){parts.count > parts.rows.length ? `, first ${fmtInt(SUPPLIER_PART_ROWS)} shown` : ''}</summary>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>NSN</th><th>Item</th><th>Part number</th></tr>
+            </thead>
+            <tbody>
+              {parts.rows.map((p) => (
+                <tr>
+                  <td class="mono"><a href={`/nsn/${toDashedNsn(p.nsn)}/`}>{toDashedNsn(p.nsn)}</a></td>
+                  <td>{p.itemName ?? '—'}</td>
+                  <td class="mono">{p.partNumber}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+  )}
+
+  {usa.count > 0 && (
+    <section class="sp-sec" id="contracts">
+      <h2>USAspending contracts</h2>
+      <p class="gloss">
+        {fmtInt(usa.count)} federal contract {usa.count === 1 ? 'action is' : 'actions are'} recorded in USAspending for UEI {page.uei}, obligating {formatUsd(usa.total)} in total.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <caption>
+            {usa.count > usa.rows.length ? `Showing the latest ${fmtInt(SUPPLIER_USA_ROWS)} of ${fmtInt(usa.count)}` : `${fmtInt(usa.count)} contract action${usa.count === 1 ? '' : 's'}`}
+          </caption>
+          <thead>
+            <tr><th>Date</th><th>Agency</th><th>PSC</th><th>Description</th><th class="num">Obligation</th><th>Source</th></tr>
+          </thead>
+          <tbody>
+            {usa.rows.map((c) => (
+              <tr>
+                <td class="mono">{c.actionDate ? formatDate(c.actionDate) : '—'}</td>
+                <td>{c.agencyName ?? '—'}</td>
+                <td class="mono">{c.psc ? c.psc.trim() : '—'}</td>
+                <td class="wrap">{c.description ?? '—'}</td>
+                <td class="num mono">{c.obligation !== null ? formatUsdPrecise(c.obligation).replace(/\.00$/, '') : '—'}</td>
+                <td><a href={c.sourceUrl} target="_blank" rel="nofollow noopener">USAspending ↗</a></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )}
+
+  <section class="sp-sec" id="awards">
+    <h2>All awards</h2>
     <div class="table-wrap">
       <table>
         <caption>
@@ -190,47 +717,24 @@ const fmtInt = (n: number): string => n.toLocaleString('en-US');
     </div>
   </section>
 
-  <section id="classes">
-    <h2 class="section-title">Supply classes</h2>
-    <p class="gloss">Federal supply classes of the NSNs in this supplier's indexed awards, with the number of awards in each.</p>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Class</th>
-            <th>Name</th>
-            <th class="num">Awards</th>
-          </tr>
-        </thead>
-        <tbody>
-          {classRows.map((c) => (
-            <tr>
-              <td class="mono">
-                {c.link === 'fsc' ? (
-                  <a href={`/fsc/${c.fsc}/`}>FSC {c.fsc}</a>
-                ) : c.link === 'open' ? (
-                  <a href={`/open/${c.fsc}/`}>FSC {c.fsc}</a>
-                ) : (
-                  <span class="code">FSC {c.fsc}</span>
-                )}
-              </td>
-              <td>{c.name ?? '—'}</td>
-              <td class="num mono">{fmtInt(c.awards)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+  <section class="card sp-claim" id="claim">
+    <h2>Is this your company?</h2>
+    <p class="gloss">
+      <a href={removalMail}>Request a correction or removal</a> by email and say which part of the profile to change or hide. We can hide
+      the contact details, the website summary, or both. <a href="/privacy/#suppliers">How supplier information is gathered</a>.
+    </p>
   </section>
 
-  <section class="card" id="about" style="margin-top:2.5rem;">
+  <section class="card" id="data-notes" style="margin-top:1.5rem;">
     <h2>About this data</h2>
     <ul class="gloss">
       <li>Awards come from DLA DIBBS award records and other indexed award records; each row links to its source.</li>
-      <li>The supplier's name and location come from the public CAGE file in DLA's PUB LOG. Only the city and state are shown.</li>
+      <li>The supplier's name and location come from the public CAGE file in DLA's PUB LOG.</li>
+      <li>Registration, address and points of contact come from <a href="https://sam.gov/" rel="noopener nofollow" target="_blank">SAM.gov</a> public entity data. Phone, email and the website summary come from the company's own website, read by NSNExplorerBot (<a href="/about/#crawler">how it behaves</a>).</li>
       <li>This list covers the awards NSN Explorer has indexed, not everything this supplier has won.</li>
       <li>Award dollars add each award's recorded total, or unit price times quantity when no total is recorded; awards with neither are not counted{page.valuedAwards < awards ? ` (${fmtInt(awards - page.valuedAwards)} of ${fmtInt(awards)} here)` : ''}.</li>
       {page.refreshedOn && <li>Data last refreshed: {page.refreshedOn}.</li>}
+      {stats && <li>Totals and ranks as of {formatDate(stats.refreshedAt.slice(0, 10))}.</li>}
       <li><a href="/methodology/">Full methodology →</a></li>
     </ul>
     <CiteThis title={heading} url={canonicalUrl} asOf={new Date().toISOString().slice(0, 10)} />

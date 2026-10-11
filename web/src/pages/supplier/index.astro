@@ -1,0 +1,258 @@
+---
+// supplier/index.astro — the supplier leaderboard (prerendered at build). Reads the precomputed
+// pub.supplier_stats ranks through the build's pg pool (lib/supplier-board-data.ts); the supplier
+// pages themselves are on-demand (supplier/[cage].astro). Stance: a public-records page — every
+// sentence states what the award records show, and every list links to the records behind it.
+import '../../styles/supplier.css';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import CiteThis from '../../components/CiteThis.astro';
+import SupplierBoardTable from '../../components/SupplierBoardTable.astro';
+import { SITE_URL } from '../../consts';
+import { formatDate, formatUsd } from '../../lib/shared';
+import { schemaText, supplierPath } from '../../lib/entity';
+import { loadSupplierBoard } from '../../lib/supplier-board-data';
+import { BOARD_H1, BOARD_SIZE, BOARD_TITLE, SMALL_FOOTNOTE, boardDescription, compactUsd, listFor, type ListKey } from '../../lib/supplier-board';
+
+const data = await loadSupplierBoard();
+const { headline: h, suppliers, states } = data;
+const has = h.suppliers > 0;
+const int = (n: number) => n.toLocaleString('en-US');
+const canonicalUrl = `${SITE_URL}/supplier/`;
+
+const lists = Object.fromEntries(
+  (['dollars-12m', 'dollars-all', 'wins-12m', 'wins-all', 'breadth-nsns', 'breadth-fscs', 'rising'] as ListKey[]).map((k) => [k, listFor(suppliers, k)])
+) as Record<ListKey, ReturnType<typeof listFor>>;
+
+const title = BOARD_TITLE;
+const description = boardDescription(h.suppliers);
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  { name: 'Suppliers', url: canonicalUrl },
+];
+const itemList = {
+  name: 'Top government parts suppliers by award dollars, last 12 months',
+  items: lists['dollars-12m'].flatMap((s) => {
+    const url = supplierPath(s.cage);
+    return url ? [{ name: schemaText(s.name ?? `CAGE ${s.cage}`), url }] : [];
+  }),
+};
+const faq = [
+  {
+    question: 'How are the suppliers ranked?',
+    answer:
+      "Four ways: total award dollars, number of awards won, breadth (distinct NSNs and supply classes supplied), and rising suppliers (last 12 months against the 12 months before). Each list shows the top 100 and is rebuilt every day from indexed award records.",
+  },
+  {
+    question: 'Does a high rank mean a supplier is better?',
+    answer:
+      'No. The lists count indexed award records only: they say how much and how often a supplier appears as the awardee, not how well it performs or how large the company is.',
+  },
+  {
+    question: 'Where does the supplier information come from?',
+    answer:
+      "Awards come from DLA DIBBS and USAspending records. Names and locations come from the public CAGE file, and registration details from SAM.gov's public entity data. Each supplier page links to its sources.",
+  },
+];
+
+const topStates = states.slice(0, 12);
+const restStates = states.slice(12);
+const asOf = h.asOf;
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  pageType="CollectionPage"
+  canonicalUrl={canonicalUrl}
+  breadcrumbs={breadcrumbs}
+  itemList={itemList}
+  faq={faq}
+>
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a> › Suppliers
+  </nav>
+
+  <h1>{BOARD_H1}</h1>
+  <p class="lede">
+    These are the suppliers that appear most often, and for the most money, as the awardee on the
+    federal parts awards NSN Explorer has indexed. Each list shows the top {BOARD_SIZE} by one
+    measure. Open a supplier to see its awards, its SAM.gov registration, what its own website
+    says, and the bids now open for parts it makes. New to selling to the government? Read{' '}
+    <a href="/suppliers/">how to sell parts to the government</a>.
+  </p>
+
+  {!has ? (
+    <div class="note">
+      <strong>Supplier rankings are being built.</strong> They appear here after the first daily refresh of supplier totals.
+    </div>
+  ) : (
+    <>
+      <div class="datastrip" aria-label="Supplier headline numbers">
+        <div class="cell">
+          <div class="k">Suppliers with awards</div>
+          <div class="v">{int(h.suppliers)}</div>
+        </div>
+        <div class="cell">
+          <div class="k">Awards, last 12 months</div>
+          <div class="v">{int(h.awards12m)}</div>
+        </div>
+        <div class="cell">
+          <div class="k">Award dollars, last 12 months</div>
+          <div class="v">{compactUsd(h.dollars12m)}</div>
+        </div>
+        <div class="cell">
+          <div class="k">Small businesses<sup><a href="#fn-small" aria-label="Footnote: how small business is defined">1</a></sup></div>
+          <div class="v">{int(h.small)}</div>
+        </div>
+        <div class="cell">
+          <div class="k">States represented</div>
+          <div class="v">{int(h.states)}</div>
+        </div>
+      </div>
+
+      <ul class="chips wrap-wide" aria-label="Free downloads">
+        <li><a class="chip outline" href="/supplier/leaderboard.csv" download>Download all lists (CSV)</a></li>
+      </ul>
+
+      <nav class="tabs" aria-label="Rankings">
+        <a href="#dollars">Award dollars</a>
+        <a href="#wins">Wins</a>
+        <a href="#breadth">Breadth</a>
+        <a href="#rising">Rising</a>
+        <a href="#states">By state</a>
+        <a href="#method">How it works</a>
+      </nav>
+
+      <div class="board">
+        <section class="board-section" id="dollars">
+          <h2>Award dollars</h2>
+          <p class="gloss">Suppliers ranked by the total value of the awards recorded for them.</p>
+          <div class="viz-seg" data-seg-group="board-dollars" role="group" aria-label="Period">
+            <button type="button" aria-pressed="true" data-seg-show="dollars-12m">Last 12 months</button>
+            <button type="button" aria-pressed="false" data-seg-show="dollars-all">All time</button>
+          </div>
+          <div class="board-panel" id="dollars-12m" data-seg-panel="board-dollars">
+            <SupplierBoardTable rows={lists['dollars-12m']} kind="dollars-12m" caption="Suppliers ranked by award dollars, last 12 months" />
+          </div>
+          <div class="board-panel" id="dollars-all" data-seg-panel="board-dollars" hidden>
+            <SupplierBoardTable rows={lists['dollars-all']} kind="dollars-all" caption="Suppliers ranked by award dollars, all time" />
+          </div>
+        </section>
+
+        <section class="board-section" id="wins">
+          <h2>Wins</h2>
+          <p class="gloss">Suppliers ranked by the number of awards recorded for them, whatever each was worth.</p>
+          <div class="viz-seg" data-seg-group="board-wins" role="group" aria-label="Period">
+            <button type="button" aria-pressed="true" data-seg-show="wins-12m">Last 12 months</button>
+            <button type="button" aria-pressed="false" data-seg-show="wins-all">All time</button>
+          </div>
+          <div class="board-panel" id="wins-12m" data-seg-panel="board-wins">
+            <SupplierBoardTable rows={lists['wins-12m']} kind="wins-12m" caption="Suppliers ranked by awards won, last 12 months" />
+          </div>
+          <div class="board-panel" id="wins-all" data-seg-panel="board-wins" hidden>
+            <SupplierBoardTable rows={lists['wins-all']} kind="wins-all" caption="Suppliers ranked by awards won, all time" />
+          </div>
+        </section>
+
+        <section class="board-section" id="breadth">
+          <h2>Breadth</h2>
+          <p class="gloss">Suppliers ranked by how many different items they have been awarded: distinct NSNs, or distinct federal supply classes.</p>
+          <div class="viz-seg" data-seg-group="board-breadth" role="group" aria-label="Measure">
+            <button type="button" aria-pressed="true" data-seg-show="breadth-nsns">Distinct NSNs</button>
+            <button type="button" aria-pressed="false" data-seg-show="breadth-fscs">Supply classes</button>
+          </div>
+          <div class="board-panel" id="breadth-nsns" data-seg-panel="board-breadth">
+            <SupplierBoardTable rows={lists['breadth-nsns']} kind="breadth-nsns" caption="Suppliers ranked by distinct NSNs awarded" />
+          </div>
+          <div class="board-panel" id="breadth-fscs" data-seg-panel="board-breadth" hidden>
+            <SupplierBoardTable rows={lists['breadth-fscs']} kind="breadth-fscs" caption="Suppliers ranked by distinct supply classes awarded" />
+          </div>
+        </section>
+
+        <section class="board-section" id="rising">
+          <h2>Rising</h2>
+          <p class="gloss">
+            Suppliers whose award dollars grew the most: the last 12 months against the 12 months before. Only suppliers with at
+            least $10,000 and 3 awards in the last 12 months are listed.
+          </p>
+          {lists.rising.length > 0 ? (
+            <div class="board-panel" id="rising-list">
+              <SupplierBoardTable rows={lists.rising} kind="rising" caption="Suppliers ranked by growth in award dollars, last 12 months against the 12 months before" />
+            </div>
+          ) : (
+            <p class="board-empty">No supplier meets the minimum yet.</p>
+          )}
+        </section>
+
+        <section class="board-section" id="states">
+          <h2>Suppliers by state</h2>
+          <p class="gloss">Where the suppliers with awards are located (the city and state in the public CAGE file), and what they were awarded in the last 12 months.</p>
+          <div class="table-wrap">
+            <table>
+              <caption class="sr-only">Suppliers and award dollars by state</caption>
+              <thead>
+                <tr><th class="rank">State</th><th class="num">Suppliers</th><th class="num">Dollars, 12 months</th></tr>
+              </thead>
+              <tbody>
+                {topStates.map((s) => (
+                  <tr><td class="rank">{s.state}</td><td class="num mono">{int(s.suppliers)}</td><td class="num mono">{formatUsd(Math.round(s.dollars12m))}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {restStates.length > 0 && (
+            <details class="state-more">
+              <summary>Show the other {restStates.length} {restStates.length === 1 ? 'state' : 'states'}</summary>
+              <div class="table-wrap">
+                <table>
+                  <caption class="sr-only">Suppliers and award dollars by state, continued</caption>
+                  <thead>
+                    <tr><th class="rank">State</th><th class="num">Suppliers</th><th class="num">Dollars, 12 months</th></tr>
+                  </thead>
+                  <tbody>
+                    {restStates.map((s) => (
+                      <tr><td class="rank">{s.state}</td><td class="num mono">{int(s.suppliers)}</td><td class="num mono">{formatUsd(Math.round(s.dollars12m))}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </details>
+          )}
+        </section>
+      </div>
+
+      <section class="card board-method" id="method" style="margin-top:2.5rem;">
+        <h2>How these lists are made</h2>
+        <ul class="gloss">
+          <li>
+            Awards come from <a href="https://www.dibbs.bsm.dla.mil/" rel="noopener" target="_blank">DLA DIBBS</a> award records and
+            <a href="https://www.usaspending.gov/" rel="noopener" target="_blank">USAspending</a> contract data. Each award on a supplier's page links to its government record.
+          </li>
+          <li>Award value is the recorded total, or unit price times quantity when no total is recorded. Awards with neither add nothing to dollars but still count as wins.</li>
+          <li>Last 12 months means the 365 days ending on the date below; the prior 12 months are the 365 days before that. Ties are broken by CAGE code.</li>
+          <li>Only suppliers with at least one indexed award are ranked. These lists cover the awards NSN Explorer has indexed, not everything a supplier has won, and say nothing about quality.</li>
+          <li>Names and locations come from the public CAGE file; registration details come from <a href="https://sam.gov/" rel="noopener" target="_blank">SAM.gov</a> public entity data.</li>
+          {asOf && <li>Totals and ranks as of <strong>{formatDate(asOf)}</strong>. The page is rebuilt every day.</li>}
+          <li id="fn-small"><sup>1</sup> {SMALL_FOOTNOTE}</li>
+          <li><a href="/methodology/">Full methodology →</a></li>
+        </ul>
+      </section>
+    </>
+  )}
+
+  <section class="faq">
+    <h2 class="section-title">Supplier leaderboard questions</h2>
+    {faq.map((f) => (
+      <>
+        <h3>{f.question}</h3>
+        <p class="gloss">{f.answer}</p>
+      </>
+    ))}
+  </section>
+
+  <CiteThis title={BOARD_H1} url={canonicalUrl} asOf={asOf ?? new Date().toISOString().slice(0, 10)} />
+
+  <script>
+    import '../../scripts/supplier-board';
+  </script>
+</BaseLayout>

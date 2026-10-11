@@ -27,7 +27,9 @@ const EMBED_HEADERS: Record<string, string> = Object.fromEntries(
 // NOT cached by Cloudflare on its own (cf-cache-status DYNAMIC). So these
 // responses are put in the colo cache here, and a failed database call
 // becomes a 503 with Retry-After instead of a blank 500.
-const DB_ROUTE = /^\/(nsn|supplier|solicitation)\/|^\/api\/(lookup|nsn\/|suppliers)/;
+// /supplier/ (the prerendered leaderboard) and /supplier/leaderboard.csv are static files and read no
+// database, so only /supplier/<5-character CAGE>/ counts as a database route.
+const DB_ROUTE = /^\/(nsn|solicitation)\/|^\/supplier\/[A-Za-z0-9]{5}\/?$|^\/api\/(lookup|nsn\/|suppliers)/;
 
 // Account routes (/auth/*, /api/me, /api/account/*) answer one visitor each: never put them in
 // the edge cache, and mark every answer private (src/lib/account.ts holds the path rule).

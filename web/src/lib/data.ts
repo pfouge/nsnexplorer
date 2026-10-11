@@ -28,7 +28,7 @@ export type { ServiceNotice } from './services';
 // the pure helpers without dragging a Node-only driver into the Cloudflare
 // Pages Function (which renders /nsn/* and /api/* at request time and never
 // calls fetchSiteData).
-async function openPool(): Promise<pgTypes.Pool> {
+export async function openPool(): Promise<pgTypes.Pool> {
   const { default: pg } = await import('pg');
   // At most 4 connections: the session pooler's 15 are shared with the ingest
   // lanes and Hyperdrive (see shared/db.mjs).

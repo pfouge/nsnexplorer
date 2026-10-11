@@ -57,12 +57,13 @@ test('trimName keeps short names and cuts long ones at a word with an ellipsis',
   assert.ok(trimName('ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJ', 10).length <= 10);
 });
 
-test('supplierTitle stays within 60 characters before the site suffix', () => {
-  assert.equal(supplierTitle('ACME FASTENERS INC', '1ABC2'), 'ACME FASTENERS INC (CAGE 1ABC2): Government Parts Awards');
+test('supplierTitle stays within 55 characters before the site suffix (70 with it)', () => {
+  assert.equal(supplierTitle('ACME FASTENERS INC', '1ABC2'), 'ACME FASTENERS INC (CAGE 1ABC2): Parts Awards');
   for (const name of ['A', 'ACME FASTENERS INC', 'NORTHROP GRUMMAN SYSTEMS CORPORATION', 'X'.repeat(120), 'LOCKHEED MARTIN ROTARY AND MISSION SYSTEMS']) {
     const t = supplierTitle(name, '1ABC2');
     assert.ok(t.length <= MAX_TITLE, `${t.length} ${t}`);
-    assert.ok(t.endsWith(' (CAGE 1ABC2): Government Parts Awards'));
+    assert.ok(t.endsWith(' (CAGE 1ABC2): Parts Awards'));
+    assert.ok(`${t} · NSN Explorer`.length <= 70);
   }
   assert.equal(supplierTitle(null, '1ABC2'), 'CAGE 1ABC2: Government Parts Awards');
   assert.equal(supplierTitle('   ', '1ABC2'), 'CAGE 1ABC2: Government Parts Awards');

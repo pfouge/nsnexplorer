@@ -3,7 +3,7 @@
 // and that counts render as numbers rather than 0 or "undefined".
 // Usage: node docs/verify-seo.mjs [https://base.url]
 const base = (process.argv[2] ?? 'https://nsnexplorer.com').replace(/\/$/, '');
-const pages = ['/', '/open/', '/catalog/', '/suppliers/', '/browse/', '/agencies/', '/methodology/', '/about/'];
+const pages = ['/', '/open/', '/catalog/', '/suppliers/', '/supplier/', '/browse/', '/agencies/', '/methodology/', '/about/'];
 
 const decode = (s) => s.replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
 const strip = (s) => decode(s.replace(/<[^>]+>/g, '')).replace(/\s+/g, ' ').trim();
