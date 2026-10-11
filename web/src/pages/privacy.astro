@@ -6,7 +6,7 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { SITE_NAME, CONTACT_EMAIL } from '../consts';
 
-const updated = 'July 12, 2026';
+const updated = 'October 11, 2026';
 ---
 
 <BaseLayout
@@ -25,9 +25,8 @@ const updated = 'July 12, 2026';
   <div class="note">
     <b>Plain-language summary.</b> You can browse {SITE_NAME} anonymously. We use analytics to
     understand how the Services are used, and we may show advertising to help keep them free. If
-    you give us your email, we use it for the updates you asked for. If you create an account (a
-    feature we are building), we store what is needed to run it, like your email and your saved
-    items. We do not sell your personal information. You can contact us any time to access or
+    you give us your email, we use it for the updates you asked for. An account is optional: if you
+    create one, we store what is needed to run it, your email and your watchlists. We do not sell your personal information. You can contact us any time to access or
     delete your data.
   </div>
 
@@ -41,15 +40,13 @@ const updated = 'July 12, 2026';
       unsubscribe or ask us to delete it at any time.
     </li>
     <li>
-      <strong>Account information.</strong> When account features launch, creating an account may
-      require an email address and a password, and optionally a name and company. Passwords will
-      be handled by our authentication provider and stored in hashed form; we will not see your
-      plain-text password.
+      <strong>Account information.</strong> An account is optional. If you create one, we keep
+      your email address, an account number issued by our sign-in provider, and your lists. See
+      <a href="#accounts">Accounts and watchlists</a> below.
     </li>
     <li>
-      <strong>Saved items.</strong> If you use personal features such as saved searches,
-      watchlists, or alerts once they exist, we store those choices so they work for you across
-      devices.
+      <strong>Saved items.</strong> The parts, suppliers, supply classes, solicitations, agencies
+      and searches you follow are stored on your account's lists so they work across devices.
     </li>
     <li>
       <strong>Messages.</strong> If you email us, we keep your message and contact details to
@@ -75,7 +72,7 @@ const updated = 'July 12, 2026';
   <ul>
     <li>Operate, maintain, and improve the Services, including understanding which parts and records are most useful.</li>
     <li>Send you updates you signed up for.</li>
-    <li>Provide account features you choose to use, once they exist.</li>
+    <li>Provide account features you choose to use, such as watchlists and saved searches.</li>
     <li>Measure and analyze traffic and usage so we can make the Services more useful.</li>
     <li>Show and measure advertising that helps keep the Services free.</li>
     <li>Respond to your messages and requests.</li>
@@ -88,7 +85,7 @@ const updated = 'July 12, 2026';
     purposes:
   </p>
   <ul>
-    <li><strong>Essential.</strong> Needed for the Services to function, for example to keep you signed in once account features exist.</li>
+    <li><strong>Essential.</strong> Needed for the Services to function, for example to keep you signed in if you create an account.</li>
     <li><strong>Analytics.</strong> To understand how the Services are used so we can improve them. See <a href="#analytics">Analytics</a>.</li>
     <li><strong>Advertising.</strong> To show advertising and measure its performance. See <a href="#advertising">Advertising</a>.</li>
   </ul>
@@ -96,6 +93,52 @@ const updated = 'July 12, 2026';
     You can control cookies through your browser settings. Blocking some cookies may affect how
     parts of the Services work. Where required by law, we ask for your consent before setting
     non-essential cookies.
+  </p>
+
+  <h2 id="accounts">Accounts and watchlists</h2>
+  <p>
+    An account is optional and free. It exists so you can follow parts (NSNs), suppliers,
+    manufacturers, supply classes, solicitations and agencies, save an Open-demand search, and see
+    on your watchlist page what the public records have added since you last looked.
+  </p>
+  <p>
+    <strong>Signing in.</strong> Sign-in is run for us by
+    <a href="https://workos.com/legal/privacy" rel="noopener nofollow" target="_blank">WorkOS</a>. You sign in with a
+    one-time code sent to your email address, or with your Google, Microsoft or GitHub account.
+    WorkOS keeps your email address, your name and picture if the account you sign in with shares
+    them, and a record of sign-ins (time, IP address and browser) to keep accounts secure. We never
+    see a password.
+  </p>
+  <p>
+    <strong>What your account holds on our side.</strong> Your email address, the account number
+    WorkOS issued, your lists and the pages and searches on them, any note you wrote on an item,
+    whether you shared a list, and when you last marked each item reviewed (so we can show what is
+    new). We do not record which pages you read while signed in. Our database provider stores this
+    for us.
+  </p>
+  <p>
+    <strong>Cookies for signed-in visitors.</strong> Only when you sign in, the site sets three
+    first-party cookies it needs to work: <code>nsn_session</code>, your encrypted sign-in session,
+    which page scripts cannot read (30 days); <code>nsn_signed_in</code>, which only says that you
+    are signed in, so pages know to ask for your watchlist (30 days); and
+    <code>nsn_oauth_state</code>, which protects the sign-in itself and lasts ten minutes. If you
+    press Follow before signing in, the page remembers it in your browser's session storage until
+    you come back, then forgets it.
+  </p>
+  <p>
+    <strong>Shared lists.</strong> A list is private until you turn on sharing. A shared list can
+    be seen by anyone with its link: its name and the pages on it, never your email address or
+    account number. Turning sharing off makes the link stop working.
+  </p>
+  <p>
+    <strong>Deleting your account.</strong> "Delete my account" on your watchlist page removes your
+    account, your lists and your WorkOS sign-in at once. Copies can remain in our database
+    provider's backups for a short time before they are overwritten.
+  </p>
+  <p>
+    <strong>Email alerts.</strong> Not offered: changes appear on your watchlist page only. If
+    email alerts are added, this policy will be updated first, they will be something you switch
+    on, and every email will carry a working unsubscribe link.
   </p>
 
   <h2 id="analytics">Analytics</h2>
@@ -132,8 +175,8 @@ const updated = 'July 12, 2026';
     <li>
       <strong>Service providers.</strong> Companies that help us run the Services process
       information on our behalf: our hosting and content delivery provider, our database
-      provider, our analytics providers, our advertising partners, and, once accounts exist, our
-      authentication and email providers.
+      provider, our analytics providers, our advertising partners, and, for accounts, our sign-in provider
+      (WorkOS).
     </li>
     <li>
       <strong>Legal and safety.</strong> We may disclose information if required by law, or to
@@ -168,9 +211,8 @@ const updated = 'July 12, 2026';
     of targeted advertising or the "sale" or "sharing" of your information. To exercise any of
     these rights, email us at <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>. We will
     respond as required by applicable law and will not discriminate against you for exercising
-    your rights. Once accounts exist, you will be able to review and update much of your
-    information directly, and you can ask us to delete your account and associated data at any
-    time.
+    your rights. With an account you can review and change your lists directly, download a list as
+    a CSV file, and delete your account and its data from your watchlist page at any time.
   </p>
 
   <h2>Do Not Track and Global Privacy Control</h2>

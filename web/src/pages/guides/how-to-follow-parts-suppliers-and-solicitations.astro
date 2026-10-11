@@ -1,0 +1,146 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import GuideFooter from '../../components/GuideFooter.astro';
+import { SITE_URL } from '../../consts';
+import { ACCOUNTS_ENABLED } from '../../lib/account';
+
+const title = 'How to Follow Parts, Suppliers and Solicitations';
+const description =
+  'Follow an NSN, supplier, manufacturer, supply class, solicitation or agency on NSN Explorer and see which public records were added since you last looked.';
+const canonicalUrl = `${SITE_URL}/guides/how-to-follow-parts-suppliers-and-solicitations/`;
+
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  { name: 'Guides', url: '/guides/' },
+  { name: 'Follow parts, suppliers and solicitations', url: canonicalUrl },
+];
+
+const faq = [
+  {
+    question: 'Does it cost anything to follow a part or supplier?',
+    answer:
+      'No. An account is free and optional. You sign in with a one-time code sent to your email, or with a Google, Microsoft or GitHub account. There is no password and no payment.',
+  },
+  {
+    question: 'What counts as a change?',
+    answer:
+      'A record NSN Explorer added after you last reviewed the item: a new solicitation or award for a part, a new award for a supplier, or a solicitation whose status, return-by date or quantity differs from when you followed it or last reviewed it. It is never a prediction.',
+  },
+  {
+    question: 'Does NSN Explorer email me when something changes?',
+    answer:
+      'No. Changes show on your watchlist page and as a count on the bookmark in the page header. Nothing is emailed.',
+  },
+  {
+    question: 'Who can see my lists?',
+    answer:
+      'Only you, until you turn on sharing for a list. A shared list is visible to anyone who has its link, and shows the list name and the pages on it, never your email address. Turning sharing off ends the link.',
+  },
+  {
+    question: 'Can I take my list with me?',
+    answer:
+      'Yes. Download CSV on a list writes one row per item with its link, the headline figures and the changes since you last reviewed it. You can also delete your account from the watchlist page.',
+  },
+];
+
+const sources = [
+  { label: 'DLA: DIBBS, the Internet Bid Board System', url: 'https://www.dibbs.bsm.dla.mil/' },
+  { label: 'DLA: PUB LOG, public logistics data', url: 'https://www.dla.mil/Information-Operations/Services/Applications/PUB-LOG/' },
+  { label: 'SAM.gov: contract opportunities', url: 'https://sam.gov/content/opportunities' },
+  { label: 'USAspending.gov: federal contract awards', url: 'https://www.usaspending.gov/' },
+];
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  ogType="article"
+  pageType="Article"
+  canonicalUrl={canonicalUrl}
+  breadcrumbs={breadcrumbs}
+  faq={faq}
+>
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a> › <a href="/guides/">Guides</a> › Follow parts, suppliers and solicitations
+  </nav>
+
+  <h1>How to follow parts, suppliers and solicitations</h1>
+  <p class="lede answer">
+    Press Follow on a part, supplier, manufacturer, supply class, solicitation or agency page and
+    it joins a list on your watchlist page. The page then shows which public records NSN Explorer
+    has added since you last reviewed each one.
+  </p>
+
+  {!ACCOUNTS_ENABLED && (
+    <p class="note">Watchlists are not switched on yet. This guide describes how they will work.</p>
+  )}
+
+  <section>
+    <h2 class="section-title">What you can follow</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Follow</th><th>Where the button is</th><th>What counts as new</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>A part (NSN)</td><td class="wrap">The NSN page</td><td class="wrap">New solicitations and new awards for that NSN.</td></tr>
+          <tr><td>A supplier</td><td class="wrap">The supplier page ("Follow wins")</td><td class="wrap">New awards the CAGE code won, and new contract actions to the same company.</td></tr>
+          <tr><td>A manufacturer</td><td class="wrap">The supplier page ("Follow as maker"), when the CAGE code is listed as making parts</td><td class="wrap">New solicitations for NSNs that list that CAGE code as a source of the part.</td></tr>
+          <tr><td>A supply class</td><td class="wrap">The <a href="/guides/federal-supply-class-fsc/">FSC</a> and Open-demand class pages</td><td class="wrap">New solicitations in the class, and new awards for NSNs in it.</td></tr>
+          <tr><td>A solicitation</td><td class="wrap">The solicitation page</td><td class="wrap">A change of status, return-by date or quantity, and an award once one is posted.</td></tr>
+          <tr><td>An agency</td><td class="wrap">The agency page</td><td class="wrap">New contract actions and part awards for the agency.</td></tr>
+          <tr><td>A saved search</td><td class="wrap">"Save this search" on <a href="/open/">Open demand</a></td><td class="wrap">New solicitations that match the saved filters.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="section-title">What the watchlist page shows</h2>
+    <p>
+      At the top is "What changed since you last reviewed": for each item with new records, a list
+      of them, newest first, each with a link to its source record. Below are your lists. Every
+      row has a small chart and the headline figures for the item, such as the last twelve award
+      prices of a part or the awards a supplier won each month.
+    </p>
+    <p>
+      Mark an item reviewed when you have looked at its changes, or mark a whole list reviewed.
+      The count on the bookmark in the page header is the number of items with something new.
+    </p>
+    <p>
+      Everything on the page restates public records. It does not rank items or say what to bid on.
+    </p>
+  </section>
+
+  <section>
+    <h2 class="section-title">Saved searches</h2>
+    <p>
+      On <a href="/open/">Open demand</a> and each class's open-demand page, "Save this search" stores
+      the filter bar as it is set. Three filters can be saved: the closing window, the minimum
+      quantity, and Competed or Named source. Only open solicitations can be saved. "Has drawing"
+      cannot be saved, because the site has no record field to match it on; clear it first.
+    </p>
+  </section>
+
+  <section>
+    <h2 class="section-title">Lists, sharing and your data</h2>
+    <p>
+      You can keep up to 20 lists of up to 500 items each, move items between them, rename a list
+      and add a short note to an item. Turn on sharing for a list to get a link anyone can open;
+      they can copy it to their own watchlist if they have an account. Download CSV writes a list
+      as a spreadsheet file. You can delete your account from the watchlist page. What an account
+      keeps is in the <a href="/privacy/#accounts">privacy policy</a>.
+    </p>
+  </section>
+
+  <GuideFooter
+    faq={faq}
+    sources={sources}
+    reviewed="October 2026"
+    next={[
+      { href: '/guides/what-is-an-nsn/', label: 'What is an NSN?' },
+      { href: '/guides/how-to-bid-on-dibbs/', label: 'How to bid on DIBBS' },
+      { href: '/guides/glossary/', label: 'Glossary of government parts purchasing terms' },
+    ]}
+  />
+</BaseLayout>
