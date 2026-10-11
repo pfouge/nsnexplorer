@@ -24,7 +24,7 @@ test('sameAddress ignores case, punctuation and ZIP+4; needs both', () => {
 });
 
 test('SAM entity link needs a 12-character UEI', () => {
-  assert.equal(samEntityUrl('j7k3m9p2q4r5'), 'https://sam.gov/entity/J7K3M9P2Q4R5/coreData');
+  assert.equal(samEntityUrl('j7k3m9p2q4r5'), 'https://sam.gov/search/?index=ei&sfm%5BsimpleSearch%5D%5BkeywordRadio%5D=ALL&sfm%5BsimpleSearch%5D%5BkeywordTags%5D%5B0%5D%5Bkey%5D=J7K3M9P2Q4R5&sfm%5BsimpleSearch%5D%5BkeywordTags%5D%5B0%5D%5Bvalue%5D=J7K3M9P2Q4R5');
   assert.equal(samEntityUrl('SHORT'), null);
   assert.equal(samEntityUrl(null), null);
   assert.equal(samEntityUrl('J7K3M9P2Q4R5/../x'), null);

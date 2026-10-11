@@ -156,7 +156,8 @@ export async function verify(client, { withSeed = false } = {}) {
         const want = exp[c].get(n.cage) ?? null;
         if (want !== a[c]) note(n.cage, c, want, a[c]);
       }
-      if (Number(a.rising_delta) !== exp.delta.get(n.cage)) note(n.cage, 'rising_delta', exp.delta.get(n.cage), a.rising_delta);
+      if (a.rising_delta == null || Math.abs(Number(a.rising_delta) - exp.delta.get(n.cage)) > 1e-6) // exact in SQL numeric, float in JS: compare to 1e-6
+         note(n.cage, 'rising_delta', exp.delta.get(n.cage), a.rising_delta);
     }
     for (const a of actual) if (!naive.some((n) => n.cage === a.cage)) note(a.cage, 'row', 'absent', 'present');
 

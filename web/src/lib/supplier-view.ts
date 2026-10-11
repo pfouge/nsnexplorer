@@ -32,10 +32,10 @@ export function sameAddress(a: SupplierAddress | null, b: SupplierAddress | null
   return key(a) === key(b);
 }
 
-/** SAM.gov's public entity page for a UEI, or null when there is no (valid) UEI. */
+/** SAM.gov entity search for a UEI (the /entity/<UEI>/coreData page 404s for some public records; the search always resolves), or null when there is no (valid) UEI. */
 export function samEntityUrl(uei: string | null | undefined): string | null {
   const u = (uei ?? '').trim().toUpperCase();
-  return /^[A-Z0-9]{12}$/.test(u) ? `https://sam.gov/entity/${u}/coreData` : null;
+  return /^[A-Z0-9]{12}$/.test(u) ? `https://sam.gov/search/?index=ei&sfm%5BsimpleSearch%5D%5BkeywordRadio%5D=ALL&sfm%5BsimpleSearch%5D%5BkeywordTags%5D%5B0%5D%5Bkey%5D=${u}&sfm%5BsimpleSearch%5D%5BkeywordTags%5D%5B0%5D%5Bvalue%5D=${u}` : null;
 }
 
 /** "acmefasteners.example" from a URL (leading www. dropped), or null. */

@@ -94,10 +94,8 @@ export const SBA_LABELS = {
 };
 
 // Business type codes -> labels. Unknown codes are kept as the bare code.
-// CONFIRMED against live SAM records / docs: 2X, LJ, MF, 27, A5, QF, XS (opengovus.com SAM
-// record pages) and A6, JT, XX (GSA layout). The rest are recalled from SAM's list and have
-// not been re-checked against a GSA table: treat as unverified until someone diffs this map
-// with the Functional Data Dictionary.
+// Every code below was checked on 2026-10-11 against the SAM Functional Data Dictionary
+// (open.gsa.gov/api/entity-api/v1/SAM Functional Data Dictionary_June 23_v2.pdf).
 export const BUSINESS_TYPES = {
   '2X': 'For Profit Organization',
   LJ: 'Limited Liability Company',
@@ -109,7 +107,7 @@ export const BUSINESS_TYPES = {
   A6: 'SBA Certified 8(a) Program Participant',
   JT: 'SBA Certified 8(a) Joint Venture',
   XX: 'SBA Certified HUBZone Firm',
-  // recalled, unverified:
+  // checked 2026-10-11 against the SAM Functional Data Dictionary (June 23, 2023 v2):
   '8W': 'Woman Owned Small Business',
   A2: 'Woman Owned Business',
   23: 'Minority Owned Business',

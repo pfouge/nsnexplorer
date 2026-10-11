@@ -349,7 +349,7 @@ const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Suppl
         {(phys || showMail || pocs.length > 0) && (
           <>
             Address and points of contact are the public record in SAM.gov{samUpdated ? `, last updated ${samUpdated}` : ''}
-            {samUrl && <> (<a href={samUrl} target="_blank" rel="nofollow noopener">view the SAM.gov entity page</a>)</>}.{' '}
+            {samUrl && <> (<a href={samUrl} target="_blank" rel="nofollow noopener">find it on SAM.gov</a>)</>}.{' '}
           </>
         )}
         {(phone || email) && 'Phone and email are as the company publishes them on its own website.'}
@@ -424,7 +424,7 @@ const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Suppl
       )}
       <p class="sp-prov">
         Source: SAM.gov public entity data{sam.sourceFile ? ` (${sam.sourceFile})` : ''}
-        {samUrl && <> · <a href={samUrl} target="_blank" rel="nofollow noopener">SAM.gov entity page ↗</a></>}
+        {samUrl && <> · <a href={samUrl} target="_blank" rel="nofollow noopener">SAM.gov record ↗</a></>}
       </p>
     </section>
   )}
