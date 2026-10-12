@@ -33,7 +33,7 @@ test('small business: any small NAICS or a small-business label, not "Other than
 
 test('csv: every list, rank order, headers match the rows', () => {
   const data: BoardData = {
-    headline: { suppliers: 2, awards12m: 6, dollars12m: 1000, small: 1, states: 1, asOf: '2026-10-11' },
+    headline: { suppliers: 2, awards12m: 6, dollars12m: 1000, small: 1, withSam: 1, states: 1, asOf: '2026-10-11' },
     suppliers: [sup('A', { rankDollars12m: 1, rankWins12m: 2, name: '=EVIL, "Inc"' }), sup('B', { rankDollars12m: 2, rankWins12m: 1, rankRising: 1 })],
     states: [],
   };

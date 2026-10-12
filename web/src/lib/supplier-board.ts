@@ -42,6 +42,8 @@ export interface BoardHeadline {
   dollars12m: number;
   /** Suppliers whose SAM record says small business (see isSmallBusiness). */
   small: number;
+  /** Suppliers with a SAM.gov record loaded; the small-business count means nothing while this is 0. */
+  withSam: number;
   /** Distinct US state / territory codes among those suppliers' CAGE locations. */
   states: number;
   /** supplier_stats.refreshed_at, ISO date, or null when the table is empty. */

@@ -35,12 +35,17 @@ async function fetchSupplierBoard(): Promise<BoardData> {
   const pool = await openPool();
   try {
     const listed = await pool.query(
-      `SELECT st.cage, su.name, su.city, su.state,
+      `SELECT st.cage,
+              -- Some awards carry only a CAGE; fall back to the SAM.gov record once it is loaded.
+              COALESCE(NULLIF(btrim(su.name), ''), sam.dba_name, sam.legal_name) AS name,
+              COALESCE(NULLIF(btrim(su.city), ''), sam.phys_city) AS city,
+              COALESCE(NULLIF(btrim(su.state), ''), sam.phys_state) AS state,
               st.awards_all, st.dollars_all, st.awards_12m, st.dollars_12m, st.awards_prior_12m, st.dollars_prior_12m,
               st.nsns, st.fscs, st.rising_delta,
               st.rank_dollars_12m, st.rank_dollars_all, st.rank_wins_12m, st.rank_wins_all, st.rank_nsns, st.rank_fscs, st.rank_rising
        FROM pub.supplier_stats st
        JOIN pub.suppliers su ON su.cage = st.cage
+       LEFT JOIN pub.supplier_sam sam ON sam.cage = st.cage
        WHERE st.rank_dollars_12m <= $1 OR st.rank_dollars_all <= $1 OR st.rank_wins_12m <= $1 OR st.rank_wins_all <= $1
           OR st.rank_nsns <= $1 OR st.rank_fscs <= $1 OR st.rank_rising <= $1
        ORDER BY st.cage`,
@@ -51,6 +56,7 @@ async function fetchSupplierBoard(): Promise<BoardData> {
               COALESCE(sum(st.awards_12m), 0)::int AS awards_12m,
               COALESCE(sum(st.dollars_12m), 0) AS dollars_12m,
               count(*) FILTER (WHERE ${SMALL_SQL})::int AS small,
+              count(sam.cage)::int AS with_sam,
               count(DISTINCT su.state) FILTER (WHERE su.state ~ '^[A-Z]{2}$')::int AS states,
               max(st.refreshed_at) AS refreshed
        FROM pub.supplier_stats st
@@ -94,6 +100,7 @@ async function fetchSupplierBoard(): Promise<BoardData> {
         awards12m: n(h.awards_12m),
         dollars12m: n(h.dollars_12m),
         small: n(h.small),
+        withSam: n(h.with_sam),
         states: n(h.states),
         asOf: isoDate(h.refreshed),
       },

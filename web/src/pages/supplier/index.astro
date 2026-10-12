@@ -100,10 +100,12 @@ const asOf = h.asOf;
           <div class="k">Award dollars, last 12 months</div>
           <div class="v">{compactUsd(h.dollars12m)}</div>
         </div>
-        <div class="cell">
-          <div class="k">Small businesses<sup><a href="#fn-small" aria-label="Footnote: how small business is defined">1</a></sup></div>
-          <div class="v">{int(h.small)}</div>
-        </div>
+        {h.withSam > 0 && (
+          <div class="cell">
+            <div class="k">Small businesses<sup><a href="#fn-small" aria-label="Footnote: how small business is defined">1</a></sup></div>
+            <div class="v">{int(h.small)}</div>
+          </div>
+        )}
         <div class="cell">
           <div class="k">States represented</div>
           <div class="v">{int(h.states)}</div>
@@ -231,9 +233,9 @@ const asOf = h.asOf;
           <li>Award value is the recorded total, or unit price times quantity when no total is recorded. Awards with neither add nothing to dollars but still count as wins.</li>
           <li>Last 12 months means the 365 days ending on the date below; the prior 12 months are the 365 days before that. Ties are broken by CAGE code.</li>
           <li>Only suppliers with at least one indexed award are ranked. These lists cover the awards NSN Explorer has indexed, not everything a supplier has won, and say nothing about quality.</li>
-          <li>Names and locations come from the public CAGE file; registration details come from <a href="https://sam.gov/" rel="noopener" target="_blank">SAM.gov</a> public entity data.</li>
+          <li>Names and locations come from the public CAGE file (from SAM.gov when that file has no name); registration details come from <a href="https://sam.gov/" rel="noopener" target="_blank">SAM.gov</a> public entity data.</li>
           {asOf && <li>Totals and ranks as of <strong>{formatDate(asOf)}</strong>. The page is rebuilt every day.</li>}
-          <li id="fn-small"><sup>1</sup> {SMALL_FOOTNOTE}</li>
+          {h.withSam > 0 && <li id="fn-small"><sup>1</sup> {SMALL_FOOTNOTE}</li>}
           <li><a href="/methodology/">Full methodology →</a></li>
         </ul>
       </section>
