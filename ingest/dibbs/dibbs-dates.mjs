@@ -5,7 +5,7 @@
 // run. Replaces awards-daily.mjs (0057).
 //
 //   --grid awd  (ingest-daily, lane dibbs_awd): the last --days business days that are new, not yet
-//               settled (re-read until one read is SETTLE_DAYS after the date) or incomplete; then
+//               settled (a complete read on a later day than the date) or incomplete; then
 //               --backfill-days older dates. Each date: award totals (pub.contract_actions), then
 //               unit prices (pub.price_points).
 //   --grid rfq  (rfq-fast, lane dibbs_rfq): back-fill only. rfq-fast and rfq-reconcile already
@@ -38,7 +38,11 @@ import { rejoinForSolicitations } from './rejoin.mjs';
 import { readLane, recordPeriod, backfillCandidates, prevBusinessDay, addDaysIso, isoOf } from '../ledger.mjs';
 import { getPool, closePool } from '../../shared/db.mjs';
 
-export const SETTLE_DAYS = 2;
+// A date counts as settled once one complete read happened on a later UTC day than the date itself.
+// Was 2 (a second read the day after); the first 0058 run re-read 5 dates and every count was
+// unchanged, so the extra read only cost DIBBS time (~80 pages a day at ~20 s a page by day).
+// records_changed in the ledger shows if that ever stops being true.
+export const SETTLE_DAYS = 1;
 export const EMPTY_STREAK = 10;
 
 /** 'MM-DD-YYYY' -> 'YYYY-MM-DD' */

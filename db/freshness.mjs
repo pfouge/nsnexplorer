@@ -261,7 +261,19 @@ export async function historyByLane(pool) {
             max(fetched_at) AS last_read
        FROM ops.source_dates GROUP BY lane ORDER BY lane`
   );
-  return rows.map((r) => ({ ...r, records: Number(r.records), last_read: r.last_read ? new Date(r.last_read).toISOString() : null }));
+  // The reads from the last 24 hours, per lane (what the latest runs did), so the outcome of each
+  // lane's newest run is visible in freshness.json without opening the Actions logs.
+  const { rows: recent } = await pool.query(
+    `SELECT lane, day::text AS day, expected, records, loaded, extra, complete, fetches
+       FROM ops.source_dates WHERE fetched_at > now() - interval '24 hours'
+      ORDER BY lane, day DESC`
+  );
+  return rows.map((r) => ({
+    ...r,
+    records: Number(r.records),
+    last_read: r.last_read ? new Date(r.last_read).toISOString() : null,
+    read_last_24h: recent.filter((x) => x.lane === r.lane).map(({ lane, ...x }) => x),
+  }));
 }
 
 async function main() {

@@ -16,11 +16,11 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 test('day formats, and which window dates need a read', () => {
   assert.equal(isoDay('10-09-2026'), '2026-10-09');
   assert.equal(dibbsDay('2026-10-09'), '10-09-2026');
-  assert.equal(SETTLE_DAYS, 2);
+  assert.equal(SETTLE_DAYS, 1);
   assert.equal(needsRead(undefined, '2026-10-09'), true);
   assert.equal(needsRead({ complete: false, fetched_at: '2026-10-20T00:00:00Z' }, '2026-10-09'), true); // incomplete
-  assert.equal(needsRead({ complete: true, fetched_at: '2026-10-10T15:00:00Z' }, '2026-10-09'), true); // not settled
-  assert.equal(needsRead({ complete: true, fetched_at: '2026-10-11T00:00:00Z' }, '2026-10-09'), false);
+  assert.equal(needsRead({ complete: true, fetched_at: '2026-10-09T22:00:00Z' }, '2026-10-09'), true); // read the same day
+  assert.equal(needsRead({ complete: true, fetched_at: '2026-10-10T15:00:00Z' }, '2026-10-09'), false); // read the next day
 });
 
 test('withPoolRetry waits out a full session pooler, rethrows anything else', async () => {
