@@ -107,7 +107,7 @@ const asOf = h.asOf;
           </div>
         )}
         <div class="cell">
-          <div class="k">States represented</div>
+          <div class="k">States and territories</div>
           <div class="v">{int(h.states)}</div>
         </div>
       </div>
@@ -187,11 +187,11 @@ const asOf = h.asOf;
         </section>
 
         <section class="board-section" id="states">
-          <h2>Suppliers by state</h2>
-          <p class="gloss">Where the suppliers with awards are located (the city and state in the public CAGE file), and what they were awarded in the last 12 months.</p>
+          <h2>Suppliers by state and territory</h2>
+          <p class="gloss">Where the suppliers with awards are located (the city and state in the public CAGE file; besides the 50 states this includes Washington, DC and U.S. territories such as Puerto Rico), and what they were awarded in the last 12 months.</p>
           <div class="table-wrap">
             <table>
-              <caption class="sr-only">Suppliers and award dollars by state</caption>
+              <caption class="sr-only">Suppliers and award dollars by state and territory</caption>
               <thead>
                 <tr><th class="rank">State</th><th class="num">Suppliers</th><th class="num">Dollars, 12 months</th></tr>
               </thead>
@@ -207,7 +207,7 @@ const asOf = h.asOf;
               <summary>Show the other {restStates.length} {restStates.length === 1 ? 'state' : 'states'}</summary>
               <div class="table-wrap">
                 <table>
-                  <caption class="sr-only">Suppliers and award dollars by state, continued</caption>
+                  <caption class="sr-only">Suppliers and award dollars by state and territory, continued</caption>
                   <thead>
                     <tr><th class="rank">State</th><th class="num">Suppliers</th><th class="num">Dollars, 12 months</th></tr>
                   </thead>

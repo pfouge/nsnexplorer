@@ -16,6 +16,7 @@
 
 import { spawn } from 'node:child_process';
 import { createReadStream } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline';
 import { once } from 'node:events';
@@ -47,8 +48,21 @@ export async function openExtract(file) {
   list.stdout.on('data', (d) => { names += d; });
   const [code] = await once(list, 'close');
   if (code !== 0) throw new Error(`unzip could not read ${path.basename(file)} (exit ${code})`);
-  const entry = names.split('\n').map((s) => s.trim()).find((n) => /\.dat$/i.test(n));
-  if (!entry) throw new Error(`${path.basename(file)} has no .dat entry`);
+  const entries = names.split('\n').map((s) => s.trim()).filter((n) => n && !n.endsWith('/'));
+  console.log(`zip entries: ${entries.join(', ') || '(none)'}`);
+  // GSA's documentation says the ZIP holds one .dat file; the first live file (2026-10-13) did not,
+  // so take a .dat, else a .txt/.csv, else the only entry; a nested ZIP is unpacked to /tmp first.
+  const entry = entries.find((n) => /\.dat$/i.test(n))
+    ?? entries.find((n) => /\.(txt|csv)$/i.test(n))
+    ?? (entries.length === 1 ? entries[0] : undefined);
+  if (!entry) throw new Error(`${path.basename(file)} has no data entry (entries: ${entries.join(', ')})`);
+  if (/\.zip$/i.test(entry)) {
+    const inner = path.join(os.tmpdir(), `sam-inner-${process.pid}-${path.basename(entry)}`);
+    const x = spawn('sh', ['-c', 'unzip -p "$1" "$2" > "$3"', 'sh', file, entry, inner], { stdio: 'inherit' });
+    const [xc] = await once(x, 'close');
+    if (xc !== 0) throw new Error(`could not unpack nested ${entry} (exit ${xc})`);
+    return openExtract(inner);
+  }
   const child = spawn('unzip', ['-p', file, entry], { stdio: ['ignore', 'pipe', 'inherit'] });
   child.stdout.setEncoding('utf8');
   const exited = once(child, 'close');

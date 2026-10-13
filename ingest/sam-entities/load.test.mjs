@@ -32,10 +32,23 @@ test('streams the .dat out of a ZIP and keeps only wanted CAGEs, with counted sk
   assert.ok(!logs.join('\n').includes('BOF-NOT')); // the bad line's content is not logged
 });
 
-test('a ZIP without a .dat entry is an error', async () => {
+test('a ZIP with no data-like entry is an error that names the entries', async () => {
   const p = path.join(tmp, 'empty.zip');
-  writeFileSync(p, makeZip({ 'readme.txt': 'x' }));
-  await assert.rejects(openExtract(p), /no \.dat entry/);
+  writeFileSync(p, makeZip({ 'readme.pdf': 'x', 'layout.xml': 'y' }));
+  await assert.rejects(openExtract(p), /no data entry \(entries: .*readme\.pdf/);
+});
+
+test('a ZIP whose data file is .txt, or the only entry, or a nested ZIP still opens', async () => {
+  const read = async (s) => { let t = ''; for await (const c of s.stream) t += c; await s.done(); return t; };
+  const a = path.join(tmp, 'txt.zip');
+  writeFileSync(a, makeZip({ 'SAM_PUBLIC_MONTHLY_V2_20261013.txt': 'hello' }));
+  assert.equal(await read(await openExtract(a)), 'hello');
+  const b = path.join(tmp, 'only.zip');
+  writeFileSync(b, makeZip({ 'SAM_PUBLIC_MONTHLY_V2_20261013': 'only' }));
+  assert.equal(await read(await openExtract(b)), 'only');
+  const c = path.join(tmp, 'nested.zip');
+  writeFileSync(c, makeZip({ 'inner.zip': makeZip({ 'x.dat': 'nested' }) }));
+  assert.equal(await read(await openExtract(c)), 'nested');
 });
 
 test('layout drift (most lines malformed) aborts before anything is written', async () => {
