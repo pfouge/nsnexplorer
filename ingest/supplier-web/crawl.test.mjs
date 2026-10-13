@@ -53,7 +53,7 @@ test('normal site: home + contact + about + products, boilerplate kept in html, 
   assert.equal(r.pages[0].title, 'ACME Fasteners - Home');
   assert.ok(hits('acme-parts.test').length >= 5); // robots.txt + 4 pages
   assert.ok(hits('acme-parts.test').every((l) => l.ua === USER_AGENT));
-  assert.equal(USER_AGENT, 'NSNExplorerBot/1.0 (+https://nsnexplorer.com/about/#crawler)');
+  assert.equal(USER_AGENT, 'Mozilla/5.0 (compatible; NSNExplorerBot/1.0; +https://nsnexplorer.com/about/#crawler)');
 });
 
 test('robots disallow: status robots_blocked and nothing but /robots.txt is requested', async () => {
@@ -115,4 +115,71 @@ test('private addresses are refused unless allowed', async () => {
   const r = await crawlSite('http://127.0.0.1:9/', { fetchImpl: virtualFetch(web.port), limiter: new HostLimiter(1) });
   assert.equal(r.status, 'unreachable');
   assert.match(r.error, /private/);
+});
+
+test('urlVariants: www twin first, then plain http / https, never the start URL itself', async () => {
+  const { urlVariants } = await import('./crawl.mjs');
+  assert.deepEqual(urlVariants('https://www.x.test/'), ['https://x.test/', 'http://www.x.test/', 'http://x.test/']);
+  assert.deepEqual(urlVariants('http://x.test/home'), ['http://www.x.test/home', 'https://x.test/home', 'https://www.x.test/home']);
+  assert.deepEqual(urlVariants('https://x.test/', false), ['https://www.x.test/']);
+});
+
+const failing = (pred, code) => (input, init) => {
+  const u = new URL(typeof input === 'string' ? input : input.url);
+  if (pred(u)) return Promise.reject(Object.assign(new TypeError('fetch failed'), { cause: { code } }));
+  return virtualFetch(web.port)(input, init);
+};
+
+test('https that fails at robots.txt (TLS / refused) falls back to http and crawls', async () => {
+  const r = await crawlSite('https://acme-parts.test/', opts({ fetchImpl: failing((u) => u.protocol === 'https:', 'ECONNREFUSED') }));
+  assert.equal(r.status, 'crawled');
+  assert.equal(r.finalUrl, 'http://acme-parts.test/');
+});
+
+test('a dead www host falls back to the bare domain; the error names the real cause when all fail', async () => {
+  const r = await crawlSite('http://www.acme-parts.test/', opts({ fetchImpl: failing((u) => u.hostname.startsWith('www.'), 'ENOTFOUND') }));
+  assert.equal(r.status, 'crawled');
+  assert.equal(r.finalUrl, 'http://acme-parts.test/');
+  const dead = await crawlSite('http://acme-parts.test/', opts({ fetchImpl: failing(() => true, 'ENOTFOUND') }));
+  assert.equal(dead.status, 'unreachable');
+  assert.equal(dead.error, 'robots.txt: ENOTFOUND');
+});
+
+test('menu drawn by JavaScript: /about-us and /contact are found by trying the usual paths', async () => {
+  const r = await crawlSite('http://spa.test/', opts());
+  assert.equal(r.status, 'crawled');
+  assert.deepEqual(r.pages.map((p) => new URL(p.url).pathname).sort(), ['/', '/about-us', '/contact']);
+});
+
+test('insecureFetch reads a page whose certificate cannot be verified', async (t) => {
+  const { execFileSync } = await import('node:child_process');
+  const { mkdtempSync, readFileSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const path = await import('node:path');
+  const https = await import('node:https');
+  const { insecureFetch, errCode } = await import('./crawl.mjs');
+  const dir = mkdtempSync(path.join(tmpdir(), 'cert-'));
+  try {
+    execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-keyout', `${dir}/k.pem`, '-out', `${dir}/c.pem`, '-days', '1', '-subj', '/CN=localhost'], { stdio: 'ignore' });
+  } catch {
+    t.skip('openssl not available');
+    return;
+  }
+  const server = https.createServer({ key: readFileSync(`${dir}/k.pem`), cert: readFileSync(`${dir}/c.pem`) }, (req, res) => {
+    res.writeHead(200, { 'content-type': 'text/html' });
+    res.end(`<p>${req.headers['user-agent']}</p>`);
+  });
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const url = `https://127.0.0.1:${server.address().port}/`;
+  try {
+    const err = await fetch(url).then(() => null, (e) => e);
+    assert.match(errCode(err), /SELF_SIGNED|CERT|UNABLE/);
+    const res = await insecureFetch(url, { signal: AbortSignal.timeout(5000) });
+    assert.equal(res.status, 200);
+    assert.match(res.headers.get('content-type'), /text\/html/);
+    const text = await new Response(res.body).text();
+    assert.match(text, /NSNExplorerBot/);
+  } finally {
+    server.close();
+  }
 });

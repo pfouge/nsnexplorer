@@ -18,7 +18,10 @@
 // database is unreachable. Without ANTHROPIC_API_KEY the sites are still crawled and stored with
 // status 'ok_no_ai' (contacts + the site's own meta description, model NULL).
 //
-// CLI: node run.mjs [--limit 150] [--cage 12345] [--max-minutes 45]
+//   - (with --retry-failed) unreachable / error / no_text, whatever their age: re-read after a crawler fix.
+// --cages A,B,C re-reads exactly those suppliers (testing and fixes).
+//
+// CLI: node run.mjs [--limit 150] [--cages 12345,6789A] [--retry-failed] [--max-minutes 45]
 // Env: DATABASE_URL, ANTHROPIC_API_KEY, ANTHROPIC_BASE_URL (tests), SUPPLIER_WEB_MIN_DELAY_MS (tests),
 //      SUPPLIER_WEB_ALLOW_PRIVATE=1 (tests that crawl 127.0.0.1)
 
@@ -30,7 +33,7 @@ import { summarize, AuthError, MODEL } from './summarize.mjs';
 export const CONCURRENCY = 6;
 const MIN_TEXT_CHARS = 200;
 
-export function candidateSql({ withAi, byCage }) {
+export function candidateSql({ withAi, byCage, retryFailed = false }) {
   return `
 SELECT sam.cage, sam.entity_url, COALESCE(NULLIF(sam.dba_name, ''), sam.legal_name, su.name) AS name
 FROM pub.supplier_sam sam
@@ -40,12 +43,14 @@ LEFT JOIN pub.supplier_web w ON w.cage = sam.cage
 LEFT JOIN pub.supplier_optouts o ON o.cage = sam.cage
 WHERE sam.entity_url IS NOT NULL
   AND COALESCE(o.hide_web, false) = false
-  ${byCage ? 'AND sam.cage = $2' : ''}
-  AND (   w.cage IS NULL
+  ${byCage ? 'AND sam.cage = ANY($2::text[])' : ''}
+  AND (   ${byCage ? 'true -- named CAGEs are always re-read' : 'false'}
+       OR w.cage IS NULL
        OR w.fetched_at < now() - interval '180 days'
        OR (w.status IN ('unreachable', 'error') AND w.fetched_at < now() - interval '30 days')
        OR w.url IS DISTINCT FROM sam.entity_url
-       ${withAi ? "OR (w.status = 'ok_no_ai' AND w.fetched_at < now() - interval '1 day')" : ''})
+       ${withAi ? "OR (w.status = 'ok_no_ai' AND w.fetched_at < now() - interval '1 day')" : ''}
+       ${retryFailed ? "OR w.status IN ('unreachable', 'error', 'no_text')" : ''})
 ORDER BY (w.cage IS NULL) DESC, st.dollars_all DESC NULLS LAST, sam.cage
 LIMIT $1`;
 }
@@ -127,12 +132,13 @@ export async function saveRow(pool, r) {
  *           env?: NodeJS.ProcessEnv, fetchImpl?: typeof fetch }} o
  * @returns {Promise<{ counts: Record<string, number>, candidates: number, dbErrors: number }>}
  */
-export async function runSupplierWeb({ limit = 150, cage, maxMinutes = 45, pool = getPool(), log = console.log, env = process.env, fetchImpl } = {}) {
+export async function runSupplierWeb({ limit = 150, cage, retryFailed = false, maxMinutes = 45, pool = getPool(), log = console.log, env = process.env, fetchImpl } = {}) {
   const apiKey = env.ANTHROPIC_API_KEY || '';
   const withAi = Boolean(apiKey);
-  const params = cage ? [limit, cage] : [limit];
-  const { rows } = await pool.query(candidateSql({ withAi, byCage: Boolean(cage) }), params); // DB down -> throws -> exit 1
-  log(`supplier-web: ${rows.length} candidate(s), limit ${limit}, AI ${withAi ? `on (${env.ANTHROPIC_MODEL || MODEL})` : 'off (no ANTHROPIC_API_KEY): contacts and meta description only'}`);
+  const cages = cage ? String(cage).split(',').map((c) => c.trim().toUpperCase()).filter(Boolean) : [];
+  const params = cages.length ? [limit, cages] : [limit];
+  const { rows } = await pool.query(candidateSql({ withAi, byCage: cages.length > 0, retryFailed }), params); // DB down -> throws -> exit 1
+  log(`supplier-web: ${rows.length} candidate(s), limit ${limit}${retryFailed ? ', retrying earlier failures' : ''}, AI ${withAi ? `on (${env.ANTHROPIC_MODEL || MODEL})` : 'off (no ANTHROPIC_API_KEY): contacts and meta description only'}`);
 
   const ctx = {
     log,
@@ -176,10 +182,11 @@ export async function runSupplierWeb({ limit = 150, cage, maxMinutes = 45, pool 
 }
 
 function parseArgs(argv) {
-  const a = { limit: 150, cage: undefined, maxMinutes: 45 };
+  const a = { limit: 150, cage: undefined, retryFailed: false, maxMinutes: 45 };
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === '--limit') a.limit = Number(argv[++i]);
-    else if (argv[i] === '--cage') a.cage = argv[++i];
+    else if (argv[i] === '--cage' || argv[i] === '--cages') a.cage = argv[++i];
+    else if (argv[i] === '--retry-failed') a.retryFailed = true;
     else if (argv[i] === '--max-minutes') a.maxMinutes = Number(argv[++i]);
   }
   if (!Number.isInteger(a.limit) || a.limit < 1 || a.limit > 5000) throw new Error('run.mjs: --limit must be an integer from 1 to 5000');

@@ -65,6 +65,14 @@ export const SITES = {
     pages: { '/': page('App', '<div id="root"></div><script>render()</script><a href="tel:3305550188">call</a>', { meta: '<meta name="description" content="Single page app shell.">' }) },
   },
   'gone.test': { status: 404, pages: {} },
+  // Menu drawn by JavaScript: the home page has text but no links; /about-us and /contact exist.
+  'spa.test': {
+    pages: {
+      '/': page('SPA Parts', `<main><p>${BIG_TEXT.repeat(4)}</p><div id="menu"></div><script>drawMenu()</script></main>`),
+      '/about-us': page('About SPA', `<main><p>Founded in 1999. ${BIG_TEXT.repeat(3)}</p></main>`),
+      '/contact': page('Contact SPA', '<main><p>Call (614) 555-0199 or write to info@spa.test.</p></main>'),
+    },
+  },
   'robots500.test': { robots: 500, pages: { '/': page('x', `<p>${BIG_TEXT.repeat(5)}</p>`) } },
   // A 2 MB home page: only the first 1.5 MB is read.
   'big.test': { pages: { '/': page('Big', `<main><p>${BIG_TEXT.repeat(2)}</p>${'<p>filler filler filler filler filler filler</p>'.repeat(50000)}</main>`) } },

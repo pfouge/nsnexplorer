@@ -18,6 +18,14 @@ on:
         description: 'Maximum suppliers to read in this run'
         type: string
         default: '150'
+      cages:
+        description: 'Only these CAGE codes, comma-separated (re-read even if done recently)'
+        type: string
+        default: ''
+      retry_failed:
+        description: 'Also re-read suppliers whose last read was unreachable, error or no_text'
+        type: boolean
+        default: false
 
 concurrency:
   group: supplier-web-daily
@@ -52,7 +60,12 @@ jobs:
         run: |
           limit="${LIMIT_INPUT:-150}"
           [ -n "$limit" ] || limit=150
-          bash .github/scripts/retry-pool-full.sh /tmp/supplier-web.log node ingest/supplier-web/run.mjs --limit "$limit" --max-minutes 45
+          args=(--limit "$limit" --max-minutes 45)
+          if [ -n "$CAGES_INPUT" ]; then args+=(--cages "$CAGES_INPUT"); fi
+          if [ "$RETRY_INPUT" = "true" ]; then args+=(--retry-failed); fi
+          bash .github/scripts/retry-pool-full.sh /tmp/supplier-web.log node ingest/supplier-web/run.mjs "${args[@]}"
         env:
           LIMIT_INPUT: ${{ inputs.limit }}
+          CAGES_INPUT: ${{ inputs.cages }}
+          RETRY_INPUT: ${{ inputs.retry_failed }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

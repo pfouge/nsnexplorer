@@ -69,3 +69,29 @@ test('validateProfile: types, lengths, years', () => {
   assert.deepEqual(validateProfile({ summary: null, products: [], capabilities: [], certifications: [], founded: null }).summary, null);
   assert.equal(copiesSource('a b c', 'a b c d e f'), false); // shorter than the window
 });
+
+test('a rejected answer gets one corrective retry that names the problem; a good second answer is kept', async () => {
+  const words = (n) => Array.from({ length: n }, (_, i) => `w${i}`).join(' ');
+  const answer = (summary) => new Response(JSON.stringify({ model: 'm', content: [{ type: 'tool_use', name: 'record_profile', input: { summary, products: [], capabilities: [], certifications: [], founded: null } }] }), { status: 200 });
+  const seen = [];
+  const fetchImpl = async (url, init) => {
+    const body = JSON.parse(init.body);
+    seen.push(body.messages[0].content);
+    return answer(seen.length === 1 ? words(130) : words(70));
+  };
+  const { profile } = await summarize(site('LONGCO'), { apiKey: 'k', baseUrl: 'http://x', fetchImpl });
+  assert.equal(seen.length, 2);
+  assert.match(seen[1], /\[correction\] A previous answer was rejected: summary is 130 words \(max 110\)/);
+  assert.equal(profile.summary.split(' ').length, 70);
+
+  // 100 words is now accepted outright (the prompt asks for 80; validation allows 110)
+  const one = [];
+  const ok = await summarize(site('MIDCO'), { apiKey: 'k', baseUrl: 'http://x', fetchImpl: async (u, i) => { one.push(1); return answer(words(100)); } });
+  assert.equal(one.length, 1);
+  assert.equal(ok.profile.summary.split(' ').length, 100);
+
+  // two bad answers in a row: rejected after exactly two calls
+  let n = 0;
+  await assert.rejects(summarize(site('BADTWICE'), { apiKey: 'k', baseUrl: 'http://x', fetchImpl: async () => { n += 1; return answer(words(140)); } }), /rejected model output: summary is 140 words/);
+  assert.equal(n, 2);
+});

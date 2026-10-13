@@ -11,7 +11,8 @@
 export const MODEL = process.env.ANTHROPIC_MODEL || 'claude-haiku-5-5';
 export const ANTHROPIC_VERSION = '2023-06-01';
 export const MAX_TOKENS = 600;
-export const MAX_SUMMARY_WORDS = 90;
+export const MAX_SUMMARY_WORDS = 80; // what the prompt asks for
+export const HARD_MAX_SUMMARY_WORDS = 110; // what validation accepts (models overshoot a word limit a little)
 export const MAX_ITEMS = 8;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -23,7 +24,7 @@ export const TOOL = {
     additionalProperties: false,
     required: ['summary', 'products', 'capabilities', 'certifications', 'founded'],
     properties: {
-      summary: { type: ['string', 'null'], description: 'At most 90 words, neutral, third person, in your own words. null when the text is too thin.' },
+      summary: { type: ['string', 'null'], description: `At most ${MAX_SUMMARY_WORDS} words, neutral, third person, in your own words. null when the text is too thin.` },
       products: { type: 'array', maxItems: MAX_ITEMS, items: { type: 'string', maxLength: 80 }, description: 'Products the company makes or sells, short noun phrases.' },
       capabilities: { type: 'array', maxItems: MAX_ITEMS, items: { type: 'string', maxLength: 80 }, description: 'Processes or services it offers, short noun phrases.' },
       certifications: { type: 'array', maxItems: 12, items: { type: 'string', maxLength: 60 }, description: 'Only certifications or registrations the text explicitly names.' },
@@ -89,8 +90,8 @@ export function validateProfile(input, sourceText = '') {
     summary = summary.replace(/\s+/g, ' ').trim() || null;
   }
   if (summary) {
-    if (wordCount(summary) > MAX_SUMMARY_WORDS) throw new Error(`summary is ${wordCount(summary)} words (max ${MAX_SUMMARY_WORDS})`);
-    if (summary.length > 800) throw new Error('summary is too long');
+    if (wordCount(summary) > HARD_MAX_SUMMARY_WORDS) throw new Error(`summary is ${wordCount(summary)} words (max ${HARD_MAX_SUMMARY_WORDS})`);
+    if (summary.length > 1000) throw new Error('summary is too long');
     if (copiesSource(summary, sourceText)) throw new Error('summary repeats the site text verbatim');
   }
   const products = cleanList(input.products ?? [], 'products', MAX_ITEMS, 80);
@@ -104,6 +105,7 @@ export function validateProfile(input, sourceText = '') {
 }
 
 export class AuthError extends Error {}
+const RETRY_MARK = '[correction]';
 
 /**
  * Calls the model once (with retries on 429 / 5xx / 529) and returns the validated profile.
@@ -170,6 +172,12 @@ export async function summarize(site, cfg) {
     try {
       profile = validateProfile(block.input, sourceText);
     } catch (err) {
+      // One corrective retry: tell the model what was wrong (too long, copied wording, ...) and ask again.
+      if (!body.messages[0].content.includes(RETRY_MARK)) {
+        body.messages = [{ role: 'user', content: `${body.messages[0].content}\n\n${RETRY_MARK} A previous answer was rejected: ${err.message}. Call record_profile again. Keep the summary under ${MAX_SUMMARY_WORDS} words and put every sentence in your own words; do not reuse phrases from the website text.` }];
+        attempt -= 1;
+        continue;
+      }
       throw new Error(`rejected model output: ${err.message}`);
     }
     return { profile, model: json.model || model };

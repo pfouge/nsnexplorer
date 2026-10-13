@@ -1,7 +1,14 @@
 // ingest/supplier-web/crawl.mjs
 // Polite, small-footprint crawler for a supplier's own website.
 //
-//  - User-Agent NSNExplorerBot/1.0 (+https://nsnexplorer.com/about/#crawler)
+//  - User-Agent "Mozilla/5.0 (compatible; NSNExplorerBot/1.0; +https://nsnexplorer.com/about/#crawler)", the
+//    usual crawler form (as Googlebot and Bingbot use): many web firewalls answer 403 to any agent that
+//    does not start with Mozilla/5.0. It still names the bot, and robots.txt rules are matched on our token.
+//  - when the start URL cannot be reached (DNS, TLS, refused, timeout; also for its robots.txt) the www /
+//    bare-domain twin and plain http are tried; a certificate the runtime cannot verify (expired, incomplete
+//    chain, self-signed: common on small-company sites) is read once more without verification. These pages
+//    are public and only read, never posted to.
+//  - sites whose links are drawn by JavaScript: /about-us, /about, /contact-us and /contact are tried directly
 //  - robots.txt is fetched per origin and honoured (our token and "*"; the more specific group wins;
 //    longest matching rule wins, Allow beats Disallow on a tie; * and $ wildcards). A 4xx robots.txt
 //    means "no rules"; a 5xx or unreachable robots.txt is treated as "disallow everything" (RFC 9309)
@@ -14,10 +21,12 @@
 //    (set allowPrivate for tests that talk to 127.0.0.1)
 
 import dns from 'node:dns/promises';
+import http from 'node:http';
+import https from 'node:https';
 import net from 'node:net';
 import { extractLinks, extractTitle } from './extract.mjs';
 
-export const USER_AGENT = 'NSNExplorerBot/1.0 (+https://nsnexplorer.com/about/#crawler)';
+export const USER_AGENT = 'Mozilla/5.0 (compatible; NSNExplorerBot/1.0; +https://nsnexplorer.com/about/#crawler)';
 export const BOT_TOKEN = 'nsnexplorerbot';
 export const MAX_PAGES = 4;
 export const MIN_DELAY_MS = 2000;
@@ -176,7 +185,7 @@ async function getRobots(origin, o) {
       try {
         res = await rawGet(u, o, { maxBytes: 512 * 1024, anyText: true });
       } catch (err) {
-        return { unavailable: true, error: `robots.txt: ${err.message}` };
+        return { unavailable: true, network: true, error: `robots.txt: ${errCode(err)}` };
       }
       if (res.status >= 500) return { unavailable: true, error: `robots.txt answered HTTP ${res.status}` };
       if (res.status >= 400 || res.status < 200) return { group: null };
@@ -187,17 +196,53 @@ async function getRobots(origin, o) {
   return o.robotsCache.get(origin);
 }
 
+/** Short reason for a failed request: the underlying error code (ENOTFOUND, CERT_HAS_EXPIRED, ...). */
+export function errCode(err) {
+  if (err?.name === 'TimeoutError' || err?.cause?.name === 'TimeoutError') return 'timed out';
+  const c = err?.cause;
+  return String(c?.code || err?.code || c?.message || err?.message || err).slice(0, 120);
+}
+
+const CERT_ERROR = /CERT|SELF_SIGNED|UNABLE_TO_VERIFY|UNABLE_TO_GET_ISSUER|DEPTH_ZERO|ERR_TLS|HOSTNAME|ALTNAME/i;
+const HEADERS = { 'User-Agent': USER_AGENT, Accept: 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.1', 'Accept-Language': 'en-US,en;q=0.8' };
+
+/** fetch()-shaped GET over node:https without certificate verification (fallback for broken TLS only). */
+export function insecureFetch(urlStr, { signal } = {}) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(urlStr);
+    const mod = u.protocol === 'https:' ? https : http;
+    const req = mod.request(u, { method: 'GET', headers: HEADERS, rejectUnauthorized: false, signal }, (res) => {
+      const headers = new Headers();
+      for (const [k, v] of Object.entries(res.headers)) if (v != null) headers.set(k, Array.isArray(v) ? v.join(', ') : String(v));
+      const body = new ReadableStream({
+        start(ctrl) {
+          res.on('data', (c) => ctrl.enqueue(new Uint8Array(c)));
+          res.on('end', () => ctrl.close());
+          res.on('error', (e) => ctrl.error(e));
+        },
+        cancel() { res.destroy(); },
+      });
+      resolve({ status: res.statusCode, headers, body, insecure: true });
+    });
+    req.on('error', reject);
+    req.end();
+  });
+}
+
 /** One HTTP GET with limiter, timeout, size cap and no redirect following. */
 async function rawGet(url, o, { maxBytes = o.maxBytes ?? MAX_BYTES, anyText = false } = {}) {
   await assertPublicHost(url.hostname, o.allowPrivate);
   const host = url.host;
   await o.limiter.wait(host);
   try {
-    const res = await (o.fetchImpl ?? fetch)(url.toString(), {
-      redirect: 'manual',
-      headers: { 'User-Agent': USER_AGENT, Accept: 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.1', 'Accept-Language': 'en-US,en;q=0.8' },
-      signal: AbortSignal.timeout(o.timeoutMs ?? TIMEOUT_MS),
-    });
+    const init = { redirect: 'manual', headers: HEADERS, signal: AbortSignal.timeout(o.timeoutMs ?? TIMEOUT_MS) };
+    let res;
+    try {
+      res = await (o.fetchImpl ?? fetch)(url.toString(), init);
+    } catch (err) {
+      if (url.protocol !== 'https:' || !CERT_ERROR.test(errCode(err)) || o.fetchImpl) throw err;
+      res = await insecureFetch(url.toString(), { signal: AbortSignal.timeout(o.timeoutMs ?? TIMEOUT_MS) });
+    }
     const contentType = (res.headers.get('content-type') || '').toLowerCase();
     const location = res.headers.get('location');
     if (res.status >= 300 && res.status < 400) {
@@ -228,7 +273,9 @@ export async function politeGet(startUrl, o) {
   for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
     if (url.protocol !== 'http:' && url.protocol !== 'https:') return { ok: false, reason: 'network', error: `unsupported scheme ${url.protocol}` };
     const robots = await getRobots(url.origin, o);
-    if (robots.unavailable) return { ok: false, reason: 'robots_unavailable', error: robots.error };
+    // Unreachable robots.txt (network): the site itself is almost certainly unreachable the same way, so
+    // report it as a network failure and let crawlSite try the www / http variants.
+    if (robots.unavailable) return { ok: false, reason: robots.network ? 'network' : 'robots_unavailable', error: robots.error };
     if (!robotsAllows(robots.group, url.pathname + url.search)) return { ok: false, reason: 'robots', finalUrl: url.toString() };
     if (robots.group?.crawlDelay) {
       (o.robotsDelayMs ??= new Map()).set(url.host, Math.min(MAX_CRAWL_DELAY_MS, Math.max(o.limiter.minDelayMs, robots.group.crawlDelay * 1000)));
@@ -237,8 +284,7 @@ export async function politeGet(startUrl, o) {
     try {
       res = await rawGet(url, o);
     } catch (err) {
-      const code = err.cause?.code || err.code;
-      return { ok: false, reason: 'network', error: err.name === 'TimeoutError' ? 'timed out' : String(code || err.message).slice(0, 120) };
+      return { ok: false, reason: 'network', error: errCode(err) };
     }
     if (res.status >= 300 && res.status < 400 && res.location) {
       try {
@@ -312,6 +358,25 @@ export function chooseLinks(links, baseUrl, max = MAX_PAGES - 1) {
 
 // ---------------------------------------------------------------- the crawl
 
+/** Other spellings of a site's start URL to try when it fails: www twin first, then plain http. */
+export function urlVariants(startUrl, includeHttp = true) {
+  const u = new URL(startUrl);
+  const host = u.hostname;
+  const twin = host.startsWith('www.') ? host.slice(4) : `www.${host}`;
+  const out = [];
+  const add = (proto, h) => {
+    const v = new URL(u);
+    v.protocol = proto;
+    v.hostname = h;
+    const s = v.toString();
+    if (s !== u.toString() && !out.includes(s)) out.push(s);
+  };
+  add(u.protocol, twin);
+  if (includeHttp && u.protocol === 'https:') { add('http:', host); add('http:', twin); }
+  if (includeHttp && u.protocol === 'http:') { add('https:', host); add('https:', twin); }
+  return out.slice(0, 3);
+}
+
 /**
  * @param {string} startUrl
  * @param {CrawlOpts} opts
@@ -326,10 +391,14 @@ export async function crawlSite(startUrl, opts = {}) {
   };
 
   let home = await politeGet(startUrl, o);
-  // Old supplier sites often have a broken certificate or no TLS at all: try plain http once.
-  if (!home.ok && home.reason === 'network' && startUrl.startsWith('https://')) {
-    const alt = await politeGet(`http://${startUrl.slice('https://'.length)}`, o);
-    if (alt.ok || alt.reason === 'robots') home = alt;
+  // Registered URLs are often slightly off: the www / bare-domain twin, or http when TLS is missing.
+  if (!home.ok && (home.reason === 'network' || (home.reason === 'http' && [403, 404, 410].includes(home.status)))) {
+    const first = home;
+    for (const alt of urlVariants(startUrl, home.reason === 'network')) {
+      const r = await politeGet(alt, o);
+      if (r.ok || r.reason === 'robots') { home = r; break; }
+    }
+    if (!home.ok && home !== first) home = first;
   }
   if (!home.ok) {
     if (home.reason === 'robots') return { status: 'robots_blocked', finalUrl: home.finalUrl ?? null, pages: [], error: null };
@@ -339,6 +408,12 @@ export async function crawlSite(startUrl, opts = {}) {
 
   const pages = [{ url: home.finalUrl, title: extractTitle(home.html), html: home.html, category: 'home' }];
   const picks = chooseLinks(extractLinks(home.html, home.finalUrl), home.finalUrl);
+  // Menus built by JavaScript leave no links in the HTML: try the usual paths for what is missing.
+  for (const [cat, paths] of [['contact', ['/contact-us', '/contact']], ['about', ['/about-us', '/about']]]) {
+    if (picks.length >= MAX_PAGES - 1 || picks.some((p) => p.category === cat)) continue;
+    const [first, ...alts] = paths.map((p) => new URL(p, home.finalUrl).toString());
+    picks.push({ category: cat, url: first, alts });
+  }
   for (const pick of picks) {
     if (pages.length >= MAX_PAGES) break;
     // Try the best link for this category, then its runners-up if it is dead, off-site or already read.

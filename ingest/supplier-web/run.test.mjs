@@ -15,7 +15,9 @@ test('candidate SQL: opt-outs excluded, never-fetched first, re-queue rules', ()
   assert.match(sql, /w\.status IN \('unreachable', 'error'\) AND w\.fetched_at < now\(\) - interval '30 days'/);
   assert.doesNotMatch(sql, /ok_no_ai/);
   assert.match(candidateSql({ withAi: true, byCage: false }), /ok_no_ai/);
-  assert.match(candidateSql({ withAi: false, byCage: true }), /sam\.cage = \$2/);
+  assert.match(candidateSql({ withAi: false, byCage: true }), /sam\.cage = ANY\(\$2::text\[\]\)/);
+  assert.match(candidateSql({ withAi: false, byCage: false, retryFailed: true }), /w\.status IN \('unreachable', 'error', 'no_text'\)/);
+  assert.doesNotMatch(candidateSql({ withAi: false, byCage: false }), /'no_text'\)/);
 });
 
 let web;
