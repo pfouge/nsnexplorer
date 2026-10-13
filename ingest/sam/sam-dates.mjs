@@ -1,0 +1,196 @@
+#!/usr/bin/env node
+// ingest/sam/sam-dates.mjs
+// SAM.gov notices read one posting day at a time, each checked against SAM's own totalRecords
+// and recorded in the history ledger (ops.source_dates, lane `sam`). Replaces the one 30-day
+// query in sam-daily (fetch.mjs + load.mjs) as of 2026-10-13.
+//
+// Why per day: the old query paged with `offset` as a record count, but SAM's offset is a page
+// index, so every run stopped after the first 1,000 of ~18,000 notices (fixed in fetch.mjs too).
+// Per-day reads make each day's completeness checkable, and let the back-fill repair the days
+// that were cut short and then extend history.
+//
+// Each run:
+//   1. forward: the last N calendar days, re-read every run so status and deadline changes are
+//      picked up. N adapts to the API key's allowance, read from api.data.gov's X-RateLimit-Limit
+//      header on the first response: --days-high (30) when the limit is 1,000+ a day, else
+//      --days-low (7).
+//   2. back-fill: up to --backfill-days older days (default 2) that are missing or incomplete,
+//      newest first, down to --floor-days (365) ago, while X-RateLimit-Remaining stays above
+//      --reserve (5).
+// Older notices load with their own status (SAM's `active` flag), so expired ones arrive as
+// expired. A day is complete when the notices read equal SAM's totalRecords for that day.
+//
+// CLI: node ingest/sam/sam-dates.mjs [--days-high 30] [--days-low 7] [--backfill-days 2] [--floor-days 365]
+
+import { loadSamSolicitations } from './load.mjs';
+import { readLane, recordPeriod, backfillCandidates, addDaysIso, isoOf } from '../ledger.mjs';
+import { getPool, closePool } from '../../shared/db.mjs';
+
+const BASE_URL = 'https://api.sam.gov/opportunities/v2/search';
+export const PAGE_LIMIT = 1000;
+const PTYPE = 'r,o,k';
+const LANE = 'sam';
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const prevDay = (iso) => addDaysIso(iso, -1);
+/** 'YYYY-MM-DD' -> SAM's 'MM/DD/YYYY' */
+export const samDate = (iso) => { const [y, m, d] = iso.split('-'); return `${m}/${d}/${y}`; };
+
+export class QuotaError extends Error {}
+
+/**
+ * One page (page index `page`) of notices posted on `iso`. Retries 429 a few times; a 429 that
+ * persists means the daily allowance is spent (QuotaError).
+ */
+export async function fetchSamPage({ apiKey, iso, page, fetchImpl = fetch, throttleMs = 2500, quota }) {
+  const url = new URL(BASE_URL);
+  url.searchParams.set('api_key', apiKey);
+  url.searchParams.set('postedFrom', samDate(iso));
+  url.searchParams.set('postedTo', samDate(iso));
+  url.searchParams.set('limit', String(PAGE_LIMIT));
+  url.searchParams.set('offset', String(page)); // a PAGE INDEX (see header)
+  url.searchParams.set('ptype', PTYPE);
+  for (let attempt = 1; attempt <= 4; attempt += 1) {
+    if (throttleMs) await sleep(throttleMs);
+    const res = await fetchImpl(url.toString());
+    const lim = Number(res.headers?.get?.('x-ratelimit-limit'));
+    const rem = Number(res.headers?.get?.('x-ratelimit-remaining'));
+    if (Number.isFinite(lim) && lim > 0) quota.limit = lim;
+    if (Number.isFinite(rem)) quota.remaining = rem;
+    quota.used += 1;
+    if (res.status === 429) {
+      await res.text().catch(() => {});
+      if (attempt === 4) throw new QuotaError('SAM answered 429 four times: daily allowance spent');
+      await sleep(throttleMs ? 2 ** attempt * 5000 : 0);
+      continue;
+    }
+    if (res.status !== 200) {
+      const body = await res.text().catch(() => '');
+      throw new Error(`SAM API returned ${res.status} for ${iso} page ${page}: ${body.replace(/api_key=[^&\s]+/g, 'api_key=***').slice(0, 300)}`);
+    }
+    return res.json();
+  }
+  throw new Error('unreachable');
+}
+
+/** Every notice posted on `iso`. */
+export async function fetchSamDay(o) {
+  const records = [];
+  let total = null;
+  for (let page = 0; ; page += 1) {
+    const data = await fetchSamPage({ ...o, page });
+    total = Number(data.totalRecords) || 0;
+    const rows = data.opportunitiesData || [];
+    records.push(...rows);
+    if (rows.length === 0 || records.length >= total) break;
+  }
+  return { records, total };
+}
+
+export async function runSamDates({
+  pool,
+  apiKey,
+  daysHigh = 30,
+  daysLow = 7,
+  backfillDays = 2,
+  floorDays = 365,
+  reserve = 5,
+  now = Date.now(),
+  fetchImpl = fetch,
+  throttleMs = 2500,
+  load = loadSamSolicitations,
+  log = console.log,
+}) {
+  const today = isoOf(now);
+  const quota = { limit: null, remaining: null, used: 0 };
+  const ledger = await readLane(pool, LANE);
+  const result = { forward: [], backfill: [], incomplete: [], failed: [], quotaStop: false, exhausted: false, quota };
+
+  const readDay = async (iso, kind) => {
+    const { records, total } = await fetchSamDay({ apiKey, iso, fetchImpl, throttleMs, quota });
+    const r = records.length ? await load(records, { pool }) : { loaded: 0, skipped: 0 };
+    const matches = records.length === total;
+    const row = await recordPeriod(pool, LANE, { day: iso, expected: total, records: records.length, pages: Math.ceil(total / PAGE_LIMIT), loaded: r.loaded, matches });
+    if (!row.complete) result.incomplete.push(iso);
+    log(`sam-dates: ${iso}${kind} ${records.length} of ${total} notices (${row.complete ? 'complete' : 'INCOMPLETE, will be read again'}), ${r.loaded} loaded`);
+  };
+
+  // 1. forward. The first request tells us the key's daily limit, which sets the window.
+  let windowDays = daysLow;
+  let iso = prevDay(today);
+  try {
+    await readDay(today, '');
+    result.forward.push(today);
+    windowDays = quota.limit !== null && quota.limit >= 1000 ? daysHigh : daysLow;
+    log(`sam-dates: API key allowance ${quota.limit ?? 'unknown'} requests a day; re-reading the last ${windowDays} days`);
+    for (let i = 1; i < windowDays; i += 1, iso = prevDay(iso)) {
+      await readDay(iso, '');
+      result.forward.push(iso);
+    }
+  } catch (err) {
+    if (!(err instanceof QuotaError)) throw err;
+    result.quotaStop = true;
+    log(`sam-dates: ${err.message}; stopping, the rest waits for tomorrow`);
+  }
+
+  // 2. back-fill older days, newest first, while the allowance lasts.
+  if (!result.quotaStop) {
+    const floor = addDaysIso(today, -floorDays);
+    const walk = backfillCandidates(ledger, { start: iso, step: prevDay, count: backfillDays, floor, emptyStreak: 30 });
+    result.exhausted = walk.exhausted || walk.reachedFloor;
+    for (const day of walk.days) {
+      if (quota.remaining !== null && quota.remaining <= reserve) {
+        log(`sam-dates: ${quota.remaining} requests left today (reserve ${reserve}); back-fill waits for tomorrow`);
+        break;
+      }
+      try {
+        await readDay(day, ' [back-fill]');
+        result.backfill.push(day);
+      } catch (err) {
+        if (err instanceof QuotaError) { result.quotaStop = true; log(`sam-dates: ${err.message}; back-fill stops`); break; }
+        result.failed.push(day);
+        log(`sam-dates: ${day} [back-fill] failed: ${err.message}`);
+      }
+    }
+    if (result.exhausted) log(`sam-dates: history complete back to ${floor}`);
+  }
+
+  log(`sam-dates: done. forward ${result.forward.length} days, back-fill ${result.backfill.length} [${result.backfill.join(', ')}], ` +
+    `incomplete ${result.incomplete.length}${result.incomplete.length ? ` [${result.incomplete.join(', ')}]` : ''}, ` +
+    `failed ${result.failed.length}; requests used ${quota.used}, remaining ${quota.remaining ?? 'unknown'} of ${quota.limit ?? 'unknown'}`);
+  return result;
+}
+
+function parseArgs(argv) {
+  const a = { daysHigh: 30, daysLow: 7, backfillDays: 2, floorDays: 365 };
+  for (let i = 0; i < argv.length; i += 1) {
+    if (argv[i] === '--days-high') a.daysHigh = Number(argv[++i]);
+    else if (argv[i] === '--days-low') a.daysLow = Number(argv[++i]);
+    else if (argv[i] === '--backfill-days') a.backfillDays = Number(argv[++i]);
+    else if (argv[i] === '--floor-days') a.floorDays = Number(argv[++i]);
+  }
+  for (const k of Object.keys(a)) if (!Number.isInteger(a[k]) || a[k] < 0) throw new Error(`sam-dates: --${k} must be a whole number`);
+  return a;
+}
+
+async function main() {
+  const apiKey = process.env.SAM_API_KEY;
+  if (!apiKey) throw new Error('sam-dates: SAM_API_KEY is required');
+  const args = parseArgs(process.argv.slice(2));
+  const pool = getPool();
+  try {
+    const r = await runSamDates({ pool, apiKey, ...args });
+    // A failed day, or a forward window cut short by the allowance, makes the run red so it shows.
+    if (r.failed.length || (r.quotaStop && r.forward.length < args.daysLow)) process.exitCode = 1;
+  } finally {
+    await closePool();
+  }
+}
+
+const isMain = process.argv[1] && import.meta.url === `file://${process.argv[1]}`;
+if (isMain) {
+  main().catch((err) => {
+    console.error(String(err?.stack || err).replace(/api_key=[^&\s]+/g, 'api_key=***'));
+    process.exit(1);
+  });
+}

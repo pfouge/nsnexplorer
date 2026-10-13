@@ -246,6 +246,24 @@ export async function recordDailyStats(pool) {
   }
 }
 
+/** One summary row per ledger lane; [] before migration 0013 is applied. */
+export async function historyByLane(pool) {
+  const { rows: t } = await pool.query(`SELECT to_regclass('ops.source_dates') IS NOT NULL AS ok`);
+  if (!t[0].ok) return [];
+  const { rows } = await pool.query(
+    `SELECT lane,
+            count(*)::int AS periods,
+            count(*) FILTER (WHERE complete)::int AS complete,
+            count(*) FILTER (WHERE NOT complete)::int AS incomplete,
+            min(day) FILTER (WHERE complete AND records > 0)::text AS oldest_complete,
+            max(day)::text AS newest,
+            sum(records)::bigint AS records,
+            max(fetched_at) AS last_read
+       FROM ops.source_dates GROUP BY lane ORDER BY lane`
+  );
+  return rows.map((r) => ({ ...r, records: Number(r.records), last_read: r.last_read ? new Date(r.last_read).toISOString() : null }));
+}
+
 async function main() {
   const argv = process.argv.slice(2);
   const outIdx = argv.indexOf('--out');
@@ -278,6 +296,10 @@ async function main() {
      FROM pub.fsc f LEFT JOIN pub.nsns n ON n.fsc = f.fsc GROUP BY 1 ORDER BY 1`
   );
 
+  // History ledger (ops.source_dates, 0013): how far back each date-based lane has verified,
+  // complete data, and how many periods still need another read. Informational.
+  const history = await historyByLane(pool);
+
   await recordDailyStats(pool);
 
   await closePool();
@@ -293,6 +315,7 @@ async function main() {
     problems,
     sources,
     checks,
+    history,
     classes_by_render_depth: byDepth.map((r) => ({
       render_depth: r.render_depth,
       classes: Number(r.classes),
@@ -305,6 +328,9 @@ async function main() {
     console.log(`${s.status.padEnd(5)} ${s.source.padEnd(13)} last landed ${s.last_landed ?? 'never'} (${s.age_hours ?? '-'}h, limit ${s.max_age_hours}h) rows=${s.rows}`);
   }
   for (const c of checks) console.log(`${c.status.padEnd(5)} ${c.check}: ${c.count}`);
+  for (const h of history) {
+    console.log(`hist  ${h.lane.padEnd(17)} complete back to ${h.oldest_complete ?? '-'} (${h.complete} of ${h.periods} periods complete, ${h.incomplete} to re-read, last read ${h.last_read ?? 'never'})`);
+  }
   if (problems.length) {
     console.error(`freshness: ${problems.length} problem(s): ${problems.join('; ')}`);
     if (!noFail) process.exitCode = 1;

@@ -1,26 +1,29 @@
 name: rfq-award-join
 
-# Continuous award->RETAINED-solicitation price-join lane. Fetches recent
-# DIBBS award-post-date grids and joins them against the PERSISTED
-# pub.solicitations table (~35k retained RFQs, open + closed — see
-# rfq-reconcile.yml / rfq-fast.yml) rather than a freshly-crawled RFQ set,
-# so match rate — and price history — grows organically as the retained
-# solicitations set ages. Offset from rfq-reconcile.yml's :15 by 30 minutes
-# so the two 6-hourly lanes don't collide.
+# Weekly award -> RETAINED-solicitation price-join backstop, from the database only.
+#
+# Every DIBBS award row keeps its award-grid record in pub.contract_actions.raw, so the join can be
+# re-run against today's pub.solicitations without fetching anything from DIBBS
+# (ingest/dibbs/rejoin.mjs). Until 2026-10-13 this lane re-crawled 30 days of award grids every
+# week (~3 h of DIBBS requests). The daily joins happen in ingest-daily (each award date as it
+# loads) and in rfq-fast's back-fill (stored awards that point at newly loaded older
+# solicitations); this weekly pass catches anything those miss, e.g. solicitations that arrived
+# after their awards.
 
 on:
   schedule:
-    # Weekly 30-day backstop. The daily join now runs inside ingest-daily
-    # on that lane's own award crawl, so this no longer re-crawls 30 days
-    # of award grids (~3 hours of DIBBS requests) every day.
     - cron: '45 9 * * 0'
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      days:
+        description: 'Re-join awards with an award date in the last N days (blank = 180)'
+        required: false
+        default: ''
   push:
     branches: [main]
     paths:
       - '.github/workflows/rfq-award-join.yml'
-      - 'ingest/dibbs/price-join.mjs'
-      - 'ingest/dibbs/load.mjs'
+      - 'ingest/dibbs/rejoin.mjs'
 
 concurrency:
   group: rfq-award-join
@@ -36,134 +39,26 @@ env:
 jobs:
   award-join:
     runs-on: ubuntu-latest
-    timeout-minutes: 300
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - run: npm ci
-      - run: node db/migrate.mjs
-      - name: fetch award-post-date grids (30 days)
-        run: node ingest/dibbs/fetch.mjs --type awd --days 30 --out /tmp/awd 2>&1 | tee /tmp/awd-fetch.log
-      - name: join awards against retained solicitations + load price_points
-        run: set -o pipefail; node ingest/dibbs/price-join.mjs --dir /tmp/awd 2>&1 | tee /tmp/awd-join.log
-      # TEMPORARY: commit run diagnostics so results are readable over git
-      # (dev container cannot reach the Actions UI). Remove with the other
-      # git-report steps once dashboard access is reliable.
-      - name: commit run report
+      - run: bash .github/scripts/retry-pool-full.sh /tmp/migrate.log node db/migrate.mjs
+      - name: re-join stored awards against retained solicitations
+        env:
+          DAYS_INPUT: ${{ github.event.inputs.days }}
+        run: bash .github/scripts/retry-pool-full.sh /tmp/rejoin.log node ingest/dibbs/rejoin.mjs --days "${DAYS_INPUT:-180}"
+      - name: summary
         if: always()
         run: |
-          {
-            echo "at: $(date -u +%FT%TZ)  sha: $GITHUB_SHA"
-            echo '== fetch log tail =='
-            tail -20 /tmp/awd-fetch.log 2>/dev/null || echo 'no fetch log'
-            echo '== join log tail =='
-            tail -20 /tmp/awd-join.log 2>/dev/null || echo 'no join log'
-            echo '== match/load summary =='
-            grep 'price-join.mjs:' /tmp/awd-join.log 2>/dev/null || echo 'no summary line'
-            echo '== fetched files =='
-            ls -la /tmp/awd 2>/dev/null | head -30 || echo 'no dir'
-          } > ingest/dibbs/award-join-last-run.txt
-          git config user.name "dibbs-bot"
-          git config user.email "noreply@anthropic.com"
-          git add ingest/dibbs/award-join-last-run.txt
-          if git diff --cached --quiet; then echo "no change"; else
-            git commit -m "rfq-award-join: run report [skip ci]"
-            git pull --rebase --autostash origin main
-            git push origin main
-          fi
-
-  award-join-retry:
-    needs: [award-join]
-    if: always() && needs.award-join.result == 'failure'
-    # Fresh-runner retry: DIBBS blocks some Azure runner IPs outright, so a
-    # failed fetch retries on a new runner (new IP) — same pattern as the
-    # other dibbs lanes (ingest-daily.yml, rfq-reconcile.yml).
-    runs-on: ubuntu-latest
-    timeout-minutes: 300
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - run: npm ci
-      - run: node db/migrate.mjs
-      - name: fetch award-post-date grids (30 days)
-        run: node ingest/dibbs/fetch.mjs --type awd --days 30 --out /tmp/awd 2>&1 | tee /tmp/awd-fetch.log
-      - name: join awards against retained solicitations + load price_points
-        run: set -o pipefail; node ingest/dibbs/price-join.mjs --dir /tmp/awd 2>&1 | tee /tmp/awd-join.log
-      - name: commit run report
-        if: always()
-        run: |
-          {
-            echo "at: $(date -u +%FT%TZ)  sha: $GITHUB_SHA"
-            echo '== fetch log tail =='
-            tail -20 /tmp/awd-fetch.log 2>/dev/null || echo 'no fetch log'
-            echo '== join log tail =='
-            tail -20 /tmp/awd-join.log 2>/dev/null || echo 'no join log'
-            echo '== match/load summary =='
-            grep 'price-join.mjs:' /tmp/awd-join.log 2>/dev/null || echo 'no summary line'
-            echo '== fetched files =='
-            ls -la /tmp/awd 2>/dev/null | head -30 || echo 'no dir'
-          } > ingest/dibbs/award-join-last-run.txt
-          git config user.name "dibbs-bot"
-          git config user.email "noreply@anthropic.com"
-          git add ingest/dibbs/award-join-last-run.txt
-          if git diff --cached --quiet; then echo "no change"; else
-            git commit -m "rfq-award-join: run report [skip ci]"
-            git pull --rebase --autostash origin main
-            git push origin main
-          fi
-
-  award-join-retry-2:
-    needs: [award-join-retry]
-    if: always() && needs.award-join-retry.result == 'failure'
-    # Fresh-runner retry: DIBBS blocks some Azure runner IPs outright, so a
-    # failed fetch retries on a new runner (new IP) — same pattern as the
-    # other dibbs lanes.
-    runs-on: ubuntu-latest
-    timeout-minutes: 300
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - run: npm ci
-      - run: node db/migrate.mjs
-      - name: fetch award-post-date grids (30 days)
-        run: node ingest/dibbs/fetch.mjs --type awd --days 30 --out /tmp/awd 2>&1 | tee /tmp/awd-fetch.log
-      - name: join awards against retained solicitations + load price_points
-        run: set -o pipefail; node ingest/dibbs/price-join.mjs --dir /tmp/awd 2>&1 | tee /tmp/awd-join.log
-      - name: commit run report
-        if: always()
-        run: |
-          {
-            echo "at: $(date -u +%FT%TZ)  sha: $GITHUB_SHA"
-            echo '== fetch log tail =='
-            tail -20 /tmp/awd-fetch.log 2>/dev/null || echo 'no fetch log'
-            echo '== join log tail =='
-            tail -20 /tmp/awd-join.log 2>/dev/null || echo 'no join log'
-            echo '== match/load summary =='
-            grep 'price-join.mjs:' /tmp/awd-join.log 2>/dev/null || echo 'no summary line'
-            echo '== fetched files =='
-            ls -la /tmp/awd 2>/dev/null | head -30 || echo 'no dir'
-          } > ingest/dibbs/award-join-last-run.txt
-          git config user.name "dibbs-bot"
-          git config user.email "noreply@anthropic.com"
-          git add ingest/dibbs/award-join-last-run.txt
-          if git diff --cached --quiet; then echo "no change"; else
-            git commit -m "rfq-award-join: run report [skip ci]"
-            git pull --rebase --autostash origin main
-            git push origin main
-          fi
+          { echo '### Price re-join'; echo '```'; grep -E '^rejoin.mjs' /tmp/rejoin.log || echo 'no output'; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
   deploy:
-    needs: [award-join, award-join-retry, award-join-retry-2]
-    if: >-
-      always() && (needs.award-join.result == 'success'
-      || needs.award-join-retry.result == 'success'
-      || needs.award-join-retry-2.result == 'success')
+    needs: [award-join]
+    if: needs.award-join.result == 'success'
     uses: ./.github/workflows/deploy.yml
     secrets: inherit
     with:

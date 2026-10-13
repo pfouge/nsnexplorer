@@ -9,7 +9,7 @@
 //   api_key     - from process.env.SAM_API_KEY (free api.data.gov key)
 //   postedFrom / postedTo - MM/DD/YYYY window, today back --days
 //   limit       - 1000 (page size; API max)
-//   offset      - paginated until totalRecords is consumed
+//   offset      - PAGE INDEX (0, 1, 2, ...), paginated until totalRecords is consumed
 //   ptype       - 'r,o,k' — the common open-solicitation notice types
 //                 (RFQ/solicitation/combined synopsis-solicitation)
 //
@@ -127,7 +127,7 @@ async function main() {
   let totalRecords = Infinity;
   let pageNum = 0;
 
-  while (offset < totalRecords) {
+  while (offset * PAGE_LIMIT < totalRecords) {
     const data = await fetchPage({ apiKey, postedFrom, postedTo, offset });
     if (data === null) {
       // Rate-limited past our backoff. Keep the pages we have; the load step
@@ -147,8 +147,11 @@ async function main() {
     );
 
     if (pageCount === 0) break; // safety valve: never spin if the API stops returning rows
-    offset += PAGE_LIMIT;
-    if (offset < totalRecords) await sleep(THROTTLE_MS); // stay under SAM's burst limit
+    // SAM's `offset` is a PAGE INDEX, not a record offset (open.gsa.gov get-opportunities-public-api:
+    // "Indicates the page index"). Until 2026-10-13 this added PAGE_LIMIT, so the second request
+    // asked for page 1000, got nothing, and every run kept only the first 1,000 notices.
+    offset += 1;
+    if (offset * PAGE_LIMIT < totalRecords) await sleep(THROTTLE_MS); // stay under SAM's burst limit
   }
 
   console.log(`fetch.mjs: done, ${pageNum} page(s) written to ${args.out}`);

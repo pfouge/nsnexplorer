@@ -13,7 +13,8 @@ on:
     paths:
       - 'ingest/dibbs/pipeline.mjs'
       - 'ingest/dibbs/fetch.mjs'
-      - 'ingest/dibbs/awards-daily.mjs'
+      - 'ingest/dibbs/dibbs-dates.mjs'
+      - 'ingest/ledger.mjs'
       - 'ingest/dibbs/load.mjs'
       - 'ingest/dibbs/parse.mjs'
       - '.github/workflows/ingest-daily.yml'
@@ -58,6 +59,15 @@ jobs:
         run: node ingest/usaspending/fetch.mjs --psc ${{ matrix.psc }} --days 120 --out /tmp/usaspending-${{ matrix.psc }}.jsonl
       - name: load
         run: node ingest/usaspending/load.mjs --file /tmp/usaspending-${{ matrix.psc }}.jsonl --psc ${{ matrix.psc }}
+      # History, one month at a time (ops.source_dates, lane usaspending_<psc>): 2 months per run
+      # older than the 120-day window, each checked against USAspending's own count. Re-verifies
+      # the FY2022-26 backfill first (inserting anything missing), then extends back toward FY2008.
+      - name: verify and extend history (2 months)
+        run: set -o pipefail; node ingest/usaspending/usaspending-months.mjs --psc ${{ matrix.psc }} --months 2 2>&1 | tee /tmp/usaspending-months.log
+      - name: summary
+        if: always()
+        run: |
+          { echo '### USAspending history, class ${{ matrix.psc }}'; echo '```'; grep -E '^usaspending-months' /tmp/usaspending-months.log 2>/dev/null || echo 'no output'; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
   dibbs:
     needs: migrate
@@ -74,12 +84,14 @@ jobs:
         with:
           node-version: 22
       - run: npm ci
-      # One date at a time: fetch, load award totals, join unit prices, record the date in
-      # ops.dibbs_award_dates. Settled dates are skipped, so a normal day reads ~2 dates, not 7.
-      # The budgets end the run cleanly before the job limit; whatever is left waits for the
-      # next run. Exit 1 (a date failed) starts the fresh-runner retry below.
+      # One date at a time: fetch, load award totals, join unit prices, record the date in the
+      # history ledger (ops.source_dates, lane dibbs_awd) with DIBBS's own record count as the
+      # completeness check. New and unsettled dates first, then 2 older dates that are missing or
+      # incomplete (heals early partial data, then extends history back). The budgets end the run
+      # cleanly before the job limit; whatever is left waits for the next run. Exit 1 (a date
+      # failed) starts the fresh-runner retry below.
       - name: fetch + load awards, one date at a time
-        run: set -o pipefail; node ingest/dibbs/awards-daily.mjs --days 7 --budget-min 105 --hard-budget-min 130 --out /tmp/dibbs-awd 2>&1 | tee /tmp/dibbs-fetch.log
+        run: set -o pipefail; node ingest/dibbs/dibbs-dates.mjs --grid awd --days 7 --backfill-days 2 --budget-min 105 --hard-budget-min 130 --out /tmp/dibbs-awd 2>&1 | tee /tmp/dibbs-fetch.log
       # TEMPORARY: commit run diagnostics so results are readable over git
       # (dev container cannot reach the Actions UI). Remove with the other
       # git-report steps once dashboard access is reliable.
@@ -89,7 +101,7 @@ jobs:
           {
             echo "at: $(date -u +%FT%TZ)  sha: $GITHUB_SHA"
             echo '== dates =='
-            grep -E '^awards-daily:' /tmp/dibbs-fetch.log 2>/dev/null || echo 'no awards-daily lines'
+            grep -E '^dibbs-dates' /tmp/dibbs-fetch.log 2>/dev/null || echo 'no dibbs-dates lines'
             echo '== errors and retries =='
             grep -E 'failed|retrying|Error|error' /tmp/dibbs-fetch.log 2>/dev/null | tail -20 || true
             echo '== log tail =='
@@ -119,12 +131,14 @@ jobs:
         with:
           node-version: 22
       - run: npm ci
-      # One date at a time: fetch, load award totals, join unit prices, record the date in
-      # ops.dibbs_award_dates. Settled dates are skipped, so a normal day reads ~2 dates, not 7.
-      # The budgets end the run cleanly before the job limit; whatever is left waits for the
-      # next run. Exit 1 (a date failed) starts the fresh-runner retry below.
+      # One date at a time: fetch, load award totals, join unit prices, record the date in the
+      # history ledger (ops.source_dates, lane dibbs_awd) with DIBBS's own record count as the
+      # completeness check. New and unsettled dates first, then 2 older dates that are missing or
+      # incomplete (heals early partial data, then extends history back). The budgets end the run
+      # cleanly before the job limit; whatever is left waits for the next run. Exit 1 (a date
+      # failed) starts the fresh-runner retry below.
       - name: fetch + load awards, one date at a time
-        run: set -o pipefail; node ingest/dibbs/awards-daily.mjs --days 7 --budget-min 105 --hard-budget-min 130 --out /tmp/dibbs-awd 2>&1 | tee /tmp/dibbs-fetch.log
+        run: set -o pipefail; node ingest/dibbs/dibbs-dates.mjs --grid awd --days 7 --backfill-days 2 --budget-min 105 --hard-budget-min 130 --out /tmp/dibbs-awd 2>&1 | tee /tmp/dibbs-fetch.log
       # TEMPORARY: commit run diagnostics so results are readable over git
       # (dev container cannot reach the Actions UI). Remove with the other
       # git-report steps once dashboard access is reliable.
@@ -134,7 +148,7 @@ jobs:
           {
             echo "at: $(date -u +%FT%TZ)  sha: $GITHUB_SHA"
             echo '== dates =='
-            grep -E '^awards-daily:' /tmp/dibbs-fetch.log 2>/dev/null || echo 'no awards-daily lines'
+            grep -E '^dibbs-dates' /tmp/dibbs-fetch.log 2>/dev/null || echo 'no dibbs-dates lines'
             echo '== errors and retries =='
             grep -E 'failed|retrying|Error|error' /tmp/dibbs-fetch.log 2>/dev/null | tail -20 || true
             echo '== log tail =='
@@ -162,12 +176,14 @@ jobs:
         with:
           node-version: 22
       - run: npm ci
-      # One date at a time: fetch, load award totals, join unit prices, record the date in
-      # ops.dibbs_award_dates. Settled dates are skipped, so a normal day reads ~2 dates, not 7.
-      # The budgets end the run cleanly before the job limit; whatever is left waits for the
-      # next run. Exit 1 (a date failed) starts the fresh-runner retry below.
+      # One date at a time: fetch, load award totals, join unit prices, record the date in the
+      # history ledger (ops.source_dates, lane dibbs_awd) with DIBBS's own record count as the
+      # completeness check. New and unsettled dates first, then 2 older dates that are missing or
+      # incomplete (heals early partial data, then extends history back). The budgets end the run
+      # cleanly before the job limit; whatever is left waits for the next run. Exit 1 (a date
+      # failed) starts the fresh-runner retry below.
       - name: fetch + load awards, one date at a time
-        run: set -o pipefail; node ingest/dibbs/awards-daily.mjs --days 7 --budget-min 105 --hard-budget-min 130 --out /tmp/dibbs-awd 2>&1 | tee /tmp/dibbs-fetch.log
+        run: set -o pipefail; node ingest/dibbs/dibbs-dates.mjs --grid awd --days 7 --backfill-days 2 --budget-min 105 --hard-budget-min 130 --out /tmp/dibbs-awd 2>&1 | tee /tmp/dibbs-fetch.log
       # TEMPORARY: commit run diagnostics so results are readable over git
       # (dev container cannot reach the Actions UI). Remove with the other
       # git-report steps once dashboard access is reliable.
@@ -177,7 +193,7 @@ jobs:
           {
             echo "at: $(date -u +%FT%TZ)  sha: $GITHUB_SHA"
             echo '== dates =='
-            grep -E '^awards-daily:' /tmp/dibbs-fetch.log 2>/dev/null || echo 'no awards-daily lines'
+            grep -E '^dibbs-dates' /tmp/dibbs-fetch.log 2>/dev/null || echo 'no dibbs-dates lines'
             echo '== errors and retries =='
             grep -E 'failed|retrying|Error|error' /tmp/dibbs-fetch.log 2>/dev/null | tail -20 || true
             echo '== log tail =='

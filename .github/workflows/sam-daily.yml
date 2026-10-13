@@ -21,6 +21,7 @@ on:
     paths:
       - '.github/workflows/sam-daily.yml'
       - 'ingest/sam/**'
+      - 'ingest/ledger.mjs'
 
 concurrency:
   group: sam-daily
@@ -57,21 +58,24 @@ jobs:
         if: steps.check-key.outputs.present == 'true'
       - run: node db/migrate.mjs
         if: steps.check-key.outputs.present == 'true'
-      - name: fetch sam opportunities
+      # One posting day at a time, each checked against SAM's own count and recorded in the
+      # history ledger (ops.source_dates, lane sam): the last 30 days (7 on a low-allowance key),
+      # then 2 older days that are missing or incomplete, back to a year. Replaced the single
+      # 30-day query on 2026-10-13, which kept only the first 1,000 notices (offset bug).
+      - name: fetch + load sam notices, one day at a time
         if: steps.check-key.outputs.present == 'true'
-        run: set -o pipefail; node ingest/sam/fetch.mjs --days 30 --out /tmp/sam 2>&1 | tee /tmp/sam-fetch.log
-      - name: load sam opportunities
-        if: steps.check-key.outputs.present == 'true'
-        run: set -o pipefail; node ingest/sam/load.mjs --dir /tmp/sam 2>&1 | tee /tmp/sam-load.log
+        run: set -o pipefail; node ingest/sam/sam-dates.mjs 2>&1 | tee /tmp/sam-fetch.log
+      - name: summary
+        if: always()
+        run: |
+          { echo '### SAM.gov notices by day'; echo '```'; grep -E '^sam-dates' /tmp/sam-fetch.log 2>/dev/null || echo 'no output'; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: write run report
         if: failure() && steps.check-key.outputs.present == 'true'
         run: |
           {
             echo "at: $(date -u +%FT%TZ)  sha: $GITHUB_SHA"
             echo '== fetch log tail =='
-            tail -20 /tmp/sam-fetch.log 2>/dev/null || echo 'no fetch log'
-            echo '== load log tail =='
-            tail -20 /tmp/sam-load.log 2>/dev/null || echo 'no load log'
+            grep -E '^sam-dates' /tmp/sam-fetch.log | tail -60 2>/dev/null || echo 'no fetch log'
             echo '== fetched files =='
             ls -la /tmp/sam 2>/dev/null | head -30 || echo 'no dir'
           } > ingest/sam/sam-last-run.txt
@@ -101,19 +105,23 @@ jobs:
           node-version: 22
       - run: npm ci
       - run: node db/migrate.mjs
-      - name: fetch sam opportunities
-        run: set -o pipefail; node ingest/sam/fetch.mjs --days 30 --out /tmp/sam 2>&1 | tee /tmp/sam-fetch.log
-      - name: load sam opportunities
-        run: set -o pipefail; node ingest/sam/load.mjs --dir /tmp/sam 2>&1 | tee /tmp/sam-load.log
+      # One posting day at a time, each checked against SAM's own count and recorded in the
+      # history ledger (ops.source_dates, lane sam): the last 30 days (7 on a low-allowance key),
+      # then 2 older days that are missing or incomplete, back to a year. Replaced the single
+      # 30-day query on 2026-10-13, which kept only the first 1,000 notices (offset bug).
+      - name: fetch + load sam notices, one day at a time
+        run: set -o pipefail; node ingest/sam/sam-dates.mjs 2>&1 | tee /tmp/sam-fetch.log
+      - name: summary
+        if: always()
+        run: |
+          { echo '### SAM.gov notices by day'; echo '```'; grep -E '^sam-dates' /tmp/sam-fetch.log 2>/dev/null || echo 'no output'; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: write run report
         if: failure()
         run: |
           {
             echo "at: $(date -u +%FT%TZ)  sha: $GITHUB_SHA"
             echo '== fetch log tail =='
-            tail -20 /tmp/sam-fetch.log 2>/dev/null || echo 'no fetch log'
-            echo '== load log tail =='
-            tail -20 /tmp/sam-load.log 2>/dev/null || echo 'no load log'
+            grep -E '^sam-dates' /tmp/sam-fetch.log | tail -60 2>/dev/null || echo 'no fetch log'
             echo '== fetched files =='
             ls -la /tmp/sam 2>/dev/null | head -30 || echo 'no dir'
           } > ingest/sam/sam-last-run.txt

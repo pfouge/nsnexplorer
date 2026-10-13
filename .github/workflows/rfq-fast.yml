@@ -26,6 +26,9 @@ on:
       - 'ingest/dibbs/pipeline.mjs'
       - 'ingest/dibbs/map-rfq.mjs'
       - 'ingest/dibbs/load.mjs'
+      - 'ingest/dibbs/dibbs-dates.mjs'
+      - 'ingest/dibbs/rejoin.mjs'
+      - 'ingest/ledger.mjs'
 
 # Never let two RFQ crawls run at once (fast lane and reconcile lane share
 # this group) — queue them instead of overlapping.
@@ -122,6 +125,31 @@ jobs:
             git pull --rebase --autostash origin main
             git push origin main
           fi
+
+  # History back-fill (lane dibbs_rfq in ops.source_dates): 2 older posting dates per run that are
+  # missing or incomplete, beyond the 25 business days rfq-fast/rfq-reconcile re-read daily. It
+  # first repairs dates loaded partially before the ledger existed, then extends solicitation
+  # history back until DIBBS runs out. Each date's solicitations load as expired/cancelled by their
+  # own dates, and stored awards that point at them get unit prices (rejoin.mjs). Independent of
+  # the deploy: a slow or failed back-fill never holds up today's solicitations.
+  rfq-backfill:
+    needs: [rfq, rfq-retry]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: bash .github/scripts/retry-pool-full.sh /tmp/migrate.log node db/migrate.mjs
+      - name: back-fill older solicitation dates
+        run: set -o pipefail; node ingest/dibbs/dibbs-dates.mjs --grid rfq --backfill-days 2 --budget-min 45 --hard-budget-min 60 --out /tmp/dibbs-rfq-back 2>&1 | tee /tmp/rfq-back.log
+      - name: summary
+        if: always()
+        run: |
+          { echo '### Solicitation history back-fill'; echo '```'; grep -E '^dibbs-dates' /tmp/rfq-back.log || echo 'no output'; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
   deploy:
     needs: [rfq, rfq-retry]

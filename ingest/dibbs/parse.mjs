@@ -256,6 +256,18 @@ function parsePrCell(raw) {
 }
 
 /**
+ * The grid's own total for the whole query ("Records Found: 3602" above the grid), as a number,
+ * or null when the page does not show one (DIBBS omits it when a date has no records). Used as the
+ * completeness check: a date is complete when the records parsed across all its pages equal this.
+ * @param {string} html
+ * @returns {number|null}
+ */
+export function parseRecordsFound(html) {
+  const m = String(html).match(/Records\s+Found:\s*(?:<[^>]*>\s*)*([\d,]+)/i);
+  return m ? Number(m[1].replace(/,/g, '')) : null;
+}
+
+/**
  * Parses a DIBBS RFQ grid page (`/Rfq/RfqRecs.aspx?category=post&TypeSrch=
  * dt&Value=MM-DD-YYYY`) into normalized RFQ records. Same GridView-postback
  * shape as the award grid (see docs/dibbs-ingest-findings.md and the
