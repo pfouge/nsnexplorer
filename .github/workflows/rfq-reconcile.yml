@@ -41,14 +41,16 @@ jobs:
         with:
           node-version: 22
       - run: npm ci
-      - run: node db/migrate.mjs
+      - run: bash .github/scripts/retry-pool-full.sh /tmp/migrate.log node db/migrate.mjs
       - name: fetch rfqs
         # pipefail: a full reconcile cancels every open RFQ the crawl did not
         # re-see, so it must never run on a partial crawl. fetch.mjs exits
         # nonzero if any date failed; that fails this job and the retry runs.
         run: set -o pipefail; node ingest/dibbs/fetch.mjs --type rfq --days 25 --out /tmp/rfq 2>&1 | tee /tmp/rfq-fetch.log
       - name: parse + load rfqs (reconcile)
-        run: set -o pipefail; node ingest/dibbs/pipeline.mjs --type rfq --dir /tmp/rfq --reconcile 2>&1 | tee /tmp/rfq-load.log
+        # retry-pool-full: a full Supabase session pooler (EMAXCONNSESSION) failed this step after a
+        # complete 46-minute crawl on 2026-10-11; wait it out instead of throwing the crawl away.
+        run: bash .github/scripts/retry-pool-full.sh /tmp/rfq-load.log node ingest/dibbs/pipeline.mjs --type rfq --dir /tmp/rfq --reconcile
       # TEMPORARY: commit run diagnostics so results are readable over git
       # (dev container cannot reach the Actions UI). Remove with the other
       # git-report steps once dashboard access is reliable. This lane is
@@ -87,14 +89,16 @@ jobs:
         with:
           node-version: 22
       - run: npm ci
-      - run: node db/migrate.mjs
+      - run: bash .github/scripts/retry-pool-full.sh /tmp/migrate.log node db/migrate.mjs
       - name: fetch rfqs
         # pipefail: a full reconcile cancels every open RFQ the crawl did not
         # re-see, so it must never run on a partial crawl. fetch.mjs exits
         # nonzero if any date failed; that fails this job and the retry runs.
         run: set -o pipefail; node ingest/dibbs/fetch.mjs --type rfq --days 25 --out /tmp/rfq 2>&1 | tee /tmp/rfq-fetch.log
       - name: parse + load rfqs (reconcile)
-        run: set -o pipefail; node ingest/dibbs/pipeline.mjs --type rfq --dir /tmp/rfq --reconcile 2>&1 | tee /tmp/rfq-load.log
+        # retry-pool-full: a full Supabase session pooler (EMAXCONNSESSION) failed this step after a
+        # complete 46-minute crawl on 2026-10-11; wait it out instead of throwing the crawl away.
+        run: bash .github/scripts/retry-pool-full.sh /tmp/rfq-load.log node ingest/dibbs/pipeline.mjs --type rfq --dir /tmp/rfq --reconcile
       - name: commit run report
         if: always()
         run: |
@@ -129,14 +133,16 @@ jobs:
         with:
           node-version: 22
       - run: npm ci
-      - run: node db/migrate.mjs
+      - run: bash .github/scripts/retry-pool-full.sh /tmp/migrate.log node db/migrate.mjs
       - name: fetch rfqs
         # pipefail: a full reconcile cancels every open RFQ the crawl did not
         # re-see, so it must never run on a partial crawl. fetch.mjs exits
         # nonzero if any date failed; that fails this job and the retry runs.
         run: set -o pipefail; node ingest/dibbs/fetch.mjs --type rfq --days 25 --out /tmp/rfq 2>&1 | tee /tmp/rfq-fetch.log
       - name: parse + load rfqs (reconcile)
-        run: set -o pipefail; node ingest/dibbs/pipeline.mjs --type rfq --dir /tmp/rfq --reconcile 2>&1 | tee /tmp/rfq-load.log
+        # retry-pool-full: a full Supabase session pooler (EMAXCONNSESSION) failed this step after a
+        # complete 46-minute crawl on 2026-10-11; wait it out instead of throwing the crawl away.
+        run: bash .github/scripts/retry-pool-full.sh /tmp/rfq-load.log node ingest/dibbs/pipeline.mjs --type rfq --dir /tmp/rfq --reconcile
       - name: commit run report
         if: always()
         run: |

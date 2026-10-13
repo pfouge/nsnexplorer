@@ -13,6 +13,8 @@ on:
     paths:
       - 'ingest/dibbs/pipeline.mjs'
       - 'ingest/dibbs/fetch.mjs'
+      - 'ingest/dibbs/awards-daily.mjs'
+      - 'ingest/dibbs/load.mjs'
       - 'ingest/dibbs/parse.mjs'
       - '.github/workflows/ingest-daily.yml'
 
@@ -32,7 +34,7 @@ jobs:
         with:
           node-version: 22
       - run: npm ci
-      - run: node db/migrate.mjs
+      - run: bash .github/scripts/retry-pool-full.sh /tmp/migrate.log node db/migrate.mjs
 
   usaspending:
     needs: migrate
@@ -72,16 +74,12 @@ jobs:
         with:
           node-version: 22
       - run: npm ci
-      - name: fetch awards
-        run: node ingest/dibbs/fetch.mjs --days 7 --out /tmp/dibbs-awd 2>&1 | tee /tmp/dibbs-fetch.log
-      - name: parse + load awards
-        run: set -o pipefail; node ingest/dibbs/pipeline.mjs --type awd --dir /tmp/dibbs-awd 2>&1 | tee /tmp/dibbs-load.log
-      # Same crawl, second use: join these awards against the retained
-      # solicitations to derive unit prices (pub.price_points). Doing it here
-      # keeps price history current daily without a second award crawl; the
-      # weekly rfq-award-join lane re-checks a 30-day window as a backstop.
-      - name: join awards to solicitations (price points)
-        run: set -o pipefail; node ingest/dibbs/price-join.mjs --dir /tmp/dibbs-awd 2>&1 | tee /tmp/dibbs-join.log
+      # One date at a time: fetch, load award totals, join unit prices, record the date in
+      # ops.dibbs_award_dates. Settled dates are skipped, so a normal day reads ~2 dates, not 7.
+      # The budgets end the run cleanly before the job limit; whatever is left waits for the
+      # next run. Exit 1 (a date failed) starts the fresh-runner retry below.
+      - name: fetch + load awards, one date at a time
+        run: set -o pipefail; node ingest/dibbs/awards-daily.mjs --days 7 --budget-min 105 --hard-budget-min 130 --out /tmp/dibbs-awd 2>&1 | tee /tmp/dibbs-fetch.log
       # TEMPORARY: commit run diagnostics so results are readable over git
       # (dev container cannot reach the Actions UI). Remove with the other
       # git-report steps once dashboard access is reliable.
@@ -90,14 +88,12 @@ jobs:
         run: |
           {
             echo "at: $(date -u +%FT%TZ)  sha: $GITHUB_SHA"
-            echo '== fetch log tail =='
-            tail -20 /tmp/dibbs-fetch.log 2>/dev/null || echo 'no fetch log'
-            echo '== load log tail =='
-            tail -20 /tmp/dibbs-load.log 2>/dev/null || echo 'no load log'
-            echo '== price join =='
-            tail -5 /tmp/dibbs-join.log 2>/dev/null || echo 'no join log'
-            echo '== fetched files =='
-            ls -la /tmp/dibbs-awd 2>/dev/null | head -30 || echo 'no dir'
+            echo '== dates =='
+            grep -E '^awards-daily:' /tmp/dibbs-fetch.log 2>/dev/null || echo 'no awards-daily lines'
+            echo '== errors and retries =='
+            grep -E 'failed|retrying|Error|error' /tmp/dibbs-fetch.log 2>/dev/null | tail -20 || true
+            echo '== log tail =='
+            tail -5 /tmp/dibbs-fetch.log 2>/dev/null || echo 'no log'
           } > ingest/dibbs/last-run.txt
           git config user.name "dibbs-bot"
           git config user.email "noreply@anthropic.com"
@@ -110,7 +106,9 @@ jobs:
 
   dibbs-retry:
     needs: [dibbs]
-    if: always() && needs.dibbs.result == 'failure'
+    # 'cancelled' too: a job that hits timeout-minutes is reported as cancelled, not failure, and
+    # until 2026-10-13 that kept every retry from running.
+    if: always() && (needs.dibbs.result == 'failure' || needs.dibbs.result == 'cancelled')
     # Fresh-runner retry: DIBBS blocks some Azure runner IPs outright,
     # so a failed fetch retries on a new runner (new IP).
     runs-on: ubuntu-latest
@@ -121,16 +119,12 @@ jobs:
         with:
           node-version: 22
       - run: npm ci
-      - name: fetch awards
-        run: node ingest/dibbs/fetch.mjs --days 7 --out /tmp/dibbs-awd 2>&1 | tee /tmp/dibbs-fetch.log
-      - name: parse + load awards
-        run: set -o pipefail; node ingest/dibbs/pipeline.mjs --type awd --dir /tmp/dibbs-awd 2>&1 | tee /tmp/dibbs-load.log
-      # Same crawl, second use: join these awards against the retained
-      # solicitations to derive unit prices (pub.price_points). Doing it here
-      # keeps price history current daily without a second award crawl; the
-      # weekly rfq-award-join lane re-checks a 30-day window as a backstop.
-      - name: join awards to solicitations (price points)
-        run: set -o pipefail; node ingest/dibbs/price-join.mjs --dir /tmp/dibbs-awd 2>&1 | tee /tmp/dibbs-join.log
+      # One date at a time: fetch, load award totals, join unit prices, record the date in
+      # ops.dibbs_award_dates. Settled dates are skipped, so a normal day reads ~2 dates, not 7.
+      # The budgets end the run cleanly before the job limit; whatever is left waits for the
+      # next run. Exit 1 (a date failed) starts the fresh-runner retry below.
+      - name: fetch + load awards, one date at a time
+        run: set -o pipefail; node ingest/dibbs/awards-daily.mjs --days 7 --budget-min 105 --hard-budget-min 130 --out /tmp/dibbs-awd 2>&1 | tee /tmp/dibbs-fetch.log
       # TEMPORARY: commit run diagnostics so results are readable over git
       # (dev container cannot reach the Actions UI). Remove with the other
       # git-report steps once dashboard access is reliable.
@@ -139,14 +133,12 @@ jobs:
         run: |
           {
             echo "at: $(date -u +%FT%TZ)  sha: $GITHUB_SHA"
-            echo '== fetch log tail =='
-            tail -20 /tmp/dibbs-fetch.log 2>/dev/null || echo 'no fetch log'
-            echo '== load log tail =='
-            tail -20 /tmp/dibbs-load.log 2>/dev/null || echo 'no load log'
-            echo '== price join =='
-            tail -5 /tmp/dibbs-join.log 2>/dev/null || echo 'no join log'
-            echo '== fetched files =='
-            ls -la /tmp/dibbs-awd 2>/dev/null | head -30 || echo 'no dir'
+            echo '== dates =='
+            grep -E '^awards-daily:' /tmp/dibbs-fetch.log 2>/dev/null || echo 'no awards-daily lines'
+            echo '== errors and retries =='
+            grep -E 'failed|retrying|Error|error' /tmp/dibbs-fetch.log 2>/dev/null | tail -20 || true
+            echo '== log tail =='
+            tail -5 /tmp/dibbs-fetch.log 2>/dev/null || echo 'no log'
           } > ingest/dibbs/last-run.txt
           git config user.name "dibbs-bot"
           git config user.email "noreply@anthropic.com"
@@ -159,7 +151,7 @@ jobs:
 
   dibbs-retry-2:
     needs: [dibbs-retry]
-    if: always() && needs.dibbs-retry.result == 'failure'
+    if: always() && (needs.dibbs-retry.result == 'failure' || needs.dibbs-retry.result == 'cancelled')
     # Fresh-runner retry: DIBBS blocks some Azure runner IPs outright,
     # so a failed fetch retries on a new runner (new IP).
     runs-on: ubuntu-latest
@@ -170,16 +162,12 @@ jobs:
         with:
           node-version: 22
       - run: npm ci
-      - name: fetch awards
-        run: node ingest/dibbs/fetch.mjs --days 7 --out /tmp/dibbs-awd 2>&1 | tee /tmp/dibbs-fetch.log
-      - name: parse + load awards
-        run: set -o pipefail; node ingest/dibbs/pipeline.mjs --type awd --dir /tmp/dibbs-awd 2>&1 | tee /tmp/dibbs-load.log
-      # Same crawl, second use: join these awards against the retained
-      # solicitations to derive unit prices (pub.price_points). Doing it here
-      # keeps price history current daily without a second award crawl; the
-      # weekly rfq-award-join lane re-checks a 30-day window as a backstop.
-      - name: join awards to solicitations (price points)
-        run: set -o pipefail; node ingest/dibbs/price-join.mjs --dir /tmp/dibbs-awd 2>&1 | tee /tmp/dibbs-join.log
+      # One date at a time: fetch, load award totals, join unit prices, record the date in
+      # ops.dibbs_award_dates. Settled dates are skipped, so a normal day reads ~2 dates, not 7.
+      # The budgets end the run cleanly before the job limit; whatever is left waits for the
+      # next run. Exit 1 (a date failed) starts the fresh-runner retry below.
+      - name: fetch + load awards, one date at a time
+        run: set -o pipefail; node ingest/dibbs/awards-daily.mjs --days 7 --budget-min 105 --hard-budget-min 130 --out /tmp/dibbs-awd 2>&1 | tee /tmp/dibbs-fetch.log
       # TEMPORARY: commit run diagnostics so results are readable over git
       # (dev container cannot reach the Actions UI). Remove with the other
       # git-report steps once dashboard access is reliable.
@@ -188,14 +176,12 @@ jobs:
         run: |
           {
             echo "at: $(date -u +%FT%TZ)  sha: $GITHUB_SHA"
-            echo '== fetch log tail =='
-            tail -20 /tmp/dibbs-fetch.log 2>/dev/null || echo 'no fetch log'
-            echo '== load log tail =='
-            tail -20 /tmp/dibbs-load.log 2>/dev/null || echo 'no load log'
-            echo '== price join =='
-            tail -5 /tmp/dibbs-join.log 2>/dev/null || echo 'no join log'
-            echo '== fetched files =='
-            ls -la /tmp/dibbs-awd 2>/dev/null | head -30 || echo 'no dir'
+            echo '== dates =='
+            grep -E '^awards-daily:' /tmp/dibbs-fetch.log 2>/dev/null || echo 'no awards-daily lines'
+            echo '== errors and retries =='
+            grep -E 'failed|retrying|Error|error' /tmp/dibbs-fetch.log 2>/dev/null | tail -20 || true
+            echo '== log tail =='
+            tail -5 /tmp/dibbs-fetch.log 2>/dev/null || echo 'no log'
           } > ingest/dibbs/last-run.txt
           git config user.name "dibbs-bot"
           git config user.email "noreply@anthropic.com"

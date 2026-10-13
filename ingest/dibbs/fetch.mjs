@@ -49,6 +49,7 @@ const REQUEST_TIMEOUT_MS = 90000;
 // grids have run into the hundreds of pages for a single busy posting day,
 // so this is deliberately generous, not a realistic expected count.
 const MAX_PAGES_PER_DATE = 1000;
+const SECOND_PASS_WAIT_MS = Number(process.env.DIBBS_SECOND_PASS_WAIT_MS ?? 120000);
 
 // Per-grid-type config: URL path, postback __EVENTTARGET grid id (also the
 // parsePagination fallback when a page's pager doesn't echo it), and the
@@ -95,7 +96,7 @@ function parseArgs(argv) {
 }
 
 /** Minimal in-memory cookie jar, good enough for a single-host session. */
-class CookieJar {
+export class CookieJar {
   constructor() {
     this._cookies = new Map(); // name -> value
   }
@@ -278,18 +279,18 @@ async function getPage(jar, url) {
 }
 
 /** Formats a Date as DIBBS's MM-DD-YYYY query-value format, in UTC. */
-function formatMmDdYyyy(d) {
+export function formatMmDdYyyy(d) {
   const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
   const dd = String(d.getUTCDate()).padStart(2, '0');
   return `${mm}-${dd}-${d.getUTCFullYear()}`;
 }
 
-/** Last `n` business days (Mon-Fri, UTC), most recent first, as MM-DD-YYYY strings. */
-function businessDays(n) {
+/** Last `n` business days (Mon-Fri, UTC) before `now`, most recent first, as MM-DD-YYYY strings. */
+export function businessDays(n, now = Date.now()) {
   const days = [];
   let back = 1;
   while (days.length < n) {
-    const d = new Date(Date.now() - back * 86400000);
+    const d = new Date(now - back * 86400000);
     const dow = d.getUTCDay();
     if (dow !== 0 && dow !== 6) days.push(formatMmDdYyyy(d));
     back += 1;
@@ -311,7 +312,15 @@ async function writePage(outDir, filePrefix, date, pageNum, html) {
  * pagination for newly visible Page$N values and keep going until none are
  * new.
  */
-async function fetchDate(jar, outDir, gridType, date, maxPages = MAX_PAGES_PER_DATE) {
+/** Thrown by fetchDate when `deadline` (epoch ms) passes before the date is complete. */
+export class DeadlineError extends Error {
+  constructor(date) {
+    super(`time budget ran out while fetching ${date}`);
+    this.name = 'DeadlineError';
+  }
+}
+
+export async function fetchDate(jar, outDir, gridType, date, maxPages = MAX_PAGES_PER_DATE, { deadline = Infinity } = {}) {
   const { urlPath, gridId: defaultGridId, filePrefix } = GRID_TYPES[gridType];
   const gridUrl = `${BASE_URL}${urlPath}?category=post&TypeSrch=dt&Value=${date}`;
   const page1 = await getPage(jar, gridUrl);
@@ -335,6 +344,7 @@ async function fetchDate(jar, outDir, gridType, date, maxPages = MAX_PAGES_PER_D
       break;
     }
 
+    if (Date.now() > deadline) throw new DeadlineError(date);
     const pageArg = queue.shift();
     const pageNum = Number(pageArg.slice('Page$'.length));
     if (visited.has(pageNum)) continue;
@@ -395,7 +405,7 @@ async function main() {
   // One bad date must not cost the other dates: record the failure, keep
   // going, and exit nonzero at the end so the workflow can decide whether a
   // partial crawl is usable (incremental lanes) or not (full reconcile).
-  const failed = [];
+  let failed = [];
   for (const date of dates) {
     try {
       await fetchDate(jar, args.out, args.type, date, args.maxPages);
@@ -403,6 +413,25 @@ async function main() {
       failed.push(date);
       console.error(`fetch.mjs: ${date} failed (${err.cause?.code || err.name}: ${err.message}); continuing`);
     }
+  }
+  // Second pass: DIBBS drops connections for a few minutes at a time (ECONNRESET runs, 2026-10-06
+  // and 10-08), and one lost date makes a full reconcile refuse the whole crawl. Wait, start a
+  // fresh session and try the failed dates once more before giving up.
+  if (failed.length) {
+    console.error(`fetch.mjs: retrying ${failed.length} failed date(s) in ${SECOND_PASS_WAIT_MS / 1000}s with a fresh session`);
+    await sleep(SECOND_PASS_WAIT_MS);
+    const retryJar = new CookieJar();
+    const stillFailed = [];
+    for (const date of failed) {
+      try {
+        await fetchDate(retryJar, args.out, args.type, date, args.maxPages);
+        console.error(`fetch.mjs: ${date} fetched on the second pass`);
+      } catch (err) {
+        stillFailed.push(date);
+        console.error(`fetch.mjs: ${date} failed again (${err.cause?.code || err.name}: ${err.message})`);
+      }
+    }
+    failed = stillFailed;
   }
   console.log(`fetch.mjs: ${dates.length - failed.length}/${dates.length} dates fetched` +
     (failed.length ? `; FAILED: ${failed.join(', ')}` : ''));
