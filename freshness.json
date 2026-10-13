@@ -1,35 +1,35 @@
 {
-  "at": "2026-10-12T00:49:02.893Z",
+  "at": "2026-10-13T02:45:55.488Z",
   "ok": true,
   "problems": [],
   "sources": [
     {
       "source": "dibbs_rfq",
       "label": "DIBBS open solicitations (rfq-fast, rfq-reconcile)",
-      "last_landed": "2026-10-11T15:40:22.313Z",
-      "age_hours": 9.1,
+      "last_landed": "2026-10-12T19:46:29.186Z",
+      "age_hours": 7,
       "max_age_hours": 48,
       "newest_record": "2026-10-10",
       "rows": 85511,
-      "open_rows": 10670,
+      "open_rows": 10661,
       "status": "ok"
     },
     {
       "source": "sam_gov",
       "label": "SAM.gov solicitations (sam-daily)",
-      "last_landed": "2026-10-11T13:09:40.124Z",
-      "age_hours": 11.7,
+      "last_landed": "2026-10-12T15:48:21.299Z",
+      "age_hours": 11,
       "max_age_hours": 48,
-      "newest_record": "2026-10-11",
-      "rows": 7499,
-      "open_rows": 4647,
+      "newest_record": "2026-10-12",
+      "rows": 7505,
+      "open_rows": 4644,
       "status": "ok"
     },
     {
       "source": "dibbs_awards",
       "label": "DIBBS award totals (ingest-daily)",
       "last_landed": "2026-10-10T15:09:02.707Z",
-      "age_hours": 33.7,
+      "age_hours": 59.6,
       "max_age_hours": 120,
       "newest_record": "2026-10-09",
       "rows": 73906,
@@ -39,7 +39,7 @@
       "source": "price_points",
       "label": "Unit prices from award/solicitation join (ingest-daily, rfq-award-join)",
       "last_landed": "2026-10-10T15:09:18.013Z",
-      "age_hours": 33.7,
+      "age_hours": 59.6,
       "max_age_hours": 120,
       "newest_record": "2026-10-09",
       "rows": 25480,
@@ -48,18 +48,18 @@
     {
       "source": "usaspending",
       "label": "USAspending contract actions (ingest-daily)",
-      "last_landed": "2026-10-11T15:06:17.425Z",
-      "age_hours": 9.7,
+      "last_landed": "2026-10-12T18:12:37.084Z",
+      "age_hours": 8.6,
       "max_age_hours": 336,
       "newest_record": "2027-03-22",
-      "rows": 98443,
+      "rows": 98451,
       "status": "ok"
     },
     {
       "source": "publog",
       "label": "PUB LOG / FLIS enrichment (publog-nightly)",
-      "last_landed": "2026-10-11T16:01:55.613Z",
-      "age_hours": 8.8,
+      "last_landed": "2026-10-12T19:46:14.964Z",
+      "age_hours": 7,
       "max_age_hours": 48,
       "newest_record": null,
       "rows": 88677,
@@ -70,31 +70,31 @@
     {
       "source": "sam_entities",
       "label": "SAM.gov supplier registrations (sam-entities-monthly)",
-      "last_landed": null,
-      "age_hours": null,
+      "last_landed": "2026-10-13T01:07:11.137Z",
+      "age_hours": 1.6,
       "max_age_hours": 960,
-      "newest_record": null,
-      "rows": 0,
+      "newest_record": "2026-10-04",
+      "rows": 8919,
       "customer_facing": false,
-      "status": "warn"
+      "status": "ok"
     },
     {
       "source": "supplier_web",
       "label": "Supplier website profiles (supplier-web-daily)",
-      "last_landed": null,
-      "age_hours": null,
+      "last_landed": "2026-10-13T02:39:01.706Z",
+      "age_hours": 0.1,
       "max_age_hours": 72,
-      "newest_record": null,
-      "rows": 0,
-      "read_ok": 0,
+      "newest_record": "2026-10-13",
+      "rows": 149,
+      "read_ok": 128,
       "customer_facing": false,
-      "status": "warn"
+      "status": "ok"
     },
     {
       "source": "scoring",
       "label": "Target scoring (ingest-daily)",
-      "last_landed": "2026-10-11T20:03:55.207Z",
-      "age_hours": 4.8,
+      "last_landed": "2026-10-12T20:40:21.804Z",
+      "age_hours": 6.1,
       "max_age_hours": 72,
       "newest_record": null,
       "rows": 5144,
@@ -141,25 +141,25 @@
     {
       "check": "sam_open_services",
       "label": "Open SAM.gov service notices (letter service code; listed under /services/)",
-      "count": 1002,
+      "count": 1008,
       "status": "info"
     },
     {
       "check": "sam_open_equipment_services",
       "label": "Open SAM.gov equipment-service notices tied to a supply group (H, J, K, L, N, W)",
-      "count": 178,
+      "count": 179,
       "status": "info"
     },
     {
       "check": "sam_open_uncoded",
       "label": "Open SAM.gov notices with no code at all",
-      "count": 2514,
+      "count": 2509,
       "status": "info"
     },
     {
       "check": "sam_open_unclassified",
       "label": "Open SAM.gov notices with no product supply class (services or uncoded)",
-      "count": 3597,
+      "count": 3598,
       "status": "info"
     },
     {
