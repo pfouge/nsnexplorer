@@ -51,7 +51,7 @@ WHERE sam.entity_url IS NOT NULL
        OR w.url IS DISTINCT FROM sam.entity_url
        ${withAi ? "OR (w.status = 'ok_no_ai' AND w.fetched_at < now() - interval '1 day')" : ''}
        ${retryFailed ? "OR w.status IN ('unreachable', 'error', 'no_text')" : ''})
-ORDER BY (w.cage IS NULL) DESC, st.dollars_all DESC NULLS LAST, sam.cage
+ORDER BY ${retryFailed ? "(w.status IN ('unreachable', 'error', 'no_text')) DESC NULLS LAST, " : ''}(w.cage IS NULL) DESC, st.dollars_all DESC NULLS LAST, sam.cage
 LIMIT $1`;
 }
 

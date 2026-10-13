@@ -18,6 +18,7 @@ test('candidate SQL: opt-outs excluded, never-fetched first, re-queue rules', ()
   assert.match(candidateSql({ withAi: false, byCage: true }), /sam\.cage = ANY\(\$2::text\[\]\)/);
   assert.match(candidateSql({ withAi: false, byCage: false, retryFailed: true }), /w\.status IN \('unreachable', 'error', 'no_text'\)/);
   assert.doesNotMatch(candidateSql({ withAi: false, byCage: false }), /'no_text'\)/);
+  assert.match(candidateSql({ withAi: false, byCage: false, retryFailed: true }), /ORDER BY \(w\.status IN \('unreachable', 'error', 'no_text'\)\) DESC NULLS LAST, \(w\.cage IS NULL\) DESC/);
 });
 
 let web;
@@ -127,6 +128,13 @@ test('runSupplierWeb end to end against the database (needs TEST_DATABASE_URL)',
     const r4 = await run();
     assert.equal(r4.counts.ok, 1);
     assert.equal((await pool.query(`SELECT model FROM pub.supplier_web WHERE cage = '1A001'`)).rows[0].model, 'claude-haiku-5-5');
+
+    // --retry-failed puts failed sites ahead of never-read ones, so a limited run reaches them.
+    await pool.query(`DELETE FROM pub.supplier_web WHERE cage = '1A001'`);
+    const first = async (retryFailed) => (await pool.query(candidateSql({ withAi: true, byCage: true, retryFailed }), [1, cages])).rows[0].cage.trim();
+    assert.equal(await first(false), '1A001');
+    const failed = (await pool.query(`SELECT cage FROM pub.supplier_web WHERE status IN ('unreachable', 'error', 'no_text') AND cage = ANY($1)`, [cages])).rows.map((r) => r.cage.trim());
+    assert.ok(failed.includes(await first(true)));
   } finally {
     await clean();
     await pool.end();
