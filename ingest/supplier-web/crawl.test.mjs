@@ -2,7 +2,7 @@
 // Run: node --test ingest/supplier-web/crawl.test.mjs
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { crawlSite, parseRobots, groupFor, robotsAllows, chooseLinks, HostLimiter, USER_AGENT, MAX_PAGES } from './crawl.mjs';
+import { crawlSite, parseRobots, groupFor, robotsAllows, chooseLinks, HostLimiter, USER_AGENT, ALT_USER_AGENT, MAX_PAGES, firewallName } from './crawl.mjs';
 import { startFixtureSites, virtualFetch } from './fixtures/sites.mjs';
 
 let web;
@@ -182,4 +182,46 @@ test('insecureFetch reads a page whose certificate cannot be verified', async (t
   } finally {
     server.close();
   }
+});
+
+// A firewall that refuses one form of our user agent (403, with the given headers) and serves the other.
+const refusing = (blockedUa, headers = {}) => (input, init) => {
+  const ua = init?.headers?.['User-Agent'];
+  if (ua === blockedUa) return Promise.resolve(new Response('<html><body>Access denied</body></html>', { status: 403, headers: { 'content-type': 'text/html', ...headers } }));
+  return virtualFetch(web.port)(input, init);
+};
+
+test('a 403 to the Mozilla-style agent is retried with the plain NSNExplorerBot agent, and the reverse is not needed', async () => {
+  const r = await crawlSite('http://acme-parts.test/', opts({ fetchImpl: refusing(USER_AGENT) }));
+  assert.equal(r.status, 'crawled');
+  assert.ok(r.pages.length >= 2);
+  assert.match(ALT_USER_AGENT, /^NSNExplorerBot\/1\.0 /);
+});
+
+test('a site that refuses both agents is unreachable, and the error names the bot-protection service', async () => {
+  const both = (input, init) => Promise.resolve(new Response('denied', { status: 403, headers: { 'content-type': 'text/html', server: 'cloudflare', 'cf-ray': '8a-IAD' } }));
+  const r = await crawlSite('http://acme-parts.test/', opts({ fetchImpl: both }));
+  assert.equal(r.status, 'unreachable');
+  assert.equal(r.error, 'HTTP 403, refused by Cloudflare');
+  const plain = (input, init) => Promise.resolve(new Response('denied', { status: 403, headers: { 'content-type': 'text/html' } }));
+  assert.equal((await crawlSite('http://acme-parts.test/', opts({ fetchImpl: plain }))).error, 'HTTP 403');
+});
+
+test('firewallName reads the usual headers', () => {
+  const H = (o) => new Headers(o);
+  assert.equal(firewallName(H({ 'cf-mitigated': 'challenge', server: 'cloudflare' })), 'Cloudflare challenge');
+  assert.equal(firewallName(H({ server: 'AkamaiGHost' })), 'Akamai');
+  assert.equal(firewallName(H({ 'x-sucuri-id': '1' })), 'Sucuri');
+  assert.equal(firewallName(H({ 'x-iinfo': '1-2-3' })), 'Imperva');
+  assert.equal(firewallName(H({ server: 'awselb/2.0' })), 'AWS');
+  assert.equal(firewallName(H({ server: 'nginx' })), null);
+});
+
+test('the second-agent retry after a 403 waits the per-site delay', async () => {
+  const times = [];
+  const f = refusing(USER_AGENT);
+  const timed = (input, init) => { const u = new URL(typeof input === 'string' ? input : input.url); if (u.pathname === '/robots.txt') times.push(Date.now()); return f(input, init); };
+  await crawlSite('http://acme-parts.test/', opts({ fetchImpl: timed, limiter: new HostLimiter(150) }));
+  assert.equal(times.length, 2);
+  assert.ok(times[1] - times[0] >= 140, `gap ${times[1] - times[0]} ms`);
 });

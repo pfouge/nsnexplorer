@@ -27,6 +27,9 @@ import net from 'node:net';
 import { extractLinks, extractTitle } from './extract.mjs';
 
 export const USER_AGENT = 'Mozilla/5.0 (compatible; NSNExplorerBot/1.0; +https://nsnexplorer.com/about/#crawler)';
+/** Plain form of the same identity, tried once after a 403: some firewall rules block the "compatible; ...Bot"
+ *  pattern while letting a plain product token through, and others the reverse. Both name the bot honestly. */
+export const ALT_USER_AGENT = 'NSNExplorerBot/1.0 (+https://nsnexplorer.com/about/#crawler)';
 export const BOT_TOKEN = 'nsnexplorerbot';
 export const MAX_PAGES = 4;
 export const MIN_DELAY_MS = 2000;
@@ -205,6 +208,21 @@ export function errCode(err) {
 
 const CERT_ERROR = /CERT|SELF_SIGNED|UNABLE_TO_VERIFY|UNABLE_TO_GET_ISSUER|DEPTH_ZERO|ERR_TLS|HOSTNAME|ALTNAME/i;
 const HEADERS = { 'User-Agent': USER_AGENT, Accept: 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.1', 'Accept-Language': 'en-US,en;q=0.8' };
+const ALT_HEADERS = { ...HEADERS, 'User-Agent': ALT_USER_AGENT };
+
+/** Names the bot-protection service behind a refusal, from its response headers, or null. */
+export function firewallName(headers) {
+  const h = (k) => (headers?.get?.(k) || '').toLowerCase();
+  const server = h('server');
+  if (h('cf-mitigated') === 'challenge') return 'Cloudflare challenge';
+  if (server.includes('cloudflare') || h('cf-ray')) return 'Cloudflare';
+  if (server.includes('akamai') || h('akamai-grn') || h('x-akamai-transformed')) return 'Akamai';
+  if (h('x-sucuri-id') || server.includes('sucuri')) return 'Sucuri';
+  if (h('x-iinfo') || h('x-cdn').includes('imperva') || h('x-cdn').includes('incapsula')) return 'Imperva';
+  if (h('x-amzn-waf-action') || server.includes('awselb')) return 'AWS';
+  if (h('x-datadome') || h('x-dd-b')) return 'DataDome';
+  return null;
+}
 
 /** fetch()-shaped GET over node:https without certificate verification (fallback for broken TLS only). */
 export function insecureFetch(urlStr, { signal } = {}) {
@@ -242,6 +260,27 @@ async function rawGet(url, o, { maxBytes = o.maxBytes ?? MAX_BYTES, anyText = fa
     } catch (err) {
       if (url.protocol !== 'https:' || !CERT_ERROR.test(errCode(err)) || o.fetchImpl) throw err;
       res = await insecureFetch(url.toString(), { signal: AbortSignal.timeout(o.timeoutMs ?? TIMEOUT_MS) });
+    }
+    if (res.status === 403) {
+      // One more try with the plain form of our user agent (see ALT_USER_AGENT), after the usual pause.
+      o.limiter.done(host, o.robotsDelayMs?.get(host) ?? o.limiter.minDelayMs);
+      await o.limiter.wait(host);
+      try {
+        const alt = await (o.fetchImpl ?? fetch)(url.toString(), { ...init, headers: ALT_HEADERS, signal: AbortSignal.timeout(o.timeoutMs ?? TIMEOUT_MS) });
+        if (alt.status !== 403) {
+          await res.body?.cancel().catch(() => {});
+          res = alt;
+        } else {
+          await alt.body?.cancel().catch(() => {});
+        }
+      } catch {
+        // keep the first answer
+      }
+    }
+    const firewall = res.status === 403 || res.status === 429 ? firewallName(res.headers) : null;
+    if (firewall) {
+      await res.body?.cancel().catch(() => {});
+      return { status: res.status, contentType: '', text: '', firewall };
     }
     const contentType = (res.headers.get('content-type') || '').toLowerCase();
     const location = res.headers.get('location');
@@ -294,7 +333,7 @@ export async function politeGet(startUrl, o) {
       }
       continue;
     }
-    if (res.status >= 400 || res.status < 200) return { ok: false, reason: 'http', status: res.status, error: `HTTP ${res.status}`, finalUrl: url.toString() };
+    if (res.status >= 400 || res.status < 200) return { ok: false, reason: 'http', status: res.status, error: res.firewall ? `HTTP ${res.status}, refused by ${res.firewall}` : `HTTP ${res.status}`, finalUrl: url.toString() };
     if (res.notHtml) return { ok: false, reason: 'not_html', status: res.status, error: `not HTML (${res.contentType || 'no content type'})`, finalUrl: url.toString() };
     return { ok: true, status: res.status, finalUrl: url.toString(), html: res.text, truncated: res.truncated };
   }

@@ -90,8 +90,23 @@ test('a rejected answer gets one corrective retry that names the problem; a good
   assert.equal(one.length, 1);
   assert.equal(ok.profile.summary.split(' ').length, 100);
 
-  // two bad answers in a row: rejected after exactly two calls
+  // three bad answers in a row: rejected after exactly three calls (two corrections)
   let n = 0;
   await assert.rejects(summarize(site('BADTWICE'), { apiKey: 'k', baseUrl: 'http://x', fetchImpl: async () => { n += 1; return answer(words(140)); } }), /rejected model output: summary is 140 words/);
-  assert.equal(n, 2);
+  assert.equal(n, 3);
+});
+
+test('a copied summary gets a correction that quotes the copied words; a rewritten answer is kept', async () => {
+  const answer = (summary) => new Response(JSON.stringify({ model: 'm', content: [{ type: 'tool_use', name: 'record_profile', input: { summary, products: [], capabilities: [], certifications: [], founded: null } }] }), { status: 200 });
+  const copied = 'ACME was founded in 1987 by two machinists who wanted to build better hardware for the Air Force.';
+  const seen = [];
+  const fetchImpl = async (url, init) => {
+    seen.push(JSON.parse(init.body).messages[0].content);
+    return answer(seen.length < 3 ? copied : 'A small machine shop that has turned parts for military aircraft programs since the late 1980s.');
+  };
+  const { profile } = await summarize(site('COPYTWICE'), { apiKey: 'k', baseUrl: 'http://x', fetchImpl });
+  assert.equal(seen.length, 3);
+  assert.match(seen[1], /It copied "acme was founded in 1987 by two machinists who wanted to build" word for word/);
+  assert.equal(seen[2].split('[correction]').length - 1, 2);
+  assert.match(profile.summary, /^A small machine shop/);
 });

@@ -53,15 +53,28 @@ export function buildUserMessage({ name, pages }) {
 const wordCount = (s) => s.trim().split(/\s+/).filter(Boolean).length;
 const norm = (s) => s.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
 
-/** True when the summary repeats `n` consecutive words of the source text verbatim. */
-export function copiesSource(summary, sourceText, n = 12) {
+/** The first run of `n` consecutive summary words that also appears in the source text, or null. */
+export function copiedPhrase(summary, sourceText, n = 12) {
   const words = norm(summary).split(' ');
-  if (words.length < n) return false;
+  if (words.length < n) return null;
   const hay = ` ${norm(sourceText)} `;
   for (let i = 0; i + n <= words.length; i += 1) {
-    if (hay.includes(` ${words.slice(i, i + n).join(' ')} `)) return true;
+    const run = words.slice(i, i + n).join(' ');
+    if (hay.includes(` ${run} `)) return run;
   }
-  return false;
+  return null;
+}
+
+/** True when the summary repeats `n` consecutive words of the source text verbatim. */
+export function copiesSource(summary, sourceText, n = 12) {
+  return copiedPhrase(summary, sourceText, n) !== null;
+}
+
+class RejectedProfile extends Error {
+  constructor(message, hint = '') {
+    super(message);
+    this.hint = hint;
+  }
 }
 
 function cleanList(v, label, max, maxLen) {
@@ -92,7 +105,8 @@ export function validateProfile(input, sourceText = '') {
   if (summary) {
     if (wordCount(summary) > HARD_MAX_SUMMARY_WORDS) throw new Error(`summary is ${wordCount(summary)} words (max ${HARD_MAX_SUMMARY_WORDS})`);
     if (summary.length > 1000) throw new Error('summary is too long');
-    if (copiesSource(summary, sourceText)) throw new Error('summary repeats the site text verbatim');
+    const copied = copiedPhrase(summary, sourceText);
+    if (copied) throw new RejectedProfile('summary repeats the site text verbatim', ` It copied "${copied}" word for word from the website. Describe the company from scratch in plain words of your own, with different sentence structure; quote nothing.`);
   }
   const products = cleanList(input.products ?? [], 'products', MAX_ITEMS, 80);
   const capabilities = cleanList(input.capabilities ?? [], 'capabilities', MAX_ITEMS, 80);
@@ -106,6 +120,7 @@ export function validateProfile(input, sourceText = '') {
 
 export class AuthError extends Error {}
 const RETRY_MARK = '[correction]';
+const MAX_CORRECTIONS = 2;
 
 /**
  * Calls the model once (with retries on 429 / 5xx / 529) and returns the validated profile.
@@ -173,8 +188,9 @@ export async function summarize(site, cfg) {
       profile = validateProfile(block.input, sourceText);
     } catch (err) {
       // One corrective retry: tell the model what was wrong (too long, copied wording, ...) and ask again.
-      if (!body.messages[0].content.includes(RETRY_MARK)) {
-        body.messages = [{ role: 'user', content: `${body.messages[0].content}\n\n${RETRY_MARK} A previous answer was rejected: ${err.message}. Call record_profile again. Keep the summary under ${MAX_SUMMARY_WORDS} words and put every sentence in your own words; do not reuse phrases from the website text.` }];
+      // Up to two corrections; each one says what was wrong (for copying, which phrase).
+      if (body.messages[0].content.split(RETRY_MARK).length - 1 < MAX_CORRECTIONS) {
+        body.messages = [{ role: 'user', content: `${body.messages[0].content}\n\n${RETRY_MARK} A previous answer was rejected: ${err.message}.${err.hint || ''} Call record_profile again. Keep the summary under ${MAX_SUMMARY_WORDS} words and put every sentence in your own words; do not reuse phrases from the website text.` }];
         attempt -= 1;
         continue;
       }
