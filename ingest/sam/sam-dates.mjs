@@ -13,7 +13,9 @@
 //   1. forward: the last N calendar days, re-read every run so status and deadline changes are
 //      picked up. N adapts to the API key's allowance, read from api.data.gov's X-RateLimit-Limit
 //      header on the first response: --days-high (30) when the limit is 1,000+ a day, else
-//      --days-low (7).
+//      --days-low (7). api.sam.gov did not send the header on 2026-10-13 and the key ran out after
+//      ~10 requests that day, so 7 days
+//      plus 2 back-fill days is the normal shape.
 //   2. back-fill: up to --backfill-days older days (default 2) that are missing or incomplete,
 //      newest first, down to --floor-days (365) ago, while X-RateLimit-Remaining stays above
 //      --reserve (5).
@@ -50,7 +52,9 @@ export async function fetchSamPage({ apiKey, iso, page, fetchImpl = fetch, throt
   url.searchParams.set('limit', String(PAGE_LIMIT));
   url.searchParams.set('offset', String(page)); // a PAGE INDEX (see header)
   url.searchParams.set('ptype', PTYPE);
-  for (let attempt = 1; attempt <= 4; attempt += 1) {
+  // A 429 from api.sam.gov almost always means the key's DAILY allowance is spent (no per-minute
+  // limit was ever hit at our 2.5 s pacing), and retrying burns more of it. One short retry, then stop.
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
     if (throttleMs) await sleep(throttleMs);
     const res = await fetchImpl(url.toString());
     const lim = Number(res.headers?.get?.('x-ratelimit-limit'));
@@ -60,8 +64,8 @@ export async function fetchSamPage({ apiKey, iso, page, fetchImpl = fetch, throt
     quota.used += 1;
     if (res.status === 429) {
       await res.text().catch(() => {});
-      if (attempt === 4) throw new QuotaError('SAM answered 429 four times: daily allowance spent');
-      await sleep(throttleMs ? 2 ** attempt * 5000 : 0);
+      if (attempt === 2) throw new QuotaError('SAM answered 429 twice: the API key\'s daily allowance is spent');
+      await sleep(throttleMs ? 15000 : 0);
       continue;
     }
     if (res.status !== 200) {
@@ -180,8 +184,11 @@ async function main() {
   const pool = getPool();
   try {
     const r = await runSamDates({ pool, apiKey, ...args });
-    // A failed day, or a forward window cut short by the allowance, makes the run red so it shows.
-    if (r.failed.length || (r.quotaStop && r.forward.length < args.daysLow)) process.exitCode = 1;
+    // A failed day makes the run red. Running out of the daily allowance does not: nothing is
+    // lost (the ledger re-reads what was missed tomorrow), and a red run would start the
+    // retry job, which only spends 429s. It is reported as a warning instead.
+    if (r.failed.length) process.exitCode = 1;
+    if (r.quotaStop) console.log(`::warning::SAM.gov API key allowance ran out after ${r.quota.used} requests; ${r.forward.length} recent days read, the rest continues tomorrow`);
   } finally {
     await closePool();
   }

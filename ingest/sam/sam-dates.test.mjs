@@ -71,7 +71,7 @@ test('runSamDates: window sized by the key allowance, then 2 older days, each re
     assert.equal(low.forward.length, 7);
     assert.deepEqual(low.backfill, ['2026-10-07']); // 7 used, 3 left: one more, then stop at the reserve
 
-    // Allowance spent mid-window: stops cleanly, no back-fill.
+    // Allowance spent mid-window: stops cleanly (one short retry of the 429), no back-fill.
     await pool.query(`DELETE FROM ops.source_dates WHERE lane = 'sam'`);
     const spent = await runSamDates({ pool, apiKey: 'k', now, fetchImpl: fakeSam({ limit: 10, startRemaining: 4 }), throttleMs: 0, load, log: () => {} });
     assert.equal(spent.quotaStop, true);
