@@ -1,77 +1,77 @@
 {
-  "at": "2026-10-14T00:43:54.268Z",
+  "at": "2026-10-15T00:11:03.447Z",
   "ok": true,
   "problems": [],
   "sources": [
     {
       "source": "dibbs_rfq",
       "label": "DIBBS open solicitations (rfq-fast, rfq-reconcile)",
-      "last_landed": "2026-10-13T19:10:57.411Z",
-      "age_hours": 5.5,
+      "last_landed": "2026-10-14T15:25:39.978Z",
+      "age_hours": 8.8,
       "max_age_hours": 48,
-      "newest_record": "2026-10-13",
-      "rows": 92683,
-      "open_rows": 17729,
+      "newest_record": "2026-10-14",
+      "rows": 94210,
+      "open_rows": 16627,
       "status": "ok"
     },
     {
       "source": "sam_gov",
       "label": "SAM.gov solicitations (sam-daily)",
-      "last_landed": "2026-10-13T15:28:28.379Z",
-      "age_hours": 9.3,
+      "last_landed": "2026-10-14T12:10:47.719Z",
+      "age_hours": 12,
       "max_age_hours": 48,
-      "newest_record": "2026-10-13",
-      "rows": 8883,
-      "open_rows": 5936,
+      "newest_record": "2026-10-14",
+      "rows": 9288,
+      "open_rows": 5632,
       "status": "ok"
     },
     {
       "source": "dibbs_awards",
       "label": "DIBBS award totals (ingest-daily)",
-      "last_landed": "2026-10-13T18:43:23.260Z",
-      "age_hours": 6,
+      "last_landed": "2026-10-14T15:29:26.573Z",
+      "age_hours": 8.7,
       "max_age_hours": 120,
-      "newest_record": "2026-10-12",
-      "rows": 74037,
+      "newest_record": "2026-10-13",
+      "rows": 77310,
       "status": "ok"
     },
     {
       "source": "price_points",
       "label": "Unit prices from award/solicitation join (ingest-daily, rfq-award-join)",
-      "last_landed": "2026-10-13T15:28:11.448Z",
-      "age_hours": 9.3,
+      "last_landed": "2026-10-14T14:36:38.906Z",
+      "age_hours": 9.6,
       "max_age_hours": 120,
-      "newest_record": "2026-10-12",
-      "rows": 25507,
+      "newest_record": "2026-10-13",
+      "rows": 26318,
       "status": "ok"
     },
     {
       "source": "usaspending",
       "label": "USAspending contract actions (ingest-daily)",
-      "last_landed": "2026-10-13T18:41:01.162Z",
-      "age_hours": 6,
+      "last_landed": "2026-10-14T14:19:45.288Z",
+      "age_hours": 9.9,
       "max_age_hours": 336,
       "newest_record": "2027-03-22",
-      "rows": 103545,
+      "rows": 105298,
       "status": "ok"
     },
     {
       "source": "publog",
       "label": "PUB LOG / FLIS enrichment (publog-nightly)",
-      "last_landed": "2026-10-13T19:10:56.600Z",
-      "age_hours": 5.5,
+      "last_landed": "2026-10-14T15:29:25.682Z",
+      "age_hours": 8.7,
       "max_age_hours": 48,
       "newest_record": null,
-      "rows": 93152,
-      "with_item_name": 93147,
-      "with_characteristics": 80149,
+      "rows": 94633,
+      "with_item_name": 94627,
+      "with_characteristics": 80626,
       "status": "ok"
     },
     {
       "source": "sam_entities",
       "label": "SAM.gov supplier registrations (sam-entities-monthly)",
       "last_landed": "2026-10-13T01:07:11.137Z",
-      "age_hours": 23.6,
+      "age_hours": 47.1,
       "max_age_hours": 960,
       "newest_record": "2026-10-04",
       "rows": 8919,
@@ -81,23 +81,23 @@
     {
       "source": "supplier_web",
       "label": "Supplier website profiles (supplier-web-daily)",
-      "last_landed": "2026-10-13T18:37:42.402Z",
-      "age_hours": 6.1,
+      "last_landed": "2026-10-14T16:04:50.980Z",
+      "age_hours": 8.1,
       "max_age_hours": 72,
-      "newest_record": "2026-10-13",
-      "rows": 299,
-      "read_ok": 256,
+      "newest_record": "2026-10-14",
+      "rows": 449,
+      "read_ok": 380,
       "customer_facing": false,
       "status": "ok"
     },
     {
       "source": "scoring",
       "label": "Target scoring (ingest-daily)",
-      "last_landed": "2026-10-13T20:28:03.344Z",
-      "age_hours": 4.3,
+      "last_landed": "2026-10-14T18:19:26.992Z",
+      "age_hours": 5.9,
       "max_age_hours": 72,
       "newest_record": null,
-      "rows": 7503,
+      "rows": 7842,
       "status": "ok"
     }
   ],
@@ -141,147 +141,66 @@
     {
       "check": "sam_open_services",
       "label": "Open SAM.gov service notices (letter service code; listed under /services/)",
-      "count": 994,
+      "count": 989,
       "status": "info"
     },
     {
       "check": "sam_open_equipment_services",
       "label": "Open SAM.gov equipment-service notices tied to a supply group (H, J, K, L, N, W)",
-      "count": 172,
+      "count": 178,
       "status": "info"
     },
     {
       "check": "sam_open_uncoded",
       "label": "Open SAM.gov notices with no code at all",
-      "count": 3823,
+      "count": 3517,
       "status": "info"
     },
     {
       "check": "sam_open_unclassified",
       "label": "Open SAM.gov notices with no product supply class (services or uncoded)",
-      "count": 4896,
+      "count": 4582,
       "status": "info"
     },
     {
       "check": "nsns_without_item_name",
       "label": "NSNs with no item name yet",
-      "count": 5,
+      "count": 6,
       "status": "info"
     },
     {
       "check": "suppliers_without_name",
       "label": "Supplier CAGE stubs awaiting PUB LOG name/address",
-      "count": 1302,
+      "count": 1332,
       "status": "info"
     }
   ],
   "history": [
     {
       "lane": "dibbs_awd",
-      "periods": 11,
-      "complete": 11,
+      "periods": 13,
+      "complete": 13,
       "incomplete": 0,
-      "oldest_complete": "2026-09-28",
-      "newest": "2026-10-12",
-      "records": 42408,
-      "last_read": "2026-10-13T18:43:26.677Z",
+      "oldest_complete": "2026-09-25",
+      "newest": "2026-10-13",
+      "records": 52917,
+      "last_read": "2026-10-14T15:29:28.523Z",
       "read_last_24h": [
         {
-          "day": "2026-10-12",
-          "expected": 129,
-          "records": 129,
-          "loaded": 124,
-          "extra": 7,
-          "complete": true,
-          "fetches": 5
-        },
-        {
-          "day": "2026-10-09",
-          "expected": 2031,
-          "records": 2031,
-          "loaded": 1632,
-          "extra": 461,
-          "complete": true,
-          "fetches": 2
-        },
-        {
-          "day": "2026-10-08",
-          "expected": 4069,
-          "records": 4069,
-          "loaded": 3572,
-          "extra": 801,
-          "complete": true,
-          "fetches": 3
-        },
-        {
-          "day": "2026-10-07",
-          "expected": 4825,
-          "records": 4825,
-          "loaded": 3776,
-          "extra": 1278,
-          "complete": true,
-          "fetches": 3
-        },
-        {
-          "day": "2026-10-06",
-          "expected": 4144,
-          "records": 4144,
-          "loaded": 3363,
-          "extra": 1255,
-          "complete": true,
-          "fetches": 3
-        },
-        {
-          "day": "2026-10-05",
-          "expected": 3641,
-          "records": 3641,
-          "loaded": 2925,
-          "extra": 874,
-          "complete": true,
-          "fetches": 2
-        },
-        {
-          "day": "2026-10-02",
-          "expected": 2042,
-          "records": 2042,
-          "loaded": 1677,
-          "extra": 428,
-          "complete": true,
-          "fetches": 2
-        },
-        {
-          "day": "2026-10-01",
-          "expected": 6642,
-          "records": 6642,
-          "loaded": 6169,
-          "extra": 671,
+          "day": "2026-10-13",
+          "expected": 4549,
+          "records": 4549,
+          "loaded": 3349,
+          "extra": 811,
           "complete": true,
           "fetches": 1
         },
         {
-          "day": "2026-09-30",
-          "expected": null,
-          "records": 0,
-          "loaded": 0,
-          "extra": 0,
-          "complete": true,
-          "fetches": 2
-        },
-        {
-          "day": "2026-09-29",
-          "expected": 7998,
-          "records": 7998,
-          "loaded": 7555,
-          "extra": 1148,
-          "complete": true,
-          "fetches": 2
-        },
-        {
-          "day": "2026-09-28",
-          "expected": 6887,
-          "records": 6887,
-          "loaded": 6046,
-          "extra": 1519,
+          "day": "2026-09-25",
+          "expected": 5960,
+          "records": 5960,
+          "loaded": 5018,
+          "extra": 422,
           "complete": true,
           "fetches": 1
         }
@@ -289,65 +208,29 @@
     },
     {
       "lane": "dibbs_rfq",
-      "periods": 6,
-      "complete": 6,
+      "periods": 8,
+      "complete": 8,
       "incomplete": 0,
-      "oldest_complete": "2026-08-31",
-      "newest": "2026-09-07",
-      "records": 10783,
-      "last_read": "2026-10-13T19:10:58.962Z",
+      "oldest_complete": "2026-08-28",
+      "newest": "2026-09-08",
+      "records": 12184,
+      "last_read": "2026-10-14T15:15:35.376Z",
       "read_last_24h": [
         {
-          "day": "2026-09-07",
-          "expected": 1892,
-          "records": 1892,
-          "loaded": 1096,
-          "extra": 224,
+          "day": "2026-09-08",
+          "expected": 888,
+          "records": 888,
+          "loaded": 659,
+          "extra": 122,
           "complete": true,
           "fetches": 1
         },
         {
-          "day": "2026-09-04",
-          "expected": 348,
-          "records": 348,
-          "loaded": 254,
-          "extra": 55,
-          "complete": true,
-          "fetches": 1
-        },
-        {
-          "day": "2026-09-03",
-          "expected": 1657,
-          "records": 1657,
-          "loaded": 1253,
-          "extra": 244,
-          "complete": true,
-          "fetches": 1
-        },
-        {
-          "day": "2026-09-02",
-          "expected": 2565,
-          "records": 2565,
-          "loaded": 2197,
-          "extra": 449,
-          "complete": true,
-          "fetches": 1
-        },
-        {
-          "day": "2026-09-01",
-          "expected": 2070,
-          "records": 2070,
-          "loaded": 1781,
-          "extra": 256,
-          "complete": true,
-          "fetches": 1
-        },
-        {
-          "day": "2026-08-31",
-          "expected": 2251,
-          "records": 2251,
-          "loaded": 1884,
-          "extra": 305,
+          "day": "2026-08-28",
+          "expected": 513,
+          "records": 513,
+          "loaded": 458,
+          "extra": 91,
           "complete": true,
           "fetches": 1
         }
@@ -355,22 +238,31 @@
     },
     {
       "lane": "sam",
-      "periods": 6,
-      "complete": 6,
+      "periods": 7,
+      "complete": 7,
       "incomplete": 0,
       "oldest_complete": "2026-10-08",
-      "newest": "2026-10-13",
-      "records": 2368,
-      "last_read": "2026-10-13T15:28:28.647Z",
+      "newest": "2026-10-14",
+      "records": 2822,
+      "last_read": "2026-10-14T12:10:48.098Z",
       "read_last_24h": [
         {
-          "day": "2026-10-13",
-          "expected": 534,
-          "records": 534,
-          "loaded": 534,
+          "day": "2026-10-14",
+          "expected": 86,
+          "records": 86,
+          "loaded": 86,
           "extra": 0,
           "complete": true,
           "fetches": 1
+        },
+        {
+          "day": "2026-10-13",
+          "expected": 936,
+          "records": 936,
+          "loaded": 934,
+          "extra": 0,
+          "complete": true,
+          "fetches": 2
         },
         {
           "day": "2026-10-12",
@@ -379,7 +271,7 @@
           "loaded": 903,
           "extra": 0,
           "complete": true,
-          "fetches": 1
+          "fetches": 2
         },
         {
           "day": "2026-10-11",
@@ -388,98 +280,62 @@
           "loaded": 4,
           "extra": 0,
           "complete": true,
-          "fetches": 1
+          "fetches": 2
         },
         {
           "day": "2026-10-10",
-          "expected": 4,
-          "records": 4,
-          "loaded": 4,
+          "expected": 3,
+          "records": 3,
+          "loaded": 3,
           "extra": 0,
           "complete": true,
-          "fetches": 1
+          "fetches": 2
         },
         {
           "day": "2026-10-09",
-          "expected": 303,
-          "records": 303,
-          "loaded": 302,
+          "expected": 291,
+          "records": 291,
+          "loaded": 290,
           "extra": 0,
           "complete": true,
-          "fetches": 1
+          "fetches": 2
         },
         {
           "day": "2026-10-08",
-          "expected": 620,
-          "records": 620,
-          "loaded": 615,
+          "expected": 599,
+          "records": 599,
+          "loaded": 594,
           "extra": 0,
           "complete": true,
-          "fetches": 1
+          "fetches": 2
         }
       ]
     },
     {
       "lane": "usaspending_5330",
-      "periods": 6,
-      "complete": 6,
+      "periods": 8,
+      "complete": 8,
       "incomplete": 0,
-      "oldest_complete": "2025-12-01",
+      "oldest_complete": "2025-10-01",
       "newest": "2026-05-01",
-      "records": 16705,
-      "last_read": "2026-10-13T18:41:01.653Z",
+      "records": 22824,
+      "last_read": "2026-10-14T14:19:46.382Z",
       "read_last_24h": [
         {
-          "day": "2026-05-01",
-          "expected": 2978,
-          "records": 2978,
-          "loaded": 2978,
-          "extra": 1087,
+          "day": "2025-11-01",
+          "expected": 2892,
+          "records": 2892,
+          "loaded": 2892,
+          "extra": 741,
           "complete": true,
           "fetches": 1
         },
         {
-          "day": "2026-04-01",
-          "expected": 2697,
-          "records": 2697,
-          "loaded": 2697,
-          "extra": 789,
-          "complete": true,
-          "fetches": 1
-        },
-        {
-          "day": "2026-03-01",
-          "expected": 2460,
-          "records": 2460,
-          "loaded": 2460,
-          "extra": 760,
-          "complete": true,
-          "fetches": 1
-        },
-        {
-          "day": "2026-02-01",
-          "expected": 2681,
-          "records": 2681,
-          "loaded": 2681,
-          "extra": 731,
-          "complete": true,
-          "fetches": 1
-        },
-        {
-          "day": "2026-01-01",
-          "expected": 2955,
-          "records": 2955,
-          "loaded": 2955,
-          "extra": 853,
-          "complete": true,
-          "fetches": 1
-        },
-        {
-          "day": "2025-12-01",
-          "expected": 2934,
-          "records": 2934,
-          "loaded": 2934,
-          "extra": 782,
+          "day": "2025-10-01",
+          "expected": 3227,
+          "records": 3227,
+          "loaded": 3227,
+          "extra": 936,
           "complete": true,
           "fetches": 1
         }
@@ -487,64 +343,28 @@
     },
     {
       "lane": "usaspending_5331",
-      "periods": 6,
-      "complete": 6,
+      "periods": 8,
+      "complete": 8,
       "incomplete": 0,
-      "oldest_complete": "2025-12-01",
+      "oldest_complete": "2025-10-01",
       "newest": "2026-05-01",
-      "records": 7836,
-      "last_read": "2026-10-13T18:35:13.203Z",
+      "records": 10329,
+      "last_read": "2026-10-14T14:04:37.582Z",
       "read_last_24h": [
         {
-          "day": "2026-05-01",
-          "expected": 1286,
-          "records": 1286,
-          "loaded": 1286,
+          "day": "2025-11-01",
+          "expected": 1212,
+          "records": 1212,
+          "loaded": 1212,
           "extra": 0,
           "complete": true,
           "fetches": 1
         },
         {
-          "day": "2026-04-01",
-          "expected": 1248,
-          "records": 1248,
-          "loaded": 1248,
-          "extra": 0,
-          "complete": true,
-          "fetches": 1
-        },
-        {
-          "day": "2026-03-01",
-          "expected": 1317,
-          "records": 1317,
-          "loaded": 1317,
-          "extra": 0,
-          "complete": true,
-          "fetches": 1
-        },
-        {
-          "day": "2026-02-01",
-          "expected": 1425,
-          "records": 1425,
-          "loaded": 1425,
-          "extra": 0,
-          "complete": true,
-          "fetches": 1
-        },
-        {
-          "day": "2026-01-01",
-          "expected": 1294,
-          "records": 1294,
-          "loaded": 1294,
-          "extra": 0,
-          "complete": true,
-          "fetches": 1
-        },
-        {
-          "day": "2025-12-01",
-          "expected": 1266,
-          "records": 1266,
-          "loaded": 1266,
+          "day": "2025-10-01",
+          "expected": 1281,
+          "records": 1281,
+          "loaded": 1281,
           "extra": 0,
           "complete": true,
           "fetches": 1
@@ -555,12 +375,12 @@
   "classes_by_render_depth": [
     {
       "render_depth": "deep",
-      "classes": 505,
-      "nsns": 93152
+      "classes": 506,
+      "nsns": 94633
     },
     {
       "render_depth": "excluded",
-      "classes": 439,
+      "classes": 450,
       "nsns": 0
     }
   ]
