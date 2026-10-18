@@ -1,16 +1,15 @@
-at: 2026-10-17T12:47:53Z  sha: fa5ae1a8def25ac1af08a8caa618ffeddfd5d879
+at: 2026-10-18T14:56:13Z  sha: abe2ae6e54e4a63f2db58860c4ddf5490f5be075
 == dates ==
-dibbs-dates[awd]: window 7 dates, to read 1 [10-16-2026]; back-fill 2 [09-24-2026, 09-22-2026]
-dibbs-dates[awd]: 10-16-2026 85 pages, 4248 of 4248 records (complete), 3329 loaded, 1323 price points (first read)
-dibbs-dates[awd]: 09-24-2026 [back-fill] 200 pages, 10000 of 10241 records (INCOMPLETE, will be read again), 8765 loaded, 1886 price points (read 2, unchanged)
-dibbs-dates[awd]: 09-22-2026 [back-fill] 153 pages, 7626 of 7626 records (complete), 6100 loaded, 1238 price points (first read)
-dibbs-dates[awd]: done. loaded 3 [10-16-2026, 09-24-2026, 09-22-2026]; settled 6; incomplete 1 [09-24-2026]; failed 0; left for next run 0
-dibbs-dates[awd]: skip reasons {"unparseable NSN":3014,"fsc not in deep set":107,"missing total":559}; price points skip reasons {"no solicitation number or non-positive total":13840,"no matching persisted solicitation":3272}
+dibbs-dates[awd]: window 7 dates, to read 0 []; back-fill 2 [09-24-2026, 09-21-2026]
+dibbs-dates[awd]: 09-24-2026 [back-fill] 200 pages, 10000 of 10241 records (accepted after repeated identical reads), 8765 loaded, 1886 price points (read 3, unchanged)
+dibbs-dates[awd]: hard time limit reached during 09-21-2026; leaving 09-21-2026 for the next run
+dibbs-dates[awd]: done. loaded 1 [09-24-2026]; settled 7; incomplete 0; failed 0; left for next run 1 [09-21-2026]
+dibbs-dates[awd]: skip reasons {"unparseable NSN":998,"missing total":228,"fsc not in deep set":9}; price points skip reasons {"no solicitation number or non-positive total":5811,"no matching persisted solicitation":2186}
 == errors and retries ==
-dibbs-dates[awd]: done. loaded 3 [10-16-2026, 09-24-2026, 09-22-2026]; settled 6; incomplete 1 [09-24-2026]; failed 0; left for next run 0
+dibbs-dates[awd]: done. loaded 1 [09-24-2026]; settled 7; incomplete 0; failed 0; left for next run 1 [09-21-2026]
 == log tail ==
-loadAwardGridActions: 6100 loaded, 1526 skipped
-loadPricePointsFromAwards: 7626 award records, matched=1380 loaded=1238 skipped=6246 {"no solicitation number or non-positive total":5409,"no matching persisted solicitation":837}
-dibbs-dates[awd]: 09-22-2026 [back-fill] 153 pages, 7626 of 7626 records (complete), 6100 loaded, 1238 price points (first read)
-dibbs-dates[awd]: done. loaded 3 [10-16-2026, 09-24-2026, 09-22-2026]; settled 6; incomplete 1 [09-24-2026]; failed 0; left for next run 0
-dibbs-dates[awd]: skip reasons {"unparseable NSN":3014,"fsc not in deep set":107,"missing total":559}; price points skip reasons {"no solicitation number or non-positive total":13840,"no matching persisted solicitation":3272}
+fetch.mjs: wrote /tmp/dibbs-awd/09-21-2026/awd-09-21-2026-p70.html
+fetch.mjs: wrote /tmp/dibbs-awd/09-21-2026/awd-09-21-2026-p71.html
+dibbs-dates[awd]: hard time limit reached during 09-21-2026; leaving 09-21-2026 for the next run
+dibbs-dates[awd]: done. loaded 1 [09-24-2026]; settled 7; incomplete 0; failed 0; left for next run 1 [09-21-2026]
+dibbs-dates[awd]: skip reasons {"unparseable NSN":998,"missing total":228,"fsc not in deep set":9}; price points skip reasons {"no solicitation number or non-positive total":5811,"no matching persisted solicitation":2186}
