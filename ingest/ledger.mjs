@@ -65,21 +65,26 @@ export async function recordPeriod(pool, lane, { day, expected = null, records, 
 
 /**
  * The next periods to back-fill, newest first: walk back from `start` (inclusive) with `step`,
- * skipping complete periods, until `count` are found, the walk passes `floor`, or `emptyStreak`
+ * skipping settled periods, until `count` are found, the walk passes `floor`, or `emptyStreak`
  * consecutive complete periods held no records (the source has run out; returns exhausted: true).
  *
  * @param {Map<string, object>} ledger from readLane
- * @param {{ start: string, step: (iso: string) => string, count: number, floor?: string, emptyStreak?: number, maxSteps?: number }} o
+ * `settled(row, day)` decides whether a recorded period can be skipped. The default is its
+ * `complete` flag. Day lanes pass a stricter rule: complete AND read on a later day, because a
+ * day read on the day itself matched the source's count only as it stood then (2026-10-17's SAM
+ * read at 11:00 UTC, before an outage, is the case that prompted this).
+ *
+ * @param {{ start: string, step: (iso: string) => string, count: number, floor?: string, emptyStreak?: number, maxSteps?: number, settled?: (row: object, day: string) => boolean }} o
  * @returns {{ days: string[], exhausted: boolean, reachedFloor: boolean, oldestComplete: string|null }}
  */
-export function backfillCandidates(ledger, { start, step, count, floor = '1900-01-01', emptyStreak = 10, maxSteps = 5000 }) {
+export function backfillCandidates(ledger, { start, step, count, floor = '1900-01-01', emptyStreak = 10, maxSteps = 5000, settled = (row) => row.complete }) {
   const days = [];
   if (!(count > 0)) return { days, exhausted: false, reachedFloor: false, oldestComplete: oldestComplete(ledger) };
   let empty = 0;
   let d = start;
   for (let i = 0; i < maxSteps && d >= floor; i += 1, d = step(d)) {
     const row = ledger.get(d);
-    if (row && row.complete) {
+    if (row && settled(row, d)) {
       empty = row.records === 0 ? empty + 1 : 0;
       if (empty >= emptyStreak) return { days, exhausted: true, reachedFloor: false, oldestComplete: oldestComplete(ledger) };
       continue;
