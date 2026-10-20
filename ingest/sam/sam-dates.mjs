@@ -38,11 +38,28 @@ const prevDay = (iso) => addDaysIso(iso, -1);
 /** 'YYYY-MM-DD' -> SAM's 'MM/DD/YYYY' */
 export const samDate = (iso) => { const [y, m, d] = iso.split('-'); return `${m}/${d}/${y}`; };
 
+/**
+ * A SAM posting day is settled once a complete read was made after that day ended. SAM's dates
+ * are Eastern; 05:00 UTC is midnight EST (01:00 EDT), so a read after it is safely the next day.
+ * A day read only on the day itself (2026-10-17, read 11:00 UTC, then three days of a rejected
+ * key) is re-read by the back-fill even after it leaves the 7-day window.
+ */
+export const samSettled = (row, iso) =>
+  Boolean(row?.complete) && Date.parse(row.fetched_at) >= Date.parse(`${addDaysIso(iso, 1)}T05:00:00Z`);
+
 export class QuotaError extends Error {}
+/** SAM refused the API key itself (HTTP 401/403): nothing will work until the key is replaced. */
+export class KeyError extends Error {}
+
+const redact = (t) => String(t).replace(/api_key=[^&\s]+/g, 'api_key=***');
+const bodyText = (t) => redact(t).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200);
 
 /**
- * One page (page index `page`) of notices posted on `iso`. Retries 429 a few times; a 429 that
- * persists means the daily allowance is spent (QuotaError).
+ * One page (page index `page`) of notices posted on `iso`.
+ * - 429: one short retry, then QuotaError (the daily allowance is spent).
+ * - 401/403: KeyError at once (the key was rejected; retrying cannot help).
+ * - 5xx or a network failure: one retry after 30 s, then an ordinary error for this day only.
+ *   SAM answered 504 mid-run on 2026-10-15 and that one error used to end the whole run.
  */
 export async function fetchSamPage({ apiKey, iso, page, fetchImpl = fetch, throttleMs = 2500, quota }) {
   const url = new URL(BASE_URL);
@@ -56,7 +73,14 @@ export async function fetchSamPage({ apiKey, iso, page, fetchImpl = fetch, throt
   // limit was ever hit at our 2.5 s pacing), and retrying burns more of it. One short retry, then stop.
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     if (throttleMs) await sleep(throttleMs);
-    const res = await fetchImpl(url.toString());
+    let res;
+    try {
+      res = await fetchImpl(url.toString());
+    } catch (err) {
+      if (attempt === 2) throw new Error(`SAM API unreachable for ${iso} page ${page}: ${redact(err?.cause?.code || err?.message || err)}`);
+      await sleep(throttleMs ? 30000 : 0);
+      continue;
+    }
     const lim = Number(res.headers?.get?.('x-ratelimit-limit'));
     const rem = Number(res.headers?.get?.('x-ratelimit-remaining'));
     if (Number.isFinite(lim) && lim > 0) quota.limit = lim;
@@ -68,9 +92,18 @@ export async function fetchSamPage({ apiKey, iso, page, fetchImpl = fetch, throt
       await sleep(throttleMs ? 15000 : 0);
       continue;
     }
+    if (res.status === 401 || res.status === 403) {
+      const body = await res.text().catch(() => '');
+      throw new KeyError(`SAM.gov rejected the API key (HTTP ${res.status}: ${bodyText(body)}). Generate a new public API key on SAM.gov (Workspace > Account Details) and save it as the GitHub secret SAM_API_KEY`);
+    }
+    if (res.status >= 500 && attempt === 1) {
+      await res.text().catch(() => {});
+      await sleep(throttleMs ? 30000 : 0);
+      continue;
+    }
     if (res.status !== 200) {
       const body = await res.text().catch(() => '');
-      throw new Error(`SAM API returned ${res.status} for ${iso} page ${page}: ${body.replace(/api_key=[^&\s]+/g, 'api_key=***').slice(0, 300)}`);
+      throw new Error(`SAM API returned ${res.status} for ${iso} page ${page}: ${bodyText(body)}`);
     }
     return res.json();
   }
@@ -108,7 +141,13 @@ export async function runSamDates({
   const today = isoOf(now);
   const quota = { limit: null, remaining: null, used: 0 };
   const ledger = await readLane(pool, LANE);
-  const result = { forward: [], backfill: [], incomplete: [], failed: [], quotaStop: false, exhausted: false, quota };
+  const result = { forward: [], backfill: [], incomplete: [], failed: [], quotaStop: false, keyRejected: false, exhausted: false, quota };
+  // A rejected key or a spent allowance ends the run; any other error costs only that day.
+  const stopOn = (err, where) => {
+    if (err instanceof KeyError) { result.keyRejected = true; log(`sam-dates: ${err.message}; stopping`); return true; }
+    if (err instanceof QuotaError) { result.quotaStop = true; log(`sam-dates: ${err.message}; ${where}`); return true; }
+    return false;
+  };
 
   const readDay = async (iso, kind) => {
     const { records, total } = await fetchSamDay({ apiKey, iso, fetchImpl, throttleMs, quota });
@@ -122,25 +161,28 @@ export async function runSamDates({
   // 1. forward. The first request tells us the key's daily limit, which sets the window.
   let windowDays = daysLow;
   let iso = prevDay(today);
-  try {
-    await readDay(today, '');
-    result.forward.push(today);
-    windowDays = quota.limit !== null && quota.limit >= 1000 ? daysHigh : daysLow;
-    log(`sam-dates: API key allowance ${quota.limit ?? 'unknown'} requests a day; re-reading the last ${windowDays} days`);
-    for (let i = 1; i < windowDays; i += 1, iso = prevDay(iso)) {
-      await readDay(iso, '');
-      result.forward.push(iso);
+  for (let i = 0; i < windowDays; i += 1) {
+    const day = i === 0 ? today : iso;
+    try {
+      await readDay(day, '');
+      result.forward.push(day);
+    } catch (err) {
+      if (stopOn(err, 'stopping, the rest waits for tomorrow')) break;
+      result.failed.push(day);
+      log(`sam-dates: ${day} failed: ${redact(err.message)}`);
     }
-  } catch (err) {
-    if (!(err instanceof QuotaError)) throw err;
-    result.quotaStop = true;
-    log(`sam-dates: ${err.message}; stopping, the rest waits for tomorrow`);
+    if (i === 0) {
+      windowDays = quota.limit !== null && quota.limit >= 1000 ? daysHigh : daysLow;
+      log(`sam-dates: API key allowance ${quota.limit ?? 'unknown'} requests a day; re-reading the last ${windowDays} days`);
+    } else {
+      iso = prevDay(iso);
+    }
   }
 
   // 2. back-fill older days, newest first, while the allowance lasts.
-  if (!result.quotaStop) {
+  if (!result.quotaStop && !result.keyRejected) {
     const floor = addDaysIso(today, -floorDays);
-    const walk = backfillCandidates(ledger, { start: iso, step: prevDay, count: backfillDays, floor, emptyStreak: 30 });
+    const walk = backfillCandidates(ledger, { start: iso, step: prevDay, count: backfillDays, floor, emptyStreak: 30, settled: samSettled });
     result.exhausted = walk.exhausted || walk.reachedFloor;
     for (const day of walk.days) {
       if (quota.remaining !== null && quota.remaining <= reserve) {
@@ -151,9 +193,9 @@ export async function runSamDates({
         await readDay(day, ' [back-fill]');
         result.backfill.push(day);
       } catch (err) {
-        if (err instanceof QuotaError) { result.quotaStop = true; log(`sam-dates: ${err.message}; back-fill stops`); break; }
+        if (stopOn(err, 'back-fill stops')) break;
         result.failed.push(day);
-        log(`sam-dates: ${day} [back-fill] failed: ${err.message}`);
+        log(`sam-dates: ${day} [back-fill] failed: ${redact(err.message)}`);
       }
     }
     if (result.exhausted) log(`sam-dates: history complete back to ${floor}`);
@@ -161,7 +203,7 @@ export async function runSamDates({
 
   log(`sam-dates: done. forward ${result.forward.length} days, back-fill ${result.backfill.length} [${result.backfill.join(', ')}], ` +
     `incomplete ${result.incomplete.length}${result.incomplete.length ? ` [${result.incomplete.join(', ')}]` : ''}, ` +
-    `failed ${result.failed.length}; requests used ${quota.used}, remaining ${quota.remaining ?? 'unknown'} of ${quota.limit ?? 'unknown'}`);
+    `failed ${result.failed.length}${result.failed.length ? ` [${result.failed.join(', ')}]` : ''}${result.keyRejected ? ', API KEY REJECTED' : ''}; requests used ${quota.used}, remaining ${quota.remaining ?? 'unknown'} of ${quota.limit ?? 'unknown'}`);
   return result;
 }
 
@@ -187,7 +229,8 @@ async function main() {
     // A failed day makes the run red. Running out of the daily allowance does not: nothing is
     // lost (the ledger re-reads what was missed tomorrow), and a red run would start the
     // retry job, which only spends 429s. It is reported as a warning instead.
-    if (r.failed.length) process.exitCode = 1;
+    if (r.failed.length || r.keyRejected) process.exitCode = 1;
+    if (r.keyRejected) console.log('::error::SAM.gov rejected the API key. Generate a new public API key on SAM.gov (Workspace > Account Details) and save it as the GitHub secret SAM_API_KEY. Missed days are re-read automatically once it works.');
     if (r.quotaStop) console.log(`::warning::SAM.gov API key allowance ran out after ${r.quota.used} requests; ${r.forward.length} recent days read, the rest continues tomorrow`);
   } finally {
     await closePool();
