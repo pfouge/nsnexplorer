@@ -1,1 +1,95 @@
 == files ==
+total 9824084
+drwxr-xr-x  2 runner runner       4096 Oct 10 18:39 .
+drwxrwxrwt 16 root   root         4096 Oct 22 14:43 ..
+-rw-r--r--  1 runner runner  371183040 Sep 28 13:39 P_CAGE.CSV
+-rw-r--r--  1 runner runner  987210664 Sep 28 13:43 P_FLIS_NSN.CSV
+-rw-r--r--  1 runner runner    4798116 Sep 28 13:43 P_HELP.CSV
+-rw-r--r--  1 runner runner  468230972 Sep 28 13:40 V_CAGE_ADDRESS.CSV
+-rw-r--r--  1 runner runner 2957026235 Sep 28 13:55 V_CHARACTERISTICS.CSV
+-rw-r--r--  1 runner runner    1068171 Sep 28 13:46 V_COLLOQUIAL_NAME.CSV
+-rw-r--r--  1 runner runner   49009257 Sep 28 13:46 V_FLIS_CANCELLED_NIIN.CSV
+-rw-r--r--  1 runner runner 1608363642 Sep 28 13:46 V_FLIS_IDENTIFICATION.CSV
+-rw-r--r--  1 runner runner 1283022921 Sep 28 14:02 V_FLIS_PART.CSV
+-rw-r--r--  1 runner runner  614943289 Sep 28 13:47 V_FLIS_STANDARDIZATION.CSV
+-rw-r--r--  1 runner runner 1714944447 Sep 28 13:59 V_MOE_RULE.CSV
+== per-file head (first 2 lines, 400 chars each) ==
+--- /tmp/publog/P_CAGE.CSV
+"CAGE_CODE","CAGE_STATUS","COMPANY","CITY","STATE_PROVINCE","ZIP_POSTAL_ZONE","COUNTRY"
+"00000","H","ORDNANCE CORPS","BATTLE CREEK","MI","49017","UNITED STATES"
+
+--- /tmp/publog/P_FLIS_NSN.CSV
+"FSC","NIIN","INC","ITEM_NAME","SOS","END_ITEM_NAME","CANCELLED_NIIN"
+"4935","000000012","77777","UNKNOWN","","",""
+
+--- /tmp/publog/P_HELP.CSV
+"CODE","LITERAL","DESCRIPTION","REGS"
+"AAC","ACQUISITION ADVICE","ACQUISITION ADVICE CODE (AAC):  A CODE DENOTING HOW, AS DISTINGUISHED FROM WHERE, AND UNDER WHATRESTRICTIONS AN ITEM WILL BE ACQUIRED. SHORT TITLE, AAC.  SEE VOLUME 10, TABLES 58, 97, 113, AND 143 AND QUICK INFO ON-LINE.","HTTPS://WWW.DLA.MIL/PORTALS/104/DOCUMENTS/DLMS/CDS/MANUALS/CDTS_VOLUME_10.DOCX"
+
+--- /tmp/publog/V_CAGE_ADDRESS.CSV
+"CAGE_CODE","COMPANY_NAME","STREET_ADDRESS_1","STREET_ADDRESS_2","STREET_ADDRESS_3","CITY","STATE","ZIP","COUNTRY"
+"00000","ORDNANCE CORPS","","","","BATTLE CREEK","MI","49017","UNITED STATES"
+
+--- /tmp/publog/V_CHARACTERISTICS.CSV
+"NIIN","MRC","REQUIREMENTS_STATEMENT","CLEAR_TEXT_REPLY"
+"000000042","AGAV","END ITEM IDENTIFICATION","USED ON ALM F13 AIRCRAFT"
+
+--- /tmp/publog/V_COLLOQUIAL_NAME.CSV
+"INC","COLLOQUIAL_NAME"
+"00001","CATHODE RAY TUBE"
+
+--- /tmp/publog/V_FLIS_CANCELLED_NIIN.CSV
+"NIIN","CANCELLED_NIIN_FSC","CANCELLED_NIIN","NIIN_STAT_CD","EFF_DATE","DEMIL"
+"000000051","5960","001649799","5","02-JUL-2026","A"
+
+--- /tmp/publog/V_FLIS_IDENTIFICATION.CSV
+"NIIN","INC","PINC","CRIT_CD","II","DMIL","DMIL_INT_CD","NIIN_ASGMT","PMIC","ADP","HMIC","ESD_EMI","HCC","SCHEDULE_B","ENAC","IUID_INDICATOR","LST_KWN_SOS","FEDMALL"
+"000000012","77777","2146085","","0","B","3","10-JAN-22","U","","N","","","","","","N32",""
+
+--- /tmp/publog/V_FLIS_PART.CSV
+"NIIN","PART_NUMBER","CAGE_CODE","CAGE_STATUS","RNCC","RNVC","DAC","RNAAC","RNFC","RNSC","RNJC","SADC","HCC","MSDS","MEDALS"
+"000000042","UK 60A890216","24039","A","3","2","6","9Z","4","A","","","","",""
+
+--- /tmp/publog/V_FLIS_STANDARDIZATION.CSV
+"NIIN","RELATED_NSN","ISC","ORIG_STDZN_DEC","DT_STDZN_DEC","NIIN_STAT_CD"
+"000000012","","","","","4"
+
+--- /tmp/publog/V_MOE_RULE.CSV
+"NIIN","MOE_RL","MOE_CD","AMC","AMSC","NIMSC","DT_ASGND","IMC","IMCA","AAC","PICA","PICA_LOA","SICA","SICA_LOA","AUTH_COLLAB","SUPP_COLLAB","DSOR","FMR_MOE_RL","ROW_OBS_DT"
+"000000042","ZK01","ZK","","","","01-MAR-06","","","","ZK","81","","","ZK","","","",""
+
+== V_MOE_RULE.CSV (first 2 lines, 1000 chars each) ==
+"NIIN","MOE_RL","MOE_CD","AMC","AMSC","NIMSC","DT_ASGND","IMC","IMCA","AAC","PICA","PICA_LOA","SICA","SICA_LOA","AUTH_COLLAB","SUPP_COLLAB","DSOR","FMR_MOE_RL","ROW_OBS_DT"
+"000000042","ZK01","ZK","","","","01-MAR-06","","","","ZK","81","","","ZK","","","",""
+== load output (tail) ==
+load.mjs: tracking 106585 existing NIIN(s)
+load.mjs: P_FLIS_NSN.CSV: 104037 loaded, 17025717 rows scanned
+load.mjs: V_FLIS_PART.CSV: 382795 loaded, 16623521 rows scanned
+load.mjs: characteristics candidate P_HELP.CSV rejected (headers: CODE, LITERAL, DESCRIPTION, REGS)
+load.mjs: characteristics candidate V_CAGE_ADDRESS.CSV rejected (headers: CAGE_CODE, COMPANY_NAME, STREET_ADDRESS_1, STREET_ADDRESS_2, STREET_ADDRESS_3, CITY, STATE, ZIP, COUNTRY)
+error: (EMAXCONNSESSION) max clients reached in session mode - max clients are limited to pool_size: 15
+    at /home/runner/work/nsnexplorer/nsnexplorer/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async txOnce (file:///home/runner/work/nsnexplorer/nsnexplorer/shared/db.mjs:75:18)
+    at async withRetry (file:///home/runner/work/nsnexplorer/nsnexplorer/shared/db.mjs:169:14)
+    at async flushCharacteristics (file:///home/runner/work/nsnexplorer/nsnexplorer/ingest/publog/load.mjs:383:5)
+    at async loadCharacteristicsFile (file:///home/runner/work/nsnexplorer/nsnexplorer/ingest/publog/load.mjs:637:18)
+    at async main (file:///home/runner/work/nsnexplorer/nsnexplorer/ingest/publog/load.mjs:1035:20) {
+  length: 117,
+  severity: 'FATAL',
+  code: 'XX000',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: undefined,
+  line: undefined,
+  routine: undefined
+}
