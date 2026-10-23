@@ -1,7 +1,7 @@
 == files ==
 total 9824084
 drwxr-xr-x  2 runner runner       4096 Oct 10 18:39 .
-drwxrwxrwt 16 root   root         4096 Oct 22 14:43 ..
+drwxrwxrwt 16 root   root         4096 Oct 23 14:30 ..
 -rw-r--r--  1 runner runner  371183040 Sep 28 13:39 P_CAGE.CSV
 -rw-r--r--  1 runner runner  987210664 Sep 28 13:43 P_FLIS_NSN.CSV
 -rw-r--r--  1 runner runner    4798116 Sep 28 13:43 P_HELP.CSV
@@ -62,34 +62,17 @@ drwxrwxrwt 16 root   root         4096 Oct 22 14:43 ..
 "NIIN","MOE_RL","MOE_CD","AMC","AMSC","NIMSC","DT_ASGND","IMC","IMCA","AAC","PICA","PICA_LOA","SICA","SICA_LOA","AUTH_COLLAB","SUPP_COLLAB","DSOR","FMR_MOE_RL","ROW_OBS_DT"
 "000000042","ZK01","ZK","","","","01-MAR-06","","","","ZK","81","","","ZK","","","",""
 == load output (tail) ==
-load.mjs: tracking 106585 existing NIIN(s)
-load.mjs: P_FLIS_NSN.CSV: 104037 loaded, 17025717 rows scanned
-load.mjs: V_FLIS_PART.CSV: 382795 loaded, 16623521 rows scanned
+load.mjs: tracking 112061 existing NIIN(s)
+load.mjs: P_FLIS_NSN.CSV: 109417 loaded, 17025717 rows scanned
+load.mjs: V_FLIS_PART.CSV: 402070 loaded, 16623521 rows scanned
 load.mjs: characteristics candidate P_HELP.CSV rejected (headers: CODE, LITERAL, DESCRIPTION, REGS)
 load.mjs: characteristics candidate V_CAGE_ADDRESS.CSV rejected (headers: CAGE_CODE, COMPANY_NAME, STREET_ADDRESS_1, STREET_ADDRESS_2, STREET_ADDRESS_3, CITY, STATE, ZIP, COUNTRY)
-error: (EMAXCONNSESSION) max clients reached in session mode - max clients are limited to pool_size: 15
-    at /home/runner/work/nsnexplorer/nsnexplorer/node_modules/pg-pool/index.js:45:11
-    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    at async txOnce (file:///home/runner/work/nsnexplorer/nsnexplorer/shared/db.mjs:75:18)
-    at async withRetry (file:///home/runner/work/nsnexplorer/nsnexplorer/shared/db.mjs:169:14)
-    at async flushCharacteristics (file:///home/runner/work/nsnexplorer/nsnexplorer/ingest/publog/load.mjs:383:5)
-    at async loadCharacteristicsFile (file:///home/runner/work/nsnexplorer/nsnexplorer/ingest/publog/load.mjs:637:18)
-    at async main (file:///home/runner/work/nsnexplorer/nsnexplorer/ingest/publog/load.mjs:1035:20) {
-  length: 117,
-  severity: 'FATAL',
-  code: 'XX000',
-  detail: undefined,
-  hint: undefined,
-  position: undefined,
-  internalPosition: undefined,
-  internalQuery: undefined,
-  where: undefined,
-  schema: undefined,
-  table: undefined,
-  column: undefined,
-  dataType: undefined,
-  constraint: undefined,
-  file: undefined,
-  line: undefined,
-  routine: undefined
-}
+load.mjs: V_CHARACTERISTICS.CSV: 80884 loaded, 38936531 rows scanned
+load.mjs: V_MOE_RULE.CSV first line: "NIIN","MOE_RL","MOE_CD","AMC","AMSC","NIMSC","DT_ASGND","IMC","IMCA","AAC","PICA","PICA_LOA","SICA","SICA_LOA","AUTH_COLLAB","SUPP_COLLAB","DSOR","FMR_MOE_RL","ROW_OBS_DT"
+load.mjs: V_MOE_RULE.CSV resolved columns (0-based): niin=0(header) moe=2(header) amc=3(header) amsc=4(header) obs=18(header) of 19 column(s) [headers: NIIN, MOE_RL, MOE_CD, AMC, AMSC, NIMSC, DT_ASGND, IMC, IMCA, AAC, PICA, PICA_LOA, SICA, SICA_LOA, AUTH_COLLAB, SUPP_COLLAB, DSOR, FMR_MOE_RL, ROW_OBS_DT]
+load.mjs: V_MOE_RULE.CSV: 18284387 rows scanned, 591120 on tracked NIINs, 375792 skipped (AMC and AMSC both blank), 0 invalid AMC and 0 invalid AMSC treated as blank, 109368 NSN(s) with a kept row (109367 without a parseable date)
+load.mjs: V_MOE_RULE.CSV kept AMC distribution: 0:880 1:48405 2:1488 3:56095 4:1588 5:912
+load.mjs: V_MOE_RULE.CSV kept AMSC distribution: 0:880 A:45 B:3042 C:14578 D:22742 G:30449 H:2025 K:10 L:6574 M:53 N:29 P:3366 Q:4319 R:7270 S:9 T:4685 U:33 V:28 Y:4 Z:9227
+load.mjs: V_MOE_RULE.CSV: 9348 observation(s) written, 100020 unchanged (latest flis value identical)
+load.mjs: V_MOE_RULE.CSV: 9348 loaded, 18284387 rows scanned
+load.mjs: P_CAGE.CSV: 24445 loaded, 4158375 rows scanned
