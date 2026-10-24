@@ -79,12 +79,26 @@ test('runSamDates: window sized by the key allowance, then 2 older days, each re
     assert.equal(low.forward.length, 7);
     assert.deepEqual(low.backfill, ['2026-10-07']); // 7 used, 3 left: one more, then stop at the reserve
 
-    // Allowance spent mid-window: stops cleanly (one short retry of the 429), no back-fill.
+    // Allowance spent mid-window: SAM reports 0 left, so the run stops before asking for a 429.
     await pool.query(`DELETE FROM ops.source_dates WHERE lane = 'sam'`);
     const spent = await runSamDates({ pool, apiKey: 'k', now, fetchImpl: fakeSam({ limit: 10, startRemaining: 4 }), throttleMs: 0, load, log: () => {} });
-    assert.equal(spent.quotaStop, true);
+    assert.equal(spent.quotaStop, false);
     assert.equal(spent.forward.length, 4);
     assert.deepEqual(spent.backfill, []);
+    assert.equal(spent.left.length, 3 + 2); // 3 window days and 2 back-fill days wait for tomorrow
+
+    // SAM sends no remaining-count header at all: the 429 ends the run as before.
+    await pool.query(`DELETE FROM ops.source_dates WHERE lane = 'sam'`);
+    let calls = 0;
+    const headerless = async (u) => {
+      calls += 1;
+      if (calls > 4) return new Response('over', { status: 429 });
+      const r = await fakeSam()(u);
+      return new Response(await r.text(), { status: r.status });
+    };
+    const blind = await runSamDates({ pool, apiKey: 'k', now, fetchImpl: headerless, throttleMs: 0, load, log: () => {} });
+    assert.equal(blind.quotaStop, true);
+    assert.equal(blind.forward.length, 4);
   } finally {
     await pool.query(`DELETE FROM ops.source_dates WHERE lane = 'sam'`);
   }
@@ -186,6 +200,65 @@ test('runSamDates: the first run after the key is replaced re-reads every missed
     for (const d of ['2026-10-17', '2026-10-18', '2026-10-19', '2026-10-20']) assert.ok(loaded.includes(d), d);
     const { rows } = await p.query(`SELECT day::text FROM ops.source_dates WHERE lane = 'sam' AND day BETWEEN '2026-10-17' AND '2026-10-21' AND complete ORDER BY day`);
     assert.equal(rows.length, 5);
+  } finally {
+    await p.query(`DELETE FROM ops.source_dates WHERE lane = 'sam'`);
+    await p.end();
+  }
+});
+
+test('runSamDates: with a 10-a-day key, missed days come before refreshes (2026-10-25)', { skip: !url }, async () => {
+  const pg = (await import('pg')).default;
+  const p = new pg.Pool({ connectionString: url, max: 2 });
+  await p.query(`DELETE FROM ops.source_dates WHERE lane = 'sam'`);
+  try {
+    // The ledger after run #35 on 2026-10-24: 10-08..10-17 as before the outage (10-17 read only
+    // that morning), 10-18..10-24 read at 19:00 UTC on 10-24 (so 10-24 itself is not settled).
+    const seed = [...outageLedger()];
+    for (let d = '2026-10-18'; d <= '2026-10-24'; d = addDaysIso(d, 1)) seed.push([d, { fetched_at: '2026-10-24T19:00:00Z' }]);
+    for (const [d, row] of seed) {
+      await p.query(`INSERT INTO ops.source_dates (lane, day, expected, records, complete, fetches, first_fetched_at, fetched_at)
+                     VALUES ('sam', $1, 500, 500, true, 1, $2, $2)`, [d, row.fetched_at]);
+    }
+    const load = async (records) => ({ loaded: records.length, skipped: 0 });
+    const order = [];
+    const logs = [];
+    const fetchImpl = fakeSam({ limit: 10, startRemaining: 10, requests: order });
+    const r = await runSamDates({ pool: p, apiKey: 'k', now: Date.parse('2026-10-25T06:30:00Z'), fetchImpl, throttleMs: 0, load, log: (l) => logs.push(l) });
+    // today, the unsettled 10-24, then the back-fill (10-17 first), then refreshes while requests last.
+    assert.deepEqual(order.map((q) => q.iso), ['2026-10-25', '2026-10-24', '2026-10-17', '2026-10-07',
+      '2026-10-23', '2026-10-22', '2026-10-21', '2026-10-20', '2026-10-19']);
+    assert.deepEqual(r.backfill, ['2026-10-17', '2026-10-07']);
+    assert.deepEqual(r.left, []);
+    assert.ok(logs.some((l) => /2026-10-17 \[back-fill\] 3 of 3 notices \(complete\)/.test(l)));
+
+    // A tighter day (6 left): the repairs still happen; only refreshes wait.
+    await p.query(`DELETE FROM ops.source_dates WHERE lane = 'sam'`);
+    for (const [d, row] of seed) {
+      await p.query(`INSERT INTO ops.source_dates (lane, day, expected, records, complete, fetches, first_fetched_at, fetched_at)
+                     VALUES ('sam', $1, 500, 500, true, 1, $2, $2)`, [d, row.fetched_at]);
+    }
+    const tight = await runSamDates({ pool: p, apiKey: 'k', now: Date.parse('2026-10-25T06:30:00Z'), fetchImpl: fakeSam({ limit: 10, startRemaining: 6 }), throttleMs: 0, load, log: () => {} });
+    assert.deepEqual(tight.backfill, ['2026-10-17', '2026-10-07']);
+    assert.deepEqual(tight.left, ['2026-10-21 [refresh]', '2026-10-20 [refresh]', '2026-10-19 [refresh]']);
+
+    // Production on 2026-10-24: SAM sent no remaining-count header. That is not "0 left": the run
+    // carries on through the repairs and stops at SAM's first refusal (429), as a warning.
+    await p.query(`DELETE FROM ops.source_dates WHERE lane = 'sam'`);
+    for (const [d, row] of seed) {
+      await p.query(`INSERT INTO ops.source_dates (lane, day, expected, records, complete, fetches, first_fetched_at, fetched_at)
+                     VALUES ('sam', $1, 500, 500, true, 1, $2, $2)`, [d, row.fetched_at]);
+    }
+    let n = 0;
+    const tenThenRefuse = async (u) => {
+      n += 1;
+      if (n > 10) return new Response('over', { status: 429 });
+      const res = await fakeSam()(u);
+      return new Response(await res.text(), { status: res.status }); // no rate-limit headers at all
+    };
+    const blind = await runSamDates({ pool: p, apiKey: 'k', now: Date.parse('2026-10-25T06:30:00Z'), fetchImpl: tenThenRefuse, throttleMs: 0, load, log: () => {} });
+    assert.deepEqual(blind.backfill, ['2026-10-17', '2026-10-07']);
+    assert.equal(blind.quota.remaining, null);
+    assert.equal(blind.forward.length, 7);
   } finally {
     await p.query(`DELETE FROM ops.source_dates WHERE lane = 'sam'`);
     await p.end();
