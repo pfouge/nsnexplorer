@@ -9,20 +9,24 @@
 // Per-day reads make each day's completeness checkable, and let the back-fill repair the days
 // that were cut short and then extend history.
 //
-// Each run:
-//   1. forward: the last N calendar days, re-read every run so status and deadline changes are
-//      picked up. N adapts to the API key's allowance, read from api.data.gov's X-RateLimit-Limit
-//      header on the first response: --days-high (30) when the limit is 1,000+ a day, else
-//      --days-low (7). api.sam.gov did not send the header on 2026-10-13 and the key ran out after
-//      ~10 requests that day, so 7 days
-//      plus 2 back-fill days is the normal shape.
-//   2. back-fill: up to --backfill-days older days (default 2) that are missing or incomplete,
-//      newest first, down to --floor-days (365) ago, while X-RateLimit-Remaining stays above
-//      --reserve (5).
+// Each run reads, in this order, until the key's daily allowance runs out:
+//   1. today.
+//   2. days in the window (the last N calendar days) that are missing or not yet settled (see
+//      samSettled): new data and gap repair come first.
+//   3. back-fill: up to --backfill-days older days (default 2) that are missing or not settled,
+//      newest first, down to --floor-days (365) ago.
+//   4. refresh: the settled days in the window, newest first, so status and deadline changes are
+//      picked up while requests last.
+// N adapts to the key's allowance, read from X-RateLimit-Limit on the first response:
+// --days-high (30) at 1,000+ a day, else --days-low (7). The key allows about 10 requests a day.
+// Until 2026-10-24 the whole window was re-read before the back-fill and 5 requests were held in
+// reserve, so with 10 a day the back-fill never ran: SAM history never grew, and 2026-10-17 (read
+// only that morning, then a 7-day key outage) was not repaired. Missed days now come before
+// refreshes, and the reserve defaults to 0 (--reserve).
 // Older notices load with their own status (SAM's `active` flag), so expired ones arrive as
 // expired. A day is complete when the notices read equal SAM's totalRecords for that day.
 //
-// CLI: node ingest/sam/sam-dates.mjs [--days-high 30] [--days-low 7] [--backfill-days 2] [--floor-days 365]
+// CLI: node ingest/sam/sam-dates.mjs [--days-high 30] [--days-low 7] [--backfill-days 2] [--floor-days 365] [--reserve 0]
 
 import { loadSamSolicitations } from './load.mjs';
 import { readLane, recordPeriod, backfillCandidates, addDaysIso, isoOf } from '../ledger.mjs';
@@ -81,8 +85,11 @@ export async function fetchSamPage({ apiKey, iso, page, fetchImpl = fetch, throt
       await sleep(throttleMs ? 30000 : 0);
       continue;
     }
-    const lim = Number(res.headers?.get?.('x-ratelimit-limit'));
-    const rem = Number(res.headers?.get?.('x-ratelimit-remaining'));
+    // A missing header is unknown, not 0: Number(null) is 0, and until 2026-10-24 that made every
+    // run think its allowance was spent after the window, so the back-fill never ran.
+    const header = (name) => { const v = res.headers?.get?.(name); return v === null || v === undefined || v === '' ? NaN : Number(v); };
+    const lim = header('x-ratelimit-limit');
+    const rem = header('x-ratelimit-remaining');
     if (Number.isFinite(lim) && lim > 0) quota.limit = lim;
     if (Number.isFinite(rem)) quota.remaining = rem;
     quota.used += 1;
@@ -131,7 +138,7 @@ export async function runSamDates({
   daysLow = 7,
   backfillDays = 2,
   floorDays = 365,
-  reserve = 5,
+  reserve = 0,
   now = Date.now(),
   fetchImpl = fetch,
   throttleMs = 2500,
@@ -141,7 +148,7 @@ export async function runSamDates({
   const today = isoOf(now);
   const quota = { limit: null, remaining: null, used: 0 };
   const ledger = await readLane(pool, LANE);
-  const result = { forward: [], backfill: [], incomplete: [], failed: [], quotaStop: false, keyRejected: false, exhausted: false, quota };
+  const result = { forward: [], backfill: [], incomplete: [], failed: [], left: [], quotaStop: false, keyRejected: false, exhausted: false, quota };
   // A rejected key or a spent allowance ends the run; any other error costs only that day.
   const stopOn = (err, where) => {
     if (err instanceof KeyError) { result.keyRejected = true; log(`sam-dates: ${err.message}; stopping`); return true; }
@@ -158,45 +165,48 @@ export async function runSamDates({
     log(`sam-dates: ${iso}${kind} ${records.length} of ${total} notices (${row.complete ? 'complete' : 'INCOMPLETE, will be read again'}), ${r.loaded} loaded`);
   };
 
-  // 1. forward. The first request tells us the key's daily limit, which sets the window.
-  let windowDays = daysLow;
-  let iso = prevDay(today);
-  for (let i = 0; i < windowDays; i += 1) {
-    const day = i === 0 ? today : iso;
+  // The allowance is spent once SAM reports `reserve` or fewer requests left; reading on would
+  // only earn 429s.
+  const spent = () => quota.remaining !== null && quota.remaining <= reserve;
+  const read = async (day, kind, into) => {
     try {
-      await readDay(day, '');
-      result.forward.push(day);
+      await readDay(day, kind);
+      into.push(day);
+      return true;
     } catch (err) {
-      if (stopOn(err, 'stopping, the rest waits for tomorrow')) break;
+      if (stopOn(err, 'stopping, the rest waits for tomorrow')) return false;
       result.failed.push(day);
-      log(`sam-dates: ${day} failed: ${redact(err.message)}`);
+      log(`sam-dates: ${day}${kind} failed: ${redact(err.message)}`);
+      return true;
     }
-    if (i === 0) {
-      windowDays = quota.limit !== null && quota.limit >= 1000 ? daysHigh : daysLow;
-      log(`sam-dates: API key allowance ${quota.limit ?? 'unknown'} requests a day; re-reading the last ${windowDays} days`);
-    } else {
-      iso = prevDay(iso);
-    }
-  }
+  };
 
-  // 2. back-fill older days, newest first, while the allowance lasts.
-  if (!result.quotaStop && !result.keyRejected) {
+  // 1. today. The first response tells us the key's daily limit, which sets the window.
+  if (await read(today, '', result.forward)) {
+    const windowDays = quota.limit !== null && quota.limit >= 1000 ? daysHigh : daysLow;
+    log(`sam-dates: API key allowance ${quota.limit ?? 'unknown'} requests a day, ${quota.remaining ?? 'unknown'} left; window ${windowDays} days`);
+    const window = [];
+    let iso = today;
+    for (let i = 1; i < windowDays; i += 1) { iso = prevDay(iso); window.push(iso); }
+    const due = window.filter((d) => !samSettled(ledger.get(d), d));
+    const refresh = window.filter((d) => samSettled(ledger.get(d), d));
     const floor = addDaysIso(today, -floorDays);
-    const walk = backfillCandidates(ledger, { start: iso, step: prevDay, count: backfillDays, floor, emptyStreak: 30, settled: samSettled });
+    const walk = backfillCandidates(ledger, { start: prevDay(iso), step: prevDay, count: backfillDays, floor, emptyStreak: 30, settled: samSettled });
     result.exhausted = walk.exhausted || walk.reachedFloor;
-    for (const day of walk.days) {
-      if (quota.remaining !== null && quota.remaining <= reserve) {
-        log(`sam-dates: ${quota.remaining} requests left today (reserve ${reserve}); back-fill waits for tomorrow`);
+    // 2-4: missed days in the window, then older missed days, then refreshes.
+    const plan = [
+      ...due.map((d) => [d, '', result.forward]),
+      ...walk.days.map((d) => [d, ' [back-fill]', result.backfill]),
+      ...refresh.map((d) => [d, ' [refresh]', result.forward]),
+    ];
+    for (const [day, kind, into] of plan) {
+      if (spent()) {
+        const left = plan.slice(plan.findIndex((p) => p[0] === day)).map((p) => p[0] + p[1]);
+        result.left = left;
+        log(`sam-dates: ${quota.remaining} requests left today (reserve ${reserve}); waiting for tomorrow: ${left.join(', ')}`);
         break;
       }
-      try {
-        await readDay(day, ' [back-fill]');
-        result.backfill.push(day);
-      } catch (err) {
-        if (stopOn(err, 'back-fill stops')) break;
-        result.failed.push(day);
-        log(`sam-dates: ${day} [back-fill] failed: ${redact(err.message)}`);
-      }
+      if (!(await read(day, kind, into))) break;
     }
     if (result.exhausted) log(`sam-dates: history complete back to ${floor}`);
   }
@@ -208,12 +218,13 @@ export async function runSamDates({
 }
 
 function parseArgs(argv) {
-  const a = { daysHigh: 30, daysLow: 7, backfillDays: 2, floorDays: 365 };
+  const a = { daysHigh: 30, daysLow: 7, backfillDays: 2, floorDays: 365, reserve: 0 };
   for (let i = 0; i < argv.length; i += 1) {
     if (argv[i] === '--days-high') a.daysHigh = Number(argv[++i]);
     else if (argv[i] === '--days-low') a.daysLow = Number(argv[++i]);
     else if (argv[i] === '--backfill-days') a.backfillDays = Number(argv[++i]);
     else if (argv[i] === '--floor-days') a.floorDays = Number(argv[++i]);
+    else if (argv[i] === '--reserve') a.reserve = Number(argv[++i]);
   }
   for (const k of Object.keys(a)) if (!Number.isInteger(a[k]) || a[k] < 0) throw new Error(`sam-dates: --${k} must be a whole number`);
   return a;
