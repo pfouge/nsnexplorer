@@ -1,18 +1,19 @@
-at: 2026-10-24T12:38:14Z  sha: d89deb19cc0d7e8392725a9d7f13e20d6fb97a82
+at: 2026-10-24T13:43:31Z  sha: 2d08732f5ace86aa24f64679bf43748dc541a3c6
 == dates ==
-dibbs-dates[awd]: window 7 dates, to read 1 [10-23-2026]; back-fill 2 [09-09-2026, 09-08-2026]
-dibbs-dates[awd]: 10-23-2026 72 pages, 3599 of 3599 records (complete), 2853 loaded, 695 price points (first read)
-dibbs-dates: database connection limit reached (attempt 1 of 3); retrying in 120 s
-dibbs-dates: database connection limit reached (attempt 2 of 3); retrying in 120 s
+dibbs-dates[awd]: window 7 dates, to read 0 []; back-fill 2 [09-09-2026, 09-08-2026]
+dibbs-dates[awd]: 09-09-2026 [back-fill] 125 pages, 6225 of 6225 records (complete), 4956 loaded, 728 price points (first read)
+dibbs-dates[awd]: 09-08-2026 [back-fill] fetch failed (ECONNRESET: fetch failed); continuing
+dibbs-dates[awd]: done. loaded 1 [09-09-2026]; settled 7; incomplete 0; failed 1 [09-08-2026]; left for next run 0
+dibbs-dates[awd]: skip reasons {"unparseable NSN":970,"missing total":283,"fsc not in deep set":16}; price points skip reasons {"no solicitation number or non-positive total":4623,"no matching persisted solicitation":792}
 == errors and retries ==
-jarFetch attempt 1 failed for https://www.dibbs.bsm.dla.mil/Awards/AwdRecs.aspx?category=post&TypeSrch=dt&Value=09-09-2026 (ECONNRESET); retrying in 20s
-jarFetch attempt 2 failed for https://www.dibbs.bsm.dla.mil/Awards/AwdRecs.aspx?category=post&TypeSrch=dt&Value=09-09-2026 (ECONNRESET); retrying in 40s
-dibbs-dates: database connection limit reached (attempt 1 of 3); retrying in 120 s
-dibbs-dates: database connection limit reached (attempt 2 of 3); retrying in 120 s
-error: (EMAXCONNSESSION) max clients reached in session mode - max clients are limited to pool_size: 15
+jarFetch attempt 1 failed for https://www.dibbs.bsm.dla.mil/Awards/AwdRecs.aspx?category=post&TypeSrch=dt&Value=09-08-2026 (ECONNRESET); retrying in 20s
+jarFetch attempt 2 failed for https://www.dibbs.bsm.dla.mil/Awards/AwdRecs.aspx?category=post&TypeSrch=dt&Value=09-08-2026 (ECONNRESET); retrying in 40s
+jarFetch attempt 3 failed for https://www.dibbs.bsm.dla.mil/Awards/AwdRecs.aspx?category=post&TypeSrch=dt&Value=09-08-2026 (ECONNRESET); retrying in 60s
+dibbs-dates[awd]: 09-08-2026 [back-fill] fetch failed (ECONNRESET: fetch failed); continuing
+dibbs-dates[awd]: done. loaded 1 [09-09-2026]; settled 7; incomplete 0; failed 1 [09-08-2026]; left for next run 0
 == log tail ==
-  constraint: undefined,
-  file: undefined,
-  line: undefined,
-  routine: undefined
-}
+jarFetch attempt 2 failed for https://www.dibbs.bsm.dla.mil/Awards/AwdRecs.aspx?category=post&TypeSrch=dt&Value=09-08-2026 (ECONNRESET); retrying in 40s
+jarFetch attempt 3 failed for https://www.dibbs.bsm.dla.mil/Awards/AwdRecs.aspx?category=post&TypeSrch=dt&Value=09-08-2026 (ECONNRESET); retrying in 60s
+dibbs-dates[awd]: 09-08-2026 [back-fill] fetch failed (ECONNRESET: fetch failed); continuing
+dibbs-dates[awd]: done. loaded 1 [09-09-2026]; settled 7; incomplete 0; failed 1 [09-08-2026]; left for next run 0
+dibbs-dates[awd]: skip reasons {"unparseable NSN":970,"missing total":283,"fsc not in deep set":16}; price points skip reasons {"no solicitation number or non-positive total":4623,"no matching persisted solicitation":792}
