@@ -1,3 +1,14 @@
-at: 2026-10-24T11:19:55Z  sha: f65592b8c4992db5941e31630426fffe32fdf7de
-== fetch log tail ==
-== fetched files ==
+at: 2026-10-24T12:21:04Z  sha: d89deb19cc0d7e8392725a9d7f13e20d6fb97a82
+== fetch log tail (errors included) ==
+sam-dates: SAM.gov rejected the API key (HTTP 401: API_KEY_INVALID An invalid API key was supplied. Please submit with a valid API key.). Generate a new public API key on SAM.gov (Workspace > Account Details) and save it as the GitHub secret SAM_API_KEY; stopping
+sam-dates: done. forward 0 days, back-fill 0 [], incomplete 0, failed 0, API KEY REJECTED; requests used 1, remaining 0 of unknown
+::error::SAM.gov rejected the API key. Generate a new public API key on SAM.gov (Workspace > Account Details) and save it as the GitHub secret SAM_API_KEY. Missed days are re-read automatically once it works.
+== migrate log tail ==
+skip  0007_fsc_guard_service_codes.sql (already applied)
+skip  0008_daily_stats.sql (already applied)
+skip  0009_accounts_watchlists.sql (already applied)
+skip  0010_contract_actions_raw_nsn_idx.sql (already applied)
+skip  0011_supplier_profiles.sql (already applied)
+skip  0012_dibbs_award_dates.sql (already applied)
+skip  0013_source_dates_ledger.sql (already applied)
+migrate: no-op, all migrations already applied
