@@ -1,19 +1,18 @@
-at: 2026-10-23T14:10:09Z  sha: eebc69711cb9192090109ab6c8930665d02b96c2
+at: 2026-10-24T12:38:14Z  sha: d89deb19cc0d7e8392725a9d7f13e20d6fb97a82
 == dates ==
-dibbs-dates[awd]: window 7 dates, to read 2 [10-22-2026, 10-21-2026]; back-fill 2 [09-11-2026, 09-10-2026]
+dibbs-dates[awd]: window 7 dates, to read 1 [10-23-2026]; back-fill 2 [09-09-2026, 09-08-2026]
+dibbs-dates[awd]: 10-23-2026 72 pages, 3599 of 3599 records (complete), 2853 loaded, 695 price points (first read)
 dibbs-dates: database connection limit reached (attempt 1 of 3); retrying in 120 s
-dibbs-dates[awd]: 10-22-2026 92 pages, 4585 of 4585 records (complete), 3740 loaded, 624 price points (first read)
-dibbs-dates[awd]: 10-21-2026 88 pages, 4362 of 4362 records (complete), 3611 loaded, 1025 price points (first read)
-dibbs-dates[awd]: 09-11-2026 [back-fill] 92 pages, 4578 of 4578 records (complete), 3300 loaded, 362 price points (first read)
-dibbs-dates[awd]: 09-10-2026 [back-fill] 128 pages, 6400 of 6400 records (complete), 5223 loaded, 671 price points (first read)
-dibbs-dates[awd]: done. loaded 4 [10-22-2026, 10-21-2026, 09-11-2026, 09-10-2026]; settled 5; incomplete 0; failed 0; left for next run 0
-dibbs-dates[awd]: skip reasons {"unparseable NSN":3315,"missing total":695,"fsc not in deep set":41}; price points skip reasons {"no solicitation number or non-positive total":15030,"no matching persisted solicitation":2012}
+dibbs-dates: database connection limit reached (attempt 2 of 3); retrying in 120 s
 == errors and retries ==
+jarFetch attempt 1 failed for https://www.dibbs.bsm.dla.mil/Awards/AwdRecs.aspx?category=post&TypeSrch=dt&Value=09-09-2026 (ECONNRESET); retrying in 20s
+jarFetch attempt 2 failed for https://www.dibbs.bsm.dla.mil/Awards/AwdRecs.aspx?category=post&TypeSrch=dt&Value=09-09-2026 (ECONNRESET); retrying in 40s
 dibbs-dates: database connection limit reached (attempt 1 of 3); retrying in 120 s
-dibbs-dates[awd]: done. loaded 4 [10-22-2026, 10-21-2026, 09-11-2026, 09-10-2026]; settled 5; incomplete 0; failed 0; left for next run 0
+dibbs-dates: database connection limit reached (attempt 2 of 3); retrying in 120 s
+error: (EMAXCONNSESSION) max clients reached in session mode - max clients are limited to pool_size: 15
 == log tail ==
-loadAwardGridActions: 5223 loaded, 1177 skipped
-loadPricePointsFromAwards: 6400 award records, matched=704 loaded=671 skipped=5696 {"no solicitation number or non-positive total":4999,"no matching persisted solicitation":697}
-dibbs-dates[awd]: 09-10-2026 [back-fill] 128 pages, 6400 of 6400 records (complete), 5223 loaded, 671 price points (first read)
-dibbs-dates[awd]: done. loaded 4 [10-22-2026, 10-21-2026, 09-11-2026, 09-10-2026]; settled 5; incomplete 0; failed 0; left for next run 0
-dibbs-dates[awd]: skip reasons {"unparseable NSN":3315,"missing total":695,"fsc not in deep set":41}; price points skip reasons {"no solicitation number or non-positive total":15030,"no matching persisted solicitation":2012}
+  constraint: undefined,
+  file: undefined,
+  line: undefined,
+  routine: undefined
+}
