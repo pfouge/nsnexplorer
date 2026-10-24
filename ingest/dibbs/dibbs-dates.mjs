@@ -145,7 +145,7 @@ export async function runDibbsDates({
   const start = windowDates.length
     ? prevBusinessDay(isoDay(windowDates.at(-1)))
     : isoDay(businessDays(backfillStart, now).at(-1));
-  const walk = backfillCandidates(ledger, { start, step: prevBusinessDay, count: backfillDays, floor, emptyStreak: EMPTY_STREAK });
+  const walk = backfillCandidates(ledger, { start, step: prevBusinessDay, count: backfillDays, floor, emptyStreak: EMPTY_STREAK, settled: (row, d) => !needsRead(row, d) });
   const backfill = walk.days.map(dibbsDay);
   const todo = [...forward, ...backfill];
   log(`${tag}: window ${windowDates.length} dates, to read ${forward.length} [${forward.join(', ')}]; ` +

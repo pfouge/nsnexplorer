@@ -56,7 +56,7 @@ jobs:
           node-version: 22
       - run: npm ci
         if: steps.check-key.outputs.present == 'true'
-      - run: node db/migrate.mjs
+      - run: bash .github/scripts/retry-pool-full.sh /tmp/migrate.log node db/migrate.mjs
         if: steps.check-key.outputs.present == 'true'
       # One posting day at a time, each checked against SAM's own count and recorded in the
       # history ledger (ops.source_dates, lane sam): the last 30 days (7 on a low-allowance key),
@@ -68,16 +68,16 @@ jobs:
       - name: summary
         if: always()
         run: |
-          { echo '### SAM.gov notices by day'; echo '```'; grep -E '^sam-dates' /tmp/sam-fetch.log 2>/dev/null || echo 'no output'; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          { echo '### SAM.gov notices by day'; echo '```'; grep -E '^(sam-dates|Error)' /tmp/sam-fetch.log 2>/dev/null || echo 'no output'; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: write run report
         if: failure() && steps.check-key.outputs.present == 'true'
         run: |
           {
             echo "at: $(date -u +%FT%TZ)  sha: $GITHUB_SHA"
-            echo '== fetch log tail =='
-            grep -E '^sam-dates' /tmp/sam-fetch.log | tail -60 2>/dev/null || echo 'no fetch log'
-            echo '== fetched files =='
-            ls -la /tmp/sam 2>/dev/null | head -30 || echo 'no dir'
+            echo '== fetch log tail (errors included) =='
+            if [ -s /tmp/sam-fetch.log ]; then grep -vE '^[[:space:]]+at ' /tmp/sam-fetch.log | sed -E 's/api_key=[^&[:space:]]+/api_key=***/g' | tail -60; else echo 'no fetch log: the run stopped before reading SAM.gov'; fi
+            echo '== migrate log tail =='
+            if [ -s /tmp/migrate.log ]; then grep -vE '^[[:space:]]+at ' /tmp/migrate.log | tail -8; else echo 'no migrate log'; fi
           } > ingest/sam/sam-last-run.txt
       - name: commit run report
         if: failure() && steps.check-key.outputs.present == 'true'
@@ -104,7 +104,7 @@ jobs:
         with:
           node-version: 22
       - run: npm ci
-      - run: node db/migrate.mjs
+      - run: bash .github/scripts/retry-pool-full.sh /tmp/migrate.log node db/migrate.mjs
       # One posting day at a time, each checked against SAM's own count and recorded in the
       # history ledger (ops.source_dates, lane sam): the last 30 days (7 on a low-allowance key),
       # then 2 older days that are missing or incomplete, back to a year. Replaced the single
@@ -114,16 +114,16 @@ jobs:
       - name: summary
         if: always()
         run: |
-          { echo '### SAM.gov notices by day'; echo '```'; grep -E '^sam-dates' /tmp/sam-fetch.log 2>/dev/null || echo 'no output'; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          { echo '### SAM.gov notices by day'; echo '```'; grep -E '^(sam-dates|Error)' /tmp/sam-fetch.log 2>/dev/null || echo 'no output'; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: write run report
         if: failure()
         run: |
           {
             echo "at: $(date -u +%FT%TZ)  sha: $GITHUB_SHA"
-            echo '== fetch log tail =='
-            grep -E '^sam-dates' /tmp/sam-fetch.log | tail -60 2>/dev/null || echo 'no fetch log'
-            echo '== fetched files =='
-            ls -la /tmp/sam 2>/dev/null | head -30 || echo 'no dir'
+            echo '== fetch log tail (errors included) =='
+            if [ -s /tmp/sam-fetch.log ]; then grep -vE '^[[:space:]]+at ' /tmp/sam-fetch.log | sed -E 's/api_key=[^&[:space:]]+/api_key=***/g' | tail -60; else echo 'no fetch log: the run stopped before reading SAM.gov'; fi
+            echo '== migrate log tail =='
+            if [ -s /tmp/migrate.log ]; then grep -vE '^[[:space:]]+at ' /tmp/migrate.log | tail -8; else echo 'no migrate log'; fi
           } > ingest/sam/sam-last-run.txt
       - name: commit run report
         if: failure()
