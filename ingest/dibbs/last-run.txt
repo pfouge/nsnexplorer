@@ -1,19 +1,15 @@
-at: 2026-10-24T13:43:31Z  sha: 2d08732f5ace86aa24f64679bf43748dc541a3c6
+at: 2026-10-25T13:32:33Z  sha: 1b188073b0391355fc392d0ea845f3c1ccf6e685
 == dates ==
-dibbs-dates[awd]: window 7 dates, to read 0 []; back-fill 2 [09-09-2026, 09-08-2026]
-dibbs-dates[awd]: 09-09-2026 [back-fill] 125 pages, 6225 of 6225 records (complete), 4956 loaded, 728 price points (first read)
-dibbs-dates[awd]: 09-08-2026 [back-fill] fetch failed (ECONNRESET: fetch failed); continuing
-dibbs-dates[awd]: done. loaded 1 [09-09-2026]; settled 7; incomplete 0; failed 1 [09-08-2026]; left for next run 0
-dibbs-dates[awd]: skip reasons {"unparseable NSN":970,"missing total":283,"fsc not in deep set":16}; price points skip reasons {"no solicitation number or non-positive total":4623,"no matching persisted solicitation":792}
+dibbs-dates[awd]: window 7 dates, to read 0 []; back-fill 2 [09-03-2026, 09-02-2026]
+dibbs-dates[awd]: 09-03-2026 [back-fill] 153 pages, 7641 of 7641 records (complete), 6376 loaded, 524 price points (first read)
+dibbs-dates[awd]: 09-02-2026 [back-fill] 133 pages, 6612 of 6612 records (complete), 5731 loaded, 869 price points (first read)
+dibbs-dates[awd]: done. loaded 2 [09-03-2026, 09-02-2026]; settled 7; incomplete 0; failed 0; left for next run 0
+dibbs-dates[awd]: skip reasons {"unparseable NSN":1360,"missing total":739,"fsc not in deep set":47}; price points skip reasons {"no solicitation number or non-positive total":8694,"no matching persisted solicitation":4047}
 == errors and retries ==
-jarFetch attempt 1 failed for https://www.dibbs.bsm.dla.mil/Awards/AwdRecs.aspx?category=post&TypeSrch=dt&Value=09-08-2026 (ECONNRESET); retrying in 20s
-jarFetch attempt 2 failed for https://www.dibbs.bsm.dla.mil/Awards/AwdRecs.aspx?category=post&TypeSrch=dt&Value=09-08-2026 (ECONNRESET); retrying in 40s
-jarFetch attempt 3 failed for https://www.dibbs.bsm.dla.mil/Awards/AwdRecs.aspx?category=post&TypeSrch=dt&Value=09-08-2026 (ECONNRESET); retrying in 60s
-dibbs-dates[awd]: 09-08-2026 [back-fill] fetch failed (ECONNRESET: fetch failed); continuing
-dibbs-dates[awd]: done. loaded 1 [09-09-2026]; settled 7; incomplete 0; failed 1 [09-08-2026]; left for next run 0
+dibbs-dates[awd]: done. loaded 2 [09-03-2026, 09-02-2026]; settled 7; incomplete 0; failed 0; left for next run 0
 == log tail ==
-jarFetch attempt 2 failed for https://www.dibbs.bsm.dla.mil/Awards/AwdRecs.aspx?category=post&TypeSrch=dt&Value=09-08-2026 (ECONNRESET); retrying in 40s
-jarFetch attempt 3 failed for https://www.dibbs.bsm.dla.mil/Awards/AwdRecs.aspx?category=post&TypeSrch=dt&Value=09-08-2026 (ECONNRESET); retrying in 60s
-dibbs-dates[awd]: 09-08-2026 [back-fill] fetch failed (ECONNRESET: fetch failed); continuing
-dibbs-dates[awd]: done. loaded 1 [09-09-2026]; settled 7; incomplete 0; failed 1 [09-08-2026]; left for next run 0
-dibbs-dates[awd]: skip reasons {"unparseable NSN":970,"missing total":283,"fsc not in deep set":16}; price points skip reasons {"no solicitation number or non-positive total":4623,"no matching persisted solicitation":792}
+loadAwardGridActions: 5731 loaded, 881 skipped
+loadPricePointsFromAwards: 6612 award records, matched=944 loaded=869 skipped=5668 {"no matching persisted solicitation":1799,"no solicitation number or non-positive total":3869}
+dibbs-dates[awd]: 09-02-2026 [back-fill] 133 pages, 6612 of 6612 records (complete), 5731 loaded, 869 price points (first read)
+dibbs-dates[awd]: done. loaded 2 [09-03-2026, 09-02-2026]; settled 7; incomplete 0; failed 0; left for next run 0
+dibbs-dates[awd]: skip reasons {"unparseable NSN":1360,"missing total":739,"fsc not in deep set":47}; price points skip reasons {"no solicitation number or non-positive total":8694,"no matching persisted solicitation":4047}
