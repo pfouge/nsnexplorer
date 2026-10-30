@@ -1,6 +1,74 @@
-at: 2026-10-30T15:50:28Z  sha: 8d4cafc7c34983fd8f1dfafd36f1df2e9f1fbbe1
+at: 2026-10-30T18:26:47Z  sha: 24ba3969e944f6ce297c8e9584ed5032ff8bce7c
 == fetch log tail ==
-no fetch log
+fetch.mjs: wrote /tmp/rfq/rfq-09-28-2026-p45.html
+fetch.mjs: wrote /tmp/rfq/rfq-09-28-2026-p46.html
+fetch.mjs: wrote /tmp/rfq/rfq-09-28-2026-p47.html
+fetch.mjs: wrote /tmp/rfq/rfq-09-28-2026-p48.html
+fetch.mjs: wrote /tmp/rfq/rfq-09-28-2026-p49.html
+fetch.mjs: wrote /tmp/rfq/rfq-09-28-2026-p50.html
+fetch.mjs: wrote /tmp/rfq/rfq-09-28-2026-p51.html
+fetch.mjs: wrote /tmp/rfq/rfq-09-28-2026-p52.html
+fetch.mjs: wrote /tmp/rfq/rfq-09-25-2026-p1.html
+fetch.mjs: wrote /tmp/rfq/rfq-09-25-2026-p2.html
+fetch.mjs: wrote /tmp/rfq/rfq-09-25-2026-p3.html
+fetch.mjs: wrote /tmp/rfq/rfq-09-25-2026-p4.html
+fetch.mjs: wrote /tmp/rfq/rfq-09-25-2026-p5.html
+fetch.mjs: wrote /tmp/rfq/rfq-09-25-2026-p6.html
+fetch.mjs: wrote /tmp/rfq/rfq-09-25-2026-p7.html
+fetch.mjs: wrote /tmp/rfq/rfq-09-25-2026-p8.html
+fetch.mjs: wrote /tmp/rfq/rfq-09-25-2026-p9.html
+fetch.mjs: wrote /tmp/rfq/rfq-09-25-2026-p10.html
+fetch.mjs: wrote /tmp/rfq/rfq-09-25-2026-p11.html
+fetch.mjs: 25/25 dates fetched
 == load log tail ==
-no load log
+    at async runRfq (file:///home/runner/work/nsnexplorer/nsnexplorer/ingest/dibbs/pipeline.mjs:107:22)
+    at async main (file:///home/runner/work/nsnexplorer/nsnexplorer/ingest/dibbs/pipeline.mjs:128:5) {
+  length: 117,
+  severity: 'FATAL',
+  code: 'XX000',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: undefined,
+  line: undefined,
+  routine: undefined
+}
 == fetched files ==
+total 375940
+drwxr-xr-x  2 runner runner  53248 Oct 30 18:22 .
+drwxrwxrwt 16 root   root     4096 Oct 30 18:22 ..
+-rw-r--r--  1 runner runner 358277 Oct 30 18:21 rfq-09-25-2026-p1.html
+-rw-r--r--  1 runner runner 389349 Oct 30 18:22 rfq-09-25-2026-p10.html
+-rw-r--r--  1 runner runner 275099 Oct 30 18:22 rfq-09-25-2026-p11.html
+-rw-r--r--  1 runner runner 387869 Oct 30 18:21 rfq-09-25-2026-p2.html
+-rw-r--r--  1 runner runner 396970 Oct 30 18:21 rfq-09-25-2026-p3.html
+-rw-r--r--  1 runner runner 391578 Oct 30 18:21 rfq-09-25-2026-p4.html
+-rw-r--r--  1 runner runner 403323 Oct 30 18:21 rfq-09-25-2026-p5.html
+-rw-r--r--  1 runner runner 406625 Oct 30 18:22 rfq-09-25-2026-p6.html
+-rw-r--r--  1 runner runner 393925 Oct 30 18:22 rfq-09-25-2026-p7.html
+-rw-r--r--  1 runner runner 382305 Oct 30 18:22 rfq-09-25-2026-p8.html
+-rw-r--r--  1 runner runner 375922 Oct 30 18:22 rfq-09-25-2026-p9.html
+-rw-r--r--  1 runner runner 334780 Oct 30 18:13 rfq-09-28-2026-p1.html
+-rw-r--r--  1 runner runner 349084 Oct 30 18:15 rfq-09-28-2026-p10.html
+-rw-r--r--  1 runner runner 336867 Oct 30 18:15 rfq-09-28-2026-p11.html
+-rw-r--r--  1 runner runner 346928 Oct 30 18:15 rfq-09-28-2026-p12.html
+-rw-r--r--  1 runner runner 337884 Oct 30 18:15 rfq-09-28-2026-p13.html
+-rw-r--r--  1 runner runner 358276 Oct 30 18:15 rfq-09-28-2026-p14.html
+-rw-r--r--  1 runner runner 376967 Oct 30 18:15 rfq-09-28-2026-p15.html
+-rw-r--r--  1 runner runner 372234 Oct 30 18:16 rfq-09-28-2026-p16.html
+-rw-r--r--  1 runner runner 420998 Oct 30 18:16 rfq-09-28-2026-p17.html
+-rw-r--r--  1 runner runner 398877 Oct 30 18:16 rfq-09-28-2026-p18.html
+-rw-r--r--  1 runner runner 389358 Oct 30 18:16 rfq-09-28-2026-p19.html
+-rw-r--r--  1 runner runner 342763 Oct 30 18:13 rfq-09-28-2026-p2.html
+-rw-r--r--  1 runner runner 415152 Oct 30 18:16 rfq-09-28-2026-p20.html
+-rw-r--r--  1 runner runner 383467 Oct 30 18:16 rfq-09-28-2026-p21.html
+-rw-r--r--  1 runner runner 391298 Oct 30 18:16 rfq-09-28-2026-p22.html
+-rw-r--r--  1 runner runner 396211 Oct 30 18:17 rfq-09-28-2026-p23.html
