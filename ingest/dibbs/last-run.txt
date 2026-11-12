@@ -1,20 +1,16 @@
-at: 2026-11-11T16:49:09Z  sha: 379a6f065b1a7fa936fe37b35b5513f83646418b
+at: 2026-11-12T17:15:55Z  sha: 5da1299bc97575f068eba1bcf09c0db35ce1c3c4
 == dates ==
-dibbs-dates[awd]: window 7 dates, to read 1 [11-10-2026]; back-fill 2 [07-28-2026, 07-27-2026]
-dibbs-dates[awd]: 11-10-2026 181 pages, 9015 of 9015 records (complete), 8218 loaded, 1022 price points (first read)
-dibbs-dates[awd]: 07-28-2026 [back-fill] fetch failed (ECONNRESET: fetch failed); continuing
-dibbs-dates[awd]: 07-27-2026 [back-fill] 144 pages, 7185 of 7185 records (complete), 5664 loaded, 0 price points (first read)
-dibbs-dates[awd]: done. loaded 2 [11-10-2026, 07-27-2026]; settled 6; incomplete 0; failed 1 [07-28-2026]; left for next run 0
-dibbs-dates[awd]: skip reasons {"unparseable NSN":1898,"missing total":419,"fsc not in deep set":1}; price points skip reasons {"no solicitation number or non-positive total":11395,"no matching persisted solicitation":3712}
+dibbs-dates[awd]: window 7 dates, to read 1 [11-11-2026]; back-fill 2 [07-22-2026, 07-21-2026]
+dibbs-dates[awd]: 11-11-2026 10 pages, 459 of 459 records (complete), 459 loaded, 2 price points (first read)
+dibbs-dates[awd]: 07-22-2026 [back-fill] 105 pages, 5227 of 5227 records (complete), 4229 loaded, 1 price points (first read)
+dibbs-dates[awd]: 07-21-2026 [back-fill] 200 pages, 10000 of 10163 records (INCOMPLETE, will be read again), 8276 loaded, 0 price points (first read)
+dibbs-dates[awd]: done. loaded 3 [11-11-2026, 07-22-2026, 07-21-2026]; settled 6; incomplete 1 [07-21-2026]; failed 0; left for next run 0
+dibbs-dates[awd]: skip reasons {"unparseable NSN":2029,"missing total":692,"fsc not in deep set":1}; price points skip reasons {"no solicitation number or non-positive total":10807,"no matching persisted solicitation":4876}
 == errors and retries ==
-jarFetch attempt 1 failed for https://www.dibbs.bsm.dla.mil/Awards/AwdRecs.aspx?category=post&TypeSrch=dt&Value=07-28-2026 (ECONNRESET); retrying in 20s
-jarFetch attempt 2 failed for https://www.dibbs.bsm.dla.mil/Awards/AwdRecs.aspx?category=post&TypeSrch=dt&Value=07-28-2026 (ECONNRESET); retrying in 40s
-jarFetch attempt 3 failed for https://www.dibbs.bsm.dla.mil/Awards/AwdRecs.aspx?category=post&TypeSrch=dt&Value=07-28-2026 (ECONNRESET); retrying in 60s
-dibbs-dates[awd]: 07-28-2026 [back-fill] fetch failed (ECONNRESET: fetch failed); continuing
-dibbs-dates[awd]: done. loaded 2 [11-10-2026, 07-27-2026]; settled 6; incomplete 0; failed 1 [07-28-2026]; left for next run 0
+dibbs-dates[awd]: done. loaded 3 [11-11-2026, 07-22-2026, 07-21-2026]; settled 6; incomplete 1 [07-21-2026]; failed 0; left for next run 0
 == log tail ==
-loadAwardGridActions: 5664 loaded, 1521 skipped
-loadPricePointsFromAwards: 7185 award records, matched=0 loaded=0 skipped=7185 {"no matching persisted solicitation":3208,"no solicitation number or non-positive total":3977}
-dibbs-dates[awd]: 07-27-2026 [back-fill] 144 pages, 7185 of 7185 records (complete), 5664 loaded, 0 price points (first read)
-dibbs-dates[awd]: done. loaded 2 [11-10-2026, 07-27-2026]; settled 6; incomplete 0; failed 1 [07-28-2026]; left for next run 0
-dibbs-dates[awd]: skip reasons {"unparseable NSN":1898,"missing total":419,"fsc not in deep set":1}; price points skip reasons {"no solicitation number or non-positive total":11395,"no matching persisted solicitation":3712}
+loadAwardGridActions: 8276 loaded, 1724 skipped
+loadPricePointsFromAwards: 10000 award records, matched=0 loaded=0 skipped=10000 {"no solicitation number or non-positive total":6804,"no matching persisted solicitation":3196}
+dibbs-dates[awd]: 07-21-2026 [back-fill] 200 pages, 10000 of 10163 records (INCOMPLETE, will be read again), 8276 loaded, 0 price points (first read)
+dibbs-dates[awd]: done. loaded 3 [11-11-2026, 07-22-2026, 07-21-2026]; settled 6; incomplete 1 [07-21-2026]; failed 0; left for next run 0
+dibbs-dates[awd]: skip reasons {"unparseable NSN":2029,"missing total":692,"fsc not in deep set":1}; price points skip reasons {"no solicitation number or non-positive total":10807,"no matching persisted solicitation":4876}
