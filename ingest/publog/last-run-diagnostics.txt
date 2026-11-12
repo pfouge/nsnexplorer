@@ -1,7 +1,7 @@
 == files ==
 total 9877404
 drwxr-xr-x  2 runner runner       4096 Nov  1 16:30 .
-drwxrwxrwt 16 root   root         4096 Nov 11 17:30 ..
+drwxrwxrwt 16 root   root         4096 Nov 12 17:46 ..
 -rw-r--r--  1 runner runner  371182966 Oct 23 18:41 P_CAGE.CSV
 -rw-r--r--  1 runner runner  988252755 Oct 23 18:44 P_FLIS_NSN.CSV
 -rw-r--r--  1 runner runner    4796029 Oct 23 18:45 P_HELP.CSV
@@ -62,17 +62,17 @@ drwxrwxrwt 16 root   root         4096 Nov 11 17:30 ..
 "NIIN","MOE_RL","MOE_CD","AMC","AMSC","NIMSC","DT_ASGND","IMC","IMCA","AAC","PICA","PICA_LOA","SICA","SICA_LOA","AUTH_COLLAB","SUPP_COLLAB","DSOR","FMR_MOE_RL","ROW_OBS_DT"
 "000000042","ZK01","ZK","","","","01-MAR-06","","","","ZK","81","","","ZK","","","",""
 == load output (tail) ==
-load.mjs: tracking 163264 existing NIIN(s)
-load.mjs: P_FLIS_NSN.CSV: 159340 loaded, 17041282 rows scanned
-load.mjs: V_FLIS_PART.CSV: 582014 loaded, 16654147 rows scanned
+load.mjs: tracking 170974 existing NIIN(s)
+load.mjs: P_FLIS_NSN.CSV: 166929 loaded, 17041282 rows scanned
+load.mjs: V_FLIS_PART.CSV: 607109 loaded, 16654147 rows scanned
 load.mjs: characteristics candidate P_HELP.CSV rejected (headers: CODE, LITERAL, DESCRIPTION, REGS)
 load.mjs: characteristics candidate V_CAGE_ADDRESS.CSV rejected (headers: CAGE_CODE, COMPANY_NAME, STREET_ADDRESS_1, STREET_ADDRESS_2, STREET_ADDRESS_3, CITY, STATE, ZIP, COUNTRY)
-load.mjs: V_CHARACTERISTICS.CSV: 145531 loaded, 39729609 rows scanned
+load.mjs: V_CHARACTERISTICS.CSV: 152405 loaded, 39729609 rows scanned
 load.mjs: V_MOE_RULE.CSV first line: "NIIN","MOE_RL","MOE_CD","AMC","AMSC","NIMSC","DT_ASGND","IMC","IMCA","AAC","PICA","PICA_LOA","SICA","SICA_LOA","AUTH_COLLAB","SUPP_COLLAB","DSOR","FMR_MOE_RL","ROW_OBS_DT"
 load.mjs: V_MOE_RULE.CSV resolved columns (0-based): niin=0(header) moe=2(header) amc=3(header) amsc=4(header) obs=18(header) of 19 column(s) [headers: NIIN, MOE_RL, MOE_CD, AMC, AMSC, NIMSC, DT_ASGND, IMC, IMCA, AAC, PICA, PICA_LOA, SICA, SICA_LOA, AUTH_COLLAB, SUPP_COLLAB, DSOR, FMR_MOE_RL, ROW_OBS_DT]
-load.mjs: V_MOE_RULE.CSV: 18308422 rows scanned, 842047 on tracked NIINs, 534710 skipped (AMC and AMSC both blank), 0 invalid AMC and 0 invalid AMSC treated as blank, 159241 NSN(s) with a kept row (159240 without a parseable date)
-load.mjs: V_MOE_RULE.CSV kept AMC distribution: 0:1129 1:70499 2:2228 3:81846 4:2231 5:1308
-load.mjs: V_MOE_RULE.CSV kept AMSC distribution: 0:1129 A:63 B:4370 C:21638 D:33385 G:44712 H:2700 K:17 L:9849 M:88 N:40 P:4974 Q:6173 R:10706 S:18 T:6607 U:47 V:34 Y:8 Z:12683
-load.mjs: V_MOE_RULE.CSV: 5485 observation(s) written, 153756 unchanged (latest flis value identical)
-load.mjs: V_MOE_RULE.CSV: 5485 loaded, 18308422 rows scanned
-load.mjs: P_CAGE.CSV: 28791 loaded, 4158374 rows scanned
+load.mjs: V_MOE_RULE.CSV: 18308422 rows scanned, 876482 on tracked NIINs, 556320 skipped (AMC and AMSC both blank), 0 invalid AMC and 0 invalid AMSC treated as blank, 166796 NSN(s) with a kept row (166795 without a parseable date)
+load.mjs: V_MOE_RULE.CSV kept AMC distribution: 0:1148 1:73829 2:2399 3:85746 4:2336 5:1338
+load.mjs: V_MOE_RULE.CSV kept AMSC distribution: 0:1148 A:65 B:4675 C:23112 D:34769 G:46726 H:2813 K:19 L:10149 M:112 N:42 P:5434 Q:6546 R:11089 S:19 T:6954 U:49 V:35 Y:8 Z:13032
+load.mjs: V_MOE_RULE.CSV: 7556 observation(s) written, 159240 unchanged (latest flis value identical)
+load.mjs: V_MOE_RULE.CSV: 7556 loaded, 18308422 rows scanned
+load.mjs: P_CAGE.CSV: 29253 loaded, 4158374 rows scanned
