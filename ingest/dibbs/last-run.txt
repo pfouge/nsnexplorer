@@ -1,16 +1,20 @@
-at: 2026-11-12T17:15:55Z  sha: 5da1299bc97575f068eba1bcf09c0db35ce1c3c4
+at: 2026-11-13T17:46:25Z  sha: 00dce0516760f605a9265239088226d5db7e0c40
 == dates ==
-dibbs-dates[awd]: window 7 dates, to read 1 [11-11-2026]; back-fill 2 [07-22-2026, 07-21-2026]
-dibbs-dates[awd]: 11-11-2026 10 pages, 459 of 459 records (complete), 459 loaded, 2 price points (first read)
-dibbs-dates[awd]: 07-22-2026 [back-fill] 105 pages, 5227 of 5227 records (complete), 4229 loaded, 1 price points (first read)
-dibbs-dates[awd]: 07-21-2026 [back-fill] 200 pages, 10000 of 10163 records (INCOMPLETE, will be read again), 8276 loaded, 0 price points (first read)
-dibbs-dates[awd]: done. loaded 3 [11-11-2026, 07-22-2026, 07-21-2026]; settled 6; incomplete 1 [07-21-2026]; failed 0; left for next run 0
-dibbs-dates[awd]: skip reasons {"unparseable NSN":2029,"missing total":692,"fsc not in deep set":1}; price points skip reasons {"no solicitation number or non-positive total":10807,"no matching persisted solicitation":4876}
+dibbs-dates[awd]: window 7 dates, to read 1 [11-12-2026]; back-fill 2 [07-21-2026, 07-20-2026]
+dibbs-dates[awd]: 11-12-2026 93 pages, 4631 of 4631 records (complete), 4042 loaded, 1165 price points (first read)
+dibbs-dates[awd]: 07-21-2026 [back-fill] fetch failed (ECONNRESET: fetch failed); continuing
+dibbs-dates[awd]: 07-20-2026 [back-fill] 86 pages, 4286 of 4286 records (complete), 3558 loaded, 0 price points (first read)
+dibbs-dates[awd]: done. loaded 2 [11-12-2026, 07-20-2026]; settled 6; incomplete 0; failed 1 [07-21-2026]; left for next run 0
+dibbs-dates[awd]: skip reasons {"unparseable NSN":974,"missing total":325,"fsc not in deep set":18}; price points skip reasons {"no solicitation number or non-positive total":5530,"no matching persisted solicitation":2175}
 == errors and retries ==
-dibbs-dates[awd]: done. loaded 3 [11-11-2026, 07-22-2026, 07-21-2026]; settled 6; incomplete 1 [07-21-2026]; failed 0; left for next run 0
+jarFetch attempt 1 failed for https://www.dibbs.bsm.dla.mil/Awards/AwdRecs.aspx?category=post&TypeSrch=dt&Value=07-21-2026 (ECONNRESET); retrying in 20s
+jarFetch attempt 2 failed for https://www.dibbs.bsm.dla.mil/Awards/AwdRecs.aspx?category=post&TypeSrch=dt&Value=07-21-2026 (ECONNRESET); retrying in 40s
+jarFetch attempt 3 failed for https://www.dibbs.bsm.dla.mil/Awards/AwdRecs.aspx?category=post&TypeSrch=dt&Value=07-21-2026 (ECONNRESET); retrying in 60s
+dibbs-dates[awd]: 07-21-2026 [back-fill] fetch failed (ECONNRESET: fetch failed); continuing
+dibbs-dates[awd]: done. loaded 2 [11-12-2026, 07-20-2026]; settled 6; incomplete 0; failed 1 [07-21-2026]; left for next run 0
 == log tail ==
-loadAwardGridActions: 8276 loaded, 1724 skipped
-loadPricePointsFromAwards: 10000 award records, matched=0 loaded=0 skipped=10000 {"no solicitation number or non-positive total":6804,"no matching persisted solicitation":3196}
-dibbs-dates[awd]: 07-21-2026 [back-fill] 200 pages, 10000 of 10163 records (INCOMPLETE, will be read again), 8276 loaded, 0 price points (first read)
-dibbs-dates[awd]: done. loaded 3 [11-11-2026, 07-22-2026, 07-21-2026]; settled 6; incomplete 1 [07-21-2026]; failed 0; left for next run 0
-dibbs-dates[awd]: skip reasons {"unparseable NSN":2029,"missing total":692,"fsc not in deep set":1}; price points skip reasons {"no solicitation number or non-positive total":10807,"no matching persisted solicitation":4876}
+loadAwardGridActions: 3558 loaded, 728 skipped
+loadPricePointsFromAwards: 4286 award records, matched=0 loaded=0 skipped=4286 {"no solicitation number or non-positive total":2666,"no matching persisted solicitation":1620}
+dibbs-dates[awd]: 07-20-2026 [back-fill] 86 pages, 4286 of 4286 records (complete), 3558 loaded, 0 price points (first read)
+dibbs-dates[awd]: done. loaded 2 [11-12-2026, 07-20-2026]; settled 6; incomplete 0; failed 1 [07-21-2026]; left for next run 0
+dibbs-dates[awd]: skip reasons {"unparseable NSN":974,"missing total":325,"fsc not in deep set":18}; price points skip reasons {"no solicitation number or non-positive total":5530,"no matching persisted solicitation":2175}
