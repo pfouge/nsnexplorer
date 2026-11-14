@@ -106,7 +106,7 @@ SELECT s.sol_number, s.nsn, s.fsc, s.nomenclature, s.quantity, s.unit_of_issue,
           FROM (SELECT ca.raw ->> 'awardNumber' AS award_number, ca.raw ->> 'deliveryOrder' AS delivery_order,
                        ca.action_date, ca.raw ->> 'cage' AS cage, su.name AS supplier_name,
                        COALESCE(ca.obligation,
-                                CASE WHEN regexp_replace(COALESCE(ca.raw ->> 'total', ''), '[$,[:space:]]', '', 'g') ~ '^-?[0-9]+(\.[0-9]+)?$'
+                                CASE WHEN regexp_replace(COALESCE(ca.raw ->> 'total', ''), '[$,[:space:]]', '', 'g') ~ '^-?[0-9]+([.][0-9]+)?$'
                                      THEN regexp_replace(ca.raw ->> 'total', '[$,[:space:]]', '', 'g')::numeric END) AS total,
                        ca.source_url
                 FROM pub.contract_actions ca
