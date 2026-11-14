@@ -328,6 +328,9 @@ p.lede:not(.answer):not(:has(~ p.lede)):not(.open), section.intro > p.gloss:not(
   margin: 1.5rem 0; border: 0;
 }
 @media (max-width: 640px) { .datastrip, .stat-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; } }
+/* Wider cells for strips that carry an NSN beside five or more other stats, so it stays on one line. */
+.stat-strip.roomy { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+@media (max-width: 640px) { .stat-strip.roomy { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .datastrip .cell, .stat-strip .stat { display: flex; flex-direction: column; padding: 0; border: 0; min-width: 0; }
 .datastrip .k, .stat .label { order: -1; font-size: 0.875rem; color: var(--ink-soft); line-height: 1.35; }
 .datastrip .v, .stat .value { font-size: 1.25rem; font-weight: 600; color: var(--ink); line-height: 1.4; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
