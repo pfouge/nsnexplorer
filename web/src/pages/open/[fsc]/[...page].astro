@@ -311,13 +311,13 @@ const breadcrumbSchema = {
             <SaveSearch fsc={fscCode} fscName={displayName} />
           </div>
 
-          {coverageLabel && (
-              <p class="gloss" style="margin:0; font-size:0.78rem; flex-basis:100%;">
-                Past due: return date passed 30–180 days ago and no matching award in our DIBBS award records since {coverageLabel}. Check DIBBS before quoting.
-              </p>
-            )}
           <p class="filter-count" id="filter-count" aria-live="polite">{firstPaintCount} of {totalOpen.toLocaleString('en-US')} shown</p>
         </aside>
+        {coverageLabel && (
+          <p class="gloss" style="margin:0.6rem 0 0.25rem; font-size:0.78rem;">
+            Past due: return date passed 30–180 days ago and no matching award in our DIBBS award records since {coverageLabel}. Check DIBBS before quoting.
+          </p>
+        )}
 
         <div
           class="product-grid"

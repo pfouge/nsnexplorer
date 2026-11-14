@@ -513,7 +513,8 @@ footer.site .disclaimer { color: var(--inv-softer); max-width: 78ch; }
 .filter-group { display: flex; flex-direction: row; align-items: center; gap: 6px; flex: none; }
 .filter-group + .filter-group { border: 0; padding: 0; }
 /* A labelled select becomes one pill: "Status  Open now ▾". */
-.filter-group:has(> select) { height: 34px; padding: 0 4px 0 14px; border-radius: 17px; background: var(--paper-2); gap: 2px; }
+/* The second selector outranks the padding reset on the line above, so every pill keeps its inset. */
+.filter-group:has(> select), .filter-group + .filter-group:has(> select) { height: 34px; padding: 0 4px 0 14px; border-radius: 17px; background: var(--paper-2); gap: 2px; }
 .filter-group:has(> select:not([data-default])) { }
 .filter-label, .filter-group > label.filter-label { font-size: 0.8125rem; color: var(--ink-soft); margin: 0; white-space: nowrap; }
 .filter-group select {
