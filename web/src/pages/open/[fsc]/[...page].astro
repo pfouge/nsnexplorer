@@ -255,11 +255,6 @@ const breadcrumbSchema = {
               <option value="all">All</option>
               {coverageLabel && <option value="pastdue">Past due, no award found</option>}
             </select>
-            {coverageLabel && (
-              <p class="gloss" style="margin:0.35rem 0 0; font-size:0.78rem;">
-                Past due: return date passed 30–180 days ago and no matching award in our DIBBS award records since {coverageLabel}. Check DIBBS before quoting.
-              </p>
-            )}
           </div>
 
           <div class="filter-group">
@@ -316,6 +311,11 @@ const breadcrumbSchema = {
             <SaveSearch fsc={fscCode} fscName={displayName} />
           </div>
 
+          {coverageLabel && (
+              <p class="gloss" style="margin:0; font-size:0.78rem; flex-basis:100%;">
+                Past due: return date passed 30–180 days ago and no matching award in our DIBBS award records since {coverageLabel}. Check DIBBS before quoting.
+              </p>
+            )}
           <p class="filter-count" id="filter-count" aria-live="polite">{firstPaintCount} of {totalOpen.toLocaleString('en-US')} shown</p>
         </aside>
 
@@ -368,7 +368,7 @@ const breadcrumbSchema = {
                   <h3 class="product-name">{c.itemName ?? 'Unnamed item'}</h3>
                   <div class="product-signals">
                     <span class={`badge ${badge.cls}`}>{badge.text}</span>
-                    <span class="signal mono">{c.openQuantity !== null ? c.openQuantity.toLocaleString('en-US') : '—'} units</span>
+                    <span class="signal mono">{(c.openQuantity ?? c.pastDueQuantity) !== null ? (c.openQuantity ?? c.pastDueQuantity)!.toLocaleString('en-US') : '—'} units</span>
                     {c.pastDueCount > 0 && <span class="badge amber">Past due</span>}
                     {(c.techDocs === 'tech_docs' || c.techDocs === 'spec_only') && (
                       <span class="badge">{c.techDocs === 'spec_only' ? 'Tech docs · Spec/standard only' : 'Tech docs'}</span>
