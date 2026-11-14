@@ -82,6 +82,11 @@ const firstPaintCount = pages > 1
   : openOnPage.toLocaleString('en-US');
 
 const fmtInt = (n: number) => n.toLocaleString('en-US');
+const fmtDollars = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`;
+// "Jul 2026": where our DIBBS award records begin (null hides the past-due option).
+const coverageLabel = data.awardCoverageFrom
+  ? new Date(`${data.awardCoverageFrom}T00:00:00Z`).toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' })
+  : null;
 
 // Category-level open stats, independent of the priced-catalog gate.
 const solicitations = entry?.solicitations ?? [];
@@ -248,6 +253,7 @@ const breadcrumbSchema = {
               <option value="open" selected>Open now</option>
               <option value="closed">Closed</option>
               <option value="all">All</option>
+              {coverageLabel && <option value="pastdue">Past due, no award found</option>}
             </select>
           </div>
 
@@ -279,6 +285,15 @@ const breadcrumbSchema = {
           </div>
 
           <div class="filter-group">
+            <label class="filter-label" for="f-techdocs">Tech docs</label>
+            <select id="f-techdocs">
+              <option value="any">Any</option>
+              <option value="listed">Listed on DIBBS</option>
+              <option value="none">None listed</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
             <label><input type="checkbox" id="f-hasdrawing" /> Has drawing</label>
           </div>
 
@@ -287,6 +302,7 @@ const breadcrumbSchema = {
             <select id="f-sort">
               <option value="closes">Closing soonest</option>
               <option value="qty">Highest quantity</option>
+              <option value="value">Highest estimated value</option>
               <option value="name">Item name</option>
             </select>
           </div>
@@ -297,6 +313,11 @@ const breadcrumbSchema = {
 
           <p class="filter-count" id="filter-count" aria-live="polite">{firstPaintCount} of {totalOpen.toLocaleString('en-US')} shown</p>
         </aside>
+        {coverageLabel && (
+          <p class="gloss" style="margin:0.6rem 0 0.75rem; font-size:0.78rem;">
+            Past due: return date passed 30–180 days ago and no matching award in our DIBBS award records since {coverageLabel}. Check DIBBS before quoting.
+          </p>
+        )}
 
         <div
           class="product-grid"
@@ -331,6 +352,9 @@ const breadcrumbSchema = {
                 data-closedct={c.closedCount}
                 data-laststatus={c.lastStatus}
                 data-lastsolicited={c.lastSolicited ?? ''}
+                data-pastdue={c.pastDueSince ?? ''}
+                data-estvalue={c.estValue ?? 0}
+                data-techdocs={c.techDocs ?? ''}
               >
                 <a class="product-thumb" href={c.href} aria-label={`View ${c.itemName ?? c.dashed}`} {...externalAttrs}>
                   {c.thumbnail ? (
@@ -344,7 +368,12 @@ const breadcrumbSchema = {
                   <h3 class="product-name">{c.itemName ?? 'Unnamed item'}</h3>
                   <div class="product-signals">
                     <span class={`badge ${badge.cls}`}>{badge.text}</span>
-                    <span class="signal mono">{c.openQuantity !== null ? c.openQuantity.toLocaleString('en-US') : '—'} units</span>
+                    <span class="signal mono">{(c.openQuantity ?? c.pastDueQuantity) !== null ? (c.openQuantity ?? c.pastDueQuantity)!.toLocaleString('en-US') : '—'} units</span>
+                    {c.pastDueCount > 0 && <span class="badge amber">Past due</span>}
+                    {(c.techDocs === 'tech_docs' || c.techDocs === 'spec_only') && (
+                      <span class="badge">{c.techDocs === 'spec_only' ? 'Tech docs · Spec/standard only' : 'Tech docs'}</span>
+                    )}
+                    {c.estValue !== null && <span class="signal mono">≈ {fmtDollars(c.estValue)} at last price</span>}
                     {c.competition !== 'unknown' && (
                       <span class={`badge ${c.competition === 'open' ? 'green' : 'amber'}`}>
                         {c.competition === 'open' ? 'Competed' : 'Named source'}
@@ -371,12 +400,14 @@ const breadcrumbSchema = {
 
   <script>
     import { createPagedLoader, rangeLabel, readPagedConfig } from '../../../lib/paged-client';
+    import { inPastDueWindow } from '../../../lib/open-signals';
 
     const grid = document.getElementById('product-grid');
     const countEl = document.getElementById('filter-count');
     const statusSelect = document.getElementById('f-status');
     const closesSelect = document.getElementById('f-closes');
     const minQtySelect = document.getElementById('f-minqty');
+    const techDocsSelect = document.getElementById('f-techdocs');
     const hasDrawingCheckbox = document.getElementById('f-hasdrawing');
     const sortSelect = document.getElementById('f-sort');
 
@@ -385,6 +416,7 @@ const breadcrumbSchema = {
       statusSelect instanceof HTMLSelectElement &&
       closesSelect instanceof HTMLSelectElement &&
       minQtySelect instanceof HTMLSelectElement &&
+      techDocsSelect instanceof HTMLSelectElement &&
       hasDrawingCheckbox instanceof HTMLInputElement &&
       sortSelect instanceof HTMLSelectElement
     ) {
@@ -402,11 +434,12 @@ const breadcrumbSchema = {
       };
 
       const apply = () => {
-        const status = statusSelect.value; // 'open' | 'closed' | 'all'
+        const status = statusSelect.value; // 'open' | 'closed' | 'all' | 'pastdue'
         const checkedCompetition = document.querySelector('input[name="f-competition"]:checked');
         const competition = checkedCompetition instanceof HTMLInputElement ? checkedCompetition.value : 'all';
         const maxCloseDays = closesSelect.value === 'any' ? null : Number(closesSelect.value);
         const minQty = minQtySelect.value === 'any' ? null : Number(minQtySelect.value);
+        const techDocs = techDocsSelect.value; // 'any' | 'listed' | 'none'
         const needsDrawing = hasDrawingCheckbox.checked;
         const today = todayIso();
         const todayMs = new Date(`${today}T00:00:00Z`).getTime();
@@ -419,6 +452,11 @@ const breadcrumbSchema = {
           // Cards in the current Status scope ('all' imposes no condition).
           if (status === 'open' && !open) { el.style.display = 'none'; continue; }
           if (status === 'closed' && open) { el.style.display = 'none'; continue; }
+          // Past due: a qualifying return date that is still inside 30-180 days by the viewer's clock.
+          if (status === 'pastdue') {
+            const pastDue = el.dataset.pastdue ?? '';
+            if (pastDue === '' || !inPastDueWindow(pastDue, today)) { el.style.display = 'none'; continue; }
+          }
           scopeCount++;
           let visible = true;
           if (competition !== 'all' && el.dataset.competition !== competition) visible = false;
@@ -433,11 +471,16 @@ const breadcrumbSchema = {
             }
           }
           if (visible && minQty !== null && Number(el.dataset.qty ?? 0) < minQty) visible = false;
+          if (visible && techDocs !== 'any') {
+            const kind = el.dataset.techdocs ?? '';
+            const listed = kind === 'tech_docs' || kind === 'spec_only';
+            if (techDocs === 'listed' ? !listed : kind !== 'none') visible = false;
+          }
           if (visible && needsDrawing && el.dataset.hasdrawing !== '1') visible = false;
           el.style.display = visible ? '' : 'none';
           if (visible) visibleCount++;
         }
-        if (!loader.complete && !loader.failed) {
+        if (!loader.complete && !loader.failed && status !== 'pastdue') {
           // Before the first interaction only this page is present: show the
           // card range within the Status scope, over the server-emitted total.
           const scope = status === 'closed' ? 'closed' : status === 'all' ? 'all' : 'open';
@@ -456,6 +499,7 @@ const breadcrumbSchema = {
         statusSelect.value = 'open';
         closesSelect.value = 'any';
         minQtySelect.value = 'any';
+        techDocsSelect.value = 'any';
         document.querySelectorAll('input[name="f-competition"]').forEach((el) => {
           if (el instanceof HTMLInputElement) el.checked = el.value === 'all';
         });
@@ -469,6 +513,9 @@ const breadcrumbSchema = {
           const bel = b as HTMLElement;
           if (mode === 'qty') {
             return Number(bel.dataset.qty ?? 0) - Number(ael.dataset.qty ?? 0);
+          }
+          if (mode === 'value') {
+            return Number(bel.dataset.estvalue ?? 0) - Number(ael.dataset.estvalue ?? 0);
           }
           if (mode === 'name') {
             const an = ael.dataset.itemname ?? '';
@@ -513,6 +560,7 @@ const breadcrumbSchema = {
       document.querySelectorAll('input[name="f-competition"]').forEach((el) => el.addEventListener('change', schedule));
       closesSelect.addEventListener('change', schedule);
       minQtySelect.addEventListener('change', schedule);
+      techDocsSelect.addEventListener('change', schedule);
       hasDrawingCheckbox.addEventListener('change', schedule);
       sortSelect.addEventListener('change', schedule);
 

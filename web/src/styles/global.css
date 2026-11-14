@@ -513,7 +513,8 @@ footer.site .disclaimer { color: var(--inv-softer); max-width: 78ch; }
 .filter-group { display: flex; flex-direction: row; align-items: center; gap: 6px; flex: none; }
 .filter-group + .filter-group { border: 0; padding: 0; }
 /* A labelled select becomes one pill: "Status  Open now ▾". */
-.filter-group:has(> select) { height: 34px; padding: 0 4px 0 14px; border-radius: 17px; background: var(--paper-2); gap: 2px; }
+/* The second selector outranks the padding reset on the line above, so every pill keeps its inset. */
+.filter-group:has(> select), .filter-group + .filter-group:has(> select) { height: 34px; padding: 0 4px 0 14px; border-radius: 17px; background: var(--paper-2); gap: 2px; }
 .filter-group:has(> select:not([data-default])) { }
 .filter-label, .filter-group > label.filter-label { font-size: 0.8125rem; color: var(--ink-soft); margin: 0; white-space: nowrap; }
 .filter-group select {
@@ -528,12 +529,16 @@ footer.site .disclaimer { color: var(--inv-softer); max-width: 78ch; }
 .filter-group label:has(> input) {
   display: inline-flex; align-items: center; height: 34px; padding: 0 14px; border-radius: 17px; background: var(--paper-2);
   font-size: 0.9375rem; color: var(--ink); margin: 0; cursor: pointer; white-space: nowrap; flex: none;
+  position: relative; /* anchors the hidden input, so a scrolled-off chip cannot widen the page */
 }
 .filter-group label:has(> input:checked) { background: var(--ink); color: var(--paper); }
 .filter-group label:has(> input:focus-visible) { outline: 2px solid var(--green); outline-offset: 2px; }
 .filter-group input[type='checkbox'], .filter-group input[type='radio'] { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .filter-group[role='radiogroup'] .filter-label { margin-right: 2px; }
-.filter-materials { display: flex; gap: 6px; max-height: none; overflow: visible; }
+/* The material chips scroll inside their own strip. A class can have hundreds of materials; left visible
+   they ran off the page and gave it a horizontal scrollbar. */
+.filter-group:has(> .filter-materials) { flex: 1 1 100%; min-width: 0; max-width: 100%; }
+.filter-materials { display: flex; gap: 6px; max-height: none; flex: 1 1 auto; min-width: 0; overflow-x: auto; scrollbar-width: thin; padding-bottom: 2px; }
 .filter-count { font-size: 0.8125rem; color: var(--ink-soft); margin: 0 0 0 auto; padding-left: 8px; white-space: nowrap; font-variant-numeric: tabular-nums; flex: none; }
 
 .product-grid { display: block; border-top: 0; }

@@ -13,6 +13,7 @@ import {
   type SolicitationRecord,
 } from './data';
 import { buildThumbnail } from './diagram';
+import { estimatedValue, isPastDueUnawarded, lastUnitPrice, type TechDocsKind } from './open-signals';
 
 export interface ProductCard {
   nsn: string; // 13-digit undashed
@@ -45,6 +46,18 @@ export interface ProductCard {
    * (rendered on request). False only for solicitations whose NSN is not in
    * the catalog, which link out to DIBBS instead. */
   hasCatalogPage: boolean;
+  /** Expired solicitations 30-180 days past return_by with no matching DIBBS award (see open-signals.ts). */
+  pastDueCount: number;
+  /** Latest return_by (ISO) among those past-due solicitations, or null. */
+  pastDueSince: string | null;
+  /** Sum of quantity across those past-due solicitations; null when there are none. */
+  pastDueQuantity: number | null;
+  /** DIBBS tech-docs flag: from open solicitations when any (tech_docs > spec_only > none), else the newest solicitation. */
+  techDocs: TechDocsKind | null;
+  /** Unit price of the most recent award on record (pricePointsByNsn), or null. */
+  lastUnitPrice: number | null;
+  /** Quantity (open, else past-due) x lastUnitPrice, in dollars; null when either is missing. */
+  estValue: number | null;
   /** Where this card's links should point: the internal /nsn/ page when
    * hasCatalogPage is true, otherwise the official DIBBS record for the NSN. */
   href: string;
@@ -288,6 +301,35 @@ function computeSolicitationFields(sols: SolicitationRecord[]): {
   };
 }
 
+const TECH_DOCS_RANK: Record<TechDocsKind, number> = { none: 0, spec_only: 1, tech_docs: 2 };
+
+/**
+ * Past-due / tech-docs / estimated-value read for one NSN's solicitations.
+ * `today` is the build-date ISO string (data.viz.today). lastUnitPrice is only
+ * available where data.pricePointsByNsn is populated (deep classes); elsewhere
+ * estValue stays null.
+ */
+function computeOpenSignals(
+  data: SiteData,
+  nsn: string,
+  sols: SolicitationRecord[],
+  openQuantity: number | null
+): Pick<ProductCard, 'pastDueCount' | 'pastDueSince' | 'pastDueQuantity' | 'techDocs' | 'lastUnitPrice' | 'estValue'> {
+  const today = data.viz.today;
+  const pastDue = sols.filter((s) => isPastDueUnawarded(s, today, data.awardCoverageFrom));
+  const pastDueCount = pastDue.length;
+  const pastDueSince = pastDue.map((s) => s.returnBy!).sort().at(-1) ?? null;
+  const pastDueQuantity = pastDueCount > 0 ? pastDue.reduce((sum, s) => sum + (s.quantity ?? 0), 0) : null;
+
+  const openKinds = sols.filter((s) => s.status === 'open').map((s) => s.techDocs).filter((k): k is TechDocsKind => k !== null);
+  // sols arrive newest first (see data.solicitationsByNsn).
+  const techDocs = openKinds.length > 0 ? openKinds.reduce((a, b) => (TECH_DOCS_RANK[b] > TECH_DOCS_RANK[a] ? b : a)) : (sols[0]?.techDocs ?? null);
+
+  const unitPrice = lastUnitPrice(data.pricePointsByNsn.get(nsn) ?? []);
+  const estValue = estimatedValue(openQuantity !== null ? openQuantity : pastDueQuantity, unitPrice);
+  return { pastDueCount, pastDueSince, pastDueQuantity, techDocs, lastUnitPrice: unitPrice, estValue };
+}
+
 /**
  * Builds one product card per NSN in the given FSC, mirroring the
  * verdict-strip logic on the NSN detail page: combine priced purchases
@@ -340,6 +382,12 @@ export function buildProductCards(data: SiteData, fsc: FscConfig): ProductCard[]
       solicitationCount,
       lastSolicited,
       lastStatus,
+      pastDueCount: 0,
+      pastDueSince: null,
+      pastDueQuantity: null,
+      techDocs: null,
+      lastUnitPrice: null,
+      estValue: null,
       hasCatalogPage: true,
       href: `/nsn/${dashed}/`,
     };
@@ -461,6 +509,7 @@ export function buildSolicitationCards(data: SiteData, fsc?: string): ProductCar
       solicitationCount,
       lastSolicited,
       lastStatus,
+      ...computeOpenSignals(data, nsnCode, sols, openQuantity),
       hasCatalogPage,
       href,
     };
