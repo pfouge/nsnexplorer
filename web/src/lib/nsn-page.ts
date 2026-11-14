@@ -217,6 +217,8 @@ export async function loadNsnPage(sql: Sql, nsnCode: string): Promise<NsnPageDat
     status: r.status,
     setaside: r.setaside,
     buyerOffice: r.buyer_office,
+    techDocs: null,
+    awardFound: false,
     source: r.source,
     sourceUrl: assertSourceUrl(r.source_url, `solicitations.sol_number=${r.sol_number}`),
   }));

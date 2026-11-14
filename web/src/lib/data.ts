@@ -16,6 +16,7 @@ import {
 } from './shared';
 import { compareByClosing, mapServiceNotice, type ServiceNotice, type ServiceNoticeRow } from './services';
 import { nomen } from './seo-copy';
+import { techDocsKind } from './open-signals';
 import { CAGE_RE, SOL_NUMBER_RE } from './entity';
 import { foldCalendarRows } from './viz-open';
 import type { DailyStatRow, FreshnessSource, GroupDemandRow, TapeItem, TileInput } from './viz-site';
@@ -121,6 +122,12 @@ export interface SiteData {
   serviceNoticesByCategory: Map<string, ServiceNotice[]>;
   /** Keyed by 2-digit supply group, equipment-service notices only. */
   serviceNoticesByFsg: Map<string, ServiceNotice[]>;
+  /**
+   * Earliest day (ISO) with at least 200 DIBBS award rows in pub.contract_actions,
+   * or null. DIBBS awards are only dense from then on, so "no award found"
+   * claims are limited to solicitations returning on or after it.
+   */
+  awardCoverageFrom: string | null;
   stats: {
     totalNsns: number;
     totalPurchases: number;   // rows in pub.price_points (real unit prices)
@@ -402,13 +409,31 @@ async function fetchSiteData(): Promise<SiteData> {
       // Open means open TODAY: a row still flagged 'open' whose return_by has
       // passed (i.e. NOT (return_by IS NULL OR return_by >= CURRENT_DATE)) is
       // reported as 'expired' so it is neither listed nor counted as open.
-      `SELECT s.sol_number, s.nsn, s.fsc, f.name AS fsc_name, f.render_depth AS fsc_depth, s.nomenclature,
+      // award_found: a DIBBS award shares the solicitation's purchaseRequest, or
+      // a DIBBS award for the same NSN is dated on/after its return_by. Built
+      // from CTEs on distinct keys (a correlated EXISTS timed out in production).
+      `WITH award_pr AS (
+         SELECT DISTINCT btrim(ca.raw ->> 'purchaseRequest') AS pr
+         FROM pub.contract_actions ca
+         WHERE ca.award_uid LIKE 'DIBBS%' AND btrim(COALESCE(ca.raw ->> 'purchaseRequest', '')) <> ''
+       ), award_nsn AS (
+         SELECT ca.raw ->> 'nsn' AS nsn, max(ca.action_date) AS last_award
+         FROM pub.contract_actions ca
+         WHERE ca.award_uid LIKE 'DIBBS%' AND ca.raw ->> 'nsn' IS NOT NULL
+         GROUP BY ca.raw ->> 'nsn'
+       )
+       SELECT s.sol_number, s.nsn, s.fsc, f.name AS fsc_name, f.render_depth AS fsc_depth, s.nomenclature,
               s.quantity, s.unit_of_issue, s.issued_on, s.return_by,
               CASE WHEN s.status = 'open' AND s.return_by < CURRENT_DATE THEN 'expired' ELSE s.status END AS status,
-              s.setaside, s.buyer_office, s.source, s.source_url, n.item_name
+              s.setaside, s.buyer_office, s.source, s.source_url, n.item_name,
+              s.raw ->> 'techDocs' AS tech_docs,
+              (apr.pr IS NOT NULL
+               OR (an.last_award IS NOT NULL AND s.return_by IS NOT NULL AND an.last_award >= s.return_by)) AS award_found
        FROM pub.solicitations s
        LEFT JOIN pub.nsns n ON n.nsn = s.nsn
        LEFT JOIN pub.fsc f ON f.fsc = s.fsc
+       LEFT JOIN award_pr apr ON apr.pr = btrim(s.raw ->> 'purchaseRequest')
+       LEFT JOIN award_nsn an ON an.nsn = s.nsn
        ORDER BY COALESCE(s.return_by, s.issued_on) DESC NULLS LAST, s.sol_number`
     );
     // Open lane excludes service PSCs: a non-null fsc must be a 4-digit class
@@ -432,6 +457,8 @@ async function fetchSiteData(): Promise<SiteData> {
         status: r.status,
         setaside: r.setaside,
         buyerOffice: r.buyer_office,
+        techDocs: techDocsKind(r.tech_docs),
+        awardFound: r.award_found === true,
         source: r.source,
         sourceUrl: assertSourceUrl(r.source_url, `solicitations.sol_number=${r.sol_number}`),
       };
@@ -562,6 +589,17 @@ async function fetchSiteData(): Promise<SiteData> {
       }
     }
 
+    const coverageRow = (
+      await pool.query<{ coverage_from: string | null }>(
+        `SELECT min(day)::text AS coverage_from FROM (
+           SELECT action_date AS day FROM pub.contract_actions
+           WHERE award_uid LIKE 'DIBBS%' AND action_date IS NOT NULL
+           GROUP BY action_date HAVING count(*) >= 200
+         ) d`
+      )
+    ).rows[0];
+    const awardCoverageFrom = coverageRow?.coverage_from ?? null;
+
     const viz = await loadVizData(pool);
 
     return {
@@ -585,6 +623,7 @@ async function fetchSiteData(): Promise<SiteData> {
       serviceNotices,
       serviceNoticesByCategory,
       serviceNoticesByFsg,
+      awardCoverageFrom,
       stats: {
         totalNsns: nsns.length,
         totalPurchases,

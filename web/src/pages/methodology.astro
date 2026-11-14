@@ -9,6 +9,10 @@ const data = await loadSiteData();
 
 const canonicalUrl = `${SITE_URL}/methodology/`;
 
+const awardCoverageLabel = data.awardCoverageFrom
+  ? new Date(`${data.awardCoverageFrom}T00:00:00Z`).toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' })
+  : null;
+
 const breadcrumbs = [
   { name: 'Home', url: '/' },
   { name: 'Methodology', url: canonicalUrl },
@@ -119,6 +123,24 @@ const faq = [
       quantity, return-by date and set-aside or competition code, and each award's unit price,
       quantity and winning supplier. Solicitations are kept after they close so the demand record
       grows over time. Every DIBBS row on the site links to its record at dibbs.bsm.dla.mil.
+    </p>
+  </section>
+
+  <hr class="rule" />
+
+  <section id="past-due">
+    <h2>"Past due, no award found" and estimated value</h2>
+    <p class="gloss">
+      "Past due, no award found" marks a solicitation whose return-by date passed 30 to 180 days
+      ago and for which we found no matching DIBBS award. A match is an award with the same purchase
+      request number, or an award for the same NSN dated on or after the solicitation's return-by
+      date. {awardCoverageLabel ? `Our DIBBS award records are dense only from ${awardCoverageLabel}, so` : 'Because our DIBBS award records are not dense enough yet to judge,'} the
+      status is applied only to solicitations that returned {awardCoverageLabel ? `on or after ${data.awardCoverageFrom}` : 'after coverage begins'}. A missing
+      match is not proof that no award was made: awards can be posted late, filed under a different
+      number, or never reach our records, so check DIBBS before quoting. "Estimated value" is the
+      solicitation's quantity (open quantity, or the past-due quantity when nothing is open)
+      multiplied by the most recent unit price on record for that NSN. It is our arithmetic, not a
+      government estimate, and it is blank when either figure is missing.
     </p>
   </section>
 

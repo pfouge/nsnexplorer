@@ -98,6 +98,10 @@ export interface SolicitationRecord {
   status: string;
   setaside: string | null;
   buyerOffice: string | null;
+  /** DIBBS tech-docs flag (raw->>'techDocs'); null when unknown or not a DIBBS row. */
+  techDocs: 'none' | 'tech_docs' | 'spec_only' | null;
+  /** True when a DIBBS award matches this solicitation (see the ALL-solicitations query in data.ts). */
+  awardFound: boolean;
   source: string;
   sourceUrl: string;
 }
