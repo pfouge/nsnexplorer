@@ -529,6 +529,7 @@ footer.site .disclaimer { color: var(--inv-softer); max-width: 78ch; }
 .filter-group label:has(> input) {
   display: inline-flex; align-items: center; height: 34px; padding: 0 14px; border-radius: 17px; background: var(--paper-2);
   font-size: 0.9375rem; color: var(--ink); margin: 0; cursor: pointer; white-space: nowrap; flex: none;
+  position: relative; /* anchors the hidden input, so a scrolled-off chip cannot widen the page */
 }
 .filter-group label:has(> input:checked) { background: var(--ink); color: var(--paper); }
 .filter-group label:has(> input:focus-visible) { outline: 2px solid var(--green); outline-offset: 2px; }
