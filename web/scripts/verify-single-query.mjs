@@ -331,6 +331,16 @@ async function oldLoadSupplierPage(sql, cage) {
   };
 }
 
+// Fields added to the new solicitation loader after the old one was frozen (price history, matched awards).
+// Old-vs-new compares only the pre-existing fields; the new ones are not checked here.
+const NEW_SOL_FIELDS = ['purchaseRequest', 'techDocs', 'partPrices', 'partPriceCount', 'matchedAwards'];
+function withoutNewSolFields(page) {
+  if (!page) return page;
+  const out = { ...page };
+  for (const k of NEW_SOL_FIELDS) delete out[k];
+  return out;
+}
+
 async function oldLoadSolicitationPage(sql, solNumber) {
   if (!isSolNumber(solNumber)) return null;
 
@@ -855,13 +865,13 @@ async function main() {
     for (const m of solMissing) if ((await col(`select sol_number from pub.solicitations where sol_number = '${m}'`)).length === 0) solMissingChecked.push(m);
     console.log(`Solicitation sample: ${solSample.length} existing + ${solMissingChecked.length} missing`);
     for (const s of solStrata) console.log(`   stratum "${s.label}": ${s.rows.length}`);
-    for (const c of solSample) await compare('loadSolicitationPage', c, (s) => oldLoadSolicitationPage(s, c), (s) => N.loadSolicitationPage(s, c));
+    for (const c of solSample) await compare('loadSolicitationPage', c, (s) => oldLoadSolicitationPage(s, c), async (s) => withoutNewSolFields(await N.loadSolicitationPage(s, c)));
     for (const c of solMissingChecked) {
-      const r = await compare('loadSolicitationPage (missing)', c, (s) => oldLoadSolicitationPage(s, c), (s) => N.loadSolicitationPage(s, c));
+      const r = await compare('loadSolicitationPage (missing)', c, (s) => oldLoadSolicitationPage(s, c), async (s) => withoutNewSolFields(await N.loadSolicitationPage(s, c)));
       if (r.new.value !== null) fail('loadSolicitationPage (missing)', c, 'expected null');
     }
     for (const bad of ['has space', 'a/b', '']) {
-      const r = await compare('loadSolicitationPage (malformed)', JSON.stringify(bad), (s) => oldLoadSolicitationPage(s, bad), (s) => N.loadSolicitationPage(s, bad), { expectQueries: 0 });
+      const r = await compare('loadSolicitationPage (malformed)', JSON.stringify(bad), (s) => oldLoadSolicitationPage(s, bad), async (s) => withoutNewSolFields(await N.loadSolicitationPage(s, bad)), { expectQueries: 0 });
       if (r.new.value !== null) fail('loadSolicitationPage (malformed)', bad, 'expected null');
     }
 
