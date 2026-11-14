@@ -11,11 +11,12 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import CiteThis from '../../components/CiteThis.astro';
 import Follow from '../../components/Follow.astro';
 import { SITE_URL } from '../../consts';
-import { toDashedNsn, formatDate, formatUsdPrecise } from '../../lib/shared';
+import { toDashedNsn, formatDate, formatUsd, formatUsdPrecise } from '../../lib/shared';
 import { databaseUrlFrom } from '../../lib/runtime-env';
 import { openSql } from '../../lib/nsn-page';
 import { loadSolicitationPage } from '../../lib/solicitation-page';
-import { countdownBadge, daysUntilClose, isSolNumber, statusBadge, supplierPath } from '../../lib/entity';
+import { countdownBadge, daysUntilClose, isSolNumber, solicitationPath, statusBadge, supplierPath } from '../../lib/entity';
+import { priceSummary, repeatWinner, valueAtLastPrice, winners } from '../../lib/sol-history';
 
 export const prerender = false;
 
@@ -41,11 +42,18 @@ if (!page) return notFound();
 // Shorter edge cache than NSN pages: the countdown and status change daily.
 Astro.response.headers.set('Cache-Control', 'public, max-age=0, s-maxage=600, stale-while-revalidate=3600');
 
-const { sol, awards, fscName, hasOpenPage } = page;
+const { sol, awards, fscName, hasOpenPage, purchaseRequest, techDocs, partPrices, partPriceCount, matchedAwards } = page;
 const isOpen = sol.status === 'open';
 const dashed = sol.nsn ? toDashedNsn(sol.nsn) : null;
 const itemLabel = sol.nomenclature ?? sol.itemName ?? sol.solNumber;
 const sourceName = sol.source === 'sam_gov' ? 'SAM.gov' : 'DIBBS';
+
+const techDocsLabel = techDocs === 'tech_docs' ? 'Listed on DIBBS' : techDocs === 'spec_only' ? 'Spec or standard only' : techDocs === 'none' ? 'None listed' : null;
+const summary = priceSummary(partPrices);
+const lastPriceValue = valueAtLastPrice(sol.quantity, summary?.latest ?? null);
+const winnerRows = winners(partPrices).slice(0, 8);
+const repeat = repeatWinner(partPrices);
+const priceRows = partPrices.slice(0, 10);
 
 const status = statusBadge(sol.status);
 const countdown = isOpen ? countdownBadge(daysUntilClose(sol.returnBy, new Date())) : null;
@@ -99,7 +107,7 @@ const primaryLabel = isOpen
     <Follow kind="solicitation" entity={sol.solNumber} label={`${sol.solNumber} ${itemLabel}`.slice(0, 200)} />
   </header>
 
-  <div class="stat-strip">
+  <div class="stat-strip roomy">
     <div class="stat">
       <div class="value">
         {sol.quantity !== null ? sol.quantity.toLocaleString('en-US') : '—'}
@@ -119,6 +127,25 @@ const primaryLabel = isOpen
       <div class="stat">
         <div class="value"><a class="mono" href={`/nsn/${dashed}/`}>{dashed}</a></div>
         <div class="label">NSN</div>
+      </div>
+    )}
+    {purchaseRequest && (
+      <div class="stat">
+        <div class="value mono">{purchaseRequest}</div>
+        <div class="label">Purchase request</div>
+      </div>
+    )}
+    {techDocsLabel && (
+      <div class="stat">
+        <div class="value">{techDocsLabel}</div>
+        <div class="label">Tech docs</div>
+      </div>
+    )}
+    {lastPriceValue !== null && (
+      <div class="stat">
+        <div class="value">≈ {formatUsd(Math.round(lastPriceValue))}</div>
+        <div class="label">Value at last price</div>
+        <div class="gloss">Quantity × last unit price</div>
       </div>
     )}
     {sol.setaside && (
@@ -148,6 +175,127 @@ const primaryLabel = isOpen
       </a>
     )}
   </p>
+
+  {matchedAwards.length > 0 && (
+    <section id="award-on-record">
+      <h2 class="section-title">Award on record for this purchase request</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Awarded</th>
+              <th>Award number</th>
+              <th>Supplier</th>
+              <th class="num">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {matchedAwards.map((m) => {
+              const href = supplierPath(m.cage);
+              return (
+                <tr>
+                  <td class="mono">{m.actionDate ? formatDate(m.actionDate) : '—'}</td>
+                  <td>
+                    <a class="mono" href={m.sourceUrl} target="_blank" rel="nofollow noopener">{m.awardNumber ?? 'Award record'}</a>
+                    {m.deliveryOrder && <span class="cage"> (order {m.deliveryOrder})</span>}
+                  </td>
+                  <td>
+                    {href ? <a href={href}>{m.supplierName ?? `CAGE ${m.cage}`}</a> : (m.supplierName ?? m.cage ?? 'Unknown')}
+                    {m.cage && m.supplierName && <span class="cage"> ({m.cage})</span>}
+                  </td>
+                  <td class="num price">{m.total !== null ? formatUsd(m.total) : '—'}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <p class="gloss">Matched by purchase request number in DIBBS award records.</p>
+    </section>
+  )}
+
+  {partPrices.length > 0 && (
+    <section id="part-prices">
+      <h2 class="section-title">What this part has sold for</h2>
+      {summary && (
+        <p class="gloss">
+          Last {summary.n} award{summary.n === 1 ? '' : 's'}: {formatUsdPrecise(summary.low)} – {formatUsdPrecise(summary.high)}, average {formatUsdPrecise(summary.average)}; most recent {formatUsdPrecise(summary.latest)} on {formatDate(partPrices[0].awardedOn)}
+        </p>
+      )}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Awarded</th>
+              <th class="num">Unit price</th>
+              <th class="num">Qty</th>
+              <th>Supplier</th>
+              <th>Solicitation</th>
+            </tr>
+          </thead>
+          <tbody>
+            {priceRows.map((p) => {
+              const href = supplierPath(p.cage);
+              const solHref = p.solNumber && p.solNumber !== sol.solNumber ? solicitationPath(p.solNumber) : null;
+              return (
+                <tr>
+                  <td class="mono">{formatDate(p.awardedOn)}</td>
+                  <td class="num price"><a href={p.sourceUrl} target="_blank" rel="nofollow noopener">{formatUsdPrecise(p.unitPrice)}</a></td>
+                  <td class="num mono">{p.quantity !== null ? p.quantity.toLocaleString('en-US') : '—'}</td>
+                  <td>
+                    {href ? <a href={href}>{p.supplierName ?? `CAGE ${p.cage}`}</a> : (p.supplierName ?? 'Unknown')}
+                    {p.cage && p.supplierName && <span class="cage"> ({p.cage})</span>}
+                  </td>
+                  <td class="mono">{solHref ? <a href={solHref}>{p.solNumber}</a> : (p.solNumber ?? '—')}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {dashed && partPriceCount > priceRows.length && (
+        <p><a href={`/nsn/${dashed}/#prices`}>All {partPriceCount.toLocaleString('en-US')} prices on the part page →</a></p>
+      )}
+    </section>
+  )}
+
+  {winnerRows.length > 0 && (
+    <section id="winners">
+      <h2 class="section-title">Who has won this part</h2>
+      {repeat && (
+        <p><span class="badge amber">Same supplier on the last {repeat.streak} awards on record</span></p>
+      )}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Supplier</th>
+              <th class="num">Wins</th>
+              <th>Last won</th>
+              <th class="num">Last price</th>
+            </tr>
+          </thead>
+          <tbody>
+            {winnerRows.map((w) => {
+              const href = supplierPath(w.cage);
+              const last = partPrices.find((p) => p.cage === w.cage && p.awardedOn === w.lastWon && p.unitPrice === w.lastPrice);
+              return (
+                <tr>
+                  <td>
+                    {href ? <a href={href}>{w.supplierName ?? `CAGE ${w.cage}`}</a> : (w.supplierName ?? w.cage)}
+                    {w.supplierName && <span class="cage"> ({w.cage})</span>}
+                  </td>
+                  <td class="num mono">{w.wins}</td>
+                  <td class="mono">{formatDate(w.lastWon)}</td>
+                  <td class="num price">{last ? <a href={last.sourceUrl} target="_blank" rel="nofollow noopener">{formatUsdPrecise(w.lastPrice)}</a> : formatUsdPrecise(w.lastPrice)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )}
 
   {awards.length > 0 && (
     <section id="awards">
