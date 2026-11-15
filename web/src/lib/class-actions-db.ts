@@ -23,6 +23,7 @@ import {
   type ClassActionSummary,
 } from './class-actions';
 import { CSV_MAX_ROWS } from './csv-split';
+import { CONTRACT_CEILING_SQL, NOT_CONTRACT_CEILING_SQL } from './contract-ceiling';
 
 const isoDate = (v: unknown): string | null => (v ? new Date(v as string | Date).toISOString().slice(0, 10) : null);
 
@@ -43,12 +44,13 @@ export function mapContractActionRow(r: Record<string, any>): ContractActionReco
     recipientUei: r.recipient_uei,
     sourceUrl: assertSourceUrl(r.source_url, `contract_actions.id=${r.id}`),
     ingestedAt: new Date(r.ingested_at).toISOString(),
+    isCeiling: r.is_ceiling === true,
   };
 }
 
 const RECORD_COLUMNS = `ca.id, ca.award_uid, ca.piid, ca.psc, ca.naics, ca.description, ca.action_date,
        ca.obligation, ca.agency_id, ag.name AS agency_name, ca.recipient_name,
-       ca.recipient_uei, ca.source_url, ca.ingested_at`;
+       ca.recipient_uei, ca.source_url, ca.ingested_at, ${CONTRACT_CEILING_SQL} AS is_ceiling`;
 
 /** USAspending test in SQL: not a DIBBS award row, and the host matches (USASPENDING_URL_REGEX). $re is the regex parameter. */
 const usaSql = (re: string) => `(ca.award_uid NOT LIKE 'DIBBS-%' AND ca.source_url ~* ${re})`;
@@ -60,8 +62,9 @@ export interface ContractActionLoad {
   nsnActionIds: number[];
   /** Per class with at least one class-level row. */
   summaryByFsc: Map<string, ClassActionSummary>;
-  /** Rows counted by the old single query: NSN-attached plus class-level. */
+  /** Rows counted by the old single query: NSN-attached plus class-level. Contract ceilings are not counted (see contract-ceiling.ts). */
   totalActions: number;
+  /** Dollars across those rows. Contract ceilings are a contract's maximum value, not money spent, so they add nothing. */
   totalObligated: number;
 }
 
@@ -102,8 +105,11 @@ export async function loadContractActions(
       );
       for (const r of res.rows) {
         const rec = mapContractActionRow(r);
-        totalActions += 1;
-        totalObligated += rec.obligation ?? 0;
+        // A contract ceiling is still listed on its NSN page, but is neither a purchase nor dollars spent.
+        if (!rec.isCeiling) {
+          totalActions += 1;
+          totalObligated += rec.obligation ?? 0;
+        }
         nsnActionIds.push(rec.id);
         const list = contractActionsByNsn.get(r.nsn);
         if (list) list.push(rec);
@@ -121,7 +127,8 @@ export async function loadContractActions(
       const agg = await client.query(
         `SELECT ca.psc::text AS fsc,
                 count(*)::int AS n,
-                coalesce(sum(ca.obligation), 0)::text AS obligated,
+                count(*) FILTER (WHERE ${CONTRACT_CEILING_SQL})::int AS ceiling_n,
+                coalesce(sum(ca.obligation) FILTER (WHERE ${NOT_CONTRACT_CEILING_SQL}), 0)::text AS obligated,
                 count(*) FILTER (WHERE ${usaSql('$3')})::int AS usa_n,
                 max(ca.action_date)::text AS latest_date,
                 count(*) FILTER (WHERE length(btrim(ca.source_url, E' \\t\\r\\n')) = 0)::int AS blank_urls
@@ -134,10 +141,11 @@ export async function loadContractActions(
         // The old loader asserted a source_url on every row it loaded; keep that guarantee.
         if (r.blank_urls > 0) assertSourceUrl('', `contract_actions psc=${r.fsc} (${r.blank_urls} rows)`);
         const obligated = Number(r.obligated);
-        totalActions += r.n;
+        totalActions += r.n - r.ceiling_n;
         totalObligated += obligated;
         summaryByFsc.set(r.fsc, {
           count: r.n,
+          ceilingCount: r.ceiling_n,
           obligated,
           recent: [],
           usaspendingCount: r.usa_n,
@@ -184,6 +192,7 @@ export async function loadContractActions(
         `SELECT ca.psc::text AS fsc, ca.action_date, ca.obligation, ca.recipient_uei, ca.recipient_name
          FROM pub.contract_actions ca
          WHERE ${classLevel} AND ca.action_date >= $3::date AND ca.action_date <= $4::date
+           AND ${NOT_CONTRACT_CEILING_SQL}
          ORDER BY ca.psc, ca.action_date DESC, ca.id`,
         [...base, floor, today]
       );

@@ -234,7 +234,8 @@ function computeDemandStats(
   data: SiteData,
   nsn: string
 ): { lastPurchased: string | null; purchaseRecords: number; perYear: number; totalDemand: number } {
-  const contractActions = data.contractActionsByNsn.get(nsn) ?? [];
+  // A contract ceiling (the base award of a long-term contract) is not a purchase: it adds no record and no dollars.
+  const contractActions = (data.contractActionsByNsn.get(nsn) ?? []).filter((c) => !c.isCeiling);
   // A DIBBS award that produced a price point is also a DIBBS contract action: count it once.
   const rawPoints = withoutDuplicatedPricePoints(data.pricePointsByNsn.get(nsn) ?? [], (n) => data.contractActionsByNsn.get(n) ?? []);
 

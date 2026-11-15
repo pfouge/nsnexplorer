@@ -11,8 +11,8 @@ const MAX_PANELS = 3;
 
 interface ApiItem {
   nsn: { itemName: string | null; amsc: string | null; amc: string | null };
-  pricePoints: { awardedOn: string; unitPrice: number }[];
-  contractActions: unknown[];
+  pricePoints: { awardedOn: string; unitPrice: number; isCeiling?: boolean }[];
+  contractActions: { isCeiling?: boolean }[];
   solicitations: { status: string }[];
 }
 type Panel =
@@ -63,7 +63,9 @@ async function load(entry: string): Promise<Panel> {
     if (res.status === 404 || res.status === 400) return { kind: 'missing', input: entry };
     if (!res.ok) return { kind: 'error', input: entry, dashed };
     const j = (await res.json()) as ApiItem;
+    // Base awards of long-term contracts carry a ceiling, not a price or a purchase.
     const series = (j.pricePoints ?? [])
+      .filter((p) => !p.isCeiling)
       .map((p) => ({ iso: String(p.awardedOn).slice(0, 10), p: Number(p.unitPrice) }))
       .filter((p) => Number.isFinite(p.p))
       .sort((a, b) => a.iso.localeCompare(b.iso))
@@ -75,7 +77,7 @@ async function load(entry: string): Promise<Panel> {
       dashed,
       name: n.itemName?.trim() || `NSN ${dashed}`,
       open: (j.solicitations ?? []).filter((s) => s.status === 'open').length,
-      awards: series.length + (j.contractActions ?? []).length,
+      awards: series.length + (j.contractActions ?? []).filter((c) => !c.isCeiling).length,
       competition,
       series,
     };

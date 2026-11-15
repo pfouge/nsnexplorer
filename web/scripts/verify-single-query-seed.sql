@@ -167,5 +167,50 @@ SELECT nsn, 'SAMEPN', c, 'flis', 'https://example.test/pn/same/' || c
 FROM (SELECT nsn FROM pub.nsns ORDER BY nsn OFFSET 3 LIMIT 1) n, (VALUES ('Z0002'), ('Z0001'), ('1A002')) c(c)
 ON CONFLICT DO NOTHING;
 
+-- Contract ceilings (lib/contract-ceiling.ts). One NSN, two suppliers, one solicitation purchase request.
+--   ZC001 holds the long-term contract: a base award of type D (ceiling $60,000,000,000, no delivery order) and two
+--   delivery orders against it; ZC002 holds type G, A and P/V rows. Also a D base row whose deliveryOrder is blank
+--   text and one whose deliveryOrder key is missing, and a non-DIBBS (USAspending) row that looks like a ceiling.
+--   Expected: the D/G/A base rows (6) are ceilings; the orders, P, V and USAspending rows are not.
+INSERT INTO pub.suppliers (cage, name, city, state) VALUES
+  ('ZC001', 'CEILING SEED CONTRACTOR', 'Dayton', 'OH'),
+  ('ZC002', 'CEILING SEED SECOND', 'Austin', 'TX');
+INSERT INTO pub.solicitations (sol_number, nsn, fsc, nomenclature, quantity, unit_of_issue, issued_on, return_by, status, source_url, source, raw)
+SELECT 'SEED-CEIL-1', n.nsn, n.fsc, 'SEED CEILING ITEM', 40, 'EA', CURRENT_DATE - 60, CURRENT_DATE - 45, 'awarded',
+       'https://example.test/rfq/ceil1', 'dibbs_rfq', '{"purchaseRequest": "PRCEIL0001"}'::jsonb
+FROM (SELECT nsn, fsc FROM pub.nsns WHERE fsc = '5340' ORDER BY nsn OFFSET 5 LIMIT 1) n;
+INSERT INTO pub.contract_actions (award_uid, piid, psc, description, action_date, obligation, agency_id, recipient_name, source_url, raw)
+SELECT v.uid, v.piid, '5340', 'SEED CEILING ' || v.piid, CURRENT_DATE - v.age, v.obl, NULL, v.recip,
+       'https://www.dibbs.bsm.dla.mil/Awards/seedceil/' || v.uid,
+       jsonb_build_object('nsn', n.nsn, 'cage', v.cage, 'awardNumber', split_part(v.piid, '/', 1), 'purchaseRequest', 'PRCEIL0001', 'total', v.obl::text)
+       || CASE WHEN v.dord IS NOT NULL THEN jsonb_build_object('deliveryOrder', v.dord) ELSE '{}'::jsonb END
+FROM (SELECT nsn FROM pub.nsns WHERE fsc = '5340' ORDER BY nsn OFFSET 5 LIMIT 1) n,
+     (VALUES
+       ('DIBBS-SPE7M126D0001-PRCEIL0001',                       'SPE7M126D0001',                 60000000000::numeric, 50, 'ZC001', 'CEILING SEED CONTRACTOR', NULL::text),   -- D base: ceiling
+       ('DIBBS-SPE7M126D0001-SPE7M126F0001-PRCEIL0001',         'SPE7M126D0001/SPE7M126F0001',   1250::numeric,        40, 'ZC001', 'CEILING SEED CONTRACTOR', 'SPE7M126F0001'), -- order: purchase
+       ('DIBBS-SPE7M126D0001-SPE7M126F0002-PRCEIL0001',         'SPE7M126D0001/SPE7M126F0002',   2500::numeric,        30, 'ZC001', 'CEILING SEED CONTRACTOR', 'SPE7M126F0002'), -- order: purchase
+       ('DIBBS-SPE7M126G0003-PRCEIL0001',                       'SPE7M126G0003',                 100000000::numeric,   55, 'ZC002', 'CEILING SEED SECOND',     NULL),   -- G base: ceiling
+       ('DIBBS-SPE7M126A0004-PRCEIL0001',                       'SPE7M126A0004',                 250000::numeric,      35, 'ZC002', 'CEILING SEED SECOND',     ''),     -- A base, blank order: ceiling
+       ('DIBBS-SPE7M126P0002-PRCEIL0001',                       'SPE7M126P0002',                 5000::numeric,        25, 'ZC002', 'CEILING SEED SECOND',     NULL),   -- P standalone: purchase
+       ('DIBBS-SPE7M126V0005-PRCEIL0001',                       'SPE7M126V0005',                 777::numeric,         20, 'ZC002', 'CEILING SEED SECOND',     NULL),   -- V standalone: purchase
+       ('DIBBS-SPE7M126D0008-PRCEIL0001',                       'SPE7M126D0008',                 9000000::numeric,     15, 'ZC001', 'CEILING SEED CONTRACTOR', '   ')    -- D base, whitespace order: ceiling
+     ) AS v(uid, piid, obl, age, cage, recip, dord);
+-- A USAspending row with a D at the 9th character and no delivery order: not a DIBBS award, never a ceiling.
+INSERT INTO pub.contract_actions (award_uid, piid, psc, description, action_date, obligation, agency_id, recipient_name, recipient_uei, source_url, raw)
+SELECT 'CONT_AWD_SPE7M126D0006_9700_-NONE-_-NONE-', 'SPE7M126D0006', '5340', 'SEED USASPENDING D-TYPE', CURRENT_DATE - 10, 999999, 1,
+       'USA SEED RECIPIENT', 'USASEEDUEI01', 'https://www.usaspending.gov/award/CONT_AWD_SPE7M126D0006', jsonb_build_object('nsn', n.nsn)
+FROM (SELECT nsn FROM pub.nsns WHERE fsc = '5340' ORDER BY nsn OFFSET 5 LIMIT 1) n;
+-- Price points the award join derived from the same awards (unit price = total / solicitation quantity 40).
+INSERT INTO pub.price_points (nsn, awarded_on, unit_price, quantity, total_value, cage, sol_number, award_ref, source, source_url, raw)
+SELECT n.nsn, CURRENT_DATE - v.age, v.total / 40, 40, v.total, v.cage, 'SEED-CEIL-1', v.ref, 'dibbs_award',
+       'https://www.dibbs.bsm.dla.mil/Awards/seedceil/pp/' || v.ref, '{}'::jsonb
+FROM (SELECT nsn FROM pub.nsns WHERE fsc = '5340' ORDER BY nsn OFFSET 5 LIMIT 1) n,
+     (VALUES
+       ('SPE7M126D0001',               60000000000::numeric, 50, 'ZC001'),   -- ceiling
+       ('SPE7M126D0001-SPE7M126F0001', 1250::numeric,        40, 'ZC001'),   -- order
+       ('SPE7M126G0003',               100000000::numeric,   55, 'ZC002'),   -- ceiling
+       ('SPE7M126P0002',               5000::numeric,        25, 'ZC002')    -- standalone
+     ) AS v(ref, total, age, cage);
+
 COMMIT;
 ANALYZE;

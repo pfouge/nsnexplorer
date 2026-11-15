@@ -43,6 +43,7 @@ import { supplierLabel } from '../../lib/viz-nsn-common';
 import { solicitationPath, supplierPath } from '../../lib/entity';
 import { priceSummary, valueAtLastPrice } from '../../lib/sol-history';
 import { competitionRead } from '../../lib/competition-read';
+import { CEILING_LABEL, ceilingAmountText } from '../../lib/contract-ceiling';
 import { NO_DEFINITION, alsoCalled, catalogCells, foreignSummary, moeView } from '../../lib/nsn-flis';
 
 // Rendered ON REQUEST by the Cloudflare Pages Function, not at build time.
@@ -77,7 +78,11 @@ if (!page) {
 Astro.response.headers.set('Cache-Control', 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400');
 
 const { nsn, fsc, partNumbers, contractActions } = page;
-const rawPoints = page.pricePoints;
+// Long-term contract base awards (lib/contract-ceiling.ts) carry a ceiling, not a price or a purchase:
+// they stay in the lists and the win record, and are left out of every price, count and dollar figure.
+const allPricePoints = page.pricePoints;
+const rawPoints = allPricePoints.filter((p) => !p.isCeiling);
+const purchaseActions = contractActions.filter((c) => !c.isCeiling);
 const agencySlugById = new Map(page.agencies.map((a) => [a.agencyId, a.slug]));
 const allSols = page.solicitations;
 
@@ -90,11 +95,11 @@ const stats = computeNsnPriceStats(rawPoints);
 // purchases (unit prices) and contract actions (award totals).
 const allDates = [
   ...rawPoints.map((p) => p.awardedOn),
-  ...contractActions.map((c) => c.actionDate).filter((d): d is string => d !== null),
+  ...purchaseActions.map((c) => c.actionDate).filter((d): d is string => d !== null),
 ].sort();
 const lastPurchased = allDates.at(-1) ?? null;
 const firstPurchased = allDates[0] ?? null;
-const recordCount = rawPoints.length + contractActions.length;
+const recordCount = rawPoints.length + purchaseActions.length;
 const spanYears =
   firstPurchased && lastPurchased
     ? Math.max(1, (new Date(lastPurchased).getTime() - new Date(firstPurchased).getTime()) / 31557600000)
@@ -102,9 +107,9 @@ const spanYears =
 const perYear = recordCount / spanYears;
 const totalDemandDollars =
   rawPoints.reduce((s, p) => s + (p.totalValue ?? p.unitPrice * (p.quantity ?? 1)), 0) +
-  contractActions.reduce((s, c) => s + (c.obligation ?? 0), 0);
+  purchaseActions.reduce((s, c) => s + (c.obligation ?? 0), 0);
 const latestPoint = [...rawPoints].sort((a, b) => a.awardedOn.localeCompare(b.awardedOn)).at(-1);
-const latestAction = [...contractActions]
+const latestAction = [...purchaseActions]
   .filter((c) => c.actionDate !== null)
   .sort((a, b) => a.actionDate!.localeCompare(b.actionDate!))
   .at(-1);
@@ -186,7 +191,7 @@ const specDoc = (text: string): string | null => {
   return m ? m[1].trim() : null;
 };
 
-const lastUpdated = [...rawPoints.map((p) => p.ingestedAt), ...contractActions.map((c) => c.ingestedAt)]
+const lastUpdated = [...allPricePoints.map((p) => p.ingestedAt), ...contractActions.map((c) => c.ingestedAt)]
   .sort()
   .at(-1);
 
@@ -217,16 +222,19 @@ const calcData = points.length >= MIN_POINTS_CALC ? calcRows(points) : [];
 const hasPriceCharts = priceHistory !== null || priceByQty !== null || calcData.length >= MIN_POINTS_CALC;
 // Awards for the demand charts: price points, else the item's contract actions.
 const datedActions = contractActions.filter((c): c is typeof c & { actionDate: string } => c.actionDate !== null);
+const datedPurchaseActions = datedActions.filter((c) => !c.isCeiling);
+// Buying rhythm counts purchases, so it skips long-term contract base awards.
 const awardEvents: AwardEvent[] =
   points.length > 0
     ? points.map((p) => ({ date: p.awardedOn, quantity: p.quantity, supplier: supplierLabel(p.supplierName, p.cage), solNumber: p.solNumber }))
-    : datedActions.map((c) => ({ date: c.actionDate, quantity: null, supplier: supplierLabel(c.recipientName, c.cage), solNumber: null }));
+    : datedPurchaseActions.map((c) => ({ date: c.actionDate, quantity: null, supplier: supplierLabel(c.recipientName, c.cage), solNumber: null }));
+// Who won counts every award on record, a long-term contract base award included: it is a real win.
 const winAwards: WinAward[] =
-  points.length > 0
-    ? points.map((p) => ({ date: p.awardedOn, cage: p.cage, name: p.supplierName }))
+  allPricePoints.length > 0
+    ? allPricePoints.map((p) => ({ date: p.awardedOn, cage: p.cage, name: p.supplierName }))
     : datedActions.map((c) => ({ date: c.actionDate, cage: c.cage, name: c.recipientName }));
 const rhythm = buildBuyingRhythm(allSols, awardEvents, todayIso);
-const timing = buildTimeToAward(points, allSols);
+const timing = buildTimeToAward(allPricePoints, allSols);
 const winners = buildWinners(
   winAwards,
   partNumbers.filter((pn) => pn.cage).map((pn) => ({ cage: pn.cage!, name: pn.supplierName })),
@@ -846,6 +854,9 @@ const datasetSchema = {
     <p class="gloss">
       Contract action totals, not unit prices — obligation amounts from USAspending for related
       awards, shown for context only. These do not appear on the price chart above.
+      {contractActions.some((c) => c.isCeiling) && (
+        <> A long-term contract shows the most it can be worth, not money spent. It is not counted in the purchase totals on this page.</>
+      )}
     </p>
     {contractActions.length === 0 ? (
       <p class="gloss">No related contract actions on record.</p>
@@ -868,9 +879,9 @@ const datasetSchema = {
                 <td class="mono">
                   <a href={c.sourceUrl} target="_blank" rel="noopener noreferrer">{c.piid ?? 'record'} ↗</a>
                 </td>
-                <td>{c.recipientName ?? '—'}</td>
+                <td>{c.recipientName ?? '—'}{c.isCeiling && <> <span class="badge">{CEILING_LABEL}</span></>}</td>
                 <td>{c.agencyName ?? '—'}</td>
-                <td class="num mono">{c.obligation !== null ? formatUsd(c.obligation) : '—'}</td>
+                <td class="num mono">{c.obligation === null ? '—' : c.isCeiling ? ceilingAmountText(formatUsd(c.obligation)) : formatUsd(c.obligation)}</td>
               </tr>
             ))}
           </tbody>

@@ -25,6 +25,7 @@ import type { DailyStatRow, FreshnessSource, GroupDemandRow, TapeItem, TileInput
 import type { RepeatRow, StateCount, WeekCount, WinnerRow } from './viz-class';
 import type { ClassActionSummary } from './class-actions';
 import { loadContractActions } from './class-actions-db';
+import { NOT_CEILING_PRICE_POINT_SQL, NOT_CONTRACT_CEILING_SQL } from './contract-ceiling';
 
 export * from './shared';
 export type { ServiceNotice } from './services';
@@ -321,6 +322,7 @@ async function fetchSiteData(): Promise<SiteData> {
          LEFT JOIN pub.suppliers s ON s.cage = pp.cage
          LEFT JOIN pub.agencies ag ON ag.agency_id = pp.agency_id
          WHERE pp.nsn = ANY($1)
+           AND ${NOT_CEILING_PRICE_POINT_SQL}
          ORDER BY pp.nsn, pp.awarded_on`,
         [nsnCodes]
       );
@@ -747,8 +749,10 @@ async function loadVizData(pool: pgTypes.Pool): Promise<SiteViz> {
          (SELECT count(*) FROM pub.solicitations s
             WHERE s.status = 'open' AND s.return_by >= CURRENT_DATE AND s.return_by < CURRENT_DATE + 7
               AND (s.fsc IS NULL OR s.fsc ~ '^[0-9]{4}$'))::int AS closing7,
-         (SELECT coalesce(sum(obligation), 0) FROM pub.contract_actions
-            WHERE award_uid LIKE 'DIBBS-%' AND action_date >= CURRENT_DATE - 7)::float8 AS awards7,
+         -- Contract ceilings are a contract's maximum value, not money spent: left out of the dollars.
+         (SELECT coalesce(sum(ca.obligation), 0) FROM pub.contract_actions ca
+            WHERE ca.award_uid LIKE 'DIBBS-%' AND ca.action_date >= CURRENT_DATE - 7
+              AND ${NOT_CONTRACT_CEILING_SQL})::float8 AS awards7,
          (SELECT min(issued_on)::text FROM pub.solicitations) AS earliest`
     )
   ).rows[0];
@@ -899,6 +903,7 @@ async function loadVizData(pool: pgTypes.Pool): Promise<SiteViz> {
               ca.obligation
        FROM pub.contract_actions ca
        WHERE ca.psc ~ '^[0-9]{4}$' AND ca.action_date >= CURRENT_DATE - INTERVAL '12 months' AND ca.obligation IS NOT NULL
+         AND ${NOT_CONTRACT_CEILING_SQL}
      ), g AS (
        -- One group per supplier: by CAGE when the record has one (so rows
        -- loaded before the supplier's name was known still merge), else by name.
@@ -930,6 +935,7 @@ async function loadVizData(pool: pgTypes.Pool): Promise<SiteViz> {
        FROM pub.contract_actions ca
        WHERE ca.psc ~ '^[0-9]{4}$' AND ca.action_date >= CURRENT_DATE - INTERVAL '24 months'
          AND NULLIF(btrim(ca.raw ->> 'cage'), '') IS NOT NULL
+         AND ${NOT_CONTRACT_CEILING_SQL}
        GROUP BY 1, 2
      )
      SELECT c.fsc, upper(btrim(s.state)) AS st, count(*)::int AS n, coalesce(sum(c.amt), 0)::float8 AS amt

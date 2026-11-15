@@ -18,9 +18,11 @@ export interface ClassPulseRow {
 }
 
 export interface ClassActionSummary {
-  /** Class-level rows in this class (every source, dated or not). */
+  /** Class-level rows in this class (every source, dated or not), contract ceilings included: this is the length of the full list. */
   count: number;
-  /** Sum of their obligations (null counts as 0; negative de-obligations included). */
+  /** How many of `count` are contract ceilings (lib/contract-ceiling.ts): long-term contract awards, not purchases. */
+  ceilingCount: number;
+  /** Sum of the obligations of the other rows (null counts as 0; negative de-obligations included). Ceilings add nothing. */
   obligated: number;
   /** The newest rows, newest first (date desc, undated last, then id asc), at most RECENT_ACTION_ROWS. */
   recent: ContractActionRecord[];
@@ -30,7 +32,7 @@ export interface ClassActionSummary {
   usaspendingFiscalYears: { fy: number; count: number }[];
   /** Newest ISO date among the class's dated rows (any year, future included), or null when none is dated. */
   latestDate: string | null;
-  /** Dated rows from pulseLookbackFloor(today) up to and including today, newest first. */
+  /** Dated, non-ceiling rows from pulseLookbackFloor(today) up to and including today, newest first. */
   pulseRows: ClassPulseRow[];
 }
 

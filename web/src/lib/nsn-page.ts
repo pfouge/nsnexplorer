@@ -26,6 +26,7 @@ import {
   slugify,
 } from './shared';
 import { type NsnFlis, mapFlis } from './nsn-flis';
+import { CEILING_PRICE_POINT_SQL, CONTRACT_CEILING_SQL } from './contract-ceiling';
 
 /** A contract action plus the awardee's CAGE when the source carried one (DIBBS award grid rows do). */
 export interface NsnContractAction extends ContractActionRecord {
@@ -101,7 +102,8 @@ SELECT base.*,
      FROM (SELECT pp.id, pp.nsn, pp.awarded_on, pp.unit_price, pp.quantity, pp.total_value,
                   pp.cage, s.name AS supplier_name, s.city AS supplier_city, s.state AS supplier_state,
                   pp.agency_id, ag.name AS agency_name, ag.abbreviation AS agency_abbr,
-                  pp.sol_number, pp.award_ref, pp.source, pp.source_url, pp.ingested_at
+                  pp.sol_number, pp.award_ref, pp.source, pp.source_url, pp.ingested_at,
+                  ${CEILING_PRICE_POINT_SQL} AS is_ceiling
            FROM pub.price_points pp
            LEFT JOIN pub.suppliers s ON s.cage = pp.cage
            LEFT JOIN pub.agencies ag ON ag.agency_id = pp.agency_id
@@ -110,7 +112,8 @@ SELECT base.*,
      FROM (SELECT ca.id, ca.award_uid, ca.piid, ca.psc, ca.naics, ca.description, ca.action_date,
                   ca.obligation, ca.agency_id, ag.name AS agency_name, ca.recipient_name,
                   ca.recipient_uei, ca.source_url, ca.ingested_at,
-                  NULLIF(btrim(ca.raw ->> 'cage'), '') AS cage
+                  NULLIF(btrim(ca.raw ->> 'cage'), '') AS cage,
+                  ${CONTRACT_CEILING_SQL} AS is_ceiling
            FROM pub.contract_actions ca
            LEFT JOIN pub.agencies ag ON ag.agency_id = ca.agency_id
            WHERE (ca.raw ->> 'nsn') = base.nsn::text) c) AS contract_actions,
@@ -237,6 +240,7 @@ export async function loadNsnPage(sql: Sql, nsnCode: string): Promise<NsnPageDat
       source: r.source,
       sourceUrl: assertSourceUrl(r.source_url, `price_points.id=${r.id} nsn=${r.nsn}`),
       ingestedAt: new Date(r.ingested_at).toISOString(),
+      isCeiling: r.is_ceiling === true,
     };
     // Same slug rule as data.ts, so links land on the static /agency/ pages
     // (which exist for every agency with at least one priced purchase).
@@ -266,6 +270,7 @@ export async function loadNsnPage(sql: Sql, nsnCode: string): Promise<NsnPageDat
     recipientUei: r.recipient_uei,
     sourceUrl: assertSourceUrl(r.source_url, `contract_actions.id=${r.id}`),
     ingestedAt: new Date(r.ingested_at).toISOString(),
+    isCeiling: r.is_ceiling === true,
     cage: r.cage ?? null,
   }));
 

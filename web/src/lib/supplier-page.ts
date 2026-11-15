@@ -16,6 +16,7 @@
 
 import type postgres from 'postgres';
 import { assertSourceUrl, slugify } from './shared.ts';
+import { CEILING_PRICE_POINT_SQL, NOT_CEILING_PRICE_POINT_SQL } from './contract-ceiling.ts';
 
 type Sql = ReturnType<typeof postgres>;
 
@@ -37,6 +38,11 @@ export interface SupplierAward {
   agencySlug: string | null;
   source: string;
   sourceUrl: string;
+  /**
+   * The base award of a long-term contract (lib/contract-ceiling.ts): `total` is the contract's ceiling, the most it can be
+   * worth, and `unitPrice` / `quantity` are not a price or a count of units bought. Listed, never counted or summed.
+   */
+  isCeiling: boolean;
 }
 
 export interface SupplierClass {
@@ -205,8 +211,11 @@ export interface SupplierPageData {
   name: string | null;
   city: string | null;
   state: string | null;
+  /** Purchases on record; long-term contract base awards are counted in `ceilings` instead. */
   awards: number;
-  /** Sum of recorded totals (or unit price x quantity); awards with neither add nothing. */
+  /** Long-term contract base awards (contract ceilings): listed in `rows`, not counted in `awards` or `dollars`. */
+  ceilings: number;
+  /** Sum of recorded totals (or unit price x quantity); awards with neither add nothing. Ceilings add nothing. */
   dollars: number;
   /** How many awards carry a dollar figure. */
   valuedAwards: number;
@@ -307,7 +316,8 @@ SELECT st.*,
   (SELECT COALESCE(jsonb_agg(to_jsonb(a) ORDER BY a.awarded_on DESC, a.id DESC), '[]'::jsonb)
      FROM (SELECT pp.awarded_on, pp.nsn, n.item_name, pp.quantity, pp.unit_price,
                   ${VALUE_SQL} AS total,
-                  pp.agency_id, ag.name AS agency_name, pp.source, pp.source_url, pp.id
+                  pp.agency_id, ag.name AS agency_name, pp.source, pp.source_url, pp.id,
+                  ${CEILING_PRICE_POINT_SQL} AS is_ceiling
            FROM pub.price_points pp
            JOIN pub.nsns n ON n.nsn = pp.nsn
            LEFT JOIN pub.agencies ag ON ag.agency_id = pp.agency_id
@@ -326,7 +336,7 @@ SELECT st.*,
          SELECT n.fsc, count(*)::int AS awards
          FROM pub.price_points pp
          JOIN pub.nsns n ON n.nsn = pp.nsn
-         WHERE pp.cage = $1
+         WHERE pp.cage = $1 AND ${NOT_CEILING_PRICE_POINT_SQL}
          GROUP BY n.fsc
        ) g
        LEFT JOIN pub.fsc f ON f.fsc = g.fsc) c) AS class_rows,
@@ -347,7 +357,7 @@ SELECT st.*,
                   count(*)::int AS awards,
                   COALESCE(sum(${VALUE_SQL}), 0) AS dollars
            FROM pub.price_points pp
-           WHERE pp.cage = $1
+           WHERE pp.cage = $1 AND ${NOT_CEILING_PRICE_POINT_SQL}
              AND pp.awarded_on >= date_trunc('month', CURRENT_DATE)::date - interval '${SUPPLIER_MONTHS - 1} months'
              AND pp.awarded_on < date_trunc('month', CURRENT_DATE)::date + interval '1 month'
            GROUP BY 1) m) AS month_rows,
@@ -356,7 +366,7 @@ SELECT st.*,
                   COALESCE(sum(${VALUE_SQL}), 0) AS dollars, max(pp.awarded_on) AS last_award
            FROM pub.price_points pp
            JOIN pub.nsns n ON n.nsn = pp.nsn
-           WHERE pp.cage = $1
+           WHERE pp.cage = $1 AND ${NOT_CEILING_PRICE_POINT_SQL}
            GROUP BY pp.nsn, n.item_name
            ORDER BY count(*) DESC, max(pp.awarded_on) DESC, pp.nsn
            LIMIT ${SUPPLIER_TOP_NSNS}) t) AS top_nsns,
@@ -365,7 +375,7 @@ SELECT st.*,
                   COALESCE(sum(${VALUE_SQL}), 0) AS dollars, max(pp.awarded_on) AS last_award
            FROM pub.price_points pp
            JOIN pub.agencies ag ON ag.agency_id = pp.agency_id
-           WHERE pp.cage = $1
+           WHERE pp.cage = $1 AND ${NOT_CEILING_PRICE_POINT_SQL}
            GROUP BY pp.agency_id, ag.name
            ORDER BY count(*) DESC, COALESCE(sum(${VALUE_SQL}), 0) DESC, pp.agency_id
            LIMIT ${SUPPLIER_AGENCY_ROWS}) g) AS agency_rows,
@@ -415,11 +425,14 @@ SELECT st.*,
            ORDER BY s.return_by NULLS LAST, s.sol_number
            LIMIT ${SUPPLIER_OPEN_ROWS}) b) AS open_bids
 FROM (
-  SELECT count(*)::int AS awards,
-         COALESCE(sum(${VALUE_SQL}), 0) AS dollars,
-         count(${VALUE_SQL})::int AS valued,
-         count(DISTINCT pp.nsn)::int AS nsns,
-         count(DISTINCT n.fsc)::int AS classes,
+  -- Long-term contract base awards (contract ceilings) are listed but never counted or summed: their total is
+  -- the most the contract can be worth. They only keep the page alive (WHERE below) and feed first/latest award.
+  SELECT (count(*) FILTER (WHERE ${NOT_CEILING_PRICE_POINT_SQL}))::int AS awards,
+         (count(*) FILTER (WHERE ${CEILING_PRICE_POINT_SQL}))::int AS ceilings,
+         COALESCE(sum(${VALUE_SQL}) FILTER (WHERE ${NOT_CEILING_PRICE_POINT_SQL}), 0) AS dollars,
+         (count(${VALUE_SQL}) FILTER (WHERE ${NOT_CEILING_PRICE_POINT_SQL}))::int AS valued,
+         (count(DISTINCT pp.nsn) FILTER (WHERE ${NOT_CEILING_PRICE_POINT_SQL}))::int AS nsns,
+         (count(DISTINCT n.fsc) FILTER (WHERE ${NOT_CEILING_PRICE_POINT_SQL}))::int AS classes,
          min(pp.awarded_on) AS first_award,
          max(pp.awarded_on) AS latest_award,
          max(pp.ingested_at) AS refreshed,
@@ -428,7 +441,7 @@ FROM (
   JOIN pub.nsns n ON n.nsn = pp.nsn
   WHERE pp.cage = $1
 ) st
-WHERE st.awards > 0`;
+WHERE st.awards + st.ceilings > 0`;
 
 /** The 24 calendar months ending with the month of `today` (ISO date), oldest first, zero-filled from the SQL rows. */
 export function fillMonths(today: string, rows: JsonRow[], count = SUPPLIER_MONTHS): SupplierMonth[] {
@@ -575,7 +588,7 @@ export async function loadSupplierPage(sql: Sql, cage: string): Promise<Supplier
 
   const res = await sql.unsafe(SUPPLIER_PAGE_SQL, [cage]);
   const st = res[0];
-  if (!st || Number(st.awards) === 0) return null;
+  if (!st || Number(st.awards) + Number(st.ceilings) === 0) return null;
 
   const sup = st.supplier as JsonRow | null;
   const awardRows = st.award_rows as JsonRow[];
@@ -594,6 +607,7 @@ export async function loadSupplierPage(sql: Sql, cage: string): Promise<Supplier
       agencySlug: r.agency_id !== null ? slugify(agencyName ?? `agency-${r.agency_id}`) : null,
       source: r.source,
       sourceUrl: assertSourceUrl(r.source_url, `price_points.id=${r.id} cage=${cage}`),
+      isCeiling: r.is_ceiling === true,
     };
   });
 
@@ -608,6 +622,7 @@ export async function loadSupplierPage(sql: Sql, cage: string): Promise<Supplier
     city: clean(sup?.city),
     state: clean(sup?.state),
     awards: Number(st.awards),
+    ceilings: Number(st.ceilings),
     dollars: Number(st.dollars),
     valuedAwards: Number(st.valued),
     nsns: Number(st.nsns),

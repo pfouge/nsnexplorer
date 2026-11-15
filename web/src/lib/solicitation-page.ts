@@ -9,6 +9,7 @@
 import type postgres from 'postgres';
 import { assertSourceUrl, type SolicitationRecord } from './shared';
 import { isSolNumber } from './entity';
+import { CEILING_PRICE_POINT_SQL, CONTRACT_CEILING_SQL, NOT_CEILING_PRICE_POINT_SQL } from './contract-ceiling';
 
 type Sql = ReturnType<typeof postgres>;
 
@@ -18,6 +19,9 @@ export interface SolicitationAward {
   supplierName: string | null;
   unitPrice: number;
   quantity: number | null;
+  /** Base award of a long-term contract (lib/contract-ceiling.ts): `unitPrice` is not a price, `ceilingAmount` is the contract's maximum value. */
+  isCeiling: boolean;
+  ceilingAmount: number | null;
 }
 
 export type TechDocs = 'none' | 'tech_docs' | 'spec_only';
@@ -30,6 +34,8 @@ export interface PartPrice {
   supplierName: string | null;
   solNumber: string | null;
   sourceUrl: string;
+  /** Base award of a long-term contract: kept so past winners still count it; `unitPrice` is not a price. */
+  isCeiling: boolean;
 }
 
 export interface MatchedAward {
@@ -39,6 +45,8 @@ export interface MatchedAward {
   cage: string | null;
   supplierName: string | null;
   total: number | null;
+  /** Base award of a long-term contract: `total` is the contract's ceiling, not money spent. */
+  isCeiling: boolean;
   sourceUrl: string;
 }
 
@@ -64,7 +72,7 @@ export interface SolicitationPageData {
   techDocs: TechDocs | null;
   /** Up to 20 most recent price points for the same NSN, any solicitation. */
   partPrices: PartPrice[];
-  /** Total price points for the NSN. */
+  /** Total price points for the NSN, long-term contract base awards not counted (they carry no price). */
   partPriceCount: number;
   /** DIBBS award records for the same NSN carrying this solicitation's purchase request. */
   matchedAwards: MatchedAward[];
@@ -85,7 +93,8 @@ SELECT s.sol_number, s.nsn, s.fsc, s.nomenclature, s.quantity, s.unit_of_issue,
        s.setaside, s.buyer_office, s.source, s.source_url,
        n.item_name, f.name AS fsc_name, f.render_depth AS fsc_depth,
        (SELECT COALESCE(jsonb_agg(to_jsonb(a) ORDER BY a.awarded_on DESC, a.id DESC), '[]'::jsonb)
-          FROM (SELECT pp.id, pp.awarded_on, pp.cage, su.name AS supplier_name, pp.unit_price, pp.quantity
+          FROM (SELECT pp.id, pp.awarded_on, pp.cage, su.name AS supplier_name, pp.unit_price, pp.quantity,
+                       ${CEILING_PRICE_POINT_SQL} AS is_ceiling, pp.total_value AS ceiling_amount
                 FROM pub.price_points pp
                 LEFT JOIN pub.suppliers su ON su.cage = pp.cage
                 WHERE pp.sol_number = s.sol_number
@@ -95,20 +104,20 @@ SELECT s.sol_number, s.nsn, s.fsc, s.nomenclature, s.quantity, s.unit_of_issue,
        s.raw ->> 'techDocs' AS tech_docs,
        (SELECT COALESCE(jsonb_agg(to_jsonb(p) ORDER BY p.awarded_on DESC, p.id DESC), '[]'::jsonb)
           FROM (SELECT pp.id, pp.awarded_on, pp.unit_price, pp.quantity, pp.cage, su.name AS supplier_name,
-                       pp.sol_number, pp.source_url
+                       pp.sol_number, pp.source_url, ${CEILING_PRICE_POINT_SQL} AS is_ceiling
                 FROM pub.price_points pp
                 LEFT JOIN pub.suppliers su ON su.cage = pp.cage
                 WHERE pp.nsn = s.nsn
                 ORDER BY pp.awarded_on DESC, pp.id DESC
                 LIMIT 20) p) AS part_price_rows,
-       (SELECT count(*) FROM pub.price_points pp WHERE pp.nsn = s.nsn) AS part_price_count,
+       (SELECT count(*) FROM pub.price_points pp WHERE pp.nsn = s.nsn AND ${NOT_CEILING_PRICE_POINT_SQL}) AS part_price_count,
        (SELECT COALESCE(jsonb_agg(to_jsonb(m) ORDER BY m.action_date DESC NULLS LAST, m.award_number DESC NULLS LAST), '[]'::jsonb)
           FROM (SELECT ca.raw ->> 'awardNumber' AS award_number, ca.raw ->> 'deliveryOrder' AS delivery_order,
                        ca.action_date, ca.raw ->> 'cage' AS cage, su.name AS supplier_name,
                        COALESCE(ca.obligation,
                                 CASE WHEN regexp_replace(COALESCE(ca.raw ->> 'total', ''), '[$,[:space:]]', '', 'g') ~ '^-?[0-9]+([.][0-9]+)?$'
                                      THEN regexp_replace(ca.raw ->> 'total', '[$,[:space:]]', '', 'g')::numeric END) AS total,
-                       ca.source_url
+                       ca.source_url, ${CONTRACT_CEILING_SQL} AS is_ceiling
                 FROM pub.contract_actions ca
                 LEFT JOIN pub.suppliers su ON su.cage = ca.raw ->> 'cage'
                 WHERE ca.award_uid LIKE 'DIBBS%'
@@ -161,6 +170,8 @@ export async function loadSolicitationPage(sql: Sql, solNumber: string): Promise
       supplierName: a.supplier_name,
       unitPrice: Number(a.unit_price),
       quantity: a.quantity !== null ? Number(a.quantity) : null,
+      isCeiling: a.is_ceiling === true,
+      ceilingAmount: a.is_ceiling === true && a.ceiling_amount !== null && a.ceiling_amount !== undefined ? Number(a.ceiling_amount) : null,
     })),
     purchaseRequest: typeof r.purchase_request === 'string' ? r.purchase_request : null,
     techDocs: mapTechDocs(r.tech_docs),
@@ -172,6 +183,7 @@ export async function loadSolicitationPage(sql: Sql, solNumber: string): Promise
       supplierName: p.supplier_name ?? null,
       solNumber: p.sol_number ?? null,
       sourceUrl: assertSourceUrl(p.source_url, `price_points.id=${p.id}`),
+      isCeiling: p.is_ceiling === true,
     })),
     partPriceCount: Number(r.part_price_count),
     matchedAwards: matchedRows.map((m) => ({
@@ -181,6 +193,7 @@ export async function loadSolicitationPage(sql: Sql, solNumber: string): Promise
       cage: m.cage ?? null,
       supplierName: m.supplier_name ?? null,
       total: m.total !== null && m.total !== undefined ? Number(m.total) : null,
+      isCeiling: m.is_ceiling === true,
       sourceUrl: assertSourceUrl(m.source_url, `contract_actions award ${m.award_number}`),
     })),
   };

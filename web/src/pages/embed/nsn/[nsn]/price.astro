@@ -38,7 +38,7 @@ if (!page) return notFound();
 
 const now = new Date();
 const todayIso = now.toISOString().slice(0, 10);
-const model = buildPriceHistory(withSpikeRatios(page.pricePoints), todayIso);
+const model = buildPriceHistory(withSpikeRatios(page.pricePoints.filter((p) => !p.isCeiling)), todayIso);
 if (!model) return notFound();
 
 Astro.response.headers.set('Cache-Control', 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400');

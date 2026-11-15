@@ -5,11 +5,12 @@
 
 import type postgres from 'postgres';
 import type { SupplierQuery } from './entity';
+import { CEILING_PRICE_POINT_SQL } from './contract-ceiling';
 
 type Sql = ReturnType<typeof postgres>;
 
 const BY_CAGE = `
-  SELECT s.cage, s.name, s.city, s.state, count(*)::int AS awards
+  SELECT s.cage, s.name, s.city, s.state, (count(*) FILTER (WHERE NOT ${CEILING_PRICE_POINT_SQL}))::int AS awards
   FROM pub.suppliers s
   JOIN pub.price_points pp ON pp.cage = s.cage
   WHERE s.cage = $1
@@ -17,7 +18,7 @@ const BY_CAGE = `
   LIMIT 8`;
 
 const byName = (param: string) => `
-  SELECT s.cage, s.name, s.city, s.state, count(*)::int AS awards
+  SELECT s.cage, s.name, s.city, s.state, (count(*) FILTER (WHERE NOT ${CEILING_PRICE_POINT_SQL}))::int AS awards
   FROM pub.suppliers s
   JOIN pub.price_points pp ON pp.cage = s.cage
   WHERE s.name ILIKE ${param} ESCAPE '\\'
