@@ -8,6 +8,7 @@ import NsnTimeToAward from '../../components/viz/NsnTimeToAward.astro';
 import NsnWhoWins from '../../components/viz/NsnWhoWins.astro';
 import SignupForm from '../../components/SignupForm.astro';
 import Follow from '../../components/Follow.astro';
+import BidCalculator from '../../components/BidCalculator.astro';
 import CiteThis from '../../components/CiteThis.astro';
 import { SITE_URL } from '../../consts';
 import { buildDiagram } from '../../lib/diagram';
@@ -227,6 +228,7 @@ const headlineSummary = priceSummary(points);
 const headlinePoint = sortedPoints.find((p) => Number.isFinite(p.unitPrice) && p.unitPrice > 0) ?? null;
 const lastPrice = headlineSummary?.latest ?? null;
 const openQtyTotal = openSols.reduce((sum, s) => sum + (s.quantity !== null && s.quantity > 0 ? s.quantity : 0), 0);
+const openUnits = [...new Set(openSols.map((s) => s.unitOfIssue).filter((u): u is string => !!u))];
 const openValueAtLastPrice = valueAtLastPrice(openQtyTotal, lastPrice);
 const solValueAtLastPrice = (qty: number | null): number | null => valueAtLastPrice(qty, lastPrice);
 
@@ -563,6 +565,14 @@ const datasetSchema = {
       The government's own price and demand record for this NSN — what past awards cleared at,
       so you know where to land your quote.
     </p>
+    <BidCalculator
+      context="nsn"
+      quantity={openQtyTotal > 0 ? openQtyTotal : null}
+      unitOfIssue={openUnits.length === 1 ? openUnits[0] : null}
+      summary={headlineSummary}
+      latestAwardedOn={headlinePoint?.awardedOn ?? null}
+      latestSourceUrl={headlinePoint?.sourceUrl ?? null}
+    />
   </section>
 
   <div class="datastrip" style="margin-top:0.5rem;">

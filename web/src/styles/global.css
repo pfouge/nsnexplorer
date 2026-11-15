@@ -354,6 +354,20 @@ a.index-row:hover { text-decoration: none; background: var(--hover); }
 .index-row.soon { opacity: 0.6; }
 @media (max-width: 640px) { .index-row { grid-template-columns: 5rem minmax(0, 1fr) auto; } }
 
+/* ---- Bid calculator (components/BidCalculator.astro) ---- */
+.bid-calc .calc-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 20px; margin: 1rem 0 0.5rem; }
+@media (max-width: 640px) { .bid-calc .calc-grid { grid-template-columns: minmax(0, 1fr); } }
+.bid-calc .calc-field label { margin-bottom: 0.35rem; }
+.bid-calc .calc-field input {
+  display: block; width: 100%; box-sizing: border-box; min-height: 48px; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: var(--card); color: var(--ink); font-family: var(--font-sans); font-size: 1rem; font-variant-numeric: tabular-nums;
+}
+.bid-calc .calc-field input:focus-visible { outline: 2px solid var(--green); outline-offset: 1px; }
+.bid-calc .calc-time { margin: 0.5rem 0 0; }
+.bid-calc .calc-time summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
+.bid-calc .calc-compare p { margin: 0.3rem 0; }
+.bid-calc .calc-compare p[hidden] { display: none; }
+
 /* ---- Tags & badges ---- */
 .tag, .badge {
   display: inline-block; border: 0; border-radius: 6px; padding: 2px 8px; vertical-align: middle;

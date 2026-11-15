@@ -10,6 +10,7 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import CiteThis from '../../components/CiteThis.astro';
 import Follow from '../../components/Follow.astro';
+import BidCalculator from '../../components/BidCalculator.astro';
 import { SITE_URL } from '../../consts';
 import { toDashedNsn, formatDate, formatUsd, formatUsdPrecise } from '../../lib/shared';
 import { databaseUrlFrom } from '../../lib/runtime-env';
@@ -51,6 +52,9 @@ const sourceName = sol.source === 'sam_gov' ? 'SAM.gov' : 'DIBBS';
 const techDocsLabel = techDocs === 'tech_docs' ? 'Listed on DIBBS' : techDocs === 'spec_only' ? 'Spec or standard only' : techDocs === 'none' ? 'None listed' : null;
 const summary = priceSummary(partPrices);
 const lastPriceValue = valueAtLastPrice(sol.quantity, summary?.latest ?? null);
+const lastPricePoint = summary
+  ? ([...partPrices].sort((a, b) => (a.awardedOn < b.awardedOn ? 1 : a.awardedOn > b.awardedOn ? -1 : 0)).find((p) => p.unitPrice === summary.latest) ?? null)
+  : null;
 const winnerRows = winners(partPrices).slice(0, 8);
 const repeat = repeatWinner(partPrices);
 const priceRows = partPrices.slice(0, 10);
@@ -258,6 +262,15 @@ const primaryLabel = isOpen
       )}
     </section>
   )}
+
+  <BidCalculator
+    context="solicitation"
+    quantity={sol.quantity}
+    unitOfIssue={sol.unitOfIssue}
+    summary={summary}
+    latestAwardedOn={lastPricePoint?.awardedOn ?? null}
+    latestSourceUrl={lastPricePoint?.sourceUrl ?? null}
+  />
 
   {winnerRows.length > 0 && (
     <section id="winners">
