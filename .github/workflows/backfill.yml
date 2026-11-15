@@ -1,7 +1,7 @@
 name: backfill-usaspending
 
-# One-shot historical backfill: five fiscal years of USAspending contract
-# actions per PSC, run from US-hosted GitHub runners (compliance fence:
+# One-shot historical backfill: fiscal years of USAspending contract
+# actions per PSC, read month by month, run from US-hosted GitHub runners (compliance fence:
 # docs/architecture.md #3). Loads are idempotent (upserts), so re-running
 # a year is safe. Dispatch manually; delete or ignore once the catalog is
 # seeded — the nightly ingest-daily keeps it current from there.
@@ -49,28 +49,30 @@ jobs:
         with:
           node-version: 22
       - run: npm ci
-      - name: compute fiscal-year window
-        id: window
+      # One month at a time: spending_by_award returns at most 10,000 awards per
+      # query, and a busy class has more than that in a fiscal year (5330 has
+      # about 27,000), so a whole-year window silently dropped the rest.
+      - name: fetch + load FY${{ matrix.fy }} PSC ${{ matrix.psc }}, month by month
         run: |
+          set -euo pipefail
           FY=${{ matrix.fy }}
-          START="$((FY - 1))-10-01"
-          END="${FY}-09-30"
+          PSC=${{ matrix.psc }}
           TODAY=$(date -u +%F)
-          if [[ "$END" > "$TODAY" ]]; then END="$TODAY"; fi
-          echo "start=$START" >> "$GITHUB_OUTPUT"
-          echo "end=$END" >> "$GITHUB_OUTPUT"
-      - name: fetch FY${{ matrix.fy }} PSC ${{ matrix.psc }}
-        run: >
-          node ingest/usaspending/fetch.mjs
-          --psc ${{ matrix.psc }}
-          --start-date ${{ steps.window.outputs.start }}
-          --end-date ${{ steps.window.outputs.end }}
-          --out /tmp/usaspending-${{ matrix.psc }}-fy${{ matrix.fy }}.jsonl
-      - name: load
-        run: >
-          node ingest/usaspending/load.mjs
-          --file /tmp/usaspending-${{ matrix.psc }}-fy${{ matrix.fy }}.jsonl
-          --psc ${{ matrix.psc }}
+          for i in $(seq 0 11); do
+            START=$(date -u -d "$((FY - 1))-10-01 +$i month" +%F)
+            END=$(date -u -d "$START +1 month -1 day" +%F)
+            if [[ "$START" > "$TODAY" ]]; then break; fi
+            if [[ "$END" > "$TODAY" ]]; then END="$TODAY"; fi
+            OUT="/tmp/usaspending-$PSC-$START.jsonl"
+            node ingest/usaspending/fetch.mjs --psc "$PSC" --start-date "$START" --end-date "$END" --out "$OUT"
+            N=$(wc -l < "$OUT")
+            echo "month $START..$END: $N records"
+            if [ "$N" -ge 10000 ]; then
+              echo "::warning::PSC $PSC $START..$END returned $N records; the API caps a query at 10,000, so this month may be incomplete"
+            fi
+            node ingest/usaspending/load.mjs --file "$OUT" --psc "$PSC"
+            rm -f "$OUT"
+          done
       - name: row counts
         run: |
           node --input-type=module --eval "
