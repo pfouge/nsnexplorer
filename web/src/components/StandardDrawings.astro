@@ -1,0 +1,54 @@
+---
+// StandardDrawings: the "Standard drawing" lines for one part: each standard or specification document found in the
+// part's catalog data (src/lib/standard-refs.ts). Government documents link to ASSIST Quick Search (DoD's public
+// document search); industry standards name the publisher that sells them and carry no link. We never host a copy.
+import {
+  assistUrl,
+  standardActionLabel,
+  standardAvailability,
+  suffixSentence,
+  ASSIST_QUICK_SEARCH_URL,
+  type StandardDoc,
+} from '../lib/standard-refs';
+
+interface Props {
+  docs: StandardDoc[];
+  /** Heading level: 'h3' on the part page, 'h3' on the solicitation page too; kept as a prop for the guide. */
+  headingId?: string;
+}
+const { docs, headingId } = Astro.props;
+---
+
+{docs.length > 0 && (
+  <ul class="std-list" aria-labelledby={headingId}>
+    {docs.map((d) => {
+      const href = assistUrl(d);
+      const sentences = d.partNumbers
+        .filter((p) => p.govCage)
+        .map((p) => suffixSentence(d, p))
+        .filter((s): s is string => s !== null);
+      return (
+        <li class="std-item">
+          <div class="std-head">
+            <span class="mono std-id">{d.id}</span>
+          </div>
+          <p class="std-what">{d.what}</p>
+          {sentences.map((s) => <p class="std-sentence">{s}</p>)}
+          <p class="std-action">
+            {href ? (
+              <a href={href} target="_blank" rel="nofollow noopener">{standardActionLabel(d)} ↗</a>
+            ) : (
+              <span class="badge" title="Bought from the publisher; no link here">{standardActionLabel(d)}</span>
+            )}
+            <span class="gloss">
+              {href
+                ? ` Type ${d.searchTerm} in the Document ID box. `
+                : ' '}
+              {standardAvailability(d)}
+            </span>
+          </p>
+        </li>
+      );
+    })}
+  </ul>
+)}

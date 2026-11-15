@@ -269,6 +269,10 @@ const breadcrumbSchema = {
             <label><input type="checkbox" id="f-hasdrawing" /> Has drawing</label>
           </div>
 
+          <div class="filter-group">
+            <label title="A government standard or specification defines this part; its document holds the drawing"><input type="checkbox" id="f-standard" /> Standard drawing</label>
+          </div>
+
           {materialFamilies.length >= 2 && (
             <div class="filter-group">
               <label class="filter-label" for="f-material">Material</label>
@@ -310,6 +314,7 @@ const breadcrumbSchema = {
               data-competition={c.competition}
               data-lastpurchased={c.lastPurchased ?? ''}
               data-hasdrawing={c.hasDrawing ? '1' : '0'}
+              data-standard={c.standardDrawing ? '1' : '0'}
               data-material={c.material ?? ''}
               data-matfam={c.materialFamily ?? ''}
               data-demand={c.totalDemand}
@@ -334,6 +339,7 @@ const breadcrumbSchema = {
                     </span>
                   )}
                   <span class="signal mono">{formatUsd(c.totalDemand)}</span>
+                  {c.standardDrawing && <span class="badge" title="A government standard or specification defines this part. Its document holds the drawing.">Standard drawing</span>}
                 </div>
               </div>
             </article>
@@ -355,10 +361,11 @@ const breadcrumbSchema = {
     const countEl = document.getElementById('filter-count');
     const lastPurchasedSelect = document.getElementById('f-lastpurchased');
     const hasDrawingCheckbox = document.getElementById('f-hasdrawing');
+    const standardCheckbox = document.getElementById('f-standard');
     const sortSelect = document.getElementById('f-sort');
 
     if (grid && lastPurchasedSelect instanceof HTMLSelectElement &&
-        hasDrawingCheckbox instanceof HTMLInputElement && sortSelect instanceof HTMLSelectElement) {
+        hasDrawingCheckbox instanceof HTMLInputElement && standardCheckbox instanceof HTMLInputElement && sortSelect instanceof HTMLSelectElement) {
       const cards = Array.from(grid.querySelectorAll<HTMLElement>(':scope > .product-card'));
       const cfg = readPagedConfig(grid);
       const fmt = (n: number) => n.toLocaleString('en-US');
@@ -371,6 +378,7 @@ const breadcrumbSchema = {
         const competition = checkedCompetition instanceof HTMLInputElement ? checkedCompetition.value : 'all';
         const maxAgeDays = lastPurchasedSelect.value === 'any' ? null : Number(lastPurchasedSelect.value);
         const needsDrawing = hasDrawingCheckbox.checked;
+        const needsStandard = standardCheckbox.checked;
         const wantedFamily = materialSelect instanceof HTMLSelectElement && materialSelect.value !== 'any' ? materialSelect.value : null;
         const now = Date.now();
 
@@ -389,6 +397,7 @@ const breadcrumbSchema = {
             }
           }
           if (visible && needsDrawing && el.dataset.hasdrawing !== '1') visible = false;
+          if (visible && needsStandard && el.dataset.standard !== '1') visible = false;
           if (visible && wantedFamily !== null && el.dataset.matfam !== wantedFamily) visible = false;
           el.style.display = visible ? '' : 'none';
           if (visible) visibleCount++;
@@ -411,6 +420,7 @@ const breadcrumbSchema = {
         });
         lastPurchasedSelect.value = 'any';
         hasDrawingCheckbox.checked = false;
+        standardCheckbox.checked = false;
         if (materialSelect instanceof HTMLSelectElement) materialSelect.value = 'any';
       };
       document.getElementById('clear-filters')?.addEventListener('click', () => {
@@ -457,6 +467,7 @@ const breadcrumbSchema = {
       document.querySelectorAll('input[name="f-competition"]').forEach((el) => el.addEventListener('change', schedule));
       lastPurchasedSelect.addEventListener('change', schedule);
       hasDrawingCheckbox.addEventListener('change', schedule);
+      standardCheckbox.addEventListener('change', schedule);
       materialSelect?.addEventListener('change', schedule);
       sortSelect.addEventListener('change', schedule);
 

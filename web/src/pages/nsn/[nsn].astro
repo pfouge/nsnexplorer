@@ -10,8 +10,10 @@ import SignupForm from '../../components/SignupForm.astro';
 import Follow from '../../components/Follow.astro';
 import BidCalculator from '../../components/BidCalculator.astro';
 import CiteThis from '../../components/CiteThis.astro';
+import StandardDrawings from '../../components/StandardDrawings.astro';
 import { SITE_URL } from '../../consts';
 import { buildDiagram } from '../../lib/diagram';
+import { ASSIST_QUICK_SEARCH_URL, collectStandardDocs, extractStandardRefs } from '../../lib/standard-refs';
 import {
   toDashedNsn,
   undashNsn,
@@ -172,24 +174,19 @@ const hasCatalog = catalog.length > 0 || alsoLine !== null;
 const moe = moeView(flis.moeRules);
 const moeForeign = foreignSummary(moe);
 const hasMoe = moe.us.length > 0 || moeForeign !== null;
+// Standard drawings: MS/AN/NAS sheets, MIL and federal specs, and industry standards named in this part's part numbers
+// and FLIS characteristics (lib/standard-refs.ts). Government documents link to ASSIST Quick Search, industry
+// standards name the publisher that sells them. No query-string deep link into ASSIST is documented by DLA, so the
+// link goes to the site and the id to type is shown beside it.
+const standardDocs = collectStandardDocs({ characteristics, partNumbers });
+const specDoc = (text: string): string | null => extractStandardRefs(text)[0]?.id ?? null;
+
 // Dimensioned drawing: generated at build time from catalog dimensions for
 // every NSN whose specs support a known archetype (dispatched by FSC in
 // buildDiagram). Returns null — section omitted — when there's no archetype
 // for the FSC or the specs lack the needed geometry.
 const diagram = buildDiagram(characteristics, nsn.fsc, { nsnDashed: dashed, itemName: nsn.itemName });
-const hasSpecs = Boolean(diagram) || characteristics.length > 0 || partNumbers.length > 0 || hasCatalog || flis.related.length > 0 || flis.cancellations.length > 0;
-// Spec documents cited in characteristic replies (e.g. MIL-DTL-25988,
-// AMS7276, SAE-AMS-P-83461). ASSIST Quick Search (DoD's public spec
-// repository) has no public deep-link format — documents resolve only by
-// an internal ident_number — so we surface the detected document id as a
-// highlighted, copyable token beside a link to the search page itself.
-const SPEC_DOC_RE =
-  /\b((?:MIL|SAE|A-A|ASTM|QQ|ZZ|FF)[A-Z]*[- ][A-Z]*-?\d[\dA-Z./-]*|(?:AMS|NAS|MS|AN)\s?-?\d\d[\dA-Z./-]*)\b/;
-const ASSIST_URL = 'https://quicksearch.dla.mil/';
-const specDoc = (text: string): string | null => {
-  const m = text.match(SPEC_DOC_RE);
-  return m ? m[1].trim() : null;
-};
+const hasSpecs = Boolean(diagram) || standardDocs.length > 0 || characteristics.length > 0 || partNumbers.length > 0 || hasCatalog || flis.related.length > 0 || flis.cancellations.length > 0;
 
 const lastUpdated = [...allPricePoints.map((p) => p.ingestedAt), ...contractActions.map((c) => c.ingestedAt)]
   .sort()
@@ -354,7 +351,7 @@ const datasetSchema = {
   <nav class="tabs" aria-label="On this page">
     <a href="#open">Open bids <span class="tab-count">{openSols.length}</span></a>
     <a href="#competition">Competition</a>
-    {(diagram || characteristics.length > 0 || partNumbers.length > 0) && <a href="#specs">Specs</a>}
+    {(diagram || standardDocs.length > 0 || characteristics.length > 0 || partNumbers.length > 0) && <a href="#specs">Specs</a>}
     <a href="#prices">Prices <span class="tab-count">{points.length.toLocaleString('en-US')}</span></a>
     <a href="#purchases">Purchases</a>
     {(allSols.length > 0 || hasDemandCharts) && <a href="#demand">Demand{allSols.length > 0 && <> <span class="tab-count">{allSols.length.toLocaleString('en-US')}</span></>}</a>}
@@ -584,6 +581,18 @@ const datasetSchema = {
     </section>
   )}
 
+  {standardDocs.length > 0 && (
+    <section id="standard-drawing">
+      <h3 class="section-title" id="standard-drawing-h">Standard drawing</h3>
+      <p class="gloss">
+        This part is defined by a government standard or specification, and that document holds the real dimensioned
+        drawing. Government documents are listed in ASSIST Quick Search, which needs no registration. Industry standards are
+        sold by their publisher. We link to the official source and never host a copy.
+      </p>
+      <StandardDrawings docs={standardDocs} headingId="standard-drawing-h" />
+    </section>
+  )}
+
   {diagram && (
     <section>
       <h3 class="section-title">Dimensioned drawing</h3>
@@ -600,8 +609,8 @@ const datasetSchema = {
       <h3 class="section-title">Specifications</h3>
       <p class="gloss">
         From the federal catalog (DLA FLIS / PUB LOG) — what your part has to meet. Cited
-        specification documents can be looked up in <a href={ASSIST_URL} target="_blank" rel="nofollow noopener">ASSIST Quick
-        Search ↗</a>, DoD's public spec repository — copy the document number in.
+        government specification documents can be searched by document number in <a href={ASSIST_QUICK_SEARCH_URL} target="_blank" rel="nofollow noopener">ASSIST Quick
+        Search ↗</a>, DoD's public document search.
       </p>
       <div class="table-wrap">
         <table>
