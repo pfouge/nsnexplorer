@@ -25,6 +25,7 @@ import {
   mapNsnRow,
   slugify,
 } from './shared';
+import { type NsnFlis, mapFlis } from './nsn-flis';
 
 /** A contract action plus the awardee's CAGE when the source carried one (DIBBS award grid rows do). */
 export interface NsnContractAction extends ContractActionRecord {
@@ -41,6 +42,8 @@ export interface NsnPageData {
   partNumbers: PartNumberRecord[];
   /** Agencies referenced by this NSN's priced purchases, keyed by id. */
   agencies: AgencyRecord[];
+  /** FLIS catalog record (migration 0014): identification codes, related items, replaced stock numbers, MOE rules. */
+  flis: NsnFlis;
 }
 
 type Sql = ReturnType<typeof postgres>;
@@ -76,7 +79,7 @@ const isoDate = (v: unknown): string | null =>
 
 /**
  * The whole NSN page in ONE statement (one Hyperdrive round-trip): the NSN row
- * with its latest AMSC observation, plus the five child sets as jsonb arrays
+ * with its latest AMSC observation, plus the five child sets (and the FLIS catalog record) as jsonb
  * built by correlated sub-selects. Zero rows means the NSN does not exist.
  *
  * Why one statement: Hyperdrive's free plan stops after 100,000 queries a day
@@ -126,7 +129,69 @@ SELECT base.*,
      FROM (SELECT pn.id, pn.nsn, pn.part_number, pn.cage, pn.source, pn.source_url, s.name AS supplier_name
            FROM pub.part_numbers pn
            LEFT JOIN pub.suppliers s ON s.cage = pn.cage
-           WHERE pn.nsn = base.nsn) r) AS part_numbers
+           WHERE pn.nsn = base.nsn) r) AS part_numbers,
+  -- FLIS catalog record (migration 0014). Code labels come from pub.flis_codes by primary key ('FIELD:VALUE'
+  -- and bare field names for definitions); every sub-select below is a primary-key or index lookup.
+  (SELECT to_jsonb(i)
+     FROM (SELECT ni.inc, ni.crit_cd, ni.demil, ni.demil_int_cd, ni.niin_assigned, ni.pmic, ni.adp, ni.hmic,
+                  ni.esd_emi, ni.hcc, ni.schedule_b, ni.enac, ni.iuid_indicator, ni.last_known_sos, ni.source_file_date,
+                  (SELECT fc.literal FROM pub.flis_codes fc WHERE fc.code = 'PMIC:' || ni.pmic) AS pmic_label,
+                  (SELECT fc.literal FROM pub.flis_codes fc WHERE fc.code = 'HMIC:' || ni.hmic) AS hmic_label,
+                  (SELECT fc.literal FROM pub.flis_codes fc WHERE fc.code = 'HCC:' || ni.hcc) AS hcc_label,
+                  (SELECT fc.literal FROM pub.flis_codes fc WHERE fc.code = 'ENAC:' || ni.enac) AS enac_label,
+                  (SELECT fc.literal FROM pub.flis_codes fc WHERE fc.code = 'IUID_INDICATOR:' || ni.iuid_indicator) AS iuid_label,
+                  (SELECT fc.literal FROM pub.flis_codes fc WHERE fc.code = 'LST_KWN_SOS:' || ni.last_known_sos) AS sos_label,
+                  (SELECT fc.description FROM pub.flis_codes fc WHERE fc.code = 'SCHEDULE_B:' || ni.schedule_b) AS schedule_b_text,
+                  (SELECT COALESCE(jsonb_agg(jsonb_build_object('field', fd.code, 'literal', fd.literal, 'description', left(fd.description, 900)) ORDER BY fd.code), '[]'::jsonb)
+                     FROM pub.flis_codes fd
+                    WHERE fd.code = ANY (ARRAY[
+                      CASE WHEN ni.niin_assigned IS NOT NULL THEN 'NIIN_ASGMT' END,
+                      CASE WHEN ni.hmic IS NOT NULL THEN 'HMIC' END,
+                      CASE WHEN ni.pmic IS NOT NULL THEN 'PMIC' END,
+                      CASE WHEN ni.schedule_b IS NOT NULL THEN 'SCHEDULE_B' END,
+                      CASE WHEN ni.hcc IS NOT NULL THEN 'HCC' END,
+                      CASE WHEN ni.enac IS NOT NULL THEN 'ENAC' END,
+                      CASE WHEN ni.iuid_indicator IS NOT NULL THEN 'IUID_INDICATOR' END,
+                      CASE WHEN ni.last_known_sos IS NOT NULL THEN 'LST_KWN_SOS' END])) AS field_defs
+           FROM pub.nsn_identification ni
+           WHERE ni.nsn = base.nsn) i) AS flis_ident,
+  (SELECT COALESCE(jsonb_agg(cn.colloquial_name ORDER BY cn.colloquial_name), '[]'::jsonb)
+     FROM (SELECT icn.colloquial_name
+           FROM pub.inc_colloquial_names icn
+           WHERE icn.inc = (SELECT ni2.inc FROM pub.nsn_identification ni2 WHERE ni2.nsn = base.nsn)
+           ORDER BY icn.colloquial_name
+           LIMIT 8) cn) AS flis_colloquial,
+  (SELECT COALESCE(jsonb_agg(to_jsonb(rel) ORDER BY rel.related_nsn), '[]'::jsonb)
+     FROM (SELECT st.related_nsn, st.isc, st.stdzn_date,
+                  (length(st.related_nsn) = 13 AND EXISTS (SELECT 1 FROM pub.nsns rn WHERE rn.nsn = st.related_nsn::char(13))) AS has_page,
+                  (SELECT fc.literal FROM pub.flis_codes fc WHERE fc.code = 'ISC:' || st.isc) AS isc_label,
+                  (SELECT fc.literal FROM pub.flis_codes fc WHERE fc.code = 'ORIG_STDZN_DEC:' || st.orig_stdzn_dec) AS dec_label,
+                  count(*) OVER () AS total
+           FROM pub.nsn_standardization st
+           WHERE st.nsn = base.nsn AND st.related_nsn <> ''
+           ORDER BY st.related_nsn
+           LIMIT 50) rel) AS flis_related,
+  -- nsn/niin is the item we track (the survivor); cancelled_niin is the older number cancelled in its favour.
+  -- niin must match this NSN's own NIIN: a row kept only because the cancelled side is tracked is not ours.
+  (SELECT COALESCE(jsonb_agg(to_jsonb(cx) ORDER BY cx.eff_date DESC NULLS LAST, cx.cancelled_niin), '[]'::jsonb)
+     FROM (SELECT nc.cancelled_niin_fsc AS cancelled_fsc, nc.cancelled_niin, nc.niin_stat_cd AS status, nc.eff_date,
+                  (SELECT fc.literal FROM pub.flis_codes fc WHERE fc.code = 'NIIN_STAT_CD:' || nc.niin_stat_cd) AS status_label,
+                  count(*) OVER () AS total
+           FROM pub.nsn_cancellations nc
+           WHERE nc.nsn = base.nsn AND nc.niin = base.niin
+           ORDER BY nc.eff_date DESC NULLS LAST, nc.cancelled_niin
+           LIMIT 25) cx) AS flis_cancel,
+  (SELECT COALESCE(jsonb_agg(to_jsonb(mx) ORDER BY mx.moe_cd, mx.moe_rl), '[]'::jsonb)
+     FROM (SELECT m.moe_rl, m.moe_cd, m.amc, m.amsc, m.nimsc, m.assigned_on, m.imc, m.aac, m.pica, m.sica,
+                  (SELECT fc.literal FROM pub.flis_codes fc WHERE fc.code = 'MOE_CD:' || m.moe_cd) AS moe_label,
+                  (SELECT fc.literal FROM pub.flis_codes fc WHERE fc.code = 'AMC:' || m.amc) AS amc_label,
+                  (SELECT fc.literal FROM pub.flis_codes fc WHERE fc.code = 'AMSC:' || m.amsc) AS amsc_label,
+                  (SELECT fc.literal FROM pub.flis_codes fc WHERE fc.code = 'AAC:' || m.aac) AS aac_label,
+                  (SELECT fc.literal FROM pub.flis_codes fc WHERE fc.code = 'IMC:' || m.imc) AS imc_label,
+                  (SELECT fc.literal FROM pub.flis_codes fc WHERE fc.code = 'PICA:' || m.pica) AS pica_label,
+                  (SELECT fc.literal FROM pub.flis_codes fc WHERE fc.code = 'SICA:' || m.sica) AS sica_label
+           FROM pub.moe_rules m
+           WHERE m.nsn = base.nsn) mx) AS flis_moe
 FROM (${NSN_WITH_AMSC_SELECT} WHERE n.nsn = $1) base`;
 
 /**
@@ -231,5 +296,7 @@ export async function loadNsnPage(sql: Sql, nsnCode: string): Promise<NsnPageDat
     sourceUrl: assertSourceUrl(r.source_url, `part_numbers ${r.nsn}/${r.part_number}`),
   }));
 
-  return { nsn, fsc, pricePoints, contractActions, solicitations, partNumbers, agencies: [...agencyMap.values()] };
+  const flis = mapFlis(row as unknown as Parameters<typeof mapFlis>[0]);
+
+  return { nsn, fsc, pricePoints, contractActions, solicitations, partNumbers, agencies: [...agencyMap.values()], flis };
 }
