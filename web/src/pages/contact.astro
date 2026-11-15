@@ -1,0 +1,59 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE_NAME, CONTACT_EMAIL, SITE_URL } from '../consts';
+
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  { name: 'Contact', url: `${SITE_URL}/contact/` },
+];
+---
+
+<BaseLayout
+  title="Contact NSN Explorer"
+  description="How to reach NSN Explorer by email about data corrections, supplier profile changes, privacy requests, press and partnerships."
+  pageType="ContactPage"
+  breadcrumbs={breadcrumbs}
+>
+  <p class="eyebrow">Contact</p>
+  <h1>Contact {SITE_NAME}</h1>
+  <p class="lede">
+    The way to reach us is email. Write to <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+  </p>
+
+  <hr class="rule" />
+
+  <h2>What to write to us about</h2>
+  <ul>
+    <li>
+      <strong>Data corrections.</strong> A price, part name, date, supplier link or other figure
+      that does not match its source record. Send the address of the page and, if you have it, the
+      link to the official record that shows the right value.
+    </li>
+    <li>
+      <strong>Supplier profile changes.</strong> If you represent a supplier, send the CAGE code
+      and say what to change. We can also hide a supplier's contact details, its website summary,
+      or both. See <a href="/privacy/#suppliers">Supplier information</a> in the privacy policy.
+    </li>
+    <li>
+      <strong>Privacy requests.</strong> To see, correct or delete information we hold about you,
+      or to opt out of advertising or data sharing where the law gives you that right. See the
+      <a href="/privacy/#your-rights">privacy policy</a> for what we keep.
+    </li>
+    <li>
+      <strong>Press and partnerships.</strong> Questions from journalists and researchers, and
+      ideas for working together.
+    </li>
+  </ul>
+
+  <p class="gloss">
+    Every figure on {SITE_NAME} comes from a public government record, so we can only correct what
+    differs from that record. We cannot change what the government publishes, and we do not take
+    part in bids or sell parts to the government.
+  </p>
+
+  <hr class="rule" />
+
+  <p class="gloss">
+    {SITE_NAME} is operated by NAO Parts LLC. There is no contact form on this site.
+  </p>
+</BaseLayout>

@@ -332,7 +332,7 @@ document.querySelectorAll<HTMLElement>('nav.tabs').forEach((nav) => {
           a.setAttribute('aria-current', 'true');
           // Keep the active tab in view inside the scrolling bar without moving the page.
           const left = a.offsetLeft - nav.clientWidth / 2 + a.clientWidth / 2;
-          nav.scrollTo({ left, behavior: 'smooth' });
+          nav.scrollTo({ left, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
         }
       } else a.removeAttribute('aria-current');
     }

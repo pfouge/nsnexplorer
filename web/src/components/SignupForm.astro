@@ -16,7 +16,7 @@ const { hook, fscInterest = null, title, description, cta } = Astro.props;
   <input type="hidden" name="hook" value={hook} />
   {fscInterest && <input type="hidden" name="fsc_interest" value={fscInterest} />}
   <div class="row">
-    <input type="email" name="email" placeholder="you@example.com" required aria-label="Email address" />
+    <input type="email" name="email" autocomplete="email" placeholder="you@example.com" required aria-label="Email address" />
     <button type="submit">{cta}</button>
   </div>
   <p class="consent">

@@ -1,0 +1,78 @@
+name: Visual regression
+
+# Compares main against the pushed vr/** branch: builds both from one frozen copy of the data, shoots every
+# route at four widths, diffs pixels and layout boxes, and checks behaviour. Read-only against the production
+# database (one pg_dump connection, no migrations, no refresh, no ingest). Results are printed to the job log:
+#   gh run view <id> --log
+# Never deploys, never writes to the repository.
+on:
+  push:
+    branches: ['vr/**']
+
+concurrency:
+  group: visual-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: nsn
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      SOURCE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      TARGET_DB_URL: postgresql://postgres:postgres@127.0.0.1:5432/nsn
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/nsn
+    steps:
+      - name: Check out the branch (changed)
+        uses: actions/checkout@v4
+        with:
+          path: b
+      - name: Check out main (baseline)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: a
+      - name: Which commits
+        run: |
+          echo "branch: $(git -C b rev-parse HEAD)"
+          echo "main compared against: $(git -C a rev-parse HEAD)"
+          echo "main age: $(git -C a log -1 --format=%cI)"
+          git -C b merge-base --is-ancestor "$(git -C a rev-parse HEAD)" HEAD && echo "branch contains this main" || echo "WARNING: branch does not contain this main; rebase it"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-common > /dev/null
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y > /dev/null
+          sudo apt-get install -y -qq postgresql-client-17 > /dev/null
+          pip install -q playwright numpy pillow
+          python -m playwright install --with-deps chromium > /dev/null
+          (cd b && npm ci --no-audit --no-fund > /dev/null)
+      - name: Freeze a copy of the data (read-only on the source)
+        run: |
+          test -n "$SOURCE_DB_URL" || { echo "secret SUPABASE_DB_URL is not available to this run"; exit 1; }
+          bash b/tools/visual-regression/snapshot-db.sh "$GITHUB_WORKSPACE/b"
+      - name: Compare
+        run: bash b/tools/visual-regression/run.sh "$GITHUB_WORKSPACE/a" "$GITHUB_WORKSPACE/b" "$GITHUB_WORKSPACE/vr-out"
+      - name: Print summary and logs
+        if: always()
+        run: |
+          echo "=============== SUMMARY ==============="
+          cat vr-out/summary.md || true
+          echo "=============== shoot.log (errors) ==============="
+          grep -n -i "error\|skipped\|failed" vr-out/shoot.log | head -60 || true
+          echo "=============== routes ==============="
+          cat vr-out/routes.txt || true

@@ -195,3 +195,8 @@ body.embed-page { background: var(--card); padding: 12px; font-size: 16px; overf
 .viz-embed-top { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; margin-bottom: 0.4rem; font-size: 0.84rem; color: var(--ink-soft); }
 .viz-embed-copy { font: inherit; font-size: 0.78rem; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 4px; padding: 0.2rem 0.7rem; cursor: pointer; }
 .viz-embed pre { margin: 0; padding: 0.7rem 0.8rem; background: var(--paper-2); border: 1px solid var(--line); border-radius: 8px; font-family: var(--font-code); font-size: 0.78rem; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; user-select: all; }
+
+/* Forced colors: the selected segment must not rely on its background colour. */
+@media (forced-colors: active) {
+  .viz-seg button[aria-pressed='true'] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+}

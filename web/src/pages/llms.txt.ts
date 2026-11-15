@@ -76,6 +76,7 @@ NSN Explorer indexes ${int(data.stats.totalNsns)} National Stock Numbers (NSNs) 
 - [Guides](${SITE_URL}/guides/) — plain-language guides, including [how to get the drawings for a DLA solicitation](${SITE_URL}/guides/how-to-get-the-drawings-for-a-dla-solicitation/).
 - [Methodology](${SITE_URL}/methodology/) — how prices are sourced and linked to public records.
 - [About](${SITE_URL}/about/) — who runs this site and how to reach us.
+- [Contact](${SITE_URL}/contact/): what to write to us about: data corrections, supplier profile changes, privacy requests, press and partnerships.
 
 ## Sitemaps
 - [Site sitemap index](${SITE_URL}/sitemap-index.xml) — hubs, classes, groups, open-demand and service pages.
