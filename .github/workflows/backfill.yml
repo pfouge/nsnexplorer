@@ -39,7 +39,8 @@ jobs:
     strategy:
       # Be polite to the API: two year-jobs at a time, keep going if one
       # year fails so a single bad range doesn't kill the whole seed.
-      max-parallel: 2
+      # One at a time: two jobs asking the API for pages at once got throttled (2026-11-15).
+      max-parallel: 1
       fail-fast: false
       matrix:
         psc: ${{ fromJSON(inputs.pscs) }}
