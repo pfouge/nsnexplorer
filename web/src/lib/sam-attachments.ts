@@ -17,7 +17,7 @@
 /** Show a link to each file. Set to false to link only the notice's SAM.gov page and print the file count. */
 export const DIRECT_LINKS = true;
 
-/** Most links read from one notice (a notice with more is cut here; the notice page on SAM.gov lists them all). */
+/** Most links listed on our page for one notice (the notice page on SAM.gov lists them all). */
 export const MAX_ATTACHMENTS = 40;
 
 export interface SamAttachment {
@@ -109,14 +109,13 @@ const text = (v: unknown): string | null => (typeof v === 'string' && v.trim() !
 /**
  * Reads the stored `resourceLinks` value. Real records hold an array of URL strings (or null); an entry that is an
  * object with a url/link/href and optionally a name and type is read as well, so file names show if SAM.gov adds
- * them. Anything else is ignored. Duplicate links count once; at most MAX_ATTACHMENTS entries are read.
+ * them. Anything else is ignored. Duplicate links count once. Every entry is read so the count is true; the page lists at most MAX_ATTACHMENTS.
  */
 export function parseSamAttachments(value: unknown): SamAttachment[] {
   if (!Array.isArray(value)) return [];
   const out: SamAttachment[] = [];
   const seen = new Set<string>();
   for (const entry of value) {
-    if (out.length >= MAX_ATTACHMENTS) break;
     let raw: unknown = entry;
     let name: string | null = null;
     let type: string | null = null;
@@ -171,7 +170,7 @@ export function pickSamAttachments(self: SamNoticeLinks, twin: SamNoticeLinks | 
     noticeNumber: notice.solNumber,
     noticeUrl: publicNoticeUrl(notice.sourceUrl),
     total: all.length,
-    items: DIRECT_LINKS ? all.filter((a) => a.url !== null) : [],
+    items: DIRECT_LINKS ? all.filter((a) => a.url !== null).slice(0, MAX_ATTACHMENTS) : [],
   };
 }
 

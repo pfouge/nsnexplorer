@@ -38,7 +38,7 @@ const withheld = view ? view.total - view.items.length : 0;
       <p class="gloss">
         {view.items.length === 0
           ? 'Open the notice on SAM.gov to see and download the files.'
-          : `${filesText(withheld)} cannot be linked from here. Open the notice on SAM.gov to see ${withheld === 1 ? 'it' : 'them'}.`}
+          : `${withheld.toLocaleString('en-US')} more ${withheld === 1 ? 'file is' : 'files are'} not listed here. Open the notice on SAM.gov to see ${withheld === 1 ? 'it' : 'them'}.`}
       </p>
     )}
     <p class="samatt-notice">

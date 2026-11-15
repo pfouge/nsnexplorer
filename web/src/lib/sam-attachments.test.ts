@@ -80,9 +80,12 @@ test('parseSamAttachments: objects with a url and a name give a name and a type'
   assert.deepEqual(r.map((a) => [a.name, a.type]), [['SOW - Lift Replacement_V1.docx', 'DOCX'], ['Drawing', 'PDF']]);
 });
 
-test('parseSamAttachments: reads at most MAX_ATTACHMENTS', () => {
+test('a long notice: every file is counted, at most MAX_ATTACHMENTS are listed', () => {
   const many = Array.from({ length: MAX_ATTACHMENTS + 25 }, (_, i) => `https://sam.gov/f/${i}/download`);
-  assert.equal(parseSamAttachments(many).length, MAX_ATTACHMENTS);
+  assert.equal(parseSamAttachments(many).length, MAX_ATTACHMENTS + 25);
+  const view = pickSamAttachments({ source: 'sam_gov', solNumber: 'X', sourceUrl: 'https://sam.gov/opp/abc/view', resourceLinks: many }, null);
+  assert.equal(view?.total, MAX_ATTACHMENTS + 25);
+  assert.equal(view?.items.length, MAX_ATTACHMENTS);
 });
 
 test('attachmentLabel and filesText', () => {
