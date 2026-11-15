@@ -48,3 +48,20 @@ test('walks back two months a run from before the daily window; inserts what is 
     await pool.query('DELETE FROM ops.source_dates WHERE lane = $1', [lane]);
   }
 });
+
+test('loads each month through loadMany (the batched loader) when no per-record loader is given', { skip: !url }, async () => {
+  const pg = (await import('pg')).default;
+  pool = pool || new pg.Pool({ connectionString: url, max: 2 });
+  const lane = 'usaspending_9998';
+  await pool.query('DELETE FROM ops.source_dates WHERE lane = $1', [lane]);
+  try {
+    const now = Date.parse('2026-10-14T12:00:00Z');
+    const calls = [];
+    const loadMany = async (records, psc) => { calls.push([records.length, psc]); return { inserted: records.length - 1, withNsn: 0 }; };
+    const r = await runUsaspendingMonths({ pool, psc: '9998', months: 1, now, count: async () => 5, fetchAll: async () => Array.from({ length: 5 }, (_, i) => ({ i })), loadMany, log: () => {} });
+    assert.deepEqual(calls, [[5, '9998']]);
+    assert.equal(r.inserted, 4);
+  } finally {
+    await pool.query('DELETE FROM ops.source_dates WHERE lane = $1', [lane]);
+  }
+});

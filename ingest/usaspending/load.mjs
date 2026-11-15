@@ -7,11 +7,17 @@
 // IMPORTANT: USAspending's spending_by_award endpoint carries no unit-price
 // field, so this loader NEVER writes to pub.price_points.
 //
+// Writes are batched (loadRecords): per batch of BATCH_SIZE records one transaction
+// runs a handful of multi-row statements instead of ~5 statements and a
+// transaction per record. A batch that fails is re-run row by row through
+// loadRecord (the original single-record path), so a bad record behaves exactly
+// as it always did.
+//
 // CLI:
 //   node load.mjs --file x.jsonl --psc 5331
 
 import { readFile } from 'node:fs/promises';
-import { tx, upsert } from '../../shared/db.mjs';
+import { tx, upsert, chunk, closePool } from '../../shared/db.mjs';
 import { extractNiin, extractNsn } from '../../shared/nsn.mjs';
 
 // Small built-in FSC name map. Anything else falls back to 'FSC <code>' —
@@ -185,6 +191,220 @@ export async function loadRecord(record, psc) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Batched path
+// ---------------------------------------------------------------------------
+
+/** Records per transaction. Statements use unnest of arrays, so the parameter count is fixed (a dozen). */
+export const BATCH_SIZE = 500;
+
+/**
+ * Pure per-record preparation: everything loadRecord derives from a record
+ * before touching the database. Throws exactly where loadRecord would throw
+ * for the same record (unusable record, missing generated_internal_id); the
+ * caller then runs the batch row by row so the original error surfaces.
+ */
+export function prepareRecord(record, psc) {
+  const agencyName =
+    field(record, 'Awarding Sub Agency', 'awarding_sub_agency') ||
+    field(record, 'Awarding Agency', 'awarding_agency') ||
+    null;
+  const description = field(record, 'Description', 'description') || '';
+  let nsn = extractNsn(description);
+  if (!nsn) {
+    const niin = extractNiin(description);
+    if (isValidFscCode(psc) && niin && /^\d{9}$/.test(niin)) {
+      nsn = `${psc}${niin}`;
+    }
+  }
+  const awardUid = record['generated_internal_id'];
+  if (!awardUid) {
+    throw new Error('loadRecord: record missing generated_internal_id');
+  }
+  const raw = nsn ? { ...record, nsn } : record;
+  return {
+    awardUid,
+    nsn,
+    nsnFsc: nsn ? nsn.slice(0, 4) : null,
+    itemName: nsn ? itemNameFromDescription(description) : null,
+    agencyName,
+    piid: field(record, 'Award ID', 'award_id'),
+    description: description || null,
+    actionDate: parseDate(field(record, 'Start Date', 'start_date')),
+    obligation: parseAmount(field(record, 'Award Amount', 'amount')),
+    recipientName: field(record, 'Recipient Name', 'recipient'),
+    recipientUei: field(record, 'Recipient UEI', 'recipient_uei'),
+    sourceUrl: `https://www.usaspending.gov/award/${awardUid}`,
+    raw: JSON.stringify(raw),
+  };
+}
+
+/**
+ * Collapses records that share (award_uid, action_date) the way the row-by-row
+ * loop resolves them: the first one is inserted (or, if the row already exists,
+ * nothing but the UEI can change), and each later one can only fill a still-null
+ * UEI. The result is the first record with the first non-null UEI of the group.
+ * Records with no action_date never conflict (NULLs are distinct in the unique
+ * constraint) and are all kept. Order of first appearance is preserved.
+ */
+export function collapseActions(plans) {
+  const out = [];
+  const byKey = new Map();
+  for (const p of plans) {
+    if (p.actionDate === null) {
+      out.push(p);
+      continue;
+    }
+    const key = `${p.awardUid}\u0000${p.actionDate}`;
+    const first = byKey.get(key);
+    if (!first) {
+      const copy = { ...p };
+      byKey.set(key, copy);
+      out.push(copy);
+    } else if (first.recipientUei === null && p.recipientUei !== null) {
+      first.recipientUei = p.recipientUei;
+    }
+  }
+  return out;
+}
+
+async function resolveAgencies(client, names, known) {
+  const need = [...new Set(names)].filter((n) => n && !known.has(n));
+  const found = new Map();
+  if (need.length === 0) return found;
+  const sel = (arr) =>
+    client.query(
+      `SELECT agency_id, name FROM pub.agencies
+       WHERE name = ANY($1::text[]) AND toptier_code IS NULL AND subtier_code IS NULL`,
+      [arr]
+    );
+  let res = await sel(need);
+  for (const r of res.rows) found.set(r.name, r.agency_id);
+  const missing = need.filter((n) => !found.has(n)); // first-appearance order, so ids are handed out in file order
+  if (missing.length) {
+    await client.query(
+      `INSERT INTO pub.agencies (toptier_code, subtier_code, name)
+       SELECT NULL, NULL, t.name FROM unnest($1::text[]) WITH ORDINALITY AS t(name, ord) ORDER BY t.ord
+       ON CONFLICT (toptier_code, subtier_code, name) DO NOTHING`,
+      [missing]
+    );
+    res = await sel(missing);
+    for (const r of res.rows) found.set(r.name, r.agency_id);
+  }
+  return found;
+}
+
+/** One transaction body for a batch of prepared records; returns counts only (safe to re-run). */
+async function writeBatch(client, plans, psc, knownAgencies) {
+  await ensureFsc(client, psc);
+
+  const newAgencies = await resolveAgencies(client, plans.map((p) => p.agencyName), knownAgencies);
+  const agencyId = (name) => (name ? (knownAgencies.get(name) ?? newAgencies.get(name)) : null);
+
+  // pub.fsc rows for the NSN prefixes, then pub.nsns, in key order so concurrent lanes lock in one order.
+  const nsnMap = new Map();
+  for (const p of plans) {
+    if (!p.nsn) continue;
+    const cur = nsnMap.get(p.nsn) || { fsc: p.nsnFsc, itemName: null };
+    if (p.itemName) cur.itemName = p.itemName; // the last record that names the item wins, as with sequential upserts
+    nsnMap.set(p.nsn, cur);
+  }
+  if (nsnMap.size) {
+    const fscCodes = [...new Set([...nsnMap.values()].map((v) => v.fsc))].sort();
+    await client.query(
+      `INSERT INTO pub.fsc (fsc, name, render_depth)
+       SELECT * FROM unnest($1::text[], $2::text[], $3::text[]) ON CONFLICT (fsc) DO NOTHING`,
+      [fscCodes, fscCodes.map(fscName), fscCodes.map((c) => (isValidFscCode(c) ? 'deep' : 'excluded'))]
+    );
+    const nsns = [...nsnMap.keys()].sort();
+    await client.query(
+      `INSERT INTO pub.nsns (nsn, fsc, item_name)
+       SELECT * FROM unnest($1::text[], $2::text[], $3::text[])
+       ON CONFLICT (nsn) DO UPDATE
+         SET fsc = EXCLUDED.fsc, item_name = COALESCE(EXCLUDED.item_name, pub.nsns.item_name)
+         WHERE pub.nsns.fsc IS DISTINCT FROM EXCLUDED.fsc
+            OR pub.nsns.item_name IS DISTINCT FROM COALESCE(EXCLUDED.item_name, pub.nsns.item_name)`,
+      [nsns, nsns.map((n) => nsnMap.get(n).fsc), nsns.map((n) => nsnMap.get(n).itemName)]
+    );
+  }
+
+  const rows = collapseActions(plans);
+  const res = await client.query(
+    `INSERT INTO pub.contract_actions
+       (award_uid, piid, psc, naics, description, action_date, obligation,
+        agency_id, recipient_name, recipient_uei, source_url, raw)
+     SELECT t.award_uid, t.piid, $1::text, NULL, t.description, t.action_date, t.obligation,
+            t.agency_id, t.recipient_name, t.recipient_uei, t.source_url, t.raw
+     FROM unnest($2::text[], $3::text[], $4::text[], $5::date[], $6::numeric[], $7::int[],
+                 $8::text[], $9::text[], $10::text[], $11::jsonb[])
+          WITH ORDINALITY AS t(award_uid, piid, description, action_date, obligation, agency_id,
+                               recipient_name, recipient_uei, source_url, raw, ord)
+     ORDER BY t.ord
+     ON CONFLICT (award_uid, action_date) DO UPDATE
+       SET recipient_uei = EXCLUDED.recipient_uei
+       WHERE pub.contract_actions.recipient_uei IS NULL AND EXCLUDED.recipient_uei IS NOT NULL
+     RETURNING (xmax = 0) AS inserted`,
+    [
+      psc,
+      rows.map((p) => p.awardUid),
+      rows.map((p) => p.piid),
+      rows.map((p) => p.description),
+      rows.map((p) => p.actionDate),
+      rows.map((p) => p.obligation),
+      rows.map((p) => agencyId(p.agencyName)),
+      rows.map((p) => p.recipientName),
+      rows.map((p) => p.recipientUei),
+      rows.map((p) => p.sourceUrl),
+      rows.map((p) => p.raw),
+    ]
+  );
+  return {
+    inserted: res.rows.filter((r) => r.inserted === true).length,
+    newAgencies: [...newAgencies],
+  };
+}
+
+/**
+ * Loads records in batches. Same effect and same counts as calling loadRecord
+ * for each record in order. A batch that cannot be prepared or written is re-run
+ * row by row through loadRecord, which reports or throws exactly as before.
+ *
+ * @returns {Promise<{ inserted: number, withNsn: number }>}  skipped = records.length - inserted
+ */
+export async function loadRecords(records, psc, { batchSize = BATCH_SIZE, agencies = new Map(), onFallback } = {}) {
+  let inserted = 0;
+  let withNsn = 0;
+  for (const part of chunk(records, batchSize)) {
+    let plans;
+    try {
+      plans = part.map((r) => prepareRecord(r, psc));
+    } catch {
+      plans = null;
+    }
+    let done = false;
+    if (plans) {
+      try {
+        const out = await tx((client) => writeBatch(client, plans, psc, agencies), { label: 'usaspending batch' });
+        inserted += out.inserted;
+        for (const [name, id] of out.newAgencies) agencies.set(name, id);
+        withNsn += plans.filter((p) => p.nsn).length;
+        done = true;
+      } catch (err) {
+        if (onFallback) onFallback(err, part.length);
+      }
+    } else if (onFallback) {
+      onFallback(new Error('record could not be prepared'), part.length);
+    }
+    if (done) continue;
+    for (const record of part) {
+      const result = await loadRecord(record, psc); // throws as before on a bad record
+      if (result.inserted) inserted += 1;
+      if (result.nsn) withNsn += 1;
+    }
+  }
+  return { inserted, withNsn };
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const text = await readFile(args.file, 'utf8');
@@ -193,6 +413,19 @@ async function main() {
   let inserted = 0;
   let skipped = 0;
   let withNsn = 0;
+  const agencies = new Map();
+  const onFallback = (err, n) =>
+    console.error(`load.mjs: batch of ${n} failed (${err.code || err.message}); retrying its records one at a time`);
+
+  let pending = [];
+  const flush = async () => {
+    if (pending.length === 0) return;
+    const out = await loadRecords(pending, args.psc, { agencies, onFallback });
+    inserted += out.inserted;
+    skipped += pending.length - out.inserted;
+    withNsn += out.withNsn;
+    pending = [];
+  };
 
   for (const line of lines) {
     let record;
@@ -203,11 +436,10 @@ async function main() {
       skipped += 1;
       continue;
     }
-    const result = await loadRecord(record, args.psc);
-    if (result.inserted) inserted += 1;
-    else skipped += 1;
-    if (result.nsn) withNsn += 1;
+    pending.push(record);
+    if (pending.length >= BATCH_SIZE) await flush();
   }
+  await flush();
 
   console.log(
     `load.mjs: ${lines.length} record(s) read, ${inserted} inserted, ${skipped} skipped (dupes/errors), ${withNsn} with parsed NSN`
@@ -216,8 +448,10 @@ async function main() {
 
 const isMain = process.argv[1] && import.meta.url === `file://${process.argv[1]}`;
 if (isMain) {
-  main().catch((err) => {
-    console.error(err);
-    process.exit(1);
-  });
+  main()
+    .then(() => closePool()) // lets the process exit now instead of after the pool's idle timeout
+    .catch((err) => {
+      console.error(err);
+      process.exit(1);
+    });
 }
