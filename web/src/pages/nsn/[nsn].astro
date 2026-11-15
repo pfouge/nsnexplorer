@@ -437,7 +437,7 @@ const datasetSchema = {
             <>
               {compRead.streak} in a row
               {compRead.streakCage && (
-                <span class="gloss" style="font-size:0.9rem;"> {supplierPath(compRead.streakCage) ? <a href={supplierPath(compRead.streakCage)!}>{streakName ?? compRead.streakCage}</a> : (streakName ?? compRead.streakCage)}</span>
+                <span class="gloss" style="display:block; font-size:0.8125rem; font-weight:400; line-height:1.35;">{supplierPath(compRead.streakCage) ? <a href={supplierPath(compRead.streakCage)!}>{streakName ?? compRead.streakCage}</a> : (streakName ?? compRead.streakCage)}</span>
               )}
             </>
           )}
