@@ -125,3 +125,4 @@ export function contractActionRows(actions: ContractActionRecord[]) {
 }
 
 export const contractActionsPath = (fsc: string) => `/data/contract-actions-${fsc}.csv`;
+export { actionsByFiscalYear, contractActionsFyPath, csvFiscalYear, CSV_MAX_ROWS, latestYearActions } from './csv-split';

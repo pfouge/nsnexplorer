@@ -16,7 +16,7 @@ import { buildCompetitionRows, buildRepeat, buildStateMap, buildWeekly, buildWin
 import { pageCount, pageItems, pageNumbers, pageParam, pageRange, pageUrl, rangeLabel, pagedDescriptionPrefix, pagedTitle } from '../../../lib/paginate';
 import { memo, release } from '../../../lib/paged-cache';
 import { fscDescription, fscTitle } from '../../../lib/seo-copy';
-import { contractActionsPath, usaspendingActionsByFsc } from '../../../lib/csv-tables';
+import { actionsByFiscalYear, contractActionsFyPath, contractActionsPath, usaspendingActionsByFsc } from '../../../lib/csv-tables';
 import { fscEmbedPath } from '../../../lib/embed';
 import { familyCounts } from '../../../lib/material-family';
 import { withoutDuplicatedPricePoints } from '../../../lib/award-dedupe';
@@ -468,8 +468,11 @@ const breadcrumbSchema = {
     </p>
     {hasActionsCsv && (
       <ul class="chips wrap-wide" aria-label="Free downloads">
-        <li><a class="chip outline" href={contractActionsPath(fsc.fsc)} download>Download CSV</a></li>
-        <li class="gloss" style="align-self:center; margin:0;">USAspending records only.</li>
+        <li><a class="chip outline" href={contractActionsPath(fsc.fsc)} download>Download CSV, last 12 months</a></li>
+        {[...actionsByFiscalYear(usaspendingActionsByFsc(data).get(fsc.fsc) ?? []).keys()].slice(0, 8).map((fy) => (
+          <li><a class="chip outline" href={contractActionsFyPath(fsc.fsc, fy)} download>FY{fy}</a></li>
+        ))}
+        <li class="gloss" style="align-self:center; margin:0;">USAspending records only; one file per fiscal year.</li>
       </ul>
     )}
     {fscActions.length === 0 ? (
