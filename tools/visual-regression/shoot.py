@@ -34,7 +34,7 @@ GUIDE = '/guides/what-is-an-nsn/'
 
 LOCAL = re.compile(r'^https?://(127\.0\.0\.1|localhost)[:/]')
 FREEZE_INIT = """(() => { const s = document.createElement('style');
-  s.textContent = '*,*::before,*::after{animation-play-state:paused!important;caret-color:transparent!important}canvas{visibility:hidden!important}';
+  s.textContent = '*,*::before,*::after{animation-play-state:paused!important;caret-color:transparent!important}canvas{visibility:hidden!important}#viz-tip{display:none!important}';
   const put = () => (document.head || document.documentElement).appendChild(s);
   if (document.head || document.documentElement) put(); else document.addEventListener('DOMContentLoaded', put); })();"""
 COUNT_INIT = """(() => { const c = {}; const add = EventTarget.prototype.addEventListener;
@@ -186,7 +186,7 @@ with sync_playwright() as p:
                 page = open_page(ctx, r)
                 page.wait_for_timeout(800)
                 boxes[f'{slug(r)}_{w}'] = page.evaluate('''() => [...document.querySelectorAll('body *')]
-                  .filter(e => !['SCRIPT','STYLE'].includes(e.tagName) && !e.closest('canvas'))
+                  .filter(e => !['SCRIPT','STYLE'].includes(e.tagName) && !e.closest('canvas') && e.id !== 'viz-tip')
                   .map(e => { const r = e.getBoundingClientRect();
                     return (e.closest('footer.site') ? 'FOOT:' : '') + e.tagName + '.' + (typeof e.className === 'string' ? e.className : '') +
                       '|' + [r.x, r.y + scrollY, r.width, r.height].map(v => Math.round(v * 10) / 10).join(','); })''')
@@ -305,7 +305,7 @@ with sync_playwright() as p:
                 page.fill('.signup-form input[type=email]', 'harness-' + BASE.split(':')[-1] + '@example.invalid')
                 with page.expect_response(lambda x: x.url.endswith('/api/signup'), timeout=15000) as ri:
                     page.click('.signup-form button[type=submit]')
-                r['signup_status'] = ri.value.status
+                r['signup_status'] = ri.value.status; r['signup_body'] = ri.value.text()[:160]
             page.close()
             page = open_page(ctx, '/compare/')
             page.fill('input[name=nsn1]', (NSNPAGE or '').split('/')[-2] if NSNPAGE.startswith('/nsn/') else '')

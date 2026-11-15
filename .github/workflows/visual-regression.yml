@@ -75,6 +75,6 @@ jobs:
           echo "=============== shoot.log (errors) ==============="
           grep -n -i "error\|skipped\|failed" vr-out/shoot.log | head -60 || true
           echo "=============== server errors from the signup check ==============="
-          grep -h "signup insert failed" vr-out/serve-*.log | sort | uniq -c | head -5 || true
+          grep -h -i -B2 -A6 "POST /api/signup" vr-out/serve-b.log | cut -c1-240 | head -30 || true
           echo "=============== routes ==============="
           cat vr-out/routes.txt || true
