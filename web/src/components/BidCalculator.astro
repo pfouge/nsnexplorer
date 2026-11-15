@@ -1,0 +1,102 @@
+---
+// "Work out your quote": the visitor types their own cost and gets their price, margin and profit, and, when the
+// part has award history, how that price sits against what the government last paid. Arithmetic only (lib/bid-calc.ts,
+// run by scripts/bid-calc.ts in the browser). Nothing is stored or sent; no form, no name attributes.
+import { formatDate, formatUsdPrecise } from '../lib/shared';
+
+interface Props {
+  quantity: number | null;
+  unitOfIssue?: string | null;
+  summary: { latest: number; low: number; high: number; average: number; n: number } | null;
+  latestAwardedOn: string | null;
+  latestSourceUrl: string | null;
+  context: 'solicitation' | 'nsn';
+}
+const { quantity, unitOfIssue = null, summary, latestAwardedOn, latestSourceUrl, context } = Astro.props;
+const idp = `bc-${context}`;
+const qtyValue = quantity !== null && quantity > 0 ? String(quantity) : '';
+const hasLast = summary !== null && latestAwardedOn !== null && latestSourceUrl !== null;
+---
+<section
+  class="card bid-calc"
+  id={`${idp}-section`}
+  aria-labelledby={`${idp}-title`}
+  data-bid-calc
+  data-context={context}
+  data-latest={summary?.latest}
+  data-low={summary?.low}
+  data-high={summary?.high}
+  data-average={summary?.average}
+  data-n={summary?.n}
+  data-latest-on={hasLast ? latestAwardedOn : undefined}
+>
+  <h2 class="section-title" id={`${idp}-title`} style="margin-top:0;">Work out your quote</h2>
+  <p class="gloss">
+    Enter your own cost to see your price, margin and profit{summary ? ' next to what the government last paid' : ''}.
+    Nothing you type is stored or sent anywhere.
+  </p>
+
+  <div class="calc-grid" role="group" aria-label="Your numbers">
+    <div class="calc-field">
+      <label for={`${idp}-qty`}>Quantity{unitOfIssue ? ` (${unitOfIssue})` : ''}</label>
+      <input id={`${idp}-qty`} type="text" inputmode="decimal" autocomplete="off" value={qtyValue} data-bc="qty" />
+    </div>
+    <div class="calc-field">
+      <label for={`${idp}-cost`}>Your unit cost ($)</label>
+      <input id={`${idp}-cost`} type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" data-bc="cost" />
+    </div>
+    <div class="calc-field">
+      <label for={`${idp}-other`}>Other cost per order ($, optional)</label>
+      <input id={`${idp}-other`} type="text" inputmode="decimal" autocomplete="off" placeholder="Freight, packaging, testing" data-bc="other" />
+    </div>
+    <div class="calc-field">
+      <label for={`${idp}-margin`}>Target margin (%)</label>
+      <input id={`${idp}-margin`} type="text" inputmode="decimal" autocomplete="off" placeholder="e.g. 20" data-bc="margin" />
+    </div>
+    <div class="calc-field">
+      <label for={`${idp}-price`}>Your unit price ($)</label>
+      <input id={`${idp}-price`} type="text" inputmode="decimal" autocomplete="off" placeholder="or enter a price" data-bc="price" />
+    </div>
+  </div>
+  <p class="gloss">Fill in either the margin or the price; entering one clears the other. Margin is a share of the selling price: (price − cost) ÷ price.</p>
+
+  {hasLast && (
+    <details class="calc-time">
+      <summary>Adjust last price for time</summary>
+      <div class="calc-grid">
+        <div class="calc-field">
+          <label for={`${idp}-rate`}>Annual rate (%)</label>
+          <input id={`${idp}-rate`} type="text" inputmode="decimal" autocomplete="off" placeholder="0" data-bc="rate" />
+        </div>
+      </div>
+      <p class="gloss">Carries the last award price forward by this yearly rate over the whole months since the award.</p>
+    </details>
+  )}
+
+  <div class="stat-strip" aria-live="polite" data-bc="out">
+    <div class="stat"><div class="value" data-bc-out="price">—</div><div class="label">Your unit price</div></div>
+    <div class="stat"><div class="value" data-bc-out="margin">—</div><div class="label">Margin</div></div>
+    <div class="stat"><div class="value" data-bc-out="profitUnit">—</div><div class="label">Profit per unit</div></div>
+    <div class="stat"><div class="value" data-bc-out="total">—</div><div class="label">Order total</div></div>
+    <div class="stat"><div class="value" data-bc-out="profitTotal">—</div><div class="label">Profit on the order</div></div>
+  </div>
+
+  {summary && (
+    <div class="calc-compare" aria-live="polite">
+      {hasLast && (
+        <p>
+          Last award: <a href={latestSourceUrl!} target="_blank" rel="nofollow noopener">{formatUsdPrecise(summary.latest)}</a> on {formatDate(latestAwardedOn!)}
+        </p>
+      )}
+      <p data-bc-out="vsLatest" hidden></p>
+      <p data-bc-out="range" hidden></p>
+      <p data-bc-out="carried" hidden></p>
+    </div>
+  )}
+
+  <p class="gloss">Arithmetic on public award prices. It does not predict who will win.</p>
+  <noscript><p class="gloss">The calculator needs JavaScript.</p></noscript>
+</section>
+<script>
+  import '../scripts/bid-calc';
+</script>
