@@ -51,8 +51,11 @@ export function mapRfqRecord(rec, { today }) {
   const returnBy = rec.returnBy || null;
   const nomenclature = rec.nomenclature ?? null;
 
+  // DIBBS words a withdrawn RFQ 'Removed' (2026-07 capture) or 'Cancelled' (2026-09 capture); both mean the
+  // requirement is gone and must never be loaded as open.
+  const statusText = String(rec.status ?? '').trim().toLowerCase();
   let status;
-  if (String(rec.status).trim().toLowerCase() === 'removed') {
+  if (/^(removed|cancell?ed)\b/.test(statusText)) {
     status = 'cancelled';
   } else if (returnBy && returnBy < today) {
     status = 'expired';

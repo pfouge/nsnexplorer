@@ -9,6 +9,7 @@
 import type postgres from 'postgres';
 import { assertSourceUrl, type SolicitationRecord } from './shared';
 import { isSolNumber } from './entity';
+import { pickTwin, solKeySql, type TwinRow } from './sol-twin';
 import { CEILING_PRICE_POINT_SQL, CONTRACT_CEILING_SQL, NOT_CEILING_PRICE_POINT_SQL } from './contract-ceiling';
 
 type Sql = ReturnType<typeof postgres>;
@@ -76,6 +77,8 @@ export interface SolicitationPageData {
   partPriceCount: number;
   /** DIBBS award records for the same NSN carrying this solicitation's purchase request. */
   matchedAwards: MatchedAward[];
+  /** The same requirement on the other source (rule in sol-twin.ts), with the official record's link; null when there is none or it is not certain. */
+  twin: TwinRow | null;
 }
 
 const isoDate = (v: unknown): string | null =>
@@ -86,6 +89,15 @@ const isoDate = (v: unknown): string | null =>
  * columns plus its awards as a jsonb array. No row means no such solicitation.
  */
 const SOLICITATION_PAGE_SQL = `
+WITH same_key AS (
+  -- Every row whose number is the same once separators are dropped (this row included): at most five are read, one
+  -- index probe (migration 0016). pickTwin() decides from them whether there is exactly one twin on the other source.
+  SELECT t.sol_number, t.source, t.source_url
+  FROM pub.solicitations t
+  WHERE ${solKeySql('t')} = regexp_replace(upper($1::text), '[^A-Z0-9]', '', 'g')
+  ORDER BY t.sol_number
+  LIMIT 5
+)
 SELECT s.sol_number, s.nsn, s.fsc, s.nomenclature, s.quantity, s.unit_of_issue,
        s.issued_on, s.return_by,
        -- Open means open today: a past-dated 'open' row is reported as 'expired'.
@@ -125,7 +137,8 @@ SELECT s.sol_number, s.nsn, s.fsc, s.nomenclature, s.quantity, s.unit_of_issue,
                   AND NULLIF(btrim(s.raw ->> 'purchaseRequest'), '') IS NOT NULL
                   AND btrim(ca.raw ->> 'purchaseRequest') = btrim(s.raw ->> 'purchaseRequest')
                 ORDER BY ca.action_date DESC NULLS LAST, ca.raw ->> 'awardNumber' DESC NULLS LAST
-                LIMIT 20) m) AS matched_award_rows
+                LIMIT 20) m) AS matched_award_rows,
+       (SELECT COALESCE(jsonb_agg(to_jsonb(k) ORDER BY k.sol_number), '[]'::jsonb) FROM same_key k) AS same_key_rows
 FROM pub.solicitations s
 LEFT JOIN pub.nsns n ON n.nsn = s.nsn
 LEFT JOIN pub.fsc f ON f.fsc = s.fsc
@@ -140,6 +153,12 @@ export async function loadSolicitationPage(sql: Sql, solNumber: string): Promise
   const partRows = r.part_price_rows as Record<string, any>[]; // eslint-disable-line @typescript-eslint/no-explicit-any
   const matchedRows = r.matched_award_rows as Record<string, any>[]; // eslint-disable-line @typescript-eslint/no-explicit-any
   const awardRows = r.award_rows as Record<string, any>[]; // eslint-disable-line @typescript-eslint/no-explicit-any
+  const sameKeyRows = (r.same_key_rows as { sol_number: string; source: string; source_url: string }[]).map((k) => ({
+    solNumber: k.sol_number,
+    source: k.source,
+    sourceUrl: k.source_url,
+  }));
+  const twin = pickTwin({ solNumber: r.sol_number, source: r.source }, sameKeyRows);
 
   const fscName = typeof r.fsc_name === 'string' && r.fsc_name.trim() !== '' && r.fsc_name !== `FSC ${r.fsc}` ? r.fsc_name.trim() : null;
   const sol: SolicitationRecord = {
@@ -196,5 +215,6 @@ export async function loadSolicitationPage(sql: Sql, solNumber: string): Promise
       isCeiling: m.is_ceiling === true,
       sourceUrl: assertSourceUrl(m.source_url, `contract_actions award ${m.award_number}`),
     })),
+    twin: twin ? { ...twin, sourceUrl: assertSourceUrl(twin.sourceUrl, `solicitations.sol_number=${twin.solNumber} (twin)`) } : null,
   };
 }

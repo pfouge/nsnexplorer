@@ -20,6 +20,7 @@ import { PAGE_SIZE, pageCount, pageItems, pageNumbers, pageParam, pageRange, pag
 import { memo, release } from '../../../lib/paged-cache';
 import { openDescription, openTitle } from '../../../lib/seo-copy';
 import { sumOpenTotals, totalsLine } from '../../../lib/open-signals';
+import { ALSO_ON_SAM_LABEL } from '../../../lib/sol-twin';
 
 // /open/<code>/ is page 1; /open/<code>/page/<n>/ holds the next PAGE_SIZE cards.
 export async function getStaticPaths() {
@@ -401,10 +402,11 @@ const breadcrumbSchema = {
                   <div class="product-signals">
                     <span class={`badge ${badge.cls}`} data-col="closes" title={badge.text}>{badge.text}</span>
                     <span class="signal mono" data-col="qty">{(c.openQuantity ?? c.pastDueQuantity) !== null ? (c.openQuantity ?? c.pastDueQuantity)!.toLocaleString('en-US') : '—'}<span class="card-only"> units</span></span>
-                    {(c.pastDueCount > 0 || c.repost) && (
+                    {(c.pastDueCount > 0 || c.repost || c.alsoOnSam) && (
                       <span class="flags" data-col="flags">
                         {c.pastDueCount > 0 && <span class="badge amber">Past due</span>}
                         {c.repost && <span class="badge" title="Solicited again within 30 days of an earlier solicitation">Repost</span>}
+                        {c.alsoOnSam && <span class="badge" title="The same requirement is also posted on SAM.gov. The two posts are listed and counted once.">{ALSO_ON_SAM_LABEL}</span>}
                       </span>
                     )}
                     {(c.techDocs === 'tech_docs' || c.techDocs === 'spec_only') && (

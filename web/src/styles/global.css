@@ -624,6 +624,8 @@ footer.site .disclaimer { color: var(--inv-softer); max-width: 78ch; }
 .product-grid[data-view='table'] [data-col='comp'] { grid-column: 6; justify-self: start; max-width: 100%; }
 .product-grid[data-view='table'] [data-col='tech'] { grid-column: 7; justify-self: start; max-width: 100%; }
 .product-grid[data-view='table'] .flags { display: flex; gap: 4px; grid-column: 8; }
+/* The flags cell may hold up to three badges (Past due, Repost, Also on SAM.gov): wrap instead of clipping. */
+.product-grid[data-view='table'] .flags[data-col='flags'] { flex-wrap: wrap; row-gap: 2px; white-space: normal; overflow: visible; }
 .product-grid[data-view='table'] [data-col='sols'] { grid-column: 9; }
 /* Wide table: scroll inside the wrapper, never the page. Where it fits (1200px and up) the header stays sticky. */
 @media (max-width: 1199px) { .product-table-scroll:has(> .product-table-inner > .product-grid[data-view='table']) { overflow-x: auto; } }

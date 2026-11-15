@@ -3,12 +3,11 @@
 // class. Prerendered at build time, so the figures are as fresh as the deploy.
 import type { APIRoute } from 'astro';
 import { loadSiteData } from '../../lib/data';
-import { fscDisplayName } from '../../lib/browse';
+import { buildClassTotals, fscDisplayName } from '../../lib/browse';
+import { classCardStats } from '../../lib/class-totals';
 import { pngResponse, renderCard } from '../../lib/og-card';
 
 export const prerender = true;
-
-const fmt = (n: number): string => n.toLocaleString('en-US');
 
 export async function getStaticPaths() {
   const data = await loadSiteData();
@@ -27,19 +26,15 @@ export const GET: APIRoute = async ({ props }) => {
   cutoff.setUTCDate(cutoff.getUTCDate() + 7);
   const closing = open.filter((s) => s.returnBy !== null && new Date(`${s.returnBy}T00:00:00Z`) <= cutoff).length;
   const nsns = data.nsnsByFsc.get(fsc) ?? [];
-  const purchases = nsns.reduce((n, x) => n + (data.pricePointsByNsn.get(x.nsn)?.length ?? 0), 0);
-  // A class with no solicitations on record still has a card: its catalog counts.
-  const stats =
-    all.length > 0
-      ? [
-          { value: fmt(open.length), label: open.length === 1 ? 'open solicitation' : 'open solicitations' },
-          { value: fmt(closing), label: 'closing within 7 days' },
-          { value: fmt(all.length), label: 'solicitations on record' },
-        ]
-      : [
-          { value: fmt(nsns.length), label: 'stock numbers tracked' },
-          { value: fmt(purchases), label: 'priced purchases on record' },
-        ];
+  // A class with no solicitations on record still has a card: its catalog counts. Every figure is the one the pages
+  // and classes.csv show (lib/class-totals.ts, lib/browse.ts buildClassTotals).
+  const stats = classCardStats({
+    open: open.length,
+    closing,
+    onRecord: all.length,
+    nsns: nsns.length,
+    purchases: buildClassTotals(data, fsc).purchases,
+  });
   const png = await renderCard({
     eyebrow: `Federal supply class ${fsc}`,
     title: fscDisplayName(fsc, name),

@@ -108,6 +108,8 @@ export interface SolicitationRecord {
   awardFound: boolean;
   source: string;
   sourceUrl: string;
+  /** The same requirement on the other source (see sol-twin.ts), from the official record there; absent when unpaired. */
+  alsoOn?: { source: string; solNumber: string; sourceUrl: string };
 }
 
 /** One FLIS characteristics entry as written by ingest/publog/load.mjs. */

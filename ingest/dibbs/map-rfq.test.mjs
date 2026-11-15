@@ -16,9 +16,9 @@ import { mapRfqRecord } from './map-rfq.mjs';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const RFQ_FIXTURE_PATH = path.join(__dirname, 'fixtures', 'rfq-grid-p1.html');
 
-// Fixed for deterministic tests — the fixture was captured 2026-07-16/17
-// (see rfq-parse.test.mjs).
-const TODAY = '2026-07-16';
+// Fixed for deterministic tests — the fixture was re-captured 2026-09-06
+// (fixtures/capture-meta.json; posting date 09-04-2026).
+const TODAY = '2026-09-06';
 
 async function loadRfqFixture() {
   return readFile(RFQ_FIXTURE_PATH, 'utf8');
@@ -31,53 +31,61 @@ test('parseRfqGrid fixture parses to exactly 50 records', async () => {
   assert.equal(recordCount, 50);
 });
 
-test('mapRfqRecord: the sample NSN 8455-01-024-2960 row (Removed) maps to a cancelled solicitation', async () => {
+test('mapRfqRecord: a Cancelled-status fixture row maps to a cancelled row with the DIBBS NSN link', async () => {
   const html = await loadRfqFixture();
   const { records } = parseRfqGrid(html);
-  const first = records[0];
+  // Rows 40..49 of the fixture are the 'Cancelled' ones (NSN 5310-01-142-3563, SPE4A0-26-T-4687, return_by 2026-09-11).
+  const first = records[40];
 
-  // Sanity-check the raw parse first (matches rfq-parse.test.mjs's known
-  // values for this row).
-  assert.equal(first.nsnRaw, '8455010242960');
-  assert.equal(first.solicitation, 'SPE1C1-26-Q-0372');
-  assert.equal(first.status, 'Removed');
+  assert.equal(first.nsnRaw, '5310011423563');
+  assert.equal(first.solicitation, 'SPE4A0-26-T-4687');
+  assert.equal(first.status, 'Cancelled');
 
   const result = mapRfqRecord(first, { today: TODAY });
   assert.ok(!result.skip, `expected a mapped row, got skip: ${result.skip}`);
 
-  assert.equal(result.nsn, '8455010242960');
-  assert.equal(result.fsc, '8455');
-  assert.equal(result.row.sol_number, 'SPE1C1-26-Q-0372');
-  assert.equal(result.row.nsn, '8455010242960');
-  assert.equal(result.row.fsc, '8455');
-  assert.equal(result.row.quantity, 20000);
-  assert.equal(result.row.return_by, '2026-07-22');
+  assert.equal(result.nsn, '5310011423563');
+  assert.equal(result.fsc, '5310');
+  assert.equal(result.row.sol_number, 'SPE4A0-26-T-4687');
+  assert.equal(result.row.nsn, '5310011423563');
+  assert.equal(result.row.fsc, '5310');
+  assert.equal(result.row.quantity, 10);
+  assert.equal(result.row.return_by, '2026-09-11');
+  // return_by 2026-09-11 is after TODAY, so only the status text can make this row cancelled.
   assert.equal(result.row.status, 'cancelled');
   assert.equal(result.row.source, 'dibbs_rfq');
   assert.equal(
     result.row.source_url,
-    'https://www.dibbs.bsm.dla.mil/RFQ/RFQNsn.aspx?value=8455010242960&category=nsn'
+    'https://www.dibbs.bsm.dla.mil/RFQ/RFQNsn.aspx?value=5310011423563&category=nsn'
   );
   assert.equal(result.row.raw, first);
+});
+
+test('mapRfqRecord: status Removed maps to cancelled, whatever the dates', async () => {
+  const html = await loadRfqFixture();
+  const { records } = parseRfqGrid(html);
+  const removed = { ...records[0], status: 'Removed' };
+  const result = mapRfqRecord(removed, { today: TODAY });
+  assert.equal(result.row.status, 'cancelled');
 });
 
 test('mapRfqRecord: a valid-NSN row with status Open and a future return_by maps to open', async () => {
   const html = await loadRfqFixture();
   const { records } = parseRfqGrid(html);
 
-  // ctl06 (records[3]) is 'Open' with returnBy 2026-07-23 — after TODAY.
-  // (status text includes the trailing "Quote" link text the grid packs
-  // into the same cell — 'Open uote' after tag-stripping — so we only
-  // assert it does NOT read 'Removed'.)
+  // records[3] is 'Open' with returnBy 2026-09-17, after TODAY. (status text includes the trailing "Quote" link
+  // text the grid packs into the same cell, 'Open uote' after tag-stripping, so we only assert it does NOT
+  // read 'Removed'.)
   const openRec = records[3];
   assert.match(openRec.status, /^Open\b/);
   assert.notEqual(openRec.status.trim().toLowerCase(), 'removed');
-  assert.equal(openRec.returnBy, '2026-07-23');
+  assert.equal(openRec.returnBy, '2026-09-17');
   assert.match(openRec.nsnRaw, /^\d{13}$/);
 
   const result = mapRfqRecord(openRec, { today: TODAY });
   assert.ok(!result.skip, `expected a mapped row, got skip: ${result.skip}`);
   assert.equal(result.row.status, 'open');
+  assert.equal(result.row.sol_number, 'SPE1C1-26-Q-0487'); // no " --" attachment marker
 });
 
 test('mapRfqRecord: non-13-digit nsnRaw rows are skipped with reason non-nsn', () => {

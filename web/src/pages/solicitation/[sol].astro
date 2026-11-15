@@ -19,6 +19,7 @@ import { loadSolicitationPage } from '../../lib/solicitation-page';
 import { countdownBadge, daysUntilClose, isSolNumber, solicitationPath, statusBadge, supplierPath } from '../../lib/entity';
 import { priceSummary, repeatWinner, valueAtLastPrice, winners } from '../../lib/sol-history';
 import { CEILING_LABEL, ceilingAmountText } from '../../lib/contract-ceiling';
+import { twinLine } from '../../lib/sol-twin';
 
 export const prerender = false;
 
@@ -44,7 +45,7 @@ if (!page) return notFound();
 // Shorter edge cache than NSN pages: the countdown and status change daily.
 Astro.response.headers.set('Cache-Control', 'public, max-age=0, s-maxage=600, stale-while-revalidate=3600');
 
-const { sol, awards, fscName, hasOpenPage, purchaseRequest, techDocs, partPrices, partPriceCount, matchedAwards } = page;
+const { sol, awards, fscName, hasOpenPage, purchaseRequest, techDocs, partPrices, partPriceCount, matchedAwards, twin } = page;
 const isOpen = sol.status === 'open';
 const dashed = sol.nsn ? toDashedNsn(sol.nsn) : null;
 const itemLabel = sol.nomenclature ?? sol.itemName ?? sol.solNumber;
@@ -85,6 +86,10 @@ const breadcrumbSchema = {
   ],
 };
 
+// The same requirement posted on the other source (sol-twin.ts): one short line, official record linked.
+const twinText = twin ? twinLine(twin.source, twin.solNumber) : null;
+const twinOtherName = twin ? (twin.source === 'sam_gov' ? 'SAM.gov' : 'DIBBS') : null;
+
 const primaryLabel = isOpen
   ? sol.source === 'sam_gov'
     ? 'View this notice at SAM.gov →'
@@ -112,6 +117,12 @@ const primaryLabel = isOpen
       <span class:list={['badge', status.cls]}>{status.text}</span>
       {countdown && <span class:list={['badge', countdown.cls]}>{countdown.text}</span>}
     </p>
+    {twin && twinText && (
+      <p class="twin-note">
+        {twinText.prefix} <a class="mono" href={`/solicitation/${twin.solNumber}/`}>{twinText.label}</a>.
+        <a class="twin-ext" href={twin.sourceUrl} target="_blank" rel="nofollow noopener">View at {twinOtherName} →</a>
+      </p>
+    )}
     <Follow kind="solicitation" entity={sol.solNumber} label={`${sol.solNumber} ${itemLabel}`.slice(0, 200)} />
   </header>
 
@@ -362,3 +373,20 @@ const primaryLabel = isOpen
     <CiteThis title={`${itemLabel}, solicitation ${sol.solNumber}`} url={canonicalUrl} asOf={new Date().toISOString().slice(0, 10)} />
   </section>
 </BaseLayout>
+
+<style>
+  .twin-note {
+    margin: 0.5rem 0 0;
+    max-width: 100%;
+    font-size: 0.92rem;
+    overflow-wrap: anywhere;
+  }
+  .twin-note a {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .twin-note .twin-ext {
+    margin-left: 0.4rem;
+    white-space: nowrap;
+  }
+</style>

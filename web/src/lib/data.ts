@@ -17,6 +17,7 @@ import {
 import { compareByClosing, mapServiceNotice, type ServiceNotice, type ServiceNoticeRow } from './services';
 import { nomen } from './seo-copy';
 import { techDocsKind } from './open-signals';
+import { SAM_DUPES_CTE, SOLS_ONCE_SQL } from './sol-twin';
 import { CAGE_RE, SOL_NUMBER_RE } from './entity';
 import type { FiscalYearRow } from './agency-profile';
 import { AGENCY_CLASSES_SQL, AGENCY_FY_SQL, AGENCY_RECENT_SQL, AGENCY_RECIPIENTS_SQL, AGENCY_TOTALS_SQL } from './agency-profile-sql';
@@ -404,6 +405,8 @@ async function fetchSiteData(): Promise<SiteData> {
       // award_found: a DIBBS award shares the solicitation's purchaseRequest, or
       // a DIBBS award for the same NSN is dated on/after its return_by. Built
       // from CTEs on distinct keys (a correlated EXISTS timed out in production).
+      // sam_dupes (sol-twin.ts): a SAM.gov notice that is the twin of a DIBBS row. The DIBBS row stands for the pair:
+      // the notice is left out below when drop_sam, and the DIBBS row carries a link to it (alsoOn).
       `WITH award_pr AS (
          SELECT DISTINCT btrim(ca.raw ->> 'purchaseRequest') AS pr
          FROM pub.contract_actions ca
@@ -413,26 +416,35 @@ async function fetchSiteData(): Promise<SiteData> {
          FROM pub.contract_actions ca
          WHERE ca.award_uid LIKE 'DIBBS%' AND ca.raw ->> 'nsn' IS NOT NULL
          GROUP BY ca.raw ->> 'nsn'
-       )
+       ), ${SAM_DUPES_CTE}
        SELECT s.sol_number, s.nsn, s.fsc, f.name AS fsc_name, f.render_depth AS fsc_depth, s.nomenclature,
               s.quantity, s.unit_of_issue, s.issued_on, s.return_by,
               CASE WHEN s.status = 'open' AND s.return_by < CURRENT_DATE THEN 'expired' ELSE s.status END AS status,
               s.setaside, s.buyer_office, s.source, s.source_url, n.item_name,
               s.raw ->> 'techDocs' AS tech_docs,
               (apr.pr IS NOT NULL
-               OR (an.last_award IS NOT NULL AND s.return_by IS NOT NULL AND an.last_award >= s.return_by)) AS award_found
+               OR (an.last_award IS NOT NULL AND s.return_by IS NOT NULL AND an.last_award >= s.return_by)) AS award_found,
+              COALESCE(sds.drop_sam, false) AS drop_sam,
+              COALESCE(sdd.sam_number, sds.dibbs_number) AS twin_number,
+              CASE WHEN sdd.sam_number IS NOT NULL THEN 'sam_gov' WHEN sds.sam_number IS NOT NULL THEN 'dibbs_rfq' END AS twin_source,
+              COALESCE(sdd.sam_url, sds.dibbs_url) AS twin_url
        FROM pub.solicitations s
        LEFT JOIN pub.nsns n ON n.nsn = s.nsn
        LEFT JOIN pub.fsc f ON f.fsc = s.fsc
        LEFT JOIN award_pr apr ON apr.pr = btrim(s.raw ->> 'purchaseRequest')
        LEFT JOIN award_nsn an ON an.nsn = s.nsn
+       LEFT JOIN sam_dupes sds ON sds.sam_number = s.sol_number
+       LEFT JOIN sam_dupes sdd ON sdd.dibbs_number = s.sol_number
        ORDER BY COALESCE(s.return_by, s.issued_on) DESC NULLS LAST, s.sol_number`
     );
     // Open lane excludes service PSCs: a non-null fsc must be a 4-digit class
     // and not 'excluded' in pub.fsc (same rule as the catalog query above).
     // Rows with a NULL fsc keep their existing treatment.
+    // A SAM.gov notice that is the twin of a DIBBS row is not listed or counted a second time (drop_sam).
     const solRows = solRes.rows.filter(
-      (r) => r.fsc === null || r.fsc === undefined || (/^[0-9]{4}$/.test(String(r.fsc)) && r.fsc_depth !== 'excluded')
+      (r) =>
+        r.drop_sam !== true &&
+        (r.fsc === null || r.fsc === undefined || (/^[0-9]{4}$/.test(String(r.fsc)) && r.fsc_depth !== 'excluded'))
     );
     const allSolicitations: SolicitationRecord[] = solRows.map((r) => {
       const returnBy = r.return_by ? new Date(r.return_by).toISOString().slice(0, 10) : null;
@@ -453,6 +465,9 @@ async function fetchSiteData(): Promise<SiteData> {
         awardFound: r.award_found === true,
         source: r.source,
         sourceUrl: assertSourceUrl(r.source_url, `solicitations.sol_number=${r.sol_number}`),
+        ...(r.twin_number
+          ? { alsoOn: { source: r.twin_source, solNumber: r.twin_number, sourceUrl: assertSourceUrl(r.twin_url, `solicitations.sol_number=${r.twin_number} (twin)`) } }
+          : {}),
       };
 
       if (rec.nsn) {
@@ -740,13 +755,13 @@ async function loadVizData(pool: pgTypes.Pool): Promise<SiteViz> {
     await pool.query(
       // The tile definitions are exactly those of db/freshness.mjs recordDailyStats.
       `SELECT CURRENT_DATE::text AS today,
-         (SELECT count(*) FROM pub.solicitations s
+         (SELECT count(*) FROM ${SOLS_ONCE_SQL} s
             WHERE s.status = 'open' AND (s.return_by IS NULL OR s.return_by >= CURRENT_DATE)
               AND (s.fsc IS NULL OR s.fsc ~ '^[0-9]{4}$'))::int AS open,
          (SELECT max(issued_on)::text FROM pub.solicitations WHERE source = 'dibbs_rfq') AS posted_on,
          (SELECT count(*) FROM pub.solicitations s
             WHERE s.source = 'dibbs_rfq' AND s.issued_on >= CURRENT_DATE - 7)::int AS posted,
-         (SELECT count(*) FROM pub.solicitations s
+         (SELECT count(*) FROM ${SOLS_ONCE_SQL} s
             WHERE s.status = 'open' AND s.return_by >= CURRENT_DATE AND s.return_by < CURRENT_DATE + 7
               AND (s.fsc IS NULL OR s.fsc ~ '^[0-9]{4}$'))::int AS closing7,
          -- Contract ceilings are a contract's maximum value, not money spent: left out of the dollars.
@@ -822,7 +837,7 @@ async function loadVizData(pool: pgTypes.Pool): Promise<SiteViz> {
     await pool.query(
       `SELECT left(s.fsc, 2) AS fsg, count(*)::int AS open,
               count(*) FILTER (WHERE s.return_by >= CURRENT_DATE AND s.return_by < CURRENT_DATE + 7)::int AS closing7
-       FROM pub.solicitations s ${NOT_EXCLUDED_JOIN}
+       FROM ${SOLS_ONCE_SQL} s ${NOT_EXCLUDED_JOIN}
        WHERE ${OPEN_NOW} AND ${PRODUCT}
        GROUP BY 1 ORDER BY 2 DESC, 1`
     )
@@ -831,7 +846,7 @@ async function loadVizData(pool: pgTypes.Pool): Promise<SiteViz> {
   const closingRows = (
     await pool.query(
       `SELECT s.fsc, (s.return_by - CURRENT_DATE)::int AS d, count(*)::int AS n
-       FROM pub.solicitations s ${NOT_EXCLUDED_JOIN}
+       FROM ${SOLS_ONCE_SQL} s ${NOT_EXCLUDED_JOIN}
        WHERE ${OPEN_NOW} AND ${PRODUCT} AND s.return_by >= CURRENT_DATE AND s.return_by < CURRENT_DATE + 30
        GROUP BY 1, 2`
     )
@@ -885,7 +900,7 @@ async function loadVizData(pool: pgTypes.Pool): Promise<SiteViz> {
   // Demand trend: solicitations per Monday week for the 52 most recent complete weeks.
   const weeklyRes = await pool.query(
     `SELECT s.fsc, date_trunc('week', s.issued_on)::date::text AS week, count(*)::int AS n
-     FROM pub.solicitations s ${NOT_EXCLUDED_JOIN}
+     FROM ${SOLS_ONCE_SQL} s ${NOT_EXCLUDED_JOIN}
      WHERE ${PRODUCT} AND s.issued_on IS NOT NULL
        AND s.issued_on >= date_trunc('week', CURRENT_DATE)::date - 364
        AND s.issued_on <  date_trunc('week', CURRENT_DATE)::date
