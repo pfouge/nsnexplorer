@@ -6,7 +6,7 @@ import CiteThis from '../../components/CiteThis.astro';
 import Follow from '../../components/Follow.astro';
 import { assertSourceUrl } from '../../lib/shared';
 import { loadSiteData, toDashedNsn, formatDate, formatUsdPrecise, formatUsd, type AgencyRecord } from '../../lib/data';
-import { agencyLede, barWidth, compactUsd, fillFiscalYears, formatShare, truncateText } from '../../lib/agency-profile';
+import { agencyLede, barWidth, compactUsd, fillFiscalYears, formatShare, cleanDescription, truncateText } from '../../lib/agency-profile';
 import { fitDescription } from '../../lib/seo-copy';
 import { supplierPath } from '../../lib/entity';
 
@@ -57,7 +57,7 @@ const title =
     : agency.name;
 const description = profile
   ? fitDescription([
-      [`${agency.name}: ${lede} `, `${agency.name}: ${fmtInt(profile.actions)} contract actions on ${SITE_NAME}. `],
+      [`${agency.name}: ${lede} `, `${lede} `, `${agency.name}: ${fmtInt(profile.actions)} contract actions in the ${fmtInt(profile.classes)} supply ${profile.classes === 1 ? 'class' : 'classes'} ${SITE_NAME} tracks. `],
       'Every action links to its USAspending record.',
     ])
   : `${fmtInt(purchases.length)} purchases by ${agency.name} indexed on ${SITE_NAME}, every price linked to its official source record.`;
@@ -139,7 +139,7 @@ const breadcrumbSchema = {
   {topRecipients.length > 0 && (
     <section class="sp-sec" id="suppliers">
       <h2>Top suppliers</h2>
-      <p class="gloss">The {fmtInt(topRecipients.length)} suppliers with the most obligated dollars from this agency. A supplier links to its page when its SAM.gov UEI matches exactly one CAGE with a page here.</p>
+      <p class="gloss">The {fmtInt(topRecipients.length)} suppliers with the most obligated dollars from this agency. A supplier links to its page when its UEI matches exactly one CAGE with a page here.</p>
       <div class="table-wrap">
         <table>
           <thead>
@@ -201,9 +201,9 @@ const breadcrumbSchema = {
             {recent.map((a) => (
               <tr>
                 <td class="mono">{a.actionDate ? formatDate(a.actionDate) : '—'}</td>
-                <td class="wrap">{a.recipientName ?? 'Unknown'}</td>
+                <td class="wrap">{supplierPath(a.cage) ? <a href={supplierPath(a.cage)!}>{a.recipientName ?? 'Unknown'}</a> : (a.recipientName ?? 'Unknown')}</td>
                 <td class="mono">{a.psc && fscPages.has(a.psc) ? <a href={`/fsc/${a.psc}/`}>{a.psc}</a> : (a.psc ?? '—')}</td>
-                <td class="wrap">{truncateText(a.description, 80) || '—'}</td>
+                <td class="wrap">{truncateText(cleanDescription(a.description), 80) || '—'}</td>
                 <td class="num mono">
                   {a.obligation === null ? '—' : <a href={assertSourceUrl(a.sourceUrl, `agency recent action ${a.piid ?? ''}`)} target="_blank" rel="nofollow noopener">{formatUsd(a.obligation)} ↗</a>}
                 </td>

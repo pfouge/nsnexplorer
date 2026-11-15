@@ -4,6 +4,20 @@
 
 export const AGENCY_ACTIONS = `FROM pub.contract_actions ca WHERE ca.agency_id IS NOT NULL AND ca.award_uid NOT LIKE 'DIBBS%'`;
 
+/**
+ * Reverse of the supplier page's rule (supplier-page.ts: a supplier's USAspending actions are the rows with
+ * recipient_uei = COALESCE(supplier_sam.uei, suppliers.uei)). A UEI resolves to a CAGE only when exactly one
+ * CAGE with that UEI has a supplier page (a row in pub.price_points). \`src\` is a CTE with a uei column.
+ */
+const CAGE_BY_UEI_SQL = (src: string) => `SELECT x.uei, min(x.cage) AS cage, count(*) AS n
+    FROM (
+      SELECT COALESCE(sam.uei, su.uei) AS uei, su.cage::text AS cage
+      FROM pub.suppliers su LEFT JOIN pub.supplier_sam sam ON sam.cage = su.cage
+      WHERE COALESCE(sam.uei, su.uei) IN (SELECT uei FROM ${src} WHERE uei IS NOT NULL)
+        AND su.cage IN (SELECT pp.cage FROM pub.price_points pp WHERE pp.cage IS NOT NULL GROUP BY pp.cage)
+    ) x
+    GROUP BY x.uei`;
+
 export const AGENCY_TOTALS_SQL = `
   SELECT t.agency_id, ag.name, ag.abbreviation, t.actions, t.obligated, t.recipients, t.classes, t.first_date, t.last_date
   FROM (
@@ -36,13 +50,7 @@ export const AGENCY_RECIPIENTS_SQL = `
       SELECT agg.*, row_number() OVER (PARTITION BY agency_id ORDER BY obligated DESC, rkey) AS rn FROM agg
     ) r WHERE rn <= 15
   ), cg AS (
-    -- a UEI resolves to a CAGE only when exactly one CAGE with that UEI has a supplier page
-    -- (a supplier page exists when the CAGE has a row in pub.price_points)
-    SELECT sam.uei, min(sam.cage::text) AS cage, count(*) AS n
-    FROM pub.supplier_sam sam
-    WHERE sam.uei IN (SELECT uei FROM top WHERE uei IS NOT NULL)
-      AND sam.cage IN (SELECT pp.cage FROM pub.price_points pp WHERE pp.cage IS NOT NULL GROUP BY pp.cage)
-    GROUP BY sam.uei
+    ${CAGE_BY_UEI_SQL('top')}
   )
   SELECT top.agency_id, top.name, top.uei, top.actions, top.obligated, CASE WHEN cg.n = 1 THEN cg.cage END AS cage
   FROM top LEFT JOIN cg ON cg.uei = top.uei
@@ -63,12 +71,17 @@ export const AGENCY_CLASSES_SQL = `
   ORDER BY top.agency_id, top.rn`;
 
 export const AGENCY_RECENT_SQL = `
+  WITH r AS (
+    SELECT * FROM (
+      SELECT ca.id, ca.agency_id, ca.action_date, ca.recipient_name, ca.recipient_uei AS uei, ca.psc, ca.obligation,
+             ca.description, ca.piid, ca.source_url,
+             row_number() OVER (PARTITION BY ca.agency_id ORDER BY ca.action_date DESC NULLS LAST, ca.id DESC) AS rn
+      ${AGENCY_ACTIONS}
+    ) q WHERE q.rn <= 25
+  ), cg AS (
+    ${CAGE_BY_UEI_SQL('r')}
+  )
   SELECT r.agency_id, r.action_date::text AS action_date, r.recipient_name, r.psc::text AS psc, r.obligation,
-         r.description, r.piid, r.source_url
-  FROM (
-    SELECT ca.id, ca.agency_id, ca.action_date, ca.recipient_name, ca.psc, ca.obligation, ca.description, ca.piid, ca.source_url,
-           row_number() OVER (PARTITION BY ca.agency_id ORDER BY ca.action_date DESC NULLS LAST, ca.id DESC) AS rn
-    ${AGENCY_ACTIONS}
-  ) r
-  WHERE r.rn <= 25
+         r.description, r.piid, r.source_url, CASE WHEN cg.n = 1 THEN cg.cage END AS cage
+  FROM r LEFT JOIN cg ON cg.uei = r.uei
   ORDER BY r.agency_id, r.rn`;

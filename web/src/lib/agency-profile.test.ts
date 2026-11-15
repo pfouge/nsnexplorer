@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { agencyLede, barWidth, compactUsd, fillFiscalYears, fiscalRange, fiscalYear, formatShare, share, truncateText } from './agency-profile.ts';
+import { agencyLede, cleanDescription, barWidth, compactUsd, fillFiscalYears, fiscalRange, fiscalYear, formatShare, share, truncateText } from './agency-profile.ts';
 
 test('fiscal year boundaries', () => {
   assert.equal(fiscalYear('2026-09-30'), 2026);
@@ -56,9 +56,21 @@ test('fiscalRange and lede', () => {
   assert.equal(compactUsd(-2_500_000), '-$2.5M');
   assert.equal(compactUsd(950), '$950');
   assert.equal(
-    agencyLede({ actions: 1200, obligated: 3_400_000, recipients: 1, firstDate: '2020-01-01', lastDate: '2026-05-01' }),
-    '1,200 contract actions worth $3.4M to 1 supplier, FY2020–FY2026, from USAspending.'
+    agencyLede({ actions: 1200, obligated: 3_400_000, recipients: 1, classes: 2, firstDate: '2020-01-01', lastDate: '2026-05-01' }),
+    '1,200 contract actions worth $3.4M to 1 supplier in the 2 supply classes NSN Explorer tracks, FY2020–FY2026, from USAspending.'
   );
-  assert.equal(agencyLede({ actions: 0, obligated: 0, recipients: 0, firstDate: null, lastDate: null }), null);
+  assert.equal(agencyLede({ actions: 0, obligated: 0, recipients: 0, classes: 0, firstDate: null, lastDate: null }), null);
   assert.equal(agencyLede(undefined), null);
+});
+
+test('lede uses the singular for one class', () => {
+  assert.match(agencyLede({ actions: 1, obligated: 10, recipients: 1, classes: 1, firstDate: '2026-01-01', lastDate: '2026-01-02' })!, /1 contract action worth \$10 to 1 supplier in the 1 supply class NSN Explorer tracks, FY2026,/);
+});
+
+test('cleanDescription strips a leading digits-bang prefix only', () => {
+  assert.equal(cleanDescription('8512297505!PACKING,PREFORMED'), 'PACKING,PREFORMED');
+  assert.equal(cleanDescription('  12!X'), 'X');
+  assert.equal(cleanDescription('PACKING!X'), 'PACKING!X');
+  assert.equal(cleanDescription('123 bolts'), '123 bolts');
+  assert.equal(cleanDescription(null), '');
 });

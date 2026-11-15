@@ -30,6 +30,11 @@ export function barWidth(value: number, max: number): number {
   return Math.min(100, Math.round((value / max) * 100));
 }
 
+/** USAspending descriptions often start "8512297505!PACKING,PREFORMED": drop a leading digit run plus "!". */
+export function cleanDescription(s: string | null | undefined): string {
+  return (s ?? '').replace(/^\s*\d+!\s*/, '').trim();
+}
+
 /** One-line text cut to `max` characters at a word boundary when possible, ending with an ellipsis. */
 export function truncateText(s: string | null | undefined, max = 80): string {
   const t = (s ?? '').replace(/\s+/g, ' ').trim();
@@ -77,6 +82,7 @@ export interface LedeInput {
   actions: number;
   obligated: number;
   recipients: number;
+  classes: number;
   firstDate: string | null;
   lastDate: string | null;
 }
@@ -87,5 +93,6 @@ export function agencyLede(p: LedeInput | undefined): string | null {
   const range = fiscalRange(p.firstDate, p.lastDate);
   const actions = `${int(p.actions)} contract ${p.actions === 1 ? 'action' : 'actions'}`;
   const sup = `${int(p.recipients)} ${p.recipients === 1 ? 'supplier' : 'suppliers'}`;
-  return `${actions} worth ${compactUsd(p.obligated)} to ${sup}${range ? `, ${range}` : ''}, from USAspending.`;
+  const cls = `${p.classes === 1 ? 'the 1 supply class' : `the ${int(p.classes)} supply classes`} NSN Explorer tracks`;
+  return `${actions} worth ${compactUsd(p.obligated)} to ${sup} in ${cls}${range ? `, ${range}` : ''}, from USAspending.`;
 }

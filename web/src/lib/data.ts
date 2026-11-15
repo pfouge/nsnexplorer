@@ -91,7 +91,7 @@ export interface AgencyProfile {
   topRecipients: { name: string; uei: string | null; cage: string | null; actions: number; obligated: number }[];
   topClasses: { psc: string; name: string | null; actions: number; obligated: number }[];
   recent: {
-    actionDate: string | null; recipientName: string | null; psc: string | null; obligation: number | null;
+    actionDate: string | null; recipientName: string | null; cage: string | null; psc: string | null; obligation: number | null;
     description: string | null; piid: string | null; sourceUrl: string;
   }[];
 }
@@ -734,6 +734,7 @@ async function loadAgencyProfiles(
     out.get(Number(r.agency_id))?.recent.push({
       actionDate: r.action_date,
       recipientName: r.recipient_name,
+      cage: r.cage,
       psc: r.psc,
       obligation: r.obligation !== null ? Number(r.obligation) : null,
       description: r.description,
