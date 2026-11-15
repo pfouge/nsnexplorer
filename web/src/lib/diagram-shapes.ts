@@ -29,6 +29,7 @@ import {
   dimV,
   frame,
   getMeas,
+  getMeasAgreeing,
   getText,
   hasReq,
   leader,
@@ -63,7 +64,7 @@ const same = (m: Meas | null, unit: Unit): Meas | null => (m && m.unit === unit 
 // Fastener family: bolt, screw, stud, rivet, pin-rivet
 // ---------------------------------------------------------------------------------------------
 
-export type FastenerKind = 'bolt' | 'screw' | 'stud' | 'rivet';
+export type FastenerKind = 'bolt' | 'screw' | 'stud' | 'rivet' | 'pin';
 
 export interface FastenerModel {
   kind: FastenerKind;
@@ -80,13 +81,18 @@ export interface FastenerModel {
   headStyle: 'dome' | 'csk' | 'block' | null;
   headStyleText: string | null;
   continuousThread: boolean;
+  /** Headless: a stud, a threaded rod or a headless pin. */
+  noHead: boolean;
+  /** Extra words for the notes line (pin: cross holes and grooves that are not drawn). */
+  extraNotes: string[];
   thread: string | null;
   material: string | null;
   name: string;
 }
 
 // Names that share the FSC with ordinary fasteners but are not "head block plus straight shank".
-const FASTENER_NOT_STRAIGHT = new Set(['EYE', 'HOOK', 'U', 'J', 'L', 'SWING', 'TOGGLE', 'EXPANSION', 'ANCHOR', 'SET', 'SHOULDER', 'SHOULDERED', 'CAPTIVE', 'THUMB', 'WING', 'DRIVE', 'WELDING', 'WELD', 'DOUBLE', 'STEPPED']);
+const FASTENER_NOT_STRAIGHT = new Set(['EYE', 'HOOK', 'U', 'J', 'L', 'SWING', 'TOGGLE', 'EXPANSION', 'ANCHOR', 'SET', 'SHOULDER', 'SHOULDERED', 'CAPTIVE', 'THUMB', 'WING', 'WELDING', 'WELD', 'DOUBLE', 'STEPPED']);
+const STUD_PLAIN = new Set(['PLAIN', 'CONTINUOUS', 'THREAD', 'THREADED', 'END']);
 const RIVET_NOT_PLAIN = new Set(['EYELET', 'TUBULAR', 'HOLLOW']);
 
 export function fastenerKindFor(fsc: string, itemName: string | null): FastenerKind | null {
@@ -97,19 +103,26 @@ export function fastenerKindFor(fsc: string, itemName: string | null): FastenerK
     if (toks.some((t) => RIVET_NOT_PLAIN.has(t))) return null;
     return 'rivet';
   }
+  if (fsc === '5315') return pinKindFor(itemName) ? 'pin' : null;
   if (fsc === '5305' || fsc === '5306' || fsc === '5307') {
     if (toks.slice(1).some((t) => FASTENER_NOT_STRAIGHT.has(t))) return null;
-    if (fsc === '5307' || root === 'STUD') return 'stud';
+    if (root === 'SETSCREW' || root === 'THUMBSCREW' || root === 'ASSEMBLY') return null;
+    if (fsc === '5307' || root === 'STUD' || root === 'ROD') {
+      // headless: plain studs and threaded rods only (bonded, locked-in, self-locking, turnlock, ball ... studs are not a bar)
+      if (!toks.slice(1).every((t) => STUD_PLAIN.has(t))) return null;
+      return 'stud';
+    }
     return fsc === '5306' || root === 'BOLT' ? 'bolt' : 'screw';
   }
   return null;
 }
 
 export function fastenerModel(entries: CharacteristicEntry[], kind: FastenerKind, itemName: string | null): FastenerModel | null {
+  if (kind === 'pin') return pinModel(entries, itemName);
   const dia =
     kind === 'rivet'
       ? getMeas(entries, [/^SHANK DIAMETER$/i, /^NOMINAL (?:SHANK )?DIAMETER$/i, /^BODY DIAMETER$/i])
-      : getMeas(entries, [/^NOMINAL THREAD (?:DIAMETER|SIZE)$/i, /^THREAD (?:DIAMETER|SIZE)$/i, /^NOMINAL DIAMETER$/i, /^SHANK DIAMETER$/i, /^BODY DIAMETER$/i]);
+      : (kind === 'stud' ? getMeasAgreeing : getMeas)(entries, [/^(?:NONMACHINE )?NOMINAL THREAD (?:DIAMETER|SIZE)$/i, /^THREAD (?:DIAMETER|SIZE)$/i, /^NOMINAL DIAMETER$/i, /^SHANK DIAMETER$/i, /^BODY DIAMETER$/i]);
   if (!dia) return null;
   // FASTENER LENGTH is the under-head length. If it is on file but unusable, do not quietly swap in another length.
   let len: Meas | null;
@@ -127,7 +140,7 @@ export function fastenerModel(entries: CharacteristicEntry[], kind: FastenerKind
   let headDia = opt([/^HEAD MAJOR DIAMETER$/i, /^HEAD DIAMETER$/i]);
   let flats = opt([/^WIDTH (?:ACROSS|BETWEEN) FLATS$/i]);
   const headH = opt([/^HEAD HEIGHT$/i]);
-  let threadLen = kind === 'rivet' ? null : opt([/^THREAD LENGTH$/i]);
+  let threadLen = kind === 'rivet' ? null : same(getMeasAgreeing(entries, [/^THREAD LENGTH$/i]), unit);
   const grip = kind === 'rivet' ? opt([/^GRIP LENGTH$/i]) : null;
   // A head that is not wider than the shank is a bad match for a head diameter: treat it as not stated.
   if (headDia && !(headDia.mid > dia.mid * 1.05)) headDia = null;
@@ -158,7 +171,65 @@ export function fastenerModel(entries: CharacteristicEntry[], kind: FastenerKind
     headStyle,
     headStyleText: styleText,
     continuousThread: /\bCONTINUOUS\b/.test(upper(itemName)),
+    noHead: kind === 'stud',
+    extraNotes: [],
     thread: kind === 'rivet' ? null : threadCallout(entries),
+    material: materialLabel(entries),
+    name: itemName ?? '',
+  };
+}
+
+
+// Straight pins (FSC 5315): headless or headed, with or without grooves. Cotter, quick-release, spring, tapered,
+// shoulder, lock and other pins are not a bar with an optional head, so they are not drawn.
+const PIN_OK = new Set(['STRAIGHT', 'GROOVED', 'HEADED', 'HEADLESS']);
+
+function pinKindFor(itemName: string | null): boolean {
+  if (rootOf(itemName) !== 'PIN') return false;
+  const rest = tokensOf(itemName).slice(1);
+  if (rest.length === 0) return true;
+  return rest.every((t) => PIN_OK.has(t)) && (rest.includes('HEADED') || rest.includes('HEADLESS'));
+}
+
+function pinModel(entries: CharacteristicEntry[], itemName: string | null): FastenerModel | null {
+  const toks = tokensOf(itemName).slice(1);
+  const headed = toks.includes('HEADED');
+  const dia = getMeas(entries, [/^DIAMETER$/i, /^PIN OVERALL DIAMETER$/i, /^SHANK DIAMETER$/i]);
+  if (!dia) return null;
+  let len: Meas | null;
+  let underHead = false;
+  if (headed && hasReq(entries, /^UNDER HEAD LENGTH$/i)) {
+    len = getMeas(entries, [/^UNDER HEAD LENGTH$/i]);
+    underHead = true;
+  } else {
+    len = getMeas(entries, [/^PIN OVERALL LENGTH$/i, /^OVERALL LENGTH$/i, /^LENGTH$/i]);
+  }
+  if (!len || len.unit !== dia.unit) return null;
+  const unit = dia.unit;
+  let headDia = headed ? same(getMeas(entries, [/^PIN HEAD DIAMETER$/i]), unit) : null;
+  if (headDia && !(headDia.mid > dia.mid * 1.05)) headDia = null;
+  const headH = headed ? same(getMeas(entries, [/^HEIGHT$/i]), unit) : null;
+  const extra: string[] = [];
+  if (hasReq(entries, /^FIRST HOLE DIAMETER$|^DISTANCE FROM CENTERLINE OF HOLE TO END OF PIN$/i)) extra.push('CROSS HOLE');
+  if (hasReq(entries, /^CHAMFER LENGTH$/i)) extra.push('CHAMFER');
+  if (toks.includes('GROOVED')) extra.push('GROOVES');
+  return {
+    kind: 'pin',
+    unit,
+    dia,
+    len,
+    underHead,
+    headDia,
+    flats: null,
+    headH,
+    threadLen: null,
+    grip: null,
+    headStyle: headed ? 'block' : null,
+    headStyleText: null,
+    continuousThread: false,
+    noHead: !headed,
+    extraNotes: extra,
+    thread: null,
     material: materialLabel(entries),
     name: itemName ?? '',
   };
@@ -177,7 +248,7 @@ function fastenerGeom(m: FastenerModel): FastenerGeom {
   const D = m.dia.mid;
   const L = m.len.mid;
   const hd = m.headDia ?? m.flats;
-  const noHead = m.kind === 'stud';
+  const noHead = m.noHead;
   const headAxial = noHead ? 0 : m.headH ? m.headH.mid : Math.min(D * 0.75, L * 0.3);
   const shankLen = noHead ? L : m.underHead ? L : Math.max(D * 0.2, L - headAxial);
   return {
@@ -210,17 +281,17 @@ interface FastenerLayout {
 function layoutFastener(m: FastenerModel, g: FastenerGeom, scale: number, headLabel: string | null, diaLabel: string): FastenerLayout {
   const D = m.dia.mid;
   const sx0 = Math.max(76, headLabel ? 28 + Math.min(HEAD_LABEL_MAX, textWidth(headLabel)) + 44 : 0);
-  const Hh = m.kind === 'stud' ? 0 : Math.max(9, g.headHalf * scale);
-  const Sh = Math.max(3.5, Math.min(m.kind === 'stud' ? 1e9 : Hh - 1.5, (D / 2) * scale));
-  const headLenPx = m.kind === 'stud' ? 0 : Math.max(8, g.headAxial * scale);
+  const Hh = m.noHead ? 0 : Math.max(9, g.headHalf * scale);
+  const Sh = Math.max(3.5, Math.min(m.noHead ? 1e9 : Hh - 1.5, (D / 2) * scale));
+  const headLenPx = m.noHead ? 0 : Math.max(8, g.headAxial * scale);
   const shankPx = Math.max(10, g.shankLen * scale);
   const xHead = sx0 + headLenPx;
   const xEnd = xHead + shankPx;
   const full = m.kind === 'bolt' || m.kind === 'screw' ? !m.threadLen : m.kind === 'stud' ? m.continuousThread : false;
   const threadPx = m.threadLen ? Math.min(shankPx, Math.max(6, m.threadLen.mid * scale)) : shankPx;
   const rows: FastenerLayout['rows'] = [];
-  if (m.headH && m.kind !== 'stud') rows.push({ x1: sx0, x2: xHead, yFeat: Hh, label: `${m.headH.text} HEAD H` });
-  if (m.threadLen && !full && m.kind !== 'stud') rows.push({ x1: xEnd - threadPx, x2: xEnd, yFeat: Sh, label: `${m.threadLen.text} THREAD LG` });
+  if (m.headH && !m.noHead) rows.push({ x1: sx0, x2: xHead, yFeat: Hh, label: `${m.headH.text} ${m.kind === 'pin' ? 'HEIGHT' : 'HEAD H'}` });
+  if (m.threadLen && !full && !m.noHead) rows.push({ x1: xEnd - threadPx, x2: xEnd, yFeat: Sh, label: `${m.threadLen.text} THREAD LG` });
   if (m.grip) rows.push({ x1: xHead, x2: Math.min(xEnd, xHead + m.grip.mid * scale), yFeat: Sh, label: `${m.grip.text} GRIP` });
   // Rows are stacked with the one that ends furthest right on top; each label sits to the right of its own
   // dimension line, so no extension line of a lower row can cross it.
@@ -232,7 +303,7 @@ function layoutFastener(m: FastenerModel, g: FastenerGeom, scale: number, headLa
 function drawFastener(m: FastenerModel, o: ShapeOpts): string | null {
   const g = fastenerGeom(m);
   const D = m.dia.mid;
-  const headLabel = m.kind === 'stud' ? null : m.headDia ? `⌀${m.headDia.text}` : m.flats ? `${m.flats.text} A/F` : null;
+  const headLabel = m.noHead ? null : m.headDia ? `⌀${m.headDia.text}` : m.flats ? `${m.flats.text} A/F` : null;
   const diaLabel = `⌀${m.dia.text}`;
   const sx0 = Math.max(76, headLabel ? 28 + Math.min(HEAD_LABEL_MAX, textWidth(headLabel)) + 44 : 0);
   let scale = Math.min((RIGHT_EDGE - 60 - textWidth(diaLabel) - sx0) / g.total, 130 / (2 * Math.max(g.headHalf, D / 2)));
@@ -249,7 +320,7 @@ function drawFastener(m: FastenerModel, o: ShapeOpts): string | null {
   // head
   let head = '';
   const headLenPx = xHead - sx;
-  if (m.kind !== 'stud') {
+  if (!m.noHead) {
     if (m.headStyle === 'dome') {
       head = `<path d="M ${n(xHead)} ${n(scy - Hh)} A ${n(headLenPx)} ${n(Hh)} 0 0 0 ${n(xHead)} ${n(scy + Hh)} Z" class="dg-edge"/>`;
     } else if (m.headStyle === 'csk') {
@@ -261,7 +332,7 @@ function drawFastener(m: FastenerModel, o: ShapeOpts): string | null {
   // shank: threaded part hatched, the rest plain
   const shankPx = xEnd - xHead;
   let shank: string;
-  if (m.kind === 'rivet' || (m.kind === 'stud' && !m.continuousThread)) {
+  if (m.kind === 'rivet' || m.kind === 'pin' || (m.kind === 'stud' && !m.continuousThread)) {
     shank = `<rect x="${n(xHead)}" y="${n(scy - Sh)}" width="${n(shankPx)}" height="${n(2 * Sh)}" class="dg-edge"/>`;
   } else if (full) {
     shank = `<rect x="${n(xHead)}" y="${n(scy - Sh)}" width="${n(shankPx)}" height="${n(2 * Sh)}" class="dg-thread"/>`;
@@ -273,10 +344,10 @@ function drawFastener(m: FastenerModel, o: ShapeOpts): string | null {
   const view = `${txt((sx + xEnd) / 2, 64, 'SIDE VIEW', 'dg-label')}${head}${shank}${ln(sx - 14, scy, xEnd + 14, scy, 'dg-center')}`;
 
   // length dimension above
-  const lgX1 = m.underHead || m.kind === 'stud' ? xHead : sx;
-  const lgLabel = m.underHead ? `${m.len.text} FASTENER LG` : `${m.len.text} ${m.kind === 'stud' ? 'LG' : 'OVERALL LG'}`;
+  const lgX1 = m.underHead || m.noHead ? xHead : sx;
+  const lgLabel = m.underHead ? `${m.len.text} ${m.kind === 'pin' ? 'UNDER HEAD LG' : 'FASTENER LG'}` : `${m.len.text} ${m.noHead ? 'LG' : 'OVERALL LG'}`;
   const yLg = scy - half - 34;
-  const lgFeat1 = m.underHead || m.kind === 'stud' ? scy - Sh : scy - Hh;
+  const lgFeat1 = m.underHead || m.noHead ? scy - Sh : scy - Hh;
   const dimLg = dimH(lgX1, xEnd, yLg, lgFeat1, scy - Sh, lgLabel, 'above', 'middle');
   const dimDia = dimV(scy - Sh, scy + Sh, xEnd + 30, xEnd, xEnd, diaLabel, 'right');
   const dimHeadDia = headLabel ? dimV(scy - Hh, scy + Hh, sx - 26, sx, sx, headLabel, 'left') : '';
@@ -294,7 +365,7 @@ function drawFastener(m: FastenerModel, o: ShapeOpts): string | null {
 
   // what the catalog does not say
   const unknown: string[] = [];
-  if (m.kind !== 'stud') {
+  if (!m.noHead) {
     if (m.headStyle === null) unknown.push(m.headStyleText ? 'HEAD STYLE DRAWN' : 'HEAD STYLE');
     if (g.genericHeadDia) unknown.push('HEAD DIAMETER');
     if (g.genericHeadH) unknown.push('HEAD HEIGHT');
@@ -302,10 +373,11 @@ function drawFastener(m: FastenerModel, o: ShapeOpts): string | null {
   if ((m.kind === 'bolt' || m.kind === 'screw') && !m.threadLen) unknown.push('THREAD LENGTH');
   if (m.kind === 'stud' && !m.continuousThread) unknown.push('THREAD EXTENT');
   const notes = unknown.length ? [`NOT STATED OR NOT DRAWN: ${unknown.join(', ')}. SHOWN GENERIC`] : [];
+  if (m.extraNotes.length) notes.push(`NOT DRAWN: ${m.extraNotes.join(', ')}`);
   return frame(view + dimLg + dimDia + dimHeadDia + below, {
     nsnDashed: o.nsnDashed,
     unit: m.unit,
-    items: [o.itemName ?? (m.kind === 'rivet' ? 'RIVET' : m.kind.toUpperCase()), m.material, m.thread ? `THREAD ${m.thread}` : null],
+    items: [o.itemName ?? (m.kind === 'rivet' ? 'RIVET' : m.kind === 'pin' ? 'PIN' : m.kind.toUpperCase()), m.material, m.thread ? `THREAD ${m.thread}` : null],
     notes,
   });
 }
@@ -314,21 +386,21 @@ function thumbFastener(m: FastenerModel): string | null {
   const g = fastenerGeom(m);
   const D = m.dia.mid;
   const scale = Math.min(96 / g.total, 40 / (2 * Math.max(g.headHalf, D / 2)));
-  const Hh = m.kind === 'stud' ? 0 : Math.max(6, g.headHalf * scale);
-  const Sh = Math.max(3, Math.min(m.kind === 'stud' ? 1e9 : Hh - 1, (D / 2) * scale));
-  const headLenPx = m.kind === 'stud' ? 0 : Math.max(4, g.headAxial * scale);
+  const Hh = m.noHead ? 0 : Math.max(6, g.headHalf * scale);
+  const Sh = Math.max(3, Math.min(m.noHead ? 1e9 : Hh - 1, (D / 2) * scale));
+  const headLenPx = m.noHead ? 0 : Math.max(4, g.headAxial * scale);
   const shankPx = Math.max(8, g.shankLen * scale);
   const x0 = 60 - (headLenPx + shankPx) / 2;
   const xHead = x0 + headLenPx;
-  const head = m.kind === 'stud' ? '' : `<rect x="${n(x0)}" y="${n(60 - Hh)}" width="${n(headLenPx)}" height="${n(2 * Hh)}" ${THUMB_STROKE}/>`;
+  const head = m.noHead ? '' : `<rect x="${n(x0)}" y="${n(60 - Hh)}" width="${n(headLenPx)}" height="${n(2 * Hh)}" ${THUMB_STROKE}/>`;
   return thumbWrap(`${head}<rect x="${n(xHead)}" y="${n(60 - Sh)}" width="${n(shankPx)}" height="${n(2 * Sh)}" ${THUMB_STROKE}/>`);
 }
 
 // ---------------------------------------------------------------------------------------------
-// Annulus family: bearing, plain encased shaft seal, flat ring gasket, round shim
+// Annulus family: bearing, shaft seal, o-ring, packing, flat ring gasket, washer, ring spacer, round shim
 // ---------------------------------------------------------------------------------------------
 
-export type AnnulusKind = 'bearing' | 'seal' | 'gasket' | 'shim';
+export type AnnulusKind = 'bearing' | 'seal' | 'gasket' | 'shim' | 'oring' | 'packing' | 'washer' | 'spacer';
 
 interface AnnulusSpec {
   od: RegExp[];
@@ -339,6 +411,12 @@ interface AnnulusSpec {
   idCaption: string;
   depthWord: string; // WIDTH or THK
   note: string | null;
+  /** The cross-section is a circle (o-ring). */
+  round?: boolean;
+  /** One diameter may be left out: it is then worked out from the other and the cross-section, and not labelled. */
+  derive?: boolean;
+  /** The part is still drawn (end view only) when no thickness is on file. */
+  depthOptional?: boolean;
 }
 
 const ANNULUS: Record<AnnulusKind, AnnulusSpec> = {
@@ -353,7 +431,7 @@ const ANNULUS: Record<AnnulusKind, AnnulusSpec> = {
     note: 'ENVELOPE ONLY: RINGS, BALLS OR ROLLERS, CAGE AND SEALS NOT DRAWN',
   },
   seal: {
-    od: [/^OUTSIDE DIAMETER$/i],
+    od: [/^OUTSIDE DIAMETER$/i, /^HOUSING BORE DIAMETER$/i],
     id: [/^ACCOMMODATED SHAFT DIAMETER$/i],
     depth: [/^SEAL WIDTH$/i],
     fallbackTitle: 'SEAL, PLAIN ENCASED',
@@ -364,71 +442,173 @@ const ANNULUS: Record<AnnulusKind, AnnulusSpec> = {
   },
   gasket: {
     od: [/^OUTSIDE DIAMETER$/i],
-    id: [/^INSIDE DIAMETER$/i],
-    depth: [/^OVERALL THICKNESS$/i, /^THICKNESS$/i],
+    id: [/^APERTURE DIAMETER$/i, /^INSIDE DIAMETER$/i],
+    depth: [/^CROSS-SECTIONAL THICKNESS$/i, /^OVERALL THICKNESS$/i, /^THICKNESS$/i],
     fallbackTitle: 'GASKET',
     odCaption: 'OUTSIDE DIA',
-    idCaption: 'INSIDE DIA',
+    idCaption: 'APERTURE',
     depthWord: 'THK',
     note: null,
+    depthOptional: true,
   },
   shim: {
     od: [/^OUTSIDE DIAMETER$/i],
     id: [/^APERTURE DIAMETER$/i, /^INSIDE DIAMETER$/i],
-    depth: [/^OVERALL THICKNESS$/i, /^THICKNESS$/i],
+    depth: [/^OVERALL THICKNESS$/i, /^THICKNESS$/i, /^LAMINATION THICKNESS$/i],
     fallbackTitle: 'SHIM',
     odCaption: 'OUTSIDE DIA',
     idCaption: 'APERTURE',
     depthWord: 'THK',
     note: null,
+    depthOptional: true,
+  },
+  oring: {
+    od: [/^OUTSIDE DIAMETER$/i, /^PERIPHERAL DIAMETER$/i],
+    id: [/^CENTER HOLE DIAMETER$/i, /^INSIDE DIAMETER$/i],
+    depth: [/^CROSS-SECTIONAL (?:HEIGHT|DIAMETER)$/i],
+    fallbackTitle: 'O-RING',
+    odCaption: 'OUTSIDE DIA',
+    idCaption: 'INSIDE DIA',
+    depthWord: 'CROSS-SECTION',
+    note: null,
+    round: true,
+    derive: true,
+  },
+  packing: {
+    od: [/^PERIPHERAL DIAMETER$/i, /^OUTSIDE DIAMETER$/i],
+    id: [/^CENTER HOLE DIAMETER$/i, /^INSIDE DIAMETER$/i],
+    depth: [/^CROSS-SECTIONAL (?:HEIGHT|THICKNESS)$/i],
+    fallbackTitle: 'PACKING, PREFORMED',
+    odCaption: 'OUTSIDE DIA',
+    idCaption: 'INSIDE DIA',
+    depthWord: 'HEIGHT',
+    note: 'SECTION SHAPE NOT STATED, SHOWN AS A RECTANGLE',
+    derive: true,
+  },
+  washer: {
+    od: [/^OVERALL DIAMETER$/i, /^OUTSIDE DIAMETER$/i, /^WASHER OUTSIDE DIAMETER$/i],
+    id: [/^HOLE DIAMETER$/i, /^INSIDE DIAMETER$/i],
+    depth: [/^THICKNESS$/i, /^MATERIAL THICKNESS$/i],
+    fallbackTitle: 'WASHER',
+    odCaption: 'OUTSIDE DIA',
+    idCaption: 'HOLE',
+    depthWord: 'THK',
+    note: null,
+    depthOptional: true,
+  },
+  spacer: {
+    od: [/^OUTSIDE DIAMETER$/i],
+    id: [/^INSIDE DIAMETER$/i],
+    depth: [/^OVERALL THICKNESS$/i, /^THICKNESS$/i],
+    fallbackTitle: 'SPACER, RING',
+    odCaption: 'OUTSIDE DIA',
+    idCaption: 'INSIDE DIA',
+    depthWord: 'THK',
+    note: null,
+    depthOptional: true,
   },
 };
 
 export interface AnnulusModel {
   kind: AnnulusKind;
   unit: Unit;
-  od: Meas;
-  id: Meas;
-  depth: Meas;
+  /** Stated values; null when the diameter was worked out (o-ring, packing) and so is not labelled. */
+  od: Meas | null;
+  id: Meas | null;
+  /** Values the geometry is drawn from. */
+  odG: number;
+  idG: number;
+  depth: Meas | null;
+  odCaption: string;
   housing: Meas | null;
+  /** True for a plain flat washer; other washer forms get an end view only. */
+  flat: boolean;
+  formName: string;
+  notes: string[];
   material: string | null;
 }
 
 const BEARING_NOT_ENVELOPE = /\b(TAPER(?:ED)?|ROD|AIRFRAME|THRUST|PILLOW|MOUNTED|CAM|CAGE|SPHERICAL|CONE|CUP|FOLLOWER|MAGNETIC|GEAR)\b/;
+const NOT_ROUND_TEXT = /\b(IRREGULAR|OBLONG|RECTANGULAR|OVAL|ELLIPTICAL|NON-?CIRCULAR|SQUARE|TRIANGULAR|KIDNEY)\b/;
 
 export function annulusKindFor(fsc: string, itemName: string | null): AnnulusKind | null {
   const name = upper(itemName);
   const root = rootOf(itemName);
   const toks = tokensOf(itemName);
+  const rest = toks.slice(1);
   if (fsc === '3110' && root === 'BEARING' && !BEARING_NOT_ENVELOPE.test(name)) return 'bearing';
-  if (fsc === '5330') {
-    if (root === 'SEAL' && toks.includes('PLAIN') && toks.includes('ENCASED')) return 'seal';
-    if (root === 'GASKET') return 'gasket';
+  if (fsc === '5330' || fsc === '5331') {
+    if (root === 'O-RING') return rest.length === 0 ? 'oring' : null;
+    if (root === 'SEAL' && rest.every((t) => t === 'PLAIN' || t === 'ENCASED')) return 'seal';
+    if (root === 'GASKET' && rest.every((t) => t === 'SPIRAL' || t === 'WOUND')) return 'gasket';
+    if (root === 'PACKING' && rest.length === 1 && rest[0] === 'PREFORMED') return 'packing';
   }
-  if (fsc === '5365' && root === 'SHIM') return 'shim';
+  if (fsc === '5365' && root === 'SHIM' && rest.length === 0) return 'shim';
+  if (fsc === '5365' && root === 'SPACER' && rest.length === 1 && rest[0] === 'RING') return 'spacer';
+  if (fsc === '5310' && root === 'WASHER') return 'washer';
   return null;
 }
 
-export function annulusModel(entries: CharacteristicEntry[], kind: AnnulusKind): AnnulusModel | null {
+export function annulusModel(entries: CharacteristicEntry[], kind: AnnulusKind, itemName: string | null = null): AnnulusModel | null {
   const spec = ANNULUS[kind];
   const od = getMeas(entries, spec.od);
   const id = getMeas(entries, spec.id);
   const depth = getMeas(entries, spec.depth);
-  if (!od || !id || !depth) return null;
+  // a requirement that is on file but unusable (qualified, repeated, mixed) is not quietly replaced by a guess
+  if (spec.derive ? !depth || (!od && !id) : !od || !id) return null;
+  if (!spec.depthOptional && !spec.derive && !depth) return null;
+  if (hasReq(entries, spec.depth[0]) && !depth && !spec.depthOptional) return null;
   const unit = sharedUnit(od, id, depth);
   if (!unit) return null;
-  if (!(od.mid > id.mid)) return null;
-  const housing = kind === 'seal' ? same(getMeas(entries, [/^HOUSING BORE DIAMETER$/i]), unit) : null;
-  return { kind, unit, od, id, depth, housing, material: materialLabel(entries) };
+  let odG: number;
+  let idG: number;
+  if (od && id) {
+    odG = od.mid;
+    idG = id.mid;
+  } else if (od) {
+    odG = od.mid;
+    idG = od.mid - 2 * (depth as Meas).mid;
+  } else {
+    idG = (id as Meas).mid;
+    odG = idG + 2 * (depth as Meas).mid;
+  }
+  if (!(odG > idG) || !(idG > 0)) return null;
+  // an o-ring whose three stated sizes disagree is not drawn: the wall must match the cross-section
+  if (kind === 'oring' && od && id && depth && Math.abs((od.mid - id.mid) / 2 - depth.mid) > 0.25 * depth.mid) return null;
+  // a flat gasket or spacer must be a round ring: no length/width, no stated odd shape
+  if (kind === 'gasket' || kind === 'packing' || kind === 'spacer') {
+    if (hasReq(entries, /^(?:OVERALL (?:LENGTH|WIDTH)|APERTURE (?:LENGTH|WIDTH))$/i)) return null;
+    if (entries.some((e) => e.requirement && /^(?:SPECIAL|SUPPLEMENTARY) FEATURES$|^CROSS-SECTIONAL SHAPE STYLE$|^STYLE DESIGNATOR$|^PART NAME ASSIGNED BY CONTROLLING AGENCY$/i.test(e.requirement) && NOT_ROUND_TEXT.test(upper(e.reply)))) return null;
+  }
+  const hasOutside = hasReq(entries, /^OUTSIDE DIAMETER$/i);
+  const odCaption = kind === 'seal' && !hasOutside ? 'HOUSING BORE' : spec.odCaption;
+  const housing = kind === 'seal' && hasOutside ? same(getMeas(entries, [/^HOUSING BORE DIAMETER$/i]), unit) : null;
+  const toks = tokensOf(itemName);
+  const flat = kind !== 'washer' || toks.length === 1 || (toks.length === 2 && toks[1] === 'FLAT');
+  const formName = toks.slice(1).join(' ');
+  const notes: string[] = [];
+  if (kind === 'washer' && !flat) notes.push(`ENVELOPE ONLY: ${formName} FORM NOT DRAWN`);
+  else if (spec.note) notes.push(spec.note);
+  if (kind === 'oring' && (!od || !id)) notes.push(`${!od ? 'OUTSIDE' : 'INSIDE'} DIA NOT STATED`);
+  if (kind === 'packing' && (!od || !id)) notes.push(`${!od ? 'OUTSIDE' : 'INSIDE'} DIA NOT STATED`);
+  if (!depth) notes.push('THICKNESS NOT STATED');
+  if (kind === 'gasket') {
+    const extra: string[] = [];
+    if (hasReq(entries, /^BOLT (?:HOLE QUANTITY|CIRCLE DIAMETER)$|^HOLE DIAMETER$/i)) extra.push('BOLT HOLES');
+    if (/SPIRAL/.test(upper(itemName))) extra.push('WINDING AND GAGE RING');
+    if (extra.length) notes.push(`NOT DRAWN: ${extra.join(', ')}`);
+  }
+  return { kind, unit, od, id, odG, idG, depth, odCaption, housing, flat, formName, notes, material: materialLabel(entries) };
 }
 
 function drawAnnulus(m: AnnulusModel, o: ShapeOpts): string | null {
   const spec = ANNULUS[m.kind];
-  // ---- end view (left) ----
-  const ex = 150;
+  const section = !!m.depth && m.flat;
+  // ---- end view (left; centred when there is no section) ----
+  const ex = section ? 150 : 250;
   const ey = 232;
   const R = 108;
-  const r = Math.max(12, R * (m.id.mid / m.od.mid));
+  const r = Math.max(12, R * (m.idG / m.odG));
   const ang = (deg: number, rad: number) => [ex + rad * Math.cos((deg * Math.PI) / 180), ey - rad * Math.sin((deg * Math.PI) / 180)] as const;
   const [odX, odY] = ang(52, R);
   const [idX, idY] = ang(-28, r);
@@ -439,49 +619,149 @@ function drawAnnulus(m: AnnulusModel, o: ShapeOpts): string | null {
     ${ln(ex, ey - R - 18, ex, ey + R + 18, 'dg-center')}
     <circle cx="${n(ex)}" cy="${n(ey)}" r="${n(R)}" class="dg-edge"/>
     <circle cx="${n(ex)}" cy="${n(ey)}" r="${n(r)}" class="dg-edge"/>
-    ${leader(odX, odY, labelX, 138, spec.odCaption, `⌀${m.od.text}`)}
-    ${leader(idX, idY, labelX, 276, spec.idCaption, `⌀${m.id.text}`)}`;
+    ${m.od ? leader(odX, odY, labelX, 138, m.odCaption, `⌀${m.od.text}`) : ''}
+    ${m.id ? leader(idX, idY, labelX, 276, spec.idCaption, `⌀${m.id.text}`) : ''}`;
 
-  // ---- section (right): the two wall bars of an axial cut ----
-  const wall = (m.od.mid - m.id.mid) / 2;
-  const trueScale = Math.min(250 / m.od.mid, 170 / m.depth.mid);
-  const trueOk = Math.min(wall, m.depth.mid) * trueScale >= 22;
-  let sc: number;
-  let gapPx: number;
-  if (trueOk) {
-    sc = trueScale;
-    gapPx = m.id.mid * sc;
-  } else {
-    sc = Math.min(95 / wall, 140 / m.depth.mid);
-    gapPx = Math.min(110, Math.max(46, wall * sc));
-  }
-  const wallPx = wall * sc;
-  const depPx = m.depth.mid * sc;
-  const cx = 565;
-  const cy = 232;
-  const xL0 = cx - gapPx / 2 - wallPx;
-  const xR0 = cx + gapPx / 2;
-  const top = cy - depPx / 2;
-  const bot = cy + depPx / 2;
-  const dimX = xR0 + wallPx + 24;
-  const section = `
+  let sec = '';
+  if (section && m.depth) {
+    // ---- section (right): the two wall bars of an axial cut ----
+    const wall = (m.odG - m.idG) / 2;
+    const trueScale = Math.min(250 / m.odG, 170 / m.depth.mid);
+    const trueOk = Math.min(wall, m.depth.mid) * trueScale >= 22;
+    let sc: number;
+    let gapPx: number;
+    if (trueOk) {
+      sc = trueScale;
+      gapPx = m.idG * sc;
+    } else {
+      sc = Math.min(95 / wall, 140 / m.depth.mid);
+      gapPx = Math.min(110, Math.max(46, wall * sc));
+    }
+    const wallPx = wall * sc;
+    const depPx = m.depth.mid * sc;
+    const cx = 565;
+    const cy = 232;
+    const xL0 = cx - gapPx / 2 - wallPx;
+    const xR0 = cx + gapPx / 2;
+    const top = cy - depPx / 2;
+    const bot = cy + depPx / 2;
+    const dimX = xR0 + wallPx + 24;
+    const bars = spec.round
+      ? `<ellipse cx="${n(xL0 + wallPx / 2)}" cy="${n(cy)}" rx="${n(wallPx / 2)}" ry="${n(depPx / 2)}" class="dg-sec"/><ellipse cx="${n(xR0 + wallPx / 2)}" cy="${n(cy)}" rx="${n(wallPx / 2)}" ry="${n(depPx / 2)}" class="dg-sec"/>`
+      : `<rect x="${n(xL0)}" y="${n(top)}" width="${n(wallPx)}" height="${n(depPx)}" class="dg-sec"/><rect x="${n(xR0)}" y="${n(top)}" width="${n(wallPx)}" height="${n(depPx)}" class="dg-sec"/>`;
+    sec = `
     ${txt(cx, 64, m.kind === 'bearing' || m.kind === 'seal' ? 'SECTION' : 'SECTION A-A', 'dg-label')}
     ${trueOk ? '' : txt(cx, 80, '(ENLARGED)', 'dg-note')}
-    <rect x="${n(xL0)}" y="${n(top)}" width="${n(wallPx)}" height="${n(depPx)}" class="dg-sec"/>
-    <rect x="${n(xR0)}" y="${n(top)}" width="${n(wallPx)}" height="${n(depPx)}" class="dg-sec"/>
+    ${bars}
     ${ln(xL0 - 16, cy, xR0 + wallPx + 16, cy, 'dg-center')}
     ${dimV(top, bot, dimX, xR0 + wallPx, xR0 + wallPx, null, 'right')}
     ${txt(cx, bot + 42, `${m.depth.text} ${spec.depthWord}`, 'dg-dim')}`;
-  if (bot + 42 > BODY_BOTTOM || dimX > 732) return null;
+    if (bot + 42 > BODY_BOTTOM || dimX > 732) return null;
+  } else if (m.depth) {
+    // non-flat washer: the thickness is stock thickness, so it is stated but no wall is drawn
+    sec = txt(ex, ey + R + 40, `${m.depth.text} MATERIAL THK`, 'dg-dim');
+    if (ey + R + 40 > BODY_BOTTOM) return null;
+  }
 
   const items = [o.itemName ?? spec.fallbackTitle, m.material, m.housing ? `HOUSING BORE ⌀${m.housing.text}` : null];
-  return frame(endView + section, { nsnDashed: o.nsnDashed, unit: m.unit, items, notes: [spec.note] });
+  return frame(endView + sec, { nsnDashed: o.nsnDashed, unit: m.unit, items, notes: m.notes });
 }
 
 function thumbAnnulus(m: AnnulusModel): string | null {
   const R = 50;
-  const r = Math.max(8, R * (m.id.mid / m.od.mid));
+  const r = Math.max(8, R * (m.idG / m.odG));
   return thumbWrap(`${thumbCircle(60, 60, R)}${thumbCircle(60, 60, r)}`);
+}
+
+// ---------------------------------------------------------------------------------------------
+// Helical compression spring (FSC 5360)
+// ---------------------------------------------------------------------------------------------
+
+export interface SpringModel {
+  unit: Unit;
+  len: Meas;
+  od: Meas;
+  id: Meas | null;
+  wire: Meas | null;
+  wireG: number;
+  coils: number | null;
+  material: string | null;
+}
+
+export function springKindFor(fsc: string, itemName: string | null): boolean {
+  if (fsc !== '5360' || rootOf(itemName) !== 'SPRING') return false;
+  const rest = tokensOf(itemName).slice(1);
+  return rest.length === 2 && rest[0] === 'HELICAL' && (rest[1] === 'COMPRESSION' || rest[1] === 'COMP');
+}
+
+export function springModel(entries: CharacteristicEntry[]): SpringModel | null {
+  const len = getMeas(entries, [/^SPRING FREE LENGTH$/i]);
+  const od = getMeas(entries, [/^SPRING FREE OUTSIDE DIAMETER$/i]);
+  const id = getMeas(entries, [/^INSIDE DIAMETER$/i]);
+  const wire = getMeas(entries, [/^STOCK DIAMETER$/i]);
+  if (!len || !od || (!id && !wire)) return null;
+  const unit = sharedUnit(len, od, id, wire);
+  if (!unit) return null;
+  if (id && !(od.mid > id.mid)) return null;
+  const wireG = wire ? wire.mid : (od.mid - (id as Meas).mid) / 2;
+  if (!(wireG > 0) || wireG * 2 >= od.mid * 1.0001) return null;
+  // stated stock diameter and diameters must agree, or the coil cannot be drawn honestly
+  if (wire && id && Math.abs((od.mid - id.mid) / 2 - wire.mid) > 0.2 * wire.mid) return null;
+  const cq = getText(entries, [/^COIL QUANTITY$/i]);
+  const coils = cq && /^\d{1,2}(?:\.\d)?$/.test(cq) && Number(cq) >= 2 ? Number(cq) : null;
+  return { unit, len, od, id, wire, wireG, coils, material: materialLabel(entries) };
+}
+
+function springPoints(x0: number, lenPx: number, yTop: number, yBot: number, turns: number): string {
+  const pts: string[] = [];
+  const p = lenPx / turns;
+  for (let i = 0; i <= turns; i++) {
+    pts.push(`${n(x0 + i * p)},${n(i % 2 === 0 ? yTop : yBot)}`);
+  }
+  return pts.join(' ');
+}
+
+function drawSpring(m: SpringModel, o: ShapeOpts): string | null {
+  const sc = Math.min(440 / m.len.mid, 150 / m.od.mid);
+  const lenPx = m.len.mid * sc;
+  const odPx = m.od.mid * sc;
+  const wPx = Math.min(16, Math.max(3, m.wireG * sc));
+  if (!(lenPx >= 30) || !(odPx >= 24)) return null;
+  const x0 = Math.max(150, 380 - lenPx / 2);
+  const cy = 235;
+  const top = cy - odPx / 2;
+  const bot = cy + odPx / 2;
+  // turns: as stated when they fit, else as many as fit (and the note says so)
+  const maxTurns = Math.max(2, Math.floor(lenPx / (wPx * 1.3)));
+  let turns = m.coils !== null ? Math.round(m.coils * 2) : 12; // two strokes per turn
+  let generic = m.coils === null;
+  if (turns > maxTurns) {
+    turns = maxTurns;
+    generic = true;
+  }
+  const wire = `<polyline points="${springPoints(x0, lenPx, top + wPx / 2, bot - wPx / 2, turns)}" fill="none" stroke="var(--ink)" stroke-width="${n(wPx)}" stroke-linejoin="miter" stroke-linecap="butt" opacity="0.9"/>`;
+  const view = `${txt(x0 + lenPx / 2, 64, 'SIDE VIEW', 'dg-label')}${wire}${ln(x0 - 20, cy, x0 + lenPx + 20, cy, 'dg-center')}`;
+  const dimLen = dimH(x0, x0 + lenPx, top - 34, top, top, `${m.len.text} FREE LG`, 'above', 'middle');
+  const dimOd = dimV(top, bot, x0 + lenPx + 34, x0 + lenPx, x0 + lenPx, `⌀${m.od.text} O.D.`, 'right');
+  const dimId = m.id ? dimV(top + wPx, bot - wPx, x0 - 34, x0, x0, `⌀${m.id.text} I.D.`, 'left') : '';
+  if (x0 + lenPx + 34 + 9 + textWidth(`⌀${m.od.text} O.D.`) > 740 || x0 - 34 - 9 - textWidth(m.id ? `⌀${m.id.text} I.D.` : '') < 20) return null;
+  const notes = ['END FORM NOT DRAWN', generic ? 'TURN COUNT SHOWN GENERIC' : 'TURNS AS STATED'];
+  return frame(view + dimLen + dimOd + dimId, {
+    nsnDashed: o.nsnDashed,
+    unit: m.unit,
+    items: [o.itemName ?? 'SPRING, HELICAL, COMPRESSION', m.wire ? `WIRE ⌀${m.wire.text}` : null, m.material],
+    notes,
+  });
+}
+
+function thumbSpring2(m: SpringModel): string | null {
+  const sc = Math.min(96 / m.len.mid, 50 / m.od.mid);
+  const L = m.len.mid * sc;
+  const D = m.od.mid * sc;
+  const w = Math.max(2, Math.min(6, m.wireG * sc));
+  const x0 = 60 - L / 2;
+  const pts = springPoints(x0, L, 60 - D / 2 + w / 2, 60 + D / 2 - w / 2, Math.max(2, Math.min(10, Math.floor(L / (w * 1.5)))));
+  return thumbWrap(`<polyline points="${pts}" fill="none" stroke="var(--ink)" stroke-width="${n(Math.max(2, w))}" stroke-linejoin="miter"/>`);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -770,19 +1050,26 @@ export interface Resolved {
 
 const NONE: Resolved = { claimed: false, shape: null };
 
+const OLD_FALLBACK = new Set<AnnulusKind>(['washer', 'oring', 'packing', 'gasket', 'spacer']);
+
 export function resolveShape(entries: CharacteristicEntry[], fsc: string, itemName: string | null): Resolved {
   const fk = fastenerKindFor(fsc, itemName);
-  if (fsc === '5305' || fsc === '5306' || fsc === '5307' || fk === 'rivet') {
-    if (!fk) return { claimed: true, shape: null };
+  if (fsc === '5305' || fsc === '5306' || fsc === '5307' || fk === 'rivet' || fk === 'pin') {
+    // 5315 names that are not a straight pin stay with the older pin builder (and its name filter)
+    if (!fk) return fsc === '5315' ? NONE : { claimed: true, shape: null };
     const m = fastenerModel(entries, fk, itemName);
     return { claimed: true, shape: m ? { kind: fk, draw: (o) => drawFastener(m, o), thumb: () => thumbFastener(m) } : null };
   }
   const ak = annulusKindFor(fsc, itemName);
   if (ak) {
-    const m = annulusModel(entries, ak);
-    // a "GASKET" without OD, ID and thickness may still be an O-ring style part for the older ring builder
-    if (!m && ak === 'gasket') return NONE;
-    return { claimed: true, shape: m ? { kind: ak, draw: (o) => drawAnnulus(m, o), thumb: () => thumbAnnulus(m) } : null };
+    const m = annulusModel(entries, ak, itemName);
+    // washers, o-rings, packings, gaskets and ring spacers the data cannot draw may still be drawn by an older builder
+    return { claimed: !!m || !OLD_FALLBACK.has(ak), shape: m ? { kind: ak, draw: (o) => drawAnnulus(m, o), thumb: () => thumbAnnulus(m) } : null };
+  }
+  if (springKindFor(fsc, itemName)) {
+    const m = springModel(entries);
+    // a spring the data cannot draw may still be drawn by the older spring builder
+    return m ? { claimed: true, shape: { kind: 'spring', draw: (o) => drawSpring(m, o), thumb: () => thumbSpring2(m) } } : NONE;
   }
   if (retainingKindFor(fsc, itemName)) {
     const m = retainingModel(entries);
@@ -806,13 +1093,19 @@ const viaShape = (want: (fsc: string, name: string | null) => boolean, fsc: stri
 };
 export const buildBoltDiagram = viaShape((f, nm) => fastenerKindFor(f, nm) === 'bolt', '5306');
 export const buildStudDiagram = viaShape((f, nm) => fastenerKindFor(f, nm) === 'stud', '5307');
+export const buildStraightPinDiagram = viaShape((f, nm) => fastenerKindFor(f, nm) === 'pin', '5315');
 export const buildRivetDiagram = viaShape((f, nm) => fastenerKindFor(f, nm) === 'rivet', '5320');
 export const buildBearingDiagram = viaShape((f, nm) => annulusKindFor(f, nm) === 'bearing', '3110');
 export const buildSealDiagram = viaShape((f, nm) => annulusKindFor(f, nm) === 'seal', '5330');
 export const buildGasketDiagram = viaShape((f, nm) => annulusKindFor(f, nm) === 'gasket', '5330');
+export const buildORingDiagram = viaShape((f, nm) => annulusKindFor(f, nm) === 'oring', '5331');
+export const buildPackingDiagram = viaShape((f, nm) => annulusKindFor(f, nm) === 'packing', '5330');
+export const buildFlatWasherDiagram = viaShape((f, nm) => annulusKindFor(f, nm) === 'washer', '5310');
+export const buildRingSpacerDiagram = viaShape((f, nm) => annulusKindFor(f, nm) === 'spacer', '5365');
 export const buildShimDiagram = viaShape((f, nm) => annulusKindFor(f, nm) === 'shim', '5365');
 export const buildRetainingRingDiagram = viaShape((f, nm) => retainingKindFor(f, nm), '5325');
 export const buildLoopClampDiagram = viaShape((f, nm) => loopKindFor(f, nm), '5340');
+export const buildCompressionSpringDiagram = viaShape((f, nm) => springKindFor(f, nm), '5360');
 export const buildKeyDiagram = viaShape((f, nm) => keyKindFor(f, nm), '5315');
 
 // clip and arrow are re-exported for tests that build their own fixtures

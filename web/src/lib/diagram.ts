@@ -1243,7 +1243,8 @@ function thumbSpring(entries: CharacteristicEntry[]): string | null {
 // spring is not a compression coil). They get no drawing rather than a wrong one.
 const PIN_NOT_PLAIN = /\b(COTTER|QUICK|RELEASE|TAPER(?:ED)?|HEADED|SHOULDER(?:ED)?|CLEVIS|NAIL|SPIKE|STAPLE|DETENT|LOCK|HANDLE|KNOB|RING)\b/;
 const SPRING_NOT_COMPRESSION = /\b(EXTENSION|TENSION|TORSION|LEAF|FLAT|BELLEVILLE|WAVE|DISK|CLOCK|SPIRAL|CONSTANT|VOLUTE|GARTER|CANTILEVER)\b/;
-const hasFlange = (entries: CharacteristicEntry[]) => entries.some((e) => e.requirement && /\bFLANGE\b/i.test(e.requirement));
+// An outside flange only: "LEFT INTERNAL FLANGE WIDTH" describes a lip inside the bore, not a wider flange on the body.
+const hasFlange = (entries: CharacteristicEntry[]) => entries.some((e) => e.requirement && /\bFLANGE\b/i.test(e.requirement) && !/\bINTERNAL\b/i.test(e.requirement));
 
 interface Picked {
   builder: string;
@@ -1425,12 +1426,18 @@ export function buildThumbnail(entries: CharacteristicEntry[], fsc: string, item
 export {
   buildBearingDiagram,
   buildBoltDiagram,
+  buildCompressionSpringDiagram,
+  buildFlatWasherDiagram,
   buildGasketDiagram,
   buildKeyDiagram,
   buildLoopClampDiagram,
+  buildORingDiagram,
+  buildPackingDiagram,
   buildRetainingRingDiagram,
+  buildRingSpacerDiagram,
   buildRivetDiagram,
   buildSealDiagram,
   buildShimDiagram,
+  buildStraightPinDiagram,
   buildStudDiagram,
 } from './diagram-shapes.ts';

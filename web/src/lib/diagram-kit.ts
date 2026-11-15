@@ -47,6 +47,7 @@ const TRIPLE = new RegExp(
   'g'
 );
 
+const NEUTRAL_QUALIFIER = /^(?:OVERALL )?(?:LOCATION NOT OTHERWISE SPECIFIED|OVERALL|ALL)$/;
 const unitFromWord = (w: string): Unit => (w.startsWith('INCH') ? 'IN' : w.startsWith('MILLI') ? 'MM' : 'CM');
 
 /** Strict reading of one reply. null when it is not one length (or one min/max pair) in one unit. */
@@ -73,7 +74,10 @@ export function parseMeasure(reply: string | null | undefined): Meas | null {
     at = t.end;
   }
   rest += ' ' + s.slice(at);
-  const qualifier = rest.replace(/\bAND\b/g, ' ').replace(/\s+/g, ' ').trim() || null;
+  let qualifier: string | null = rest.replace(/\bAND\b/g, ' ').replace(/\s+/g, ' ').trim() || null;
+  // "LOCATION NOT OTHERWISE SPECIFIED INCHES 0.500" and "OVERALL INCHES ..." say the value belongs to the whole
+  // item, not to one feature, so they read as plain values.
+  if (qualifier !== null && NEUTRAL_QUALIFIER.test(qualifier)) qualifier = null;
   const unit = triples[0].unit;
   if (triples.length === 1) {
     const t = triples[0];
@@ -115,6 +119,24 @@ export function getMeas(entries: CharacteristicEntry[], pats: RegExp[]): Meas | 
   return null;
 }
 
+/**
+ * Like getMeas, but accepts replies that are each tied to a feature ("NUT THREAD INCHES 0.312",
+ * "STUD THREAD INCHES 0.312") as long as every reply gives the same number in the same unit. Used for a
+ * size that is stated once per end of a double-ended part: when both ends agree the size is not in doubt.
+ */
+export function getMeasAgreeing(entries: CharacteristicEntry[], pats: RegExp[]): Meas | null {
+  for (const pat of pats) {
+    const hits = entries.filter((e) => e.requirement && pat.test(e.requirement));
+    if (hits.length === 0) continue;
+    const parsed = hits.map((h) => parseMeasure(h.reply));
+    if (parsed.some((p) => p === null)) return null;
+    const first = parsed[0] as Meas;
+    if (parsed.some((p) => (p as Meas).text !== first.text || (p as Meas).unit !== first.unit)) return null;
+    return { ...first, qualifier: null };
+  }
+  return null;
+}
+
 /** A text reply by requirement name: exactly one distinct non-empty value, else null. */
 export function getText(entries: CharacteristicEntry[], pats: RegExp[]): string | null {
   for (const pat of pats) {
@@ -151,7 +173,7 @@ export function clip(t: string, n: number): string {
 
 /** Thread callout from stated values only: "0.190-32 UNJF 3A", "M6", ... Qualified or repeated values are left out. */
 export function threadCallout(entries: CharacteristicEntry[]): string | null {
-  const size = getMeas(entries, [/^NOMINAL THREAD (?:DIAMETER|SIZE)$/i, /^THREAD (?:DIAMETER|SIZE)$/i]);
+  const size = getMeasAgreeing(entries, [/^(?:NONMACHINE )?NOMINAL THREAD (?:DIAMETER|SIZE)$/i, /^THREAD (?:DIAMETER|SIZE)$/i]);
   if (!size) return null;
   const tpi = getText(entries, [/^THREAD QUANTITY PER INCH$/i]);
   const series = getText(entries, [/^THREAD SERIES DESIGNATOR$/i]);

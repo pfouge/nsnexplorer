@@ -16,6 +16,14 @@ const FX: Record<string, Fx> = {
   retaining: { fsc: '5325', name: 'RING,RETAINING', chars: { 'OUTSIDE DIAMETER': 'INCHES MINIMUM 2.672 AND INCHES MAXIMUM 2.742', 'MAJOR THICKNESS': 'INCHES MINIMUM 0.075 AND INCHES MAXIMUM 0.081' } },
   loop: { fsc: '5340', name: 'CLAMP,LOOP', chars: { 'MATERIAL THICKNESS': 'INCHES  NOMINAL  0.0468', 'LOOP WIDTH': 'INCHES  NOMINAL  0.50', 'LOOP INSIDE DIAMETER': 'INCHES  NOMINAL  2.00', 'CENTER TO CENTER DISTANCE BETWEEN LOOP AND MOUNTING HOLE': 'INCHES  NOMINAL  1.50' } },
   key: { fsc: '5315', name: 'KEY,MACHINE', chars: { 'OVERALL LENGTH': 'INCHES NOMINAL 3.500', 'OVERALL HEIGHT': 'INCHES NOMINAL 0.620', 'OVERALL WIDTH': 'INCHES NOMINAL 0.620' } },
+  oring: { fsc: '5331', name: 'O-RING', chars: { 'CENTER HOLE DIAMETER': 'INCHES MINIMUM 0.924 AND INCHES MAXIMUM 0.936', 'CROSS-SECTIONAL HEIGHT': 'INCHES MINIMUM 0.067 AND INCHES MAXIMUM 0.073' } },
+  packing: { fsc: '5330', name: 'PACKING,PREFORMED', chars: { 'CENTER HOLE DIAMETER': 'INCHES NOMINAL 1.250', 'PERIPHERAL DIAMETER': 'INCHES NOMINAL 1.500', 'CROSS-SECTIONAL HEIGHT': 'INCHES NOMINAL 0.125' } },
+  gasket: { fsc: '5330', name: 'GASKET', chars: { 'APERTURE DIAMETER': 'INCHES NOMINAL 2.000', 'OUTSIDE DIAMETER': 'INCHES NOMINAL 3.250', 'CROSS-SECTIONAL THICKNESS': 'INCHES MINIMUM 0.097 AND INCHES MAXIMUM 0.103' } },
+  washer: { fsc: '5310', name: 'WASHER,FLAT', chars: { 'HOLE DIAMETER': 'INCHES MINIMUM 0.260 AND INCHES MAXIMUM 0.270', 'OVERALL DIAMETER': 'INCHES MINIMUM 0.680 AND INCHES MAXIMUM 0.700', 'THICKNESS': 'INCHES NOMINAL 0.063' } },
+  spacer: { fsc: '5365', name: 'SPACER,RING', chars: { 'INSIDE DIAMETER': 'MILLIMETERS NOMINAL 10', 'OUTSIDE DIAMETER': 'MILLIMETERS NOMINAL 16', 'OVERALL THICKNESS': 'MILLIMETERS NOMINAL 2' } },
+  spring: { fsc: '5360', name: 'SPRING,HELICAL,COMPRESSION', chars: { 'SPRING FREE LENGTH': 'INCHES NOMINAL 1.500', 'SPRING FREE OUTSIDE DIAMETER': 'INCHES NOMINAL 0.500', 'STOCK DIAMETER': 'INCHES NOMINAL 0.062', 'COIL QUANTITY': '8' } },
+  pin: { fsc: '5315', name: 'PIN,STRAIGHT,HEADLESS', chars: { 'DIAMETER': 'INCHES NOMINAL 0.250', 'PIN OVERALL LENGTH': 'INCHES NOMINAL 1.000' } },
+  pinhead: { fsc: '5315', name: 'PIN,STRAIGHT,HEADED', chars: { 'DIAMETER': 'INCHES NOMINAL 0.250', 'UNDER HEAD LENGTH': 'INCHES MINIMUM 0.990 AND INCHES MAXIMUM 1.010', 'PIN HEAD DIAMETER': 'INCHES NOMINAL 0.400', 'HEIGHT': 'INCHES NOMINAL 0.100' } },
 };
 
 /** Checks every coordinate against the viewBox, NaN, and text vs the title block / other text. */
@@ -59,7 +67,7 @@ for (const [k, f] of Object.entries(FX)) {
     const e = E(f.chars);
     const svg = buildDiagram(e, f.fsc, O(f.name));
     assert.ok(svg, 'drawn');
-    assert.equal(diagramBuilder(e, f.fsc, O(f.name)), k === 'bolt' ? 'bolt' : k);
+    assert.equal(diagramBuilder(e, f.fsc, O(f.name)), k === 'pinhead' ? 'pin' : k);
     assert.ok(buildThumbnail(e, f.fsc, f.name), 'thumbnail');
     check(svg!);
     assert.match(svg!, /REFERENCE ONLY, NOT FOR MANUFACTURE/);
@@ -125,4 +133,47 @@ test('extremes: 0.06 in x 12 in pin-like bolt and a fat stub stay on the sheet',
   assert.ok(shim); check(shim!);
   const key = buildDiagram(E({ 'OVERALL LENGTH': 'INCHES NOMINAL 12', 'OVERALL WIDTH': 'INCHES NOMINAL 0.06', 'OVERALL HEIGHT': 'INCHES NOMINAL 0.06' }), '5315', O('KEY,MACHINE'));
   if (key) check(key);
+});
+
+test('annulus family: derived diameters, labels and refusals', () => {
+  const o = buildDiagram(E(FX.oring.chars), '5331', O('O-RING'))!;
+  assert.ok(o.includes('0.924–0.936') && o.includes('0.067–0.073'));
+  // a stated outside diameter that disagrees with the section by more than the check allows is not drawn
+  const bad = { ...FX.oring.chars, 'OUTSIDE DIAMETER': 'INCHES NOMINAL 3.000' };
+  assert.equal(buildDiagram(E(bad), '5331', O('O-RING')), null);
+  // irregular gaskets stay undrawn
+  assert.equal(buildDiagram(E(FX.gasket.chars), '5330', O('GASKET,IRREGULAR')), null);
+  assert.equal(buildDiagram(E({ 'CROSS-SECTIONAL THICKNESS': 'INCHES NOMINAL 0.06', 'OVERALL LENGTH': 'INCHES NOMINAL 4', 'OVERALL WIDTH': 'INCHES NOMINAL 2' }), '5330', O('GASKET')), null);
+  // washer without a thickness gets an end view, not an invented thickness
+  const w = buildDiagram(E({ 'HOLE DIAMETER': 'INCHES NOMINAL 0.25', 'OVERALL DIAMETER': 'INCHES NOMINAL 0.75' }), '5310', O('WASHER,FLAT'))!;
+  assert.ok(w && !/THK/.test(w)); check(w);
+  // qualified duplicate (different holes) is refused
+  const q = E({ 'HOLE DIAMETER': 'FIRST INCHES NOMINAL 0.25', 'OVERALL DIAMETER': 'INCHES NOMINAL 0.75', 'THICKNESS': 'INCHES NOMINAL 0.06' });
+  assert.equal(buildDiagram(q, '5310', O('WASHER,FLAT')), null);
+});
+
+test('washer extremes stay on the sheet', () => {
+  for (const [id, od, t] of [[0.02, 6, 0.01], [5.9, 6, 2], [0.5, 0.52, 0.5], [30, 40, 0.2]]) {
+    const svg = buildDiagram(E({ 'HOLE DIAMETER': `INCHES NOMINAL ${id}`, 'OVERALL DIAMETER': `INCHES NOMINAL ${od}`, 'THICKNESS': `INCHES NOMINAL ${t}` }), '5310', O('WASHER,FLAT'));
+    if (svg) check(svg);
+  }
+});
+
+test('spring: coil count and refusals', () => {
+  const sp = buildDiagram(E(FX.spring.chars), '5360', O('SPRING,HELICAL,COMPRESSION'))!;
+  assert.ok(sp.includes('1.500') && sp.includes('0.500'));
+  for (const nm of ['SPRING,HELICAL,TORSION', 'SPRING,HELICAL,EXTENSION', 'SPRING,FLAT']) assert.equal(buildDiagram(E(FX.spring.chars), '5360', O(nm)), null, nm);
+  const inconsistent = { ...FX.spring.chars, 'INSIDE DIAMETER': 'INCHES NOMINAL 0.100' };
+  assert.equal(buildDiagram(E(inconsistent), '5360', O('SPRING,HELICAL,COMPRESSION')), null);
+});
+
+test('pins: headless, headed, and names that are not straight pins', () => {
+  const p = buildDiagram(E(FX.pin.chars), '5315', O('PIN,STRAIGHT,HEADLESS'))!;
+  assert.ok(p.includes('1.000') && p.includes('0.250'));
+  const h = buildDiagram(E(FX.pinhead.chars), '5315', O('PIN,STRAIGHT,HEADED'))!;
+  assert.ok(h.includes('0.990–1.010') && h.includes('UNDER HEAD LG'));
+  assert.equal(diagramBuilder(E(FX.pin.chars), '5315', O('PIN,QUICK RELEASE')) === 'pin', false);
+  assert.equal(buildDiagram(E(FX.pin.chars), '5315', O('PIN,COTTER')), null);
+  const lg = buildDiagram(E({ ...FX.pin.chars, 'DIAMETER': 'LOCATION NOT OTHERWISE SPECIFIED INCHES NOMINAL 0.250' }), '5315', O('PIN,STRAIGHT,HEADLESS'));
+  assert.ok(lg);
 });
