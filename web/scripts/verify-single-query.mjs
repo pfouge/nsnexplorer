@@ -25,6 +25,13 @@
 // the old loader returned; `flis` is checked against independent naive queries (checkNsnFlis). With --seed the
 // clone gets migration 0014 (when missing) and web/scripts/flis-seed.sql.
 //
+// The item-name search loader (migration 0016, web/src/lib/item-search-sql.ts, GET /api/names.json and /search/) is
+// new, so there is no old loader to compare with. The OLD side of that comparison is a deliberately naive JavaScript
+// re-implementation (naiveNameSearch below: read every name, filter, rank and dedupe in JS, signals from separate
+// plain queries); the NEW side must return identical rows, in identical order, in exactly one round-trip. With --seed
+// the clone gets migration 0016 and web/scripts/item-search-seed.sql, whose rows have hand-checked expectations
+// (checkNameSearchSeed).
+//
 // What it checks, per sampled input, for each loader:
 //   1. OLD loader (copied verbatim below from the pre-change code) vs NEW loader
 //      (bundled straight from web/src/lib): assert.deepStrictEqual (types included:
@@ -73,6 +80,8 @@ await build({
       export { loadSupplierPage, SUPPLIER_AWARD_ROWS } from './supplier-page.ts';
       export { loadSolicitationPage } from './solicitation-page.ts';
       export { searchSupplierRows } from './supplier-search.ts';
+      export { searchItemNames } from './item-search-sql.ts';
+      export { parseNameQuery } from './item-search.ts';
       export { NSN_WITH_AMSC_SELECT, mapNsnRow, assertSourceUrl, slugify } from './shared.ts';
       export { isSolNumber, parseSupplierQuery } from './entity.ts';
       export { humanizeLabel, moeKind } from './flis-codes.ts';
@@ -1066,6 +1075,124 @@ async function compare(name, id, oldFn, newFn, { expectQueries = 1 } = {}) {
   return { old: o, new: n };
 }
 
+
+// ------------------------------------------------ item-name search (new loader): naive reference + checks
+// Reference implementation of the ranking rules documented in web/src/lib/item-search-sql.ts, written without any
+// SQL cleverness: read all names, decide everything in JavaScript, look the demand signals up with plain queries.
+const normName = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+const byteCmp = (a, b) => (a === b ? 0 : Buffer.compare(Buffer.from(a ?? ''), Buffer.from(b ?? '')));
+async function naiveNameSearch(sql, q, limit, offset) {
+  const words = q.words.filter((w) => w !== null);
+  const hasAll = (text) => words.every((w) => text.toLowerCase().includes(w));
+  const tierOf = (nn) => {
+    if (nn === q.phrase || nn === q.reversed) return 0;
+    if (nn.startsWith(q.phrase) || nn.startsWith(q.reversed)) return 1;
+    if (words.every((w) => (' ' + nn).includes(' ' + w))) return 2;
+    return 3;
+  };
+  const cands = [];
+  for (const r of await sql.unsafe(`SELECT nsn, item_name FROM pub.nsns WHERE item_name IS NOT NULL`)) {
+    if (!hasAll(r.item_name)) continue;
+    const nn = normName(r.item_name);
+    cands.push({ nsn: r.nsn, src: 0, also_called: null, tier: tierOf(nn), nl: nn.length });
+  }
+  for (const r of await sql.unsafe(
+    `SELECT n.nsn, c.colloquial_name FROM pub.inc_colloquial_names c JOIN pub.nsn_identification i ON i.inc = c.inc JOIN pub.nsns n ON n.nsn = i.nsn`
+  )) {
+    if (!hasAll(r.colloquial_name)) continue;
+    const nn = normName(r.colloquial_name);
+    cands.push({ nsn: r.nsn, src: 1, also_called: r.colloquial_name, tier: tierOf(nn), nl: nn.length });
+  }
+  const best = new Map();
+  for (const c of cands) {
+    const b = best.get(c.nsn);
+    if (!b) { best.set(c.nsn, c); continue; }
+    const d = c.tier - b.tier || c.src - b.src || c.nl - b.nl || byteCmp(c.also_called, b.also_called);
+    if (d < 0) best.set(c.nsn, c);
+  }
+  const open = new Map((await sql.unsafe(`SELECT nsn, count(*)::int AS n FROM pub.solicitations WHERE status = 'open' AND (return_by IS NULL OR return_by >= CURRENT_DATE) GROUP BY nsn`)).map((r) => [r.nsn, r.n]));
+  const recent = new Set((await sql.unsafe(`SELECT DISTINCT pp.nsn FROM pub.price_points pp WHERE pp.awarded_on >= CURRENT_DATE - 730 AND ${NAIVE_NOT_CEIL_PP('pp')}`)).map((r) => r.nsn));
+  const last = new Map((await sql.unsafe(`SELECT pp.nsn, max(pp.awarded_on) AS d FROM pub.price_points pp WHERE ${NAIVE_NOT_CEIL_PP('pp')} GROUP BY pp.nsn`)).map((r) => [r.nsn, r.d]));
+  const nsnRows = new Map((await sql.unsafe(`SELECT n.nsn, n.item_name, n.fsc, f.name AS fsc_name FROM pub.nsns n LEFT JOIN pub.fsc f ON f.fsc = n.fsc`)).map((r) => [r.nsn, r]));
+  const all = [...best.values()].sort(
+    (a, b) => a.tier - b.tier || Number(!!open.get(b.nsn)) - Number(!!open.get(a.nsn)) || Number(recent.has(b.nsn)) - Number(recent.has(a.nsn)) || a.nl - b.nl || byteCmp(a.nsn, b.nsn)
+  );
+  return all.slice(offset, offset + limit).map((c) => ({
+    nsn: c.nsn,
+    item_name: nsnRows.get(c.nsn).item_name,
+    fsc: nsnRows.get(c.nsn).fsc,
+    fsc_name: nsnRows.get(c.nsn).fsc_name,
+    also_called: c.also_called,
+    tier: c.tier,
+    total: all.length,
+    open_n: open.get(c.nsn) ?? 0,
+    last_award: last.get(c.nsn) ?? null,
+  }));
+}
+
+async function checkNameSearch(col) {
+  const queries = [
+    'lock washer', 'washer lock', 'grip washer', 'washer', 'lock', 'o-ring', 'o ring', 'oring', 'rubber ring', 'gasket seal', 'seal gasket',
+    'pin 50', 'special one', "o'brien", 'widget lock', 'orphan washer', 'percent pin', 'spring lock washer', 'washer flat', 'zzzzzz', 'xyzzy plugh',
+    '100%', '%washer%', 'wash_r', "'; drop table pub.nsns; --", 'wash', 'ring', 'abc', 'x'.repeat(500), 'lock washer '.repeat(30), '5/8 washer',
+    'WASHER, LOCK', '  Lock   Washer  ', 'seed item', 'item', 'kitchen', 'bracket mounting', 'strap', 'nut bolt screw washer extra words',
+  ];
+  // Names and everyday names actually in the database: a full name, its first word, and a lower-case copy.
+  for (const n of await col(`select item_name from pub.nsns where item_name is not null group by item_name order by md5(item_name) limit 30`)) {
+    queries.push(n, n.split(/[ ,]+/)[0], n.toLowerCase());
+  }
+  for (const n of await col(`select colloquial_name from pub.inc_colloquial_names order by md5(colloquial_name) limit 20`)) queries.push(n);
+  const pages = [[25, 0], [1, 0], [2, 0], [2, 2], [3, 1], [25, 25], [25, 5000]];
+  let n = 0;
+  for (const text of [...new Set(queries)]) {
+    const q = N.parseNameQuery(text);
+    if (!q.ok) continue;
+    n++;
+    for (const [limit, offset] of text === 'washer' || text === 'lock washer' || text === 'lock' || n % 4 === 0 ? pages : pages.slice(0, 1)) {
+      await compare('searchItemNames', `${JSON.stringify(text.slice(0, 40))} limit ${limit} offset ${offset}`, (s) => naiveNameSearch(s, q, limit, offset), (s) => N.searchItemNames(s, q, limit, offset).then((rows) => rows.map((x) => ({ ...x }))), { expectQueries: 1 });
+    }
+  }
+}
+
+// Hand-checked expectations for the rows in item-search-seed.sql (run only with --seed).
+async function checkNameSearchSeed(direct) {
+  const run = async (text, limit = 25, offset = 0) => (await N.searchItemNames(direct, N.parseNameQuery(text), limit, offset)).map((r) => ({ ...r }));
+  const expect = (label, cond, detail = '') => {
+    results.checks++;
+    if (!cond) fail('searchItemNames (seed)', label, detail);
+  };
+  const ids = (rows) => rows.map((r) => r.nsn.trim().slice(-2));
+  const lw = await run('lock washer');
+  // tier 0: WASHER,LOCK (reversed words) and the everyday name "LOCK WASHER". Inside the tier an NSN with an open solicitation comes first
+  // (..02 has one with no closing date, ..03 has two; the number of open solicitations does not rank, so they tie and fall back to NSN order;
+  // ..01's solicitation closed two days ago), then one with a recent real award (..04; ..01's recent award is a contract ceiling), then the rest.
+  expect('lock washer: WASHER,LOCK rows come first in demand order', JSON.stringify(ids(lw).slice(0, 4)) === JSON.stringify(['02', '03', '04', '01']), JSON.stringify(ids(lw)));
+  expect('lock washer: open counts', JSON.stringify(lw.slice(0, 4).map((r) => r.open_n)) === '[1,2,0,0]', JSON.stringify(lw.slice(0, 4).map((r) => r.open_n)));
+  expect('lock washer: item-name match is not labelled "also called"', lw.slice(0, 4).every((r) => r.also_called === null), JSON.stringify(lw.slice(0, 4).map((r) => r.also_called)));
+  const spring = lw.find((r) => r.nsn.trim() === '7310910000010');
+  expect('lock washer: spring tension washer is found only through its everyday name', spring && spring.also_called === 'LOCK WASHER' && spring.tier === 0, JSON.stringify(spring));
+  expect('lock washer: ceiling-only award is not a recent award', lw.find((r) => r.nsn.trim() === '7310910000001')?.last_award === null, JSON.stringify(lw.find((r) => r.nsn.trim() === '7310910000001')));
+  expect('lock washer: no NSN twice', new Set(ids(lw)).size === lw.length);
+  expect('lock washer: total counts every match', lw.every((r) => r.total === lw[0].total) && lw[0].total >= 5, String(lw[0]?.total));
+  const grip = await run('grip washer');
+  expect('grip washer finds the lock washers by their everyday name', grip.length === 4 && grip.every((r) => r.item_name.toUpperCase() === 'WASHER,LOCK' && r.also_called === 'GRIP WASHER' && r.tier === 0), JSON.stringify(grip));
+  const oring = await run('o-ring');
+  expect('o-ring finds PACKING,PREFORMED through "O-RING"', oring.length >= 2 && oring.slice(0, 2).every((r) => r.item_name === 'PACKING,PREFORMED' && r.also_called === 'O-RING'), JSON.stringify(oring.slice(0, 3)));
+  const lock = await run('lock');
+  const tierOf = (nsn) => lock.find((r) => r.nsn.trim() === nsn)?.tier;
+  // The WASHER,LOCK NSNs are tier 1 here, not 2: their everyday name "LOCK WASHER" starts with the word and the better of the two matches wins.
+  expect('lock: exact LOCK tier 0; LOCK,DOOR, LOCKNUT and the LOCK WASHER NSNs tier 1; WIDGET LOCK (word start) tier 2; PADLOCK and BLOCK,TACKLE tier 3', tierOf('7310910000040') === 0 && tierOf('7310910000041') === 1 && tierOf('7310910000044') === 1 && tierOf('7310910000001') === 1 && tierOf('7310910000010') === 1 && tierOf('7310910000050') === 2 && tierOf('7310910000042') === 3 && tierOf('7310910000043') === 3, JSON.stringify(lock.map((r) => [r.nsn.trim().slice(-2), r.tier])));
+  expect('lock: tiers never go backwards', lock.every((r, i) => i === 0 || lock[i - 1].tier <= r.tier));
+  expect('NSN with no item name is found through its everyday name', (await run('widget lock')).some((r) => r.nsn.trim() === '7310910000050' && r.item_name === null && r.also_called === 'WIDGET LOCK'));
+  expect('an INC with no NSN adds nothing', (await run('orphan washer')).length === 0);
+  expect('punctuation in the item name does not matter', (await run("special one o'brien 50")).some((r) => r.nsn.trim() === '7310910000060'));
+  expect('wildcards typed by the user are not wildcards', (await run('%%%washer___')).length === (await run('washer')).length);
+  expect('a quote cannot break out', (await run("washer'; DROP TABLE pub.nsns; --")).length >= 0);
+  expect('pagination: offset pages join up without gaps', JSON.stringify([...(await run('washer', 2, 0)), ...(await run('washer', 2, 2))].map((r) => r.nsn)) === JSON.stringify((await run('washer', 4, 0)).map((r) => r.nsn)));
+  expect('nonsense term returns no rows', (await run('qqzzxxjj')).length === 0);
+  expect('page past the end returns no rows', (await run('washer', 25, 5000)).length === 0);
+}
+
 // ----------------------------------------------------------------- sampling
 async function main() {
   let dbUrl = baseUrl;
@@ -1096,6 +1223,9 @@ async function main() {
       psql(dbUrl, ['-1', '-f', path.join(here, '../../db/migrations/0014_flis_identification.sql')]);
     }
     psql(dbUrl, ['-1', '-f', path.join(here, 'flis-seed.sql')]);
+    // Item-name search (migration 0016: trigram indexes) and its seed rows.
+    psql(dbUrl, ['-1', '-f', path.join(here, '../../db/migrations/0016_item_name_search.sql')]);
+    psql(dbUrl, ['-1', '-f', path.join(here, 'item-search-seed.sql')]);
     if (opt('--tz')) psql(adminUrl, ['-c', `ALTER DATABASE ${cloneName} SET timezone = '${opt('--tz').replace(/'/g, '')}'`]);
     console.log(`seeded clone ${cloneName}`);
   }
@@ -1278,6 +1408,8 @@ async function main() {
 
     if (withSeed) await checkCeilings(direct);
     if (withSeed) await checkTwins(direct);
+    await checkNameSearch(col);
+    if (withSeed) await checkNameSearchSeed(direct);
 
     // ---- supplier search (/api/suppliers.json): same rows, one statement even on the CAGE-then-name fallback
     const searches = [];

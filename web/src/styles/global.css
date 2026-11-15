@@ -250,6 +250,12 @@ html:has(dialog.sheet[open]) { overflow: hidden; }
 .result .code { flex: none; }
 .result .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .result .meta { flex: none; color: var(--ink-soft); font-size: 0.8125rem; }
+.result.part { flex-direction: column; align-items: flex-start; justify-content: center; gap: 1px; padding-block: 9px; }
+.result.part > * { max-width: 100%; min-width: 0; overflow-wrap: anywhere; }
+.result.part .nm { flex: none; white-space: normal; overflow: visible; font-weight: 600; }
+.result.part .sub { color: var(--green); font-size: 0.875rem; }
+.result.part .meta { flex: none; }
+.result.more { min-height: 44px; color: var(--green); font-weight: 600; overflow-wrap: anywhere; }
 .search-body .chips { padding: 0 var(--gutter); margin: 4px 0 0; }
 
 main { padding-block: 1.5rem 4rem; }
