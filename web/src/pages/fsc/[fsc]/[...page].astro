@@ -16,7 +16,8 @@ import { buildCompetitionRows, buildRepeat, buildStateMap, buildWeekly, buildWin
 import { pageCount, pageItems, pageNumbers, pageParam, pageRange, pageUrl, rangeLabel, pagedDescriptionPrefix, pagedTitle } from '../../../lib/paginate';
 import { memo, release } from '../../../lib/paged-cache';
 import { fscDescription, fscTitle } from '../../../lib/seo-copy';
-import { actionsByFiscalYear, contractActionsFyPath, contractActionsPath, usaspendingActionsByFsc } from '../../../lib/csv-tables';
+import { contractActionsFyPath, contractActionsPath } from '../../../lib/csv-tables';
+import { hasUsaspendingActions, pulseAwardRows, usaspendingFiscalYears } from '../../../lib/class-actions';
 import { fscEmbedPath } from '../../../lib/embed';
 import { familyCounts } from '../../../lib/material-family';
 import { withoutDuplicatedPricePoints } from '../../../lib/award-dedupe';
@@ -50,15 +51,16 @@ const materialFamilies = familyCounts(allCards.map((c) => c.material));
 
 // Category-level actions: real purchase records in this FSC whose public
 // description didn't identify a specific part.
-const fscActions = [...(data.contractActionsByFsc.get(fsc.fsc) ?? [])].sort((a, b) =>
-  (b.actionDate ?? '').localeCompare(a.actionDate ?? '')
-);
-const fscActionsObligated = fscActions.reduce((sum, a) => sum + (a.obligation ?? 0), 0);
-const recentActions = fscActions.slice(0, 25);
+// Counts, the obligation sum, the newest rows and the CSV years come from the per-class
+// SQL summary (lib/class-actions.ts); the page never holds every row.
+const actionSummary = data.contractActionSummaryByFsc.get(fsc.fsc);
+const fscActionCount = actionSummary?.count ?? 0;
+const fscActionsObligated = actionSummary?.obligated ?? 0;
+const recentActions = actionSummary?.recent ?? [];
 // The CSV holds this class's USAspending records only, and exists only when there are some.
-const hasActionsCsv = usaspendingActionsByFsc(data).has(fsc.fsc);
+const hasActionsCsv = hasUsaspendingActions(actionSummary);
 
-const totalPurchases = allCards.reduce((sum, c) => sum + c.purchaseRecords, 0) + fscActions.length;
+const totalPurchases = allCards.reduce((sum, c) => sum + c.purchaseRecords, 0) + fscActionCount;
 const totalDollars = allCards.reduce((sum, c) => sum + c.totalDemand, 0) + fscActionsObligated;
 
 const departmentName = fsgName(fsc.fsg);
@@ -86,8 +88,8 @@ const pulse = (() => {
       awards.push({ date: c.actionDate, amount: c.obligation ?? 0, supplierKey: supplierKey(c.recipientUei, c.recipientName) });
     }
   }
-  for (const c of fscActions) {
-    awards.push({ date: c.actionDate, amount: c.obligation ?? 0, supplierKey: supplierKey(c.recipientUei, c.recipientName) });
+  for (const c of pulseAwardRows(actionSummary)) {
+    awards.push({ date: c.date, amount: c.amount, supplierKey: supplierKey(c.recipientUei, c.recipientName) });
   }
   return buildClassPulse(data.viz.today, data.openByFsc.get(fsc.fsc)?.solicitations ?? [], awards);
 })();
@@ -462,20 +464,20 @@ const breadcrumbSchema = {
   <section id="awards">
     <h2 class="section-title">Contract awards in this category</h2>
     <p class="gloss">
-      {fscActions.length.toLocaleString('en-US')} award {fscActions.length === 1 ? 'record' : 'records'} totaling{' '}
+      {fscActionCount.toLocaleString('en-US')} award {fscActionCount === 1 ? 'record' : 'records'} totaling{' '}
       {formatUsd(fscActionsObligated)} where the public description doesn't identify a specific
       part. Newest first; every row links to its official USAspending record.
     </p>
     {hasActionsCsv && (
       <ul class="chips wrap-wide" aria-label="Free downloads">
         <li><a class="chip outline" href={contractActionsPath(fsc.fsc)} download>Download CSV, last 12 months</a></li>
-        {[...actionsByFiscalYear(usaspendingActionsByFsc(data).get(fsc.fsc) ?? []).keys()].slice(0, 8).map((fy) => (
+        {usaspendingFiscalYears(actionSummary).slice(0, 8).map((fy) => (
           <li><a class="chip outline" href={contractActionsFyPath(fsc.fsc, fy)} download>FY{fy}</a></li>
         ))}
         <li class="gloss" style="align-self:center; margin:0;">USAspending records only; one file per fiscal year.</li>
       </ul>
     )}
-    {fscActions.length === 0 ? (
+    {fscActionCount === 0 ? (
       <p class="gloss">No category-level awards indexed yet.</p>
     ) : (
       <details>
@@ -510,10 +512,10 @@ const breadcrumbSchema = {
           </tbody>
         </table>
       </div>
-        {fscActions.length > recentActions.length && (
+        {fscActionCount > recentActions.length && (
           <p class="gloss">
             Showing the {recentActions.length} most recent of{' '}
-            {fscActions.length.toLocaleString('en-US')} records. Per-part pages list every record
+            {fscActionCount.toLocaleString('en-US')} records. Per-part pages list every record
             tied to that NSN.
           </p>
         )}

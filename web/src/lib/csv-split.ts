@@ -18,6 +18,11 @@ export function csvFiscalYear(isoDate: string | null): number | null {
   return m >= 10 ? y + 1 : y;
 }
 
+/** The 12-month file keeps rows dated strictly after this ISO date (365 days before `today`). */
+export function latestYearFloor(today: string = new Date().toISOString().slice(0, 10)): string {
+  return new Date(Date.parse(`${today.slice(0, 10)}T00:00:00Z`) - 365 * 86_400_000).toISOString().slice(0, 10);
+}
+
 /**
  * Rows from the 365 days up to `today` (input newest first), capped at CSV_MAX_ROWS.
  * Anchored on the build date, not the newest row: USAspending carries a few
@@ -27,7 +32,7 @@ export function latestYearActions<T extends { actionDate: string | null }>(
   actions: T[],
   today: string = new Date().toISOString().slice(0, 10),
 ): T[] {
-  const floor = new Date(Date.parse(`${today.slice(0, 10)}T00:00:00Z`) - 365 * 86_400_000).toISOString().slice(0, 10);
+  const floor = latestYearFloor(today);
   return actions.filter((a) => a.actionDate !== null && a.actionDate.slice(0, 10) > floor).slice(0, CSV_MAX_ROWS);
 }
 
