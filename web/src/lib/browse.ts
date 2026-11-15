@@ -2,6 +2,7 @@
 // (catalog -> department -> category -> product). Pure functions over the
 // already-loaded SiteData; no I/O here.
 
+import { withoutDuplicatedPricePoints } from './award-dedupe';
 import { materialFamily, type MaterialFamily } from './material-family';
 import {
   competitionOf,
@@ -233,8 +234,9 @@ function computeDemandStats(
   data: SiteData,
   nsn: string
 ): { lastPurchased: string | null; purchaseRecords: number; perYear: number; totalDemand: number } {
-  const rawPoints = data.pricePointsByNsn.get(nsn) ?? [];
   const contractActions = data.contractActionsByNsn.get(nsn) ?? [];
+  // A DIBBS award that produced a price point is also a DIBBS contract action: count it once.
+  const rawPoints = withoutDuplicatedPricePoints(data.pricePointsByNsn.get(nsn) ?? [], (n) => data.contractActionsByNsn.get(n) ?? []);
 
   const allDates = [
     ...rawPoints.map((p) => p.awardedOn),

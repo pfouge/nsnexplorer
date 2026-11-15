@@ -171,7 +171,7 @@ const buildDate = now.toLocaleDateString('en-US', { year: 'numeric', month: 'lon
       <section id="closing">
         <h2 class="section-title">Closing soon</h2>
         <p class="gloss">
-          The {closingSoon.length} open solicitations closing soonest, across every category —
+          The <span id="hc-closing-count">{closingSoon.length}</span> open solicitations closing soonest, across every category —
           every row links to its official DIBBS record.
         </p>
         <div class="table-wrap">
@@ -190,7 +190,7 @@ const buildDate = now.toLocaleDateString('en-US', { year: 'numeric', month: 'lon
               {closingSoon.map((s) => {
                 const label = closesLabel(daysUntil(s.returnBy));
                 return (
-                  <tr>
+                  <tr data-fsc={s.fsc ?? undefined}>
                     <td class="mono">
                       {solicitationPath(s.solNumber) ? <a href={solicitationPath(s.solNumber)!}>{s.solNumber}</a> : '—'}
                     </td>
@@ -238,28 +238,49 @@ const buildDate = now.toLocaleDateString('en-US', { year: 'numeric', month: 'lon
         {departments.length > 1 && (
           <div class="chips wrap-wide" aria-label="Jump to a supply group">
             {departments.map((dept) => (
-              <a class="chip" href={`#g-${dept.fsg}`}>
+              <a class="chip" href={`#g-${dept.fsg}`} data-fscs={dept.fscs.map((f) => f.fsc).join(' ')}>
                 {dept.name}
                 <span class="n">{fmtInt(dept.fscs.reduce((n, f) => n + (data.openByFsc.get(f.fsc)?.solicitations.length ?? 0), 0))}</span>
               </a>
             ))}
           </div>
         )}
+        {departments.length > 0 && (
+          <div class="hc-wrap">
+            <p class="gloss hc-bar" id="hc-bar">
+              <span id="hc-intro">Hide supply classes you don't sell.</span>
+              <span id="hc-status" hidden>
+                <span id="hc-count">0 classes hidden</span> ·
+                <button type="button" class="hc-link" id="hc-showall">Show all</button> ·
+                <button type="button" class="hc-link" id="hc-manage-btn" aria-expanded="false" aria-controls="hc-manage">Manage</button> ·
+              </span>
+              <button type="button" class="btn btn-ghost hc-choose" id="hc-choose" aria-pressed="false">Choose classes</button>
+              <span class="hc-note" id="hc-note" hidden>Counts above and on the group chips include hidden classes.</span>
+            </p>
+            <div id="hc-manage" class="hc-manage" hidden>
+              <ul id="hc-list"></ul>
+            </div>
+          </div>
+        )}
         {departments.length === 0 ? (
           <p class="gloss">No categories have open demand indexed yet.</p>
         ) : (
           departments.map((dept) => (
-            <div class="dept-block" id={`g-${dept.fsg}`}>
+            <div class="dept-block" id={`g-${dept.fsg}`} data-fscs={dept.fscs.map((f) => f.fsc).join(' ')}>
               <h3>{dept.name} <span class="tag">FSG {dept.fsg}</span></h3>
               <div class="dept-grid">
                 {dept.fscs.map((fsc) => {
                   const count = data.openByFsc.get(fsc.fsc)?.solicitations.length ?? 0;
+                  const cls = fscDisplayName(fsc.fsc, fsc.name);
                   return (
-                    <a class="dept-card card" href={`/open/${fsc.fsc}/`}>
-                      <div class="dept-code mono">FSC {fsc.fsc}</div>
-                      <h3>{fscDisplayName(fsc.fsc, fsc.name)}</h3>
-                      <p>{fmtInt(count)} open {count === 1 ? 'solicitation' : 'solicitations'}</p>
-                    </a>
+                    <div class="dept-item" data-fsc={fsc.fsc} data-fsc-name={cls}>
+                      <a class="dept-card card" href={`/open/${fsc.fsc}/`}>
+                        <div class="dept-code mono">FSC {fsc.fsc}</div>
+                        <h3>{cls}</h3>
+                        <p>{fmtInt(count)} open {count === 1 ? 'solicitation' : 'solicitations'}</p>
+                      </a>
+                      <button type="button" class="btn btn-ghost hc-hide" hidden data-hide={fsc.fsc} aria-label={`Hide class ${fsc.fsc} ${cls}`}>Hide</button>
+                    </div>
                   );
                 })}
               </div>
@@ -293,3 +314,24 @@ const buildDate = now.toLocaleDateString('en-US', { year: 'numeric', month: 'lon
 
   <CiteThis title={h1} url={canonicalUrl} asOf={data.viz.today} />
 </BaseLayout>
+
+<style is:global>
+  /* Hide-a-class controls: Hide buttons exist only in edit mode ("Choose classes"); the extra bottom padding is added only then. */
+  .dept-item { position: relative; }
+  .dept-item .dept-card.card { height: 100%; box-sizing: border-box; }
+  #categories[data-hc-edit] .dept-item .dept-card.card { padding-bottom: 3.1rem; }
+  .hc-choose { min-height: 32px; padding: 0.2rem 0.7rem; font-size: 0.8125rem; margin-left: 0.25rem; }
+  .dept-item .hc-hide { position: absolute; right: 0.6rem; bottom: 0.5rem; min-height: 32px; padding: 0.2rem 0.7rem; font-size: 0.8125rem; }
+  .hc-bar { margin: 0.5rem 0; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 0.4rem; }
+  .hc-bar .hc-note { display: block; font-size: 0.8125rem; }
+  .hc-link { font: inherit; color: var(--ink); background: none; border: 0; padding: 4px 2px; text-decoration: underline; cursor: pointer; }
+  .hc-manage ul { list-style: none; margin: 0 0 0.75rem; padding: 0; display: grid; gap: 6px; }
+  .hc-manage li { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; min-width: 0; }
+  .hc-manage li span { min-width: 0; overflow-wrap: anywhere; }
+  .hc-manage li .btn { min-height: 32px; padding: 0.2rem 0.7rem; font-size: 0.8125rem; flex: none; }
+  @media (max-width: 640px) { .dept-item .hc-hide { right: var(--gutter); } }
+</style>
+
+<script>
+  import '../scripts/hidden-classes';
+</script>
