@@ -4,6 +4,9 @@ import { adjustForTime, compare, parseMoney, parsePercent, quote, wholeMonths } 
 import { formatDate, formatUsdPrecise } from '../lib/shared';
 
 const usd = (n: number | null): string => (n === null ? '—' : formatUsdPrecise(n));
+// The visitor's own figures are money they would quote or bank: always cents, never the 4-decimal record precision.
+const cents = (n: number | null): string =>
+  n === null ? '—' : `${n < 0 ? '-' : ''}$${Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const pct = (n: number | null): string => (n === null ? '—' : `${(Math.round(n * 10) / 10).toLocaleString('en-US')}%`);
 const todayIso = (): string => {
   const d = new Date();
@@ -51,11 +54,11 @@ function init(root: HTMLElement): void {
       quantity: parseMoney(qty.value),
       otherCostPerOrder: other && other.value.trim() !== '' ? parseMoney(other.value) ?? NaN : 0,
     });
-    set('price', usd(q.unitPrice));
+    set('price', cents(q.unitPrice));
     set('margin', pct(q.marginPct));
-    set('profitUnit', usd(q.profitPerUnit));
-    set('total', usd(q.total));
-    set('profitTotal', usd(q.profitTotal));
+    set('profitUnit', cents(q.profitPerUnit));
+    set('total', cents(q.total));
+    set('profitTotal', cents(q.profitTotal));
 
     if (!summary) return;
     const c = compare(q.unitPrice, summary);
@@ -83,7 +86,7 @@ function init(root: HTMLElement): void {
     } else {
       const adj = adjustForTime(summary.latest, on, todayIso(), annual);
       const months = wholeMonths(on, todayIso());
-      line('carried', adj === null ? null : `Last price carried forward at ${pct(annual)} a year: ${usd(adj)} (${months} whole month${months === 1 ? '' : 's'} since ${formatDate(on)}).`);
+      line('carried', adj === null ? null : `Last price carried forward at ${pct(annual)} a year: ${cents(adj)} (${months} whole month${months === 1 ? '' : 's'} since ${formatDate(on)}).`);
     }
   };
 
