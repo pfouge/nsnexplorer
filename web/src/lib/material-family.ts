@@ -9,6 +9,7 @@ export type MaterialFamily =
   | 'titanium'
   | 'nickel'
   | 'copper'
+  | 'metal'
   | 'rubber'
   | 'plastic'
   | 'composite'
@@ -23,6 +24,7 @@ export const MATERIAL_FAMILY_LABEL: Record<MaterialFamily, string> = {
   titanium: 'Titanium',
   nickel: 'Nickel alloys',
   copper: 'Copper, brass, bronze',
+  metal: 'Zinc, magnesium, other metals',
   rubber: 'Rubber and elastomers',
   plastic: 'Plastics',
   composite: 'Glass, carbon, composite',
@@ -39,6 +41,7 @@ const RULES: [MaterialFamily, RegExp][] = [
   ['titanium', /TITANIUM/],
   ['nickel', /NICKEL|INCONEL|MONEL/],
   ['copper', /COPPER|BRASS|BRONZE/],
+  ['metal', /ZINC|MAGNESIUM|\bLEAD\b|\bTIN\b|TUNGSTEN|CADMIUM|BERYLLIUM|\bSILVER\b|\bGOLD\b|\bMETAL\b/],
   ['rubber', /RUBBER|ELASTOMER|SILICONE|NEOPRENE|NITRILE|BUNA|VITON|EPDM|FLUOROSILICONE/],
   ['plastic', /PLASTIC|NYLON|POLY|PTFE|TEFLON|ACETAL|PHENOLIC|VINYL|ACRYLIC|FLUOROCARBON/],
   ['composite', /FIBERGLASS|GLASS|CARBON|COMPOSITE|GRAPHITE|CERAMIC/],
@@ -46,10 +49,16 @@ const RULES: [MaterialFamily, RegExp][] = [
   ['wood', /WOOD|PAPER|CORK|FIBERBOARD/],
 ];
 
+const NOT_A_MATERIAL =
+  /^(INCHES|MILLIMETERS|DUROMETER|DEGREES|POUNDS)\b|\b(NOMINAL|MINIMUM|MAXIMUM)\b|SINGLE MATERIAL RESPONSE|\b(FED|MIL|ASSN) (SPEC|STD)\b|^MFR REF\b/;
+
 export function materialFamily(raw: string | null | undefined): MaterialFamily | null {
   const s = (raw ?? '').trim().toUpperCase();
   if (s === '') return null;
   for (const [family, re] of RULES) if (re.test(s)) return family;
+  // Some FLIS "material" replies are a thickness, a hardness or a bare specification reference.
+  // They name no material, so they get no family and are left out of the counts.
+  if (NOT_A_MATERIAL.test(s)) return null;
   return 'other';
 }
 

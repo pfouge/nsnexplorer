@@ -46,3 +46,14 @@ test('counts sort by count then label, other last, zeros omitted', () => {
   assert.equal(out[0].label, MATERIAL_FAMILY_LABEL.steel);
   assert.deepEqual(familyCounts([null, '']), []);
 });
+
+test('measurements and bare specification references are not materials', () => {
+  assert.equal(materialFamily('INCHES  NOMINAL  0.032'), null);
+  assert.equal(materialFamily('INCHES  MINIMUM  0.029 AND INCHES  MAXIMUM  0.035'), null);
+  assert.equal(materialFamily('FED SPEC  SINGLE MATERIAL RESPONSE  QQ-A-250 TO 2'), null);
+  assert.equal(materialFamily('MFR REF  SINGLE MATERIAL RESPONSE  CAGE 25205'), null);
+  // A named material still wins when a specification follows it.
+  assert.equal(materialFamily('STEEL COMP 4340 FED SPEC QQ-S-624'), 'steel');
+  assert.equal(materialFamily('ANODE  ZINC'), 'metal');
+  assert.equal(materialFamily('MICA'), 'other');
+});
