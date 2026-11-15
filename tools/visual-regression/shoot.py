@@ -317,6 +317,9 @@ with sync_playwright() as p:
                 with page.expect_response(lambda x: x.url.endswith('/api/signup'), timeout=15000) as ri:
                     page.click('.signup-form button[type=submit]')
                 r['signup_status'] = ri.value.status; r['signup_body'] = ri.value.text()[:160]
+            for label, payload in (('bad_email', {'email': 'nope', 'hook': 'shop_alerts'}), ('valid_json', {'email': 'harness-json-' + BASE.split(':')[-1] + '@example.invalid', 'hook': 'shop_alerts'})):
+                resp = page.request.post(BASE + '/api/signup', data=payload, headers={'content-type': 'application/json', 'accept': 'application/json'})
+                r['signup_api_' + label] = [resp.status, resp.text()[:120]]
             page.close()
             page = open_page(ctx, '/compare/')
             page.fill('input[name=nsn1]', (NSNPAGE or '').split('/')[-2] if NSNPAGE.startswith('/nsn/') else '')
