@@ -7,11 +7,11 @@ import sys, os, re, difflib
 A, B = sys.argv[1], sys.argv[2]
 def norm(t):
     t = re.sub(r'/_astro/[^"\' )]+', '/_astro/X', t)
-    t = re.sub(r'<script>\{?const CONSENT_REGIONS.*?</script>', '', t, flags=re.S)
-    t = re.sub(r'<script[^>]*>[^<]*gtag\(.consent.[^<]*</script>', '', t, flags=re.S)
+    t = re.sub(r'<!--.*?-->', '', t, flags=re.S)
+    t = re.sub(r'<script>(?:(?!</script>).)*gtag\((?:(?!</script>).)*</script>', '', t, flags=re.S)  # consent defaults + GA loader (both edited)
     t = t.replace('<a href="/contact/">Contact</a>', '').replace(' autocomplete="email"', '')
     t = re.sub(r'<meta property="og:[^>]*>|<meta name="twitter:[^>]*>', lambda m: m.group(0), t)
-    return t
+    return re.sub(r'\s+', ' ', re.sub(r'>\s+<', '><', t))
 files = []
 for root, _, fs in os.walk(A):
     for f in fs:

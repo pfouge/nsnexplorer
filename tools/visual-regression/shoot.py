@@ -122,7 +122,7 @@ def click_if_visible(sel):
 
 report = {}
 with sync_playwright() as p:
-    b = p.chromium.launch()
+    b = p.chromium.launch(args=['--disable-gpu', '--disable-lcd-text', '--font-render-hinting=none', '--force-color-profile=srgb'])
 
     if 'shots' in PASSES:
         for (w, h) in WIDTHS:

@@ -49,6 +49,9 @@ for f in sorted(os.listdir(A)):
         if fn and bbox[0] >= fn[0] - 4 and bbox[2] <= fn[0] + fn[2] + 4 and bbox[1] >= fn[1] - 4 and bbox[3] <= fn[1] + fn[3] + 4:
             inside = True
     rows.append((f, 'DIFF-footer-links-only' if inside else 'DIFF', n, bbox)); fail += 1
+    if n < 50 and not inside:  # tiny differences: show the changed pixels so the cause can be read from the log
+        ys2, xs2 = np.where(d > 8)
+        print('   changed pixels of', f, [(int(x), int(y), tuple(int(v) for v in np.asarray(a)[y, x]), tuple(int(v) for v in np.asarray(b)[y, x])) for y, x in list(zip(ys2, xs2))[:6]])
     if inside:
         explained += 1
     # Bands of changed rows (gap > 40px starts a new band) with their x extent, for explaining each region.
