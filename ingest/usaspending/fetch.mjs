@@ -17,12 +17,14 @@ import { writeFile } from 'node:fs/promises';
 
 const API_URL = 'https://api.usaspending.gov/api/v2/search/spending_by_award/';
 const PAGE_LIMIT = 100;
-// The API closes the connection when pages are requested back to back for long
-// (seen 2026-11-15 once the loader stopped being the slow step), so retry longer
-// (2, 4, 8, 16, 32 s) and pause briefly between pages.
-const MAX_RETRIES = 6;
-const RETRY_BASE_MS = 2000;
-const PAGE_PAUSE_MS = 400;
+// The API throttles a caller that asks for pages back to back: first it closes
+// the connection, then it stops answering for a while (ETIMEDOUT, seen
+// 2026-11-15 once the loader stopped being the slow step). So pause between
+// pages and back off for minutes, not seconds: 5, 10, 20, 40, 80, 160, 300 s.
+const MAX_RETRIES = 8;
+const RETRY_BASE_MS = 5000;
+const RETRY_MAX_MS = 300000;
+const PAGE_PAUSE_MS = 1500;
 
 const FIELDS = [
   'Award ID',
@@ -93,7 +95,7 @@ async function postPage(body) {
     } catch (err) {
       lastErr = err;
       if (attempt < MAX_RETRIES) {
-        await sleep(RETRY_BASE_MS * 2 ** (attempt - 1));
+        await sleep(Math.min(RETRY_MAX_MS, RETRY_BASE_MS * 2 ** (attempt - 1)));
         continue;
       }
       throw err;
@@ -102,7 +104,7 @@ async function postPage(body) {
     if (res.status === 429 || res.status >= 500) {
       lastErr = new Error(`usaspending: HTTP ${res.status} on attempt ${attempt}`);
       if (attempt < MAX_RETRIES) {
-        await sleep(RETRY_BASE_MS * 2 ** (attempt - 1));
+        await sleep(Math.min(RETRY_MAX_MS, RETRY_BASE_MS * 2 ** (attempt - 1)));
         continue;
       }
       throw lastErr;
@@ -121,7 +123,7 @@ async function postPage(body) {
       // The body can be cut off mid-response; treat it like a failed request.
       lastErr = err;
       if (attempt < MAX_RETRIES) {
-        await sleep(RETRY_BASE_MS * 2 ** (attempt - 1));
+        await sleep(Math.min(RETRY_MAX_MS, RETRY_BASE_MS * 2 ** (attempt - 1)));
         continue;
       }
       throw err;
