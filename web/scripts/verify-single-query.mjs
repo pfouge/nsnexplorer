@@ -20,6 +20,11 @@
 // for leaked contact data, and the whole page must still cost exactly one round-trip. With --seed the clone
 // gets migration 0011 (when missing) and web/scripts/supplier-seed.sql on top of the edge-case seed.
 //
+// The NSN loader also returns the FLIS catalog record added by migration 0014 (`flis`: identification codes with
+// labels, colloquial names, related items, replaced stock numbers, MOE rules). Old-vs-new compares only the keys
+// the old loader returned; `flis` is checked against independent naive queries (checkNsnFlis). With --seed the
+// clone gets migration 0014 (when missing) and web/scripts/flis-seed.sql.
+//
 // What it checks, per sampled input, for each loader:
 //   1. OLD loader (copied verbatim below from the pre-change code) vs NEW loader
 //      (bundled straight from web/src/lib): assert.deepStrictEqual (types included:
@@ -69,7 +74,9 @@ await build({
       export { loadSolicitationPage } from './solicitation-page.ts';
       export { searchSupplierRows } from './supplier-search.ts';
       export { NSN_WITH_AMSC_SELECT, mapNsnRow, assertSourceUrl, slugify } from './shared.ts';
-      export { isSolNumber, parseSupplierQuery } from './entity.ts';`,
+      export { isSolNumber, parseSupplierQuery } from './entity.ts';
+      export { humanizeLabel, moeKind } from './flis-codes.ts';
+      export { nomen } from './seo-copy.ts';`,
     resolveDir: libDir,
     loader: 'ts',
   },
@@ -428,6 +435,140 @@ async function oldSearchSupplierRows(sql, query) {
 }
 
 
+// ------------------------------------------------ NSN FLIS record: independent checks
+/**
+ * Checks page.flis (loadNsnPage) against naive queries on a direct connection: one query per fact, labels looked
+ * up one code at a time, no jsonb and no joins. `seen` collects which cases were exercised.
+ */
+async function checkNsnFlis(db, nsn, page, seen) {
+  const id = nsn;
+  const flis = page.flis;
+  const eq = (label, actual, expected) => {
+    results.checks++;
+    try {
+      assert.deepStrictEqual(actual, expected);
+    } catch (e) {
+      fail('loadNsnPage flis', id, `${label}: ${String(e.message).split('\n').slice(0, 14).join('\n')}`);
+    }
+  };
+  const q = (text, params = [nsn]) => db.unsafe(text, params);
+  const lit = async (code) => (await q(`select literal from pub.flis_codes where code = $1`, [code]))[0]?.literal ?? null;
+  const lab = async (field, value) => (value === null || value === undefined ? null : N.humanizeLabel(await lit(`${field}:${value}`)));
+  const t = (v) => (typeof v === 'string' && v.trim() !== '' ? v.trim() : null);
+  const [nrow] = await q(`select niin from pub.nsns where nsn = $1`);
+
+  // ---- identification
+  const [ni] = await q(`select * from pub.nsn_identification where nsn = $1`);
+  if (!ni) {
+    eq('identification absent', flis.identification, null);
+  } else {
+    seen.ident++;
+    const i = flis.identification;
+    eq('identification scalars', [i.inc, i.critCd, i.demil, i.demilIntCd, i.niinAssigned, i.pmic, i.adp, i.hmic, i.esdEmi, i.hcc, i.scheduleB, i.enac, i.iuidIndicator, i.lastKnownSos, i.sourceFileDate],
+      [t(ni.inc), t(ni.crit_cd), t(ni.demil), t(ni.demil_int_cd), isoD(ni.niin_assigned), t(ni.pmic), t(ni.adp), t(ni.hmic), t(ni.esd_emi), t(ni.hcc), t(ni.schedule_b), t(ni.enac), t(ni.iuid_indicator), t(ni.last_known_sos), isoD(ni.source_file_date)]);
+    eq('identification labels', [i.pmicLabel, i.hmicLabel, i.hccLabel, i.enacLabel, i.iuidLabel, i.lastKnownSosLabel],
+      [await lab('PMIC', ni.pmic), await lab('HMIC', ni.hmic), await lab('HCC', ni.hcc), await lab('ENAC', ni.enac), await lab('IUID_INDICATOR', ni.iuid_indicator), await lab('LST_KWN_SOS', ni.last_known_sos)]);
+    const sbRaw = ni.schedule_b ? (await q(`select description from pub.flis_codes where code = $1`, ['SCHEDULE_B:' + ni.schedule_b]))[0]?.description ?? null : null;
+    eq('schedule B text presence', i.scheduleBText !== null, t(sbRaw) !== null);
+    const wantFields = [];
+    for (const [col, field] of [['niin_assigned', 'NIIN_ASGMT'], ['hmic', 'HMIC'], ['pmic', 'PMIC'], ['schedule_b', 'SCHEDULE_B'], ['hcc', 'HCC'], ['enac', 'ENAC'], ['iuid_indicator', 'IUID_INDICATOR'], ['last_known_sos', 'LST_KWN_SOS']]) {
+      if (ni[col] !== null && ni[col] !== undefined) wantFields.push(field);
+    }
+    const haveRows = (await q(`select code from pub.flis_codes where code = any(string_to_array($1, ',')) order by code`, [wantFields.join(',')])).map((r) => r.code);
+    eq('field definitions present', i.fieldDefinitions.map((d) => d.field), haveRows);
+    let unlabeled = false;
+    for (const [field, v] of [['PMIC', ni.pmic], ['HMIC', ni.hmic], ['HCC', ni.hcc], ['ENAC', ni.enac]]) if (t(v) && (await lit(`${field}:${t(v)}`)) === null) unlabeled = true;
+    if (unlabeled) seen.identUnlabeled++;
+  }
+
+  // ---- colloquial names (up to 8, humanized, de-duplicated)
+  const incRow = ni ? t(ni.inc) : null;
+  const allNames = incRow ? (await q(`select colloquial_name from pub.inc_colloquial_names where inc = $1 order by colloquial_name limit 8`, [incRow])).map((r) => t(r.colloquial_name)).filter(Boolean).map((n) => N.nomen(n)) : [];
+  const wantNames = [];
+  for (const n of allNames) if (!wantNames.some((w) => w.toLowerCase() === n.toLowerCase())) wantNames.push(n);
+  eq('colloquial names', flis.colloquialNames, wantNames);
+  if (wantNames.length > 0) seen.colloquial++;
+  if (incRow && Number((await q(`select count(*) c from pub.inc_colloquial_names where inc = $1`, [incRow]))[0].c) > 8) seen.colloquialCapped++;
+
+  // ---- related items
+  const rel = await q(`select related_nsn, isc, orig_stdzn_dec, stdzn_date from pub.nsn_standardization where nsn = $1 and related_nsn <> '' order by related_nsn limit 50`);
+  const relTotal = Number((await q(`select count(*) c from pub.nsn_standardization where nsn = $1 and related_nsn <> ''`))[0].c);
+  eq('related count', [flis.related.length, flis.relatedTotal], [rel.length, rel.length > 0 ? relTotal : 0]);
+  const wantRel = [];
+  for (const r of rel) {
+    const is13 = /^\d{13}$/.test(r.related_nsn);
+    const hasPage = is13 && (await q(`select 1 from pub.nsns where nsn = $1`, [r.related_nsn])).length > 0;
+    if (hasPage) seen.relatedWithPage++;
+    else seen.relatedNoPage++;
+    wantRel.push({
+      relatedNsn: is13 ? `${r.related_nsn.slice(0, 4)}-${r.related_nsn.slice(4, 6)}-${r.related_nsn.slice(6, 9)}-${r.related_nsn.slice(9)}` : r.related_nsn,
+      hasPage,
+      isc: t(r.isc),
+      iscLabel: await lab('ISC', t(r.isc)),
+      decisionBy: await lab('ORIG_STDZN_DEC', t(r.orig_stdzn_dec)),
+      date: isoD(r.stdzn_date),
+    });
+  }
+  eq('related rows', flis.related, wantRel);
+  if (rel.length > 0) seen.related++;
+  if (relTotal > 50) seen.relatedCapped++;
+
+  // ---- cancellations: this item's own NIIN only, newest first, capped at 25
+  const can = await q(`select cancelled_niin_fsc, cancelled_niin, niin_stat_cd, eff_date from pub.nsn_cancellations where nsn = $1 and niin = $2 order by eff_date desc nulls last, cancelled_niin limit 25`, [nsn, nrow.niin]);
+  const canTotal = Number((await q(`select count(*) c from pub.nsn_cancellations where nsn = $1 and niin = $2`, [nsn, nrow.niin]))[0].c);
+  eq('cancellation count', [flis.cancellations.length, flis.cancellationsTotal], [can.length, can.length > 0 ? canTotal : 0]);
+  const wantCan = [];
+  for (const c of can) {
+    const fsc = t(c.cancelled_niin_fsc);
+    const n9 = c.cancelled_niin.trim();
+    wantCan.push({
+      cancelledNsn: fsc && /^\d{4}$/.test(fsc) ? `${fsc}-${n9.slice(0, 2)}-${n9.slice(2, 5)}-${n9.slice(5)}` : `${n9.slice(0, 2)}-${n9.slice(2, 5)}-${n9.slice(5)}`,
+      statusCode: t(c.niin_stat_cd),
+      statusLabel: await lab('NIIN_STAT_CD', t(c.niin_stat_cd)),
+      effectiveDate: isoD(c.eff_date),
+    });
+  }
+  eq('cancellation rows', flis.cancellations, wantCan);
+  for (let k = 1; k < can.length; k++) if (can[k].eff_date && can[k - 1].eff_date && String(can[k].eff_date) === String(can[k - 1].eff_date)) { seen.cancelTies++; break; }
+  if (can.length > 0) seen.cancel++;
+  if (canTotal > 25) seen.cancelCapped++;
+  if (Number((await q(`select count(*) c from pub.nsn_cancellations where nsn = $1 and niin <> $2`, [nsn, nrow.niin]))[0].c) > 0) seen.cancelForeignSide++;
+
+  // ---- MOE rules: every row, labels looked up one at a time, kind decided by the same rule
+  const moe = await q(`select * from pub.moe_rules where nsn = $1 order by moe_cd, moe_rl`);
+  const wantMoe = [];
+  for (const r of moe) {
+    wantMoe.push({
+      rule: r.moe_rl,
+      moeCode: t(r.moe_cd),
+      moeLabel: await lab('MOE_CD', t(r.moe_cd)),
+      kind: N.moeKind(t(r.moe_cd)),
+      amc: t(r.amc),
+      amcLabel: await lab('AMC', t(r.amc)),
+      amsc: t(r.amsc),
+      amscLabel: await lab('AMSC', t(r.amsc)),
+      aac: t(r.aac),
+      aacLabel: await lab('AAC', t(r.aac)),
+      imc: t(r.imc),
+      imcLabel: await lab('IMC', t(r.imc)),
+      pica: t(r.pica),
+      picaLabel: await lab('PICA', t(r.pica)),
+      sica: t(r.sica),
+      sicaLabel: await lab('SICA', t(r.sica)),
+      nimsc: t(r.nimsc),
+      assignedOn: isoD(r.assigned_on),
+    });
+  }
+  eq('moe rules', flis.moeRules, wantMoe);
+  if (moe.length > 0) {
+    seen.moe++;
+    if (wantMoe.some((r) => r.kind === 'us')) seen.moeUs++;
+    if (wantMoe.some((r) => r.kind === 'foreign')) seen.moeForeign++;
+    if (wantMoe.some((r) => r.kind === 'other')) seen.moeOther++;
+  }
+  if (!ni && rel.length === 0 && can.length === 0 && moe.length === 0) seen.none++;
+}
+
 // ------------------------------------------- supplier profile: independent checks
 const isoD = (v) => (v === null || v === undefined ? null : new Date(v).toISOString().slice(0, 10));
 const cl = (v) => (typeof v === 'string' && v.trim() !== '' ? v.trim() : null);
@@ -750,6 +891,11 @@ async function main() {
       psql(dbUrl, ['-1', '-f', path.join(here, '../../db/migrations/0011_supplier_profiles.sql')]);
     }
     psql(dbUrl, ['-1', '-f', path.join(here, 'supplier-seed.sql')]);
+    // FLIS tables (migration 0014) and their seed rows.
+    if (psql(dbUrl, ['-At', '-c', `select to_regclass('pub.nsn_identification') is not null`]).trim() !== 't') {
+      psql(dbUrl, ['-1', '-f', path.join(here, '../../db/migrations/0014_flis_identification.sql')]);
+    }
+    psql(dbUrl, ['-1', '-f', path.join(here, 'flis-seed.sql')]);
     if (opt('--tz')) psql(adminUrl, ['-c', `ALTER DATABASE ${cloneName} SET timezone = '${opt('--tz').replace(/'/g, '')}'`]);
     console.log(`seeded clone ${cloneName}`);
   }
@@ -782,6 +928,15 @@ async function main() {
       await pick('seed-only FSCs (7310-7340)', "n.fsc in ('7310','7320','7330','7340')", 40),
       await pick('excluded FSC', "n.fsc in (select fsc from pub.fsc where render_depth = 'excluded')", 10),
       await pick('null characteristics / hazmat / item', 'n.characteristics is null or n.hazmat is null or n.item_name is null', 15),
+      await pick('with FLIS identification', 'exists (select 1 from pub.nsn_identification x where x.nsn = n.nsn)', 40),
+      await pick('with MOE rules', 'exists (select 1 from pub.moe_rules x where x.nsn = n.nsn)', 40),
+      await pick('with many MOE rules', '(select count(*) from pub.moe_rules x where x.nsn = n.nsn) >= 15', 10),
+      await pick('with cancellations', "exists (select 1 from pub.nsn_cancellations x where x.nsn = n.nsn)", 20),
+      await pick('with 26+ cancellations', "(select count(*) from pub.nsn_cancellations x where x.nsn = n.nsn and x.niin = n.niin) > 25", 5),
+      await pick('cancelled-side-only cancellation rows', "exists (select 1 from pub.nsn_cancellations x where x.nsn = n.nsn and x.niin <> n.niin)", 5),
+      await pick('with related items', "exists (select 1 from pub.nsn_standardization x where x.nsn = n.nsn and x.related_nsn <> '')", 20),
+      await pick('with 51+ related items', "(select count(*) from pub.nsn_standardization x where x.nsn = n.nsn and x.related_nsn <> '') > 50", 5),
+      await pick('with colloquial names', 'exists (select 1 from pub.inc_colloquial_names c join pub.nsn_identification i on i.inc = c.inc where i.nsn = n.nsn)', 15),
     ];
     const nsnSet = new Set();
     for (const s of strata) s.rows.forEach((n) => nsnSet.add(n));
@@ -796,7 +951,26 @@ async function main() {
     console.log(`NSN sample: ${nsnSample.length} existing + ${missingChecked.length} missing`);
     for (const s of strata) console.log(`   stratum "${s.label}": ${s.rows.length}`);
 
-    for (const nsn of nsnSample) await compare('loadNsnPage', nsn, (s) => oldLoadNsnPage(s, nsn), (s) => N.loadNsnPage(s, nsn));
+    // Old-vs-new compares the keys the old loader returned (same order); `flis` is checked against naive queries.
+    const sawFlis = { ident: 0, identUnlabeled: 0, colloquial: 0, colloquialCapped: 0, related: 0, relatedWithPage: 0, relatedNoPage: 0, relatedCapped: 0, cancel: 0, cancelCapped: 0, cancelTies: 0, cancelForeignSide: 0, moe: 0, moeUs: 0, moeForeign: 0, moeOther: 0, none: 0 };
+    for (const nsn of nsnSample) {
+      let full = null;
+      await compare(
+        'loadNsnPage',
+        nsn,
+        (s) => oldLoadNsnPage(s, nsn),
+        (s) =>
+          N.loadNsnPage(s, nsn).then((v) => {
+            full = v;
+            if (v === null) return null;
+            const { flis: _flis, ...rest } = v;
+            return rest;
+          })
+      );
+      if (full) await checkNsnFlis(direct, nsn, full, sawFlis);
+    }
+    console.log('   FLIS cases seen:', JSON.stringify(sawFlis));
+    for (const [k, v] of Object.entries(sawFlis)) if (v === 0) fail('loadNsnPage flis', k, 'no sampled NSN exercised this case');
     for (const nsn of missingChecked) {
       const r = await compare('loadNsnPage (missing)', nsn, (s) => oldLoadNsnPage(s, nsn), (s) => N.loadNsnPage(s, nsn));
       if (r.new.value !== null) fail('loadNsnPage (missing)', nsn, 'expected null');

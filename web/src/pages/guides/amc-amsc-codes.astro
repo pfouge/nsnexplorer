@@ -2,6 +2,17 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import GuideFooter from '../../components/GuideFooter.astro';
 import { SITE_URL } from '../../consts';
+import {
+  CRITICALITY_CODES,
+  CRITICALITY_SOURCE_LABEL,
+  DEMIL_CODES,
+  DEMIL_SECONDARY_URL,
+  DEMIL_SOURCE_LABEL,
+  DEMIL_SOURCE_URL,
+  ESD_EMI_CODES,
+  ESD_EMI_SOURCE_LABEL,
+  ESD_EMI_SOURCE_URL,
+} from '../../lib/flis-codes';
 
 const title = 'AMC and AMSC Codes: What Each Value Means';
 const description =
@@ -83,6 +94,9 @@ const amsc: { code: string; meaning: string; valid: string }[] = [
 ];
 
 const sources = [
+  { label: `${DEMIL_SOURCE_LABEL} (DEMIL codes)`, url: DEMIL_SOURCE_URL },
+  { label: 'DLA DEMIL Coding Management Office: DEMIL codes', url: DEMIL_SECONDARY_URL },
+  { label: ESD_EMI_SOURCE_LABEL, url: ESD_EMI_SOURCE_URL },
   { label: 'acquisition.gov: PGI 217.7506, Spare parts breakout program (AMC and AMSC definitions)', url: 'https://www.acquisition.gov/dfarspgi/pgi-217.7506-spare-parts-breakout-program' },
   { label: 'acquisition.gov: DFARS Subpart 217.75, Acquisition of replenishment parts', url: 'https://www.acquisition.gov/dfars/subpart-217.75-acquisition-replenishment-parts' },
   { label: 'DLA: DIBBS pocket guide (review the full solicitation)', url: 'https://www.dla.mil/Portals/104/Documents/SmallBusiness/DIBBS%20Pocket%20Guide.pdf' },
@@ -196,6 +210,61 @@ const sources = [
     </ul>
   </section>
 
+  <section id="catalog-codes">
+    <h2 class="section-title">Other catalog codes on an NSN page</h2>
+    <p class="gloss">
+      The Catalog record on each NSN page also shows codes from the federal catalog (FLIS) that
+      are not acquisition codes. The tables below paraphrase the government sources listed at the
+      bottom of this page.
+    </p>
+    <h3 id="demil-codes" class="section-title">DEMIL codes</h3>
+    <p class="gloss">
+      The demilitarization code says what must be done to an item before it leaves government
+      control. Source: {DEMIL_SOURCE_LABEL}.
+    </p>
+    <div class="table-wrap guide-table">
+      <table>
+        <thead><tr><th>DEMIL</th><th>Meaning in plain English</th></tr></thead>
+        <tbody>
+          {Object.entries(DEMIL_CODES).map(([c, m]) => (
+            <tr><td>{c}</td><td class="wrap">{m}</td></tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <h3 id="esd-emi-codes" class="section-title">Static and EMI sensitivity codes</h3>
+    <p class="gloss">
+      Shows whether an item can be damaged by electrostatic discharge (ESD) or electromagnetic
+      interference (EMI). Source: {ESD_EMI_SOURCE_LABEL}.
+    </p>
+    <div class="table-wrap guide-table">
+      <table>
+        <thead><tr><th>Code</th><th>Meaning in plain English</th></tr></thead>
+        <tbody>
+          {Object.entries(ESD_EMI_CODES).map(([c, m]) => (
+            <tr><td>{c}</td><td class="wrap">{m}</td></tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <h3 id="criticality-codes" class="section-title">Criticality codes</h3>
+    <p class="gloss">
+      Says whether an item has critical features, is a flight safety critical aircraft part, or
+      is nuclear hardened. Defined in {CRITICALITY_SOURCE_LABEL}. Codes H, M, S and V are rare
+      and are shown on part pages without a meaning.
+    </p>
+    <div class="table-wrap guide-table">
+      <table>
+        <thead><tr><th>Code</th><th>Meaning in plain English</th></tr></thead>
+        <tbody>
+          {Object.entries(CRITICALITY_CODES).map(([c, m]) => (
+            <tr><td>{c}</td><td class="wrap">{m}</td></tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
   <section>
     <h2 class="section-title">What the code does not tell you</h2>
     <div class="note">
@@ -221,7 +290,7 @@ const sources = [
   <GuideFooter
     faq={faq}
     sources={sources}
-    reviewed="October 2026"
+    reviewed="November 2026"
     next={[
       { href: '/guides/what-is-an-nsn/', label: 'What is an NSN?' },
       { href: '/guides/federal-supply-class-fsc/', label: 'Federal Supply Class (FSC) codes explained' },

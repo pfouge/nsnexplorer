@@ -7,6 +7,7 @@ import { nsnCopyInputFrom } from './nsn-copy';
 import { competitionRead } from './competition-read';
 import { priceSummary } from './sol-history';
 import { niinDashed, nomen, nsnSummary } from './seo-copy';
+import { NO_DEFINITION, alsoCalled, catalogCells, foreignSummary, moeView } from './nsn-flis';
 
 const MAX_PRICE_ROWS = 50;
 const MAX_AWARD_ROWS = 25;
@@ -36,6 +37,32 @@ export function nsnMarkdown(page: NsnPageData, siteUrl: string): string {
   if (nsn.amc) ident.push(`- Acquisition method code: ${nsn.amc}`);
   if (nsn.hazmat !== null) ident.push(`- Hazardous material: ${nsn.hazmat ? 'yes' : 'no'}`);
   out.push('## Identification', '', ...ident, '');
+
+  // Catalog record (FLIS): decoded identification codes and the US management rows.
+  const cells = catalogCells(page.flis.identification);
+  const moe = moeView(page.flis.moeRules);
+  const foreign = foreignSummary(moe);
+  const also = alsoCalled(page.flis);
+  if (cells.length > 0 || moe.us.length > 0 || foreign !== null || also !== null) {
+    out.push('## Catalog record', '');
+    if (cells.length > 0) {
+      out.push(...cells.map((c) => (c.key === 'assigned' ? `- ${c.label}: ${c.value}` : `- ${c.label}: ${c.value} (${c.meaning ?? NO_DEFINITION})`)));
+    }
+    if (also) out.push(`- Also called: ${also}`);
+    if (cells.length > 0 || also) out.push('');
+    if (moe.us.length > 0) {
+      out.push(
+        '### Who manages it',
+        '',
+        table(
+          ['Service or agency', 'AMC', 'AMSC', 'Acquisition advice', 'Manager', 'Retail manager', 'Since'],
+          moe.us.map((r) => [r.service, r.amc, r.amsc, r.aac ? (r.aacLabel ?? `${r.aac} (${NO_DEFINITION})`) : null, r.manager, r.retail, r.since])
+        ),
+        ''
+      );
+    }
+    if (foreign) out.push(`${foreign}: ${[...moe.foreignNames, ...moe.otherNames].join(', ')}.`, '');
+  }
 
   const characteristics = parseCharacteristics(nsn.characteristics);
   if (characteristics.length > 0) {

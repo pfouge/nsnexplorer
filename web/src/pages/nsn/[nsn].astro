@@ -43,6 +43,7 @@ import { supplierLabel } from '../../lib/viz-nsn-common';
 import { solicitationPath, supplierPath } from '../../lib/entity';
 import { priceSummary, valueAtLastPrice } from '../../lib/sol-history';
 import { competitionRead } from '../../lib/competition-read';
+import { NO_DEFINITION, alsoCalled, catalogCells, foreignSummary, moeView } from '../../lib/nsn-flis';
 
 // Rendered ON REQUEST by the Cloudflare Pages Function, not at build time.
 // Cloudflare Pages caps a deployment at 20,000 files and the catalog is far
@@ -156,11 +157,22 @@ const historyStatusBadge = (status: string): HistoryStatusBadge => {
 
 // Product identity: FLIS characteristics + manufacturer part numbers.
 const characteristics = parseCharacteristics(nsn.characteristics);
+
+// FLIS catalog record (identification codes, related items, replaced stock numbers, MOE rules).
+const flis = page.flis;
+const catalog = catalogCells(flis.identification);
+const alsoLine = alsoCalled(flis);
+const fieldDefs = (flis.identification?.fieldDefinitions ?? []).filter((d) => d.text);
+const hasCatalog = catalog.length > 0 || alsoLine !== null;
+const moe = moeView(flis.moeRules);
+const moeForeign = foreignSummary(moe);
+const hasMoe = moe.us.length > 0 || moeForeign !== null;
 // Dimensioned drawing: generated at build time from catalog dimensions for
 // every NSN whose specs support a known archetype (dispatched by FSC in
 // buildDiagram). Returns null — section omitted — when there's no archetype
 // for the FSC or the specs lack the needed geometry.
 const diagram = buildDiagram(characteristics, nsn.fsc, { nsnDashed: dashed, itemName: nsn.itemName });
+const hasSpecs = Boolean(diagram) || characteristics.length > 0 || partNumbers.length > 0 || hasCatalog || flis.related.length > 0 || flis.cancellations.length > 0;
 // Spec documents cited in characteristic replies (e.g. MIL-DTL-25988,
 // AMS7276, SAE-AMS-P-83461). ASSIST Quick Search (DoD's public spec
 // repository) has no public deep-link format — documents resolve only by
@@ -462,16 +474,105 @@ const datasetSchema = {
         Set-aside on open solicitation{openSetAsides.length === 1 ? '' : 's'}: {openSetAsides.join(', ')}
       </p>
     )}
+    {hasMoe && (
+      <>
+        <h3 class="section-title" style="margin-top:1.5rem;">Who manages it</h3>
+        <p class="gloss">
+          The services and agencies that hold a management record for this NSN, and how each says it buys it.
+        </p>
+        {moe.us.length > 0 && (
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Service or agency</th>
+                  <th>AMC</th>
+                  <th>AMSC</th>
+                  <th>Acquisition advice</th>
+                  <th>Manager</th>
+                  <th>Since</th>
+                </tr>
+              </thead>
+              <tbody>
+                {moe.us.map((r) => (
+                  <tr>
+                    <td>{r.service}</td>
+                    <td>{r.amc ? <span class="badge" title={r.amcLabel ?? NO_DEFINITION}>{r.amc}</span> : '—'}</td>
+                    <td>{r.amsc ? <span class="badge" title={r.amscLabel ?? NO_DEFINITION}>{r.amsc}</span> : '—'}</td>
+                    <td>{r.aac ? (r.aacLabel ?? `${r.aac} (${NO_DEFINITION})`) : '—'}</td>
+                    <td class="wrap">
+                      {r.manager ?? '—'}
+                      {r.retail && <span class="gloss" style="display:block; font-size:0.8125rem; line-height:1.35;">Retail: {r.retail}</span>}
+                    </td>
+                    <td class="mono">{r.since ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {moeForeign && (
+          <details style="margin-top:0.75rem;">
+            <summary class="gloss" style="cursor:pointer; margin-bottom:0.75rem;">{moeForeign}</summary>
+            <p class="gloss">{[...moe.foreignNames, ...moe.otherNames].join(', ')}</p>
+          </details>
+        )}
+      </>
+    )}
   </section>
 
   <!-- 3. What it is / can you make it — drawing, specs, and qualified part numbers together. -->
-  {(diagram || characteristics.length > 0 || partNumbers.length > 0) && (
+  {hasSpecs && (
     <section id="specs" style="margin-top:2.5rem;">
       <h2 class="section-title" style="margin-top:0;">What it is — can you make it?</h2>
       <p class="gloss">
         Dimensions, the FLIS specification requirements, and the manufacturer part numbers already
         qualified against this NSN.
       </p>
+    </section>
+  )}
+
+  {hasCatalog && (
+    <section>
+      <h3 class="section-title">Catalog record</h3>
+      <p class="gloss">
+        Identification codes the federal catalog (DLA FLIS) holds for this NSN, each with its plain-language meaning.
+      </p>
+      {catalog.length > 0 && (
+        <div class="datastrip" style="margin-top:0.9rem;">
+          {catalog.map((c) => (
+            <div class="cell">
+              <div class="k">{c.label}</div>
+              <div class="v">
+                {c.key === 'assigned' ? c.value : c.key === 'scheduleB' ? <span class="badge mono">{c.value}</span> : <span class="badge">{c.value}</span>}
+                {c.key !== 'assigned' && (
+                  <span class="gloss" style="display:block; font-size:0.8125rem; font-weight:400; line-height:1.35;">{c.meaning ?? NO_DEFINITION}</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {alsoLine && <p class="gloss" style="margin-top:0.9rem;">Also called: {alsoLine}</p>}
+      {catalog.length > 0 && (
+        <details>
+          <summary class="gloss" style="cursor:pointer; margin-bottom:0.75rem;">What these codes mean</summary>
+          {fieldDefs.length > 0 && (
+            <dl class="gloss" style="margin:0 0 0.75rem;">
+              {fieldDefs.map((d) => (
+                <>
+                  <dt style="font-weight:600; color:var(--ink);">{d.name ?? d.field}</dt>
+                  <dd style="margin:0 0 0.5rem;">{d.text}</dd>
+                </>
+              ))}
+            </dl>
+          )}
+          <p class="gloss">
+            DEMIL, criticality and static/EMI sensitivity are not in the catalog's own dictionary; their code tables are on
+            <a href="/guides/amc-amsc-codes/#catalog-codes"> the codes guide</a>.
+          </p>
+        </details>
+      )}
     </section>
   )}
 
@@ -555,6 +656,71 @@ const datasetSchema = {
           </tbody>
         </table>
       </div>
+    </section>
+  )}
+
+  {flis.related.length > 0 && (
+    <section>
+      <h3 class="section-title">Related items</h3>
+      <p class="gloss">
+        Other stock numbers the federal catalog links to this one, with the standardization status on record.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Related NSN</th>
+              <th>Standardization status</th>
+              <th>Decided</th>
+            </tr>
+          </thead>
+          <tbody>
+            {flis.related.map((r) => (
+              <tr>
+                <td class="mono">{r.hasPage ? <a href={`/nsn/${r.relatedNsn}/`}>{r.relatedNsn}</a> : r.relatedNsn}</td>
+                <td>{r.iscLabel ?? (r.isc ? `Code ${r.isc}, ${NO_DEFINITION}` : '—')}</td>
+                <td class="mono">{r.date ?? '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {flis.relatedTotal > flis.related.length && (
+        <p class="gloss">Showing {flis.related.length} of {flis.relatedTotal.toLocaleString('en-US')}.</p>
+      )}
+    </section>
+  )}
+
+  {flis.cancellations.length > 0 && (
+    <section>
+      <h3 class="section-title">Earlier stock numbers replaced by this one</h3>
+      <p class="gloss">
+        Older stock numbers the federal catalog cancelled in favour of this NSN, newest first. If you hold stock or an old
+        requisition under one of them, this is the number to use now.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Earlier stock number</th>
+              <th>Status of that number</th>
+              <th>Effective</th>
+            </tr>
+          </thead>
+          <tbody>
+            {flis.cancellations.map((c) => (
+              <tr>
+                <td class="mono">{c.cancelledNsn}</td>
+                <td>{c.statusLabel ?? (c.statusCode ? `Code ${c.statusCode}, ${NO_DEFINITION}` : '—')}</td>
+                <td class="mono">{c.effectiveDate ?? '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {flis.cancellationsTotal > flis.cancellations.length && (
+        <p class="gloss">Showing {flis.cancellations.length} of {flis.cancellationsTotal.toLocaleString('en-US')}.</p>
+      )}
     </section>
   )}
 
