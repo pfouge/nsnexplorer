@@ -1,7 +1,7 @@
 == files ==
-total 9877404
-drwxr-xr-x  2 runner runner       4096 Nov  1 16:30 .
-drwxrwxrwt 16 root   root         4096 Nov 15 16:40 ..
+total 12172212
+drwxr-xr-x  2 runner runner       4096 Nov 15 18:35 .
+drwxrwxrwt 16 root   root         4096 Nov 15 18:39 ..
 -rw-r--r--  1 runner runner  371182966 Oct 23 18:41 P_CAGE.CSV
 -rw-r--r--  1 runner runner  988252755 Oct 23 18:44 P_FLIS_NSN.CSV
 -rw-r--r--  1 runner runner    4796029 Oct 23 18:45 P_HELP.CSV
@@ -10,9 +10,18 @@ drwxrwxrwt 16 root   root         4096 Nov 15 16:40 ..
 -rw-r--r--  1 runner runner    1069227 Oct 23 18:47 V_COLLOQUIAL_NAME.CSV
 -rw-r--r--  1 runner runner   49009365 Oct 23 18:47 V_FLIS_CANCELLED_NIIN.CSV
 -rw-r--r--  1 runner runner 1609789964 Oct 23 18:47 V_FLIS_IDENTIFICATION.CSV
+-rw-r--r--  1 runner runner 2091566539 Oct 23 19:12 V_FLIS_MANAGEMENT.CSV
+-rw-r--r--  1 runner runner     341422 Oct 23 19:12 V_FLIS_MANAGEMENT_FUTURE.CSV
 -rw-r--r--  1 runner runner 1285460189 Oct 23 19:04 V_FLIS_PART.CSV
+-rw-r--r--  1 runner runner   27496183 Oct 23 19:12 V_FLIS_PHRASE.CSV
 -rw-r--r--  1 runner runner  615398551 Oct 23 18:49 V_FLIS_STANDARDIZATION.CSV
+-rw-r--r--  1 runner runner   65907452 Oct 23 19:12 V_MGMT_AIR_FORCE.CSV
+-rw-r--r--  1 runner runner   56049338 Oct 23 19:12 V_MGMT_ARMY.CSV
+-rw-r--r--  1 runner runner    3516451 Oct 23 19:12 V_MGMT_COAST_GUARD.CSV
+-rw-r--r--  1 runner runner   27178089 Oct 23 19:12 V_MGMT_MARINE_CORPS.CSV
+-rw-r--r--  1 runner runner   76892314 Oct 23 19:12 V_MGMT_NAVY.CSV
 -rw-r--r--  1 runner runner 1717022791 Oct 23 19:01 V_MOE_RULE.CSV
+-rw-r--r--  1 runner runner     915408 Oct 23 19:12 V_SOCOM_MANAGEMENT.CSV
 == per-file head (first 2 lines, 400 chars each) ==
 --- /tmp/publog/P_CAGE.CSV
 "CAGE_CODE","CAGE_STATUS","COMPANY","CITY","STATE_PROVINCE","ZIP_POSTAL_ZONE","COUNTRY"
@@ -46,57 +55,137 @@ drwxrwxrwt 16 root   root         4096 Nov 15 16:40 ..
 "NIIN","INC","PINC","CRIT_CD","II","DMIL","DMIL_INT_CD","NIIN_ASGMT","PMIC","ADP","HMIC","ESD_EMI","HCC","SCHEDULE_B","ENAC","IUID_INDICATOR","LST_KWN_SOS","FEDMALL"
 "000000012","77777","2146085","","0","B","3","10-JAN-22","U","","N","","","","","","N32",""
 
+--- /tmp/publog/V_FLIS_MANAGEMENT.CSV
+"NIIN","EFFECTIVE_DATE","MOE","AAC","SOS","SOSM","UI","UI_CONV_FAC","UOM","UOM_QTY","UNIT_PRICE","QUP","CIIC","SLC","REP_REC_CODE","MGMT_CTL","NET_PRICE","USC","ROW_OBS_DT"
+"000000050","01-DEC-2019","DF","V","FLZ","","EA","","","0.0000","000003228.01","1","U","0","U","--M---N","0.00","L",""
+
+--- /tmp/publog/V_FLIS_MANAGEMENT_FUTURE.CSV
+"NIIN","EFFECTIVE_DATE","MOE","AAC","SOS","SOSM","UI","UI_CONV_FAC","UOM","UOM_QTY","UNIT_PRICE","QUP","CIIC","SLC","REP_REC_CODE","MGMT_CTL","NET_PRICE","USC","ROW_OBS_DT"
+"000458173","01-JAN-2027","DF","Y","FLZ","","EA","","","0.0000","000000628.00","1","U","0","U","--ABZ-N","0.00","L",""
+
 --- /tmp/publog/V_FLIS_PART.CSV
 "NIIN","PART_NUMBER","CAGE_CODE","CAGE_STATUS","RNCC","RNVC","DAC","RNAAC","RNFC","RNSC","RNJC","SADC","HCC","MSDS","MEDALS"
 "000000042","UK 60A890216","24039","A","3","2","6","9Z","4","A","","","","",""
+
+--- /tmp/publog/V_FLIS_PHRASE.CSV
+"NIIN","MOE","USC","PHRS_CD","PHRASE_STATEMENT","ORDER_OF_USE","JUMP_TO_CODE","QPA","TECH_DOC_NBR","ROW_OBS_DT"
+"000000050","DF","L","R","REFER TO REFER TO AFM 71","","","0","REFER TO AFM 71",""
 
 --- /tmp/publog/V_FLIS_STANDARDIZATION.CSV
 "NIIN","RELATED_NSN","ISC","ORIG_STDZN_DEC","DT_STDZN_DEC","NIIN_STAT_CD"
 "000000012","","","","","4"
 
+--- /tmp/publog/V_MGMT_AIR_FORCE.CSV
+"NIIN","FUND","BUDGET","MMAC","PVC","ERRC"
+"000000050","","M","","N","U"
+
+--- /tmp/publog/V_MGMT_ARMY.CSV
+"NIIN","MATCAT_1","MATCAT_2","MATCAT_3","MATCAT_4_5","ARC"
+"000000064","C","2","2","03","X"
+
+--- /tmp/publog/V_MGMT_COAST_GUARD.CSV
+"NIIN","IAC","SNC","SMCC"
+"000000057","","",""
+
+--- /tmp/publog/V_MGMT_MARINE_CORPS.CSV
+"NIIN","SAC","CEC","MEC","MIC","OTC","PCC"
+"000000057","1","2","B2","","",""
+
+--- /tmp/publog/V_MGMT_NAVY.CSV
+"NIIN","COG","SMIC","IRRC","SMCC"
+"000000051","9B","","",""
+
 --- /tmp/publog/V_MOE_RULE.CSV
 "NIIN","MOE_RL","MOE_CD","AMC","AMSC","NIMSC","DT_ASGND","IMC","IMCA","AAC","PICA","PICA_LOA","SICA","SICA_LOA","AUTH_COLLAB","SUPP_COLLAB","DSOR","FMR_MOE_RL","ROW_OBS_DT"
 "000000042","ZK01","ZK","","","","01-MAR-06","","","","ZK","81","","","ZK","","","",""
 
+--- /tmp/publog/V_SOCOM_MANAGEMENT.CSV
+"NIIN","ICP","A_L","REP","W_ESDC","AR","COS"
+"000014707","T","9","2","00","X","9"
+
 == V_MOE_RULE.CSV (first 2 lines, 1000 chars each) ==
 "NIIN","MOE_RL","MOE_CD","AMC","AMSC","NIMSC","DT_ASGND","IMC","IMCA","AAC","PICA","PICA_LOA","SICA","SICA_LOA","AUTH_COLLAB","SUPP_COLLAB","DSOR","FMR_MOE_RL","ROW_OBS_DT"
 "000000042","ZK01","ZK","","","","01-MAR-06","","","","ZK","81","","","ZK","","","",""
+== management files (first 2 lines, 1000 chars each) ==
+--- /tmp/publog/V_FLIS_MANAGEMENT.CSV
+"NIIN","EFFECTIVE_DATE","MOE","AAC","SOS","SOSM","UI","UI_CONV_FAC","UOM","UOM_QTY","UNIT_PRICE","QUP","CIIC","SLC","REP_REC_CODE","MGMT_CTL","NET_PRICE","USC","ROW_OBS_DT"
+"000000050","01-DEC-2019","DF","V","FLZ","","EA","","","0.0000","000003228.01","1","U","0","U","--M---N","0.00","L",""
+--- /tmp/publog/V_FLIS_MANAGEMENT_FUTURE.CSV
+"NIIN","EFFECTIVE_DATE","MOE","AAC","SOS","SOSM","UI","UI_CONV_FAC","UOM","UOM_QTY","UNIT_PRICE","QUP","CIIC","SLC","REP_REC_CODE","MGMT_CTL","NET_PRICE","USC","ROW_OBS_DT"
+"000458173","01-JAN-2027","DF","Y","FLZ","","EA","","","0.0000","000000628.00","1","U","0","U","--ABZ-N","0.00","L",""
+--- /tmp/publog/V_MGMT_AIR_FORCE.CSV
+"NIIN","FUND","BUDGET","MMAC","PVC","ERRC"
+"000000050","","M","","N","U"
+--- /tmp/publog/V_MGMT_ARMY.CSV
+"NIIN","MATCAT_1","MATCAT_2","MATCAT_3","MATCAT_4_5","ARC"
+"000000064","C","2","2","03","X"
+--- /tmp/publog/V_MGMT_COAST_GUARD.CSV
+"NIIN","IAC","SNC","SMCC"
+"000000057","","",""
+--- /tmp/publog/V_MGMT_MARINE_CORPS.CSV
+"NIIN","SAC","CEC","MEC","MIC","OTC","PCC"
+"000000057","1","2","B2","","",""
+--- /tmp/publog/V_MGMT_NAVY.CSV
+"NIIN","COG","SMIC","IRRC","SMCC"
+"000000051","9B","","",""
 == load output (tail) ==
-load.mjs: tracking 178886 existing NIIN(s)
-load.mjs: P_FLIS_NSN.CSV: 174567 loaded, 17041282 rows scanned
-load.mjs: V_FLIS_PART.CSV: 633445 loaded, 16654147 rows scanned
-load.mjs: characteristics candidate P_HELP.CSV rejected (headers: CODE, LITERAL, DESCRIPTION, REGS)
-load.mjs: characteristics candidate V_CAGE_ADDRESS.CSV rejected (headers: CAGE_CODE, COMPANY_NAME, STREET_ADDRESS_1, STREET_ADDRESS_2, STREET_ADDRESS_3, CITY, STATE, ZIP, COUNTRY)
-load.mjs: V_CHARACTERISTICS.CSV: 159426 loaded, 39729609 rows scanned
-load.mjs: V_MOE_RULE.CSV first line: "NIIN","MOE_RL","MOE_CD","AMC","AMSC","NIMSC","DT_ASGND","IMC","IMCA","AAC","PICA","PICA_LOA","SICA","SICA_LOA","AUTH_COLLAB","SUPP_COLLAB","DSOR","FMR_MOE_RL","ROW_OBS_DT"
-load.mjs: V_MOE_RULE.CSV resolved columns (0-based): niin=0(header) moe=2(header) amc=3(header) amsc=4(header) obs=18(header) of 19 column(s) [headers: NIIN, MOE_RL, MOE_CD, AMC, AMSC, NIMSC, DT_ASGND, IMC, IMCA, AAC, PICA, PICA_LOA, SICA, SICA_LOA, AUTH_COLLAB, SUPP_COLLAB, DSOR, FMR_MOE_RL, ROW_OBS_DT]
-load.mjs: V_MOE_RULE.CSV (all rules) header row found; resolved columns (0-based): niin=0(header) moe_rl=1(header) moe_cd=2(header) amc=3(header) amsc=4(header) nimsc=5(header) assigned_on=6(header) imc=7(header) imca=8(header) aac=9(header) pica=10(header) pica_loa=11(header) sica=12(header) sica_loa=13(header) dsor=16(header) fmr_moe_rl=17(header)
-load.mjs: V_MOE_RULE.CSV: 18308422 rows scanned, 913801 on tracked NIINs, 579824 skipped (AMC and AMSC both blank), 0 invalid AMC and 0 invalid AMSC treated as blank, 174456 NSN(s) with a kept row (174455 without a parseable date)
-load.mjs: V_MOE_RULE.CSV kept AMC distribution: 0:1197 1:77141 2:2522 3:89710 4:2485 5:1401
-load.mjs: V_MOE_RULE.CSV kept AMSC distribution: 0:1197 A:66 B:4889 C:24361 D:36221 G:48932 H:3066 K:20 L:10567 M:120 N:43 P:5719 Q:6803 R:11602 S:19 T:7211 U:51 V:36 Y:8 Z:13525
-load.mjs: V_MOE_RULE.CSV: 1222 observation(s) written, 173234 unchanged (latest flis value identical)
-load.mjs: V_MOE_RULE.CSV: 1222 loaded, 18308422 rows scanned
-load.mjs: V_MOE_RULE.CSV (all rules): 18308422 rows scanned, 913801 on tracked NIINs, 0 malformed row(s) skipped, 5699 written
-load.mjs: V_MOE_RULE.CSV MOE_CD distribution (tracked rows): AA:5 CA:2 CB:2 CM:16 CS:17 DA:68731 DF:78176 DG:623 DH:395 DJ:635 DM:35160 DN:124625 DS:992 EX:3 FC:121 FD:1 FF:4 GE:1617 GG:33 GP:15489 HH:1 HJ:26 HK:6 KF:4 KG:1 KJ:5 KL:1 KM:129 KP:7 KR:55 KX:71 KZ:1 LP:42 QE:56 QM:27 QN:3 QU:2 RA:346 SA:2 T1:6144 T8:12 TD:1 TG:416 TJ:2 TV:101 UE:13 VA:235 VB:11 VD:522 VE:2010 VH:54 VJ:18239 VK:3877 VM:5401 VP:6137 VS:55 WB:5227 WD:66 WE:581 WF:4798 WG:21391 WH:761 WI:2611 WL:2350 WP:24439 WR:391 WS:4312 WU:1049 WZ:2140 XF:16 YA:22946 YB:32298 YC:9192 YD:29137 YF:760 YH:15 YJ:18009 YN:11 YP:4147 YQ:118 YR:12221 YS:2991 YT:159 YW:12420 YY:1038 ZA:31063 ZB:8017 ZC:26438 ZD:1127 ZE:11533 ZF:11733 ZG:13041 ZH:38423 ZI:6011 ZJ:24601 ZK:17791 ZN:14401 ZP:14623 ZR:13879 ZS:13408 ZT:13161 ZU:28186 ZW:31108 ZX:9001
-load.mjs: V_MOE_RULE.CSV (all rules): 913801 kept, 5699 written, 18308422 rows scanned
-load.mjs: V_FLIS_IDENTIFICATION.CSV header row found; resolved columns (0-based): niin=0(header) inc=1(header) crit_cd=3(header) demil=5(header) demil_int_cd=6(header) niin_assigned=7(header) pmic=8(header) adp=9(header) hmic=10(header) esd_emi=11(header) hcc=12(header) schedule_b=13(header) enac=14(header) iuid_indicator=15(header) last_known_sos=16(header)
-load.mjs: V_FLIS_IDENTIFICATION.CSV: 17041282 rows scanned, 174639 on tracked NIINs, 0 malformed row(s) skipped, 1242 written
-load.mjs: V_FLIS_IDENTIFICATION.CSV DEMIL distribution: A:146550 B:1557 C:109 D:4917 E:574 F:181 P:4 Q:20747
-load.mjs: V_FLIS_IDENTIFICATION.CSV CRIT_CD distribution: -:14349 C:2 E:7 F:3621 H:79 M:43 N:12 S:699 V:505 X:151692 Y:3630
-load.mjs: V_FLIS_IDENTIFICATION.CSV: 174639 kept, 1242 written, 17041282 rows scanned
-load.mjs: V_FLIS_STANDARDIZATION.CSV header row found; resolved columns (0-based): niin=0(header) related_nsn=1(header) isc=2(header) orig_stdzn_dec=3(header) stdzn_date=4(header) niin_stat_cd=5(header)
-load.mjs: V_FLIS_STANDARDIZATION.CSV: 17416083 rows scanned, 196035 kept (tracked NIIN with related NSN / ISC / decision), 0 malformed row(s) skipped, 1318 written
-load.mjs: V_FLIS_STANDARDIZATION.CSV NIIN_STAT_CD distribution: 0:195925 4:6 5:2 6:102
-load.mjs: V_FLIS_STANDARDIZATION.CSV: 196035 kept, 1318 written, 17416083 rows scanned
+load.mjs: V_FLIS_STANDARDIZATION.CSV: 196966 kept, 891 written, 17416083 rows scanned
 load.mjs: V_FLIS_CANCELLED_NIIN.CSV header row found; resolved columns (0-based): niin=0(header) cancelled_niin_fsc=1(header) cancelled_niin=2(header) niin_stat_cd=3(header) eff_date=4(header) demil=5(header)
-load.mjs: V_FLIS_CANCELLED_NIIN.CSV: 907606 rows scanned, 37984 involving a tracked NIIN, 0 malformed row(s) skipped, 249 written
-load.mjs: V_FLIS_CANCELLED_NIIN.CSV DEMIL distribution: -:25 A:34684 B:1877 C:151 D:348 E:3 F:25 G:21 Q:785 X:65
-load.mjs: V_FLIS_CANCELLED_NIIN.CSV NIIN_STAT_CD distribution: 0:3 3:7 5:23599 6:1 7:14374
-load.mjs: V_FLIS_CANCELLED_NIIN.CSV: 37984 kept, 249 written, 907606 rows scanned
+load.mjs: V_FLIS_CANCELLED_NIIN.CSV: 907606 rows scanned, 38129 involving a tracked NIIN, 0 malformed row(s) skipped, 145 written
+load.mjs: V_FLIS_CANCELLED_NIIN.CSV DEMIL distribution: -:25 A:34809 B:1886 C:151 D:351 E:3 F:25 G:21 Q:793 X:65
+load.mjs: V_FLIS_CANCELLED_NIIN.CSV NIIN_STAT_CD distribution: 0:3 3:7 5:23689 6:1 7:14429
+load.mjs: V_FLIS_CANCELLED_NIIN.CSV: 38129 kept, 145 written, 907606 rows scanned
 load.mjs: P_HELP.CSV header row found; resolved columns (0-based): code=0(header) literal=1(header) description=2(header) regs=3(header)
 load.mjs: P_HELP.CSV: 36505 rows scanned, 36505 kept (32036 distinct codes, 4469 repeated CODE value(s) collapsed to the last row), 0 malformed row(s) skipped, 2 written
 load.mjs: P_HELP.CSV: 36505 kept, 2 written, 36505 rows scanned
 load.mjs: V_COLLOQUIAL_NAME.CSV header row found; resolved columns (0-based): inc=0(header) colloquial_name=1(header)
 load.mjs: V_COLLOQUIAL_NAME.CSV: 33980 rows scanned, 33980 kept, 0 malformed row(s) skipped, 0 written
 load.mjs: V_COLLOQUIAL_NAME.CSV: 33980 kept, 0 written, 33980 rows scanned
-load.mjs: P_CAGE.CSV: 29869 loaded, 4158374 rows scanned
+load.mjs: V_FLIS_MANAGEMENT.CSV first line: "NIIN","EFFECTIVE_DATE","MOE","AAC","SOS","SOSM","UI","UI_CONV_FAC","UOM","UOM_QTY","UNIT_PRICE","QUP","CIIC","SLC","REP_REC_CODE","MGMT_CTL","NET_PRICE","USC","ROW_OBS_DT"
+load.mjs: V_FLIS_MANAGEMENT.CSV header names not mapped (kept in extra when non-blank): SOSM, UI_CONV_FAC, UOM, UOM_QTY, MGMT_CTL, NET_PRICE, USC, ROW_OBS_DT
+load.mjs: V_FLIS_MANAGEMENT.CSV (source FLIS) header row found; resolved columns (0-based): niin=0(header) moe_cd=2(header) effective_date=1(header) aac=3(header) sos=4(header) ui=6(header) unit_price=10(header) qup=11(header) ciic=12(header) slc=13(header) repairability=14(header)
+load.mjs: V_FLIS_MANAGEMENT.CSV: 17474284 rows scanned, 536122 on tracked NIINs, 0 malformed row(s) skipped, 35238 repeated (nsn, source, moe_cd) key(s) collapsed to the last row, 500884 written
+load.mjs: V_FLIS_MANAGEMENT.CSV UI distribution (tracked rows): -:23 7M:12 AM:10 AT:24 AY:2969 BD:35 BE:25 BF:448 BG:270 BT:5113 BX:6982 CA:905 CF:12 CL:178 CM:20 CN:2790 CO:812 CS:1353 CY:461 CZ:9 DR:1122 DZ:122 EA:441971 FT:7260 FV:113 FY:16 GL:2788 GR:41 HD:4521 IN:53 JR:123 KG:5 KT:8625 LB:958 LG:327 LI:59 MC:39 MM:2 MR:28 MX:40 ... (+26 more values)
+load.mjs: V_FLIS_MANAGEMENT.CSV SLC distribution (tracked rows): -:33 0:476514 1:43 2:667 3:633 4:3074 5:581 6:3473 7:2664 8:205 9:1225 A:115 B:2 C:129 D:1 E:16 F:859 G:526 H:3816 I:878 J:348 K:1859 L:96 M:9717 N:63 P:507 Q:7941 R:1015 S:8922 T:237 U:490 V:250 W:3401 X:571 Y:4351 Z:900
+load.mjs: V_FLIS_MANAGEMENT.CSV SOS distribution (tracked rows): A12:6 AKZ:196 B14:41 B16:46 B17:30 B64:17 F04:3 F06:15 FGZ:25 FHZ:17 FLZ:41 FPD:15 G36:63 G69:12 GSA:177 JCD:6 JDF:3 JVS:639 MPB:69 NRP:218 SMS:533718 ZNC:672 ZQC:93
+load.mjs: V_FLIS_MANAGEMENT.CSV AAC distribution (tracked rows): -:3 A:11 B:7 C:803 D:101498 F:36 G:37 H:46278 I:691 J:79419 K:6 L:44353 M:16 P:36 Q:651 R:120 S:2 T:2 V:1583 W:127 X:625 Y:805 Z:259013
+load.mjs: V_FLIS_MANAGEMENT.CSV CIIC distribution (tracked rows): -:33 1:3 3:8 4:68 6:1 7:13990 9:33 C:1 I:345 J:1603 M:157 N:672 O:2 Q:235 R:139 S:8 U:514342 V:1139 X:333 Y:366 Z:2644
+load.mjs: V_FLIS_MANAGEMENT.CSV repairability distribution (tracked rows): -:245938 A:3059 C:624 D:4872 E:11 F:11727 H:553 K:40 L:69 M:237 N:165428 NN:39 O:1613 P:2919 Q:3 R:170 S:2 T:77 U:357 W:28 Z:98105 ZN:251
+load.mjs: V_FLIS_MANAGEMENT.CSV MOE distribution (tracked rows): DA:77971 DF:86703 DJ:510 DM:38637 DN:135461 DS:179562 GE:12 GP:16453 TG:114 VA:699
+RangeError: Maximum call stack size exceeded
+    at priceStats (file:///home/runner/work/nsnexplorer/nsnexplorer/ingest/publog/load-management.mjs:183:39)
+    at logFileSummary (file:///home/runner/work/nsnexplorer/nsnexplorer/ingest/publog/load-management.mjs:244:14)
+    at Module.loadManagement (file:///home/runner/work/nsnexplorer/nsnexplorer/ingest/publog/load-management.mjs:278:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async optional (file:///home/runner/work/nsnexplorer/nsnexplorer/ingest/publog/load.mjs:1021:15)
+    at async main (file:///home/runner/work/nsnexplorer/nsnexplorer/ingest/publog/load.mjs:1115:5)
+::warning::load.mjs: V_FLIS_MANAGEMENT.CSV load failed (Maximum call stack size exceeded); continuing
+RangeError: Maximum call stack size exceeded
+    at priceStats (file:///home/runner/work/nsnexplorer/nsnexplorer/ingest/publog/load-management.mjs:183:39)
+    at logFileSummary (file:///home/runner/work/nsnexplorer/nsnexplorer/ingest/publog/load-management.mjs:244:14)
+    at Module.loadManagement (file:///home/runner/work/nsnexplorer/nsnexplorer/ingest/publog/load-management.mjs:278:7)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async optional (file:///home/runner/work/nsnexplorer/nsnexplorer/ingest/publog/load.mjs:1021:15)
+    at async main (file:///home/runner/work/nsnexplorer/nsnexplorer/ingest/publog/load.mjs:1115:5)
+::warning::load.mjs: management files load failed (Maximum call stack size exceeded); continuing
+load.mjs: P_CAGE.CSV: 29946 loaded, 4158374 rows scanned
+== management load output ==
+load.mjs: V_FLIS_MANAGEMENT.CSV first line: "NIIN","EFFECTIVE_DATE","MOE","AAC","SOS","SOSM","UI","UI_CONV_FAC","UOM","UOM_QTY","UNIT_PRICE","QUP","CIIC","SLC","REP_REC_CODE","MGMT_CTL","NET_PRICE","USC","ROW_OBS_DT"
+load.mjs: V_FLIS_MANAGEMENT.CSV header names not mapped (kept in extra when non-blank): SOSM, UI_CONV_FAC, UOM, UOM_QTY, MGMT_CTL, NET_PRICE, USC, ROW_OBS_DT
+load.mjs: V_FLIS_MANAGEMENT.CSV (source FLIS) header row found; resolved columns (0-based): niin=0(header) moe_cd=2(header) effective_date=1(header) aac=3(header) sos=4(header) ui=6(header) unit_price=10(header) qup=11(header) ciic=12(header) slc=13(header) repairability=14(header)
+load.mjs: V_FLIS_MANAGEMENT.CSV: 17474284 rows scanned, 536122 on tracked NIINs, 0 malformed row(s) skipped, 35238 repeated (nsn, source, moe_cd) key(s) collapsed to the last row, 500884 written
+load.mjs: V_FLIS_MANAGEMENT.CSV UI distribution (tracked rows): -:23 7M:12 AM:10 AT:24 AY:2969 BD:35 BE:25 BF:448 BG:270 BT:5113 BX:6982 CA:905 CF:12 CL:178 CM:20 CN:2790 CO:812 CS:1353 CY:461 CZ:9 DR:1122 DZ:122 EA:441971 FT:7260 FV:113 FY:16 GL:2788 GR:41 HD:4521 IN:53 JR:123 KG:5 KT:8625 LB:958 LG:327 LI:59 MC:39 MM:2 MR:28 MX:40 ... (+26 more values)
+load.mjs: V_FLIS_MANAGEMENT.CSV SLC distribution (tracked rows): -:33 0:476514 1:43 2:667 3:633 4:3074 5:581 6:3473 7:2664 8:205 9:1225 A:115 B:2 C:129 D:1 E:16 F:859 G:526 H:3816 I:878 J:348 K:1859 L:96 M:9717 N:63 P:507 Q:7941 R:1015 S:8922 T:237 U:490 V:250 W:3401 X:571 Y:4351 Z:900
+load.mjs: V_FLIS_MANAGEMENT.CSV SOS distribution (tracked rows): A12:6 AKZ:196 B14:41 B16:46 B17:30 B64:17 F04:3 F06:15 FGZ:25 FHZ:17 FLZ:41 FPD:15 G36:63 G69:12 GSA:177 JCD:6 JDF:3 JVS:639 MPB:69 NRP:218 SMS:533718 ZNC:672 ZQC:93
+load.mjs: V_FLIS_MANAGEMENT.CSV AAC distribution (tracked rows): -:3 A:11 B:7 C:803 D:101498 F:36 G:37 H:46278 I:691 J:79419 K:6 L:44353 M:16 P:36 Q:651 R:120 S:2 T:2 V:1583 W:127 X:625 Y:805 Z:259013
+load.mjs: V_FLIS_MANAGEMENT.CSV CIIC distribution (tracked rows): -:33 1:3 3:8 4:68 6:1 7:13990 9:33 C:1 I:345 J:1603 M:157 N:672 O:2 Q:235 R:139 S:8 U:514342 V:1139 X:333 Y:366 Z:2644
+load.mjs: V_FLIS_MANAGEMENT.CSV repairability distribution (tracked rows): -:245938 A:3059 C:624 D:4872 E:11 F:11727 H:553 K:40 L:69 M:237 N:165428 NN:39 O:1613 P:2919 Q:3 R:170 S:2 T:77 U:357 W:28 Z:98105 ZN:251
+load.mjs: V_FLIS_MANAGEMENT.CSV MOE distribution (tracked rows): DA:77971 DF:86703 DJ:510 DM:38637 DN:135461 DS:179562 GE:12 GP:16453 TG:114 VA:699
+    at priceStats (file:///home/runner/work/nsnexplorer/nsnexplorer/ingest/publog/load-management.mjs:183:39)
+    at logFileSummary (file:///home/runner/work/nsnexplorer/nsnexplorer/ingest/publog/load-management.mjs:244:14)
+    at Module.loadManagement (file:///home/runner/work/nsnexplorer/nsnexplorer/ingest/publog/load-management.mjs:278:7)
+::warning::load.mjs: V_FLIS_MANAGEMENT.CSV load failed (Maximum call stack size exceeded); continuing
+    at priceStats (file:///home/runner/work/nsnexplorer/nsnexplorer/ingest/publog/load-management.mjs:183:39)
+    at logFileSummary (file:///home/runner/work/nsnexplorer/nsnexplorer/ingest/publog/load-management.mjs:244:14)
+    at Module.loadManagement (file:///home/runner/work/nsnexplorer/nsnexplorer/ingest/publog/load-management.mjs:278:7)
+::warning::load.mjs: management files load failed (Maximum call stack size exceeded); continuing
