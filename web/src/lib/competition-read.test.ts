@@ -79,3 +79,21 @@ test('date ties keep input order', () => {
   const r2 = competitionRead({ coded: 'unknown', awards: [aw('2025-01-01', 'Y'), aw('2025-01-01', 'X'), aw('2025-01-01', 'X')] });
   assert.equal(r2.streakCage, 'Y');
 });
+
+test('a run of three by the latest winner outweighs several distinct winners', () => {
+  const awards = [
+    { cage: 'AAAAA', date: '2026-10-30' },
+    { cage: 'AAAAA', date: '2026-10-01' },
+    { cage: 'AAAAA', date: '2026-09-01' },
+    { cage: 'BBBBB', date: '2026-08-01' },
+    { cage: 'CCCCC', date: '2026-07-01' },
+  ];
+  const r = competitionRead({ coded: 'restricted', awards });
+  assert.equal(r.label, 'One supplier won the last 3');
+  assert.equal(r.tone, 'amber');
+  assert.equal(r.distinctWinners, 3);
+  assert.equal(r.streak, 3);
+  // A run of two does not trigger it.
+  const r2 = competitionRead({ coded: 'unknown', awards: [awards[0], awards[1], awards[3], awards[4]] });
+  assert.equal(r2.label, 'Usually contested');
+});

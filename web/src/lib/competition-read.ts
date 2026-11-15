@@ -35,6 +35,15 @@ export function competitionRead(input: { coded: CodedCompetition; awards: readon
   const base = { considered, distinctWinners, streak, streakCage };
 
   if (considered >= MIN_AWARDS) {
+    // A run of three or more by the latest winner outweighs the count of distinct winners.
+    if (distinctWinners >= 2 && streak >= MIN_AWARDS) {
+      return {
+        ...base,
+        label: `One supplier won the last ${streak}`,
+        tone: 'amber',
+        reason: `${distinctWinners} suppliers won the last ${considered} awards on record, but the same one won the most recent ${streak}.`,
+      };
+    }
     if (distinctWinners >= 3) {
       return { ...base, label: 'Usually contested', tone: 'green', reason: `${distinctWinners} suppliers won the last ${considered} awards on record.` };
     }

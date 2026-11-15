@@ -321,7 +321,7 @@ const datasetSchema = {
       )}
       {openQtyTotal > 0 && openValueAtLastPrice !== null && (
         <div class="stat">
-          <div class="value">≈ {formatUsd(Math.round(openValueAtLastPrice))}</div>
+          <div class="value">≈ ${Math.round(openValueAtLastPrice).toLocaleString('en-US')}</div>
           <div class="label">Value at last price</div>
           <div class="gloss">Open quantity × last unit price</div>
         </div>
@@ -372,7 +372,7 @@ const datasetSchema = {
                   <td class="num mono">
                     {s.quantity !== null ? s.quantity.toLocaleString('en-US') : '—'}
                     {solValueAtLastPrice(s.quantity) !== null && (
-                      <div class="gloss">≈ {formatUsd(Math.round(solValueAtLastPrice(s.quantity)!))} at last price</div>
+                      <div class="gloss">≈ ${Math.round(solValueAtLastPrice(s.quantity)!).toLocaleString('en-US')} at last price</div>
                     )}
                   </td>
                   <td><span class={`badge ${badge.cls}`}>{badge.text}</span></td>
