@@ -12,6 +12,8 @@
 // callers simply omit the section.
 
 import type { CharacteristicEntry } from './data';
+import { parseMeasure } from './diagram-kit.ts';
+import { resolveShape } from './diagram-shapes.ts';
 
 interface Dim {
   min: number;
@@ -217,13 +219,20 @@ export function buildRingDiagram(
 
 function parseDimAll(reply: string | null): Dim | null {
   if (!reply) return null;
+  const fmt = (n: number) => n.toFixed(4).replace(/0+$/, '').replace(/\.$/, '.0');
+  // Strict reading first: it understands whole numbers ("MILLIMETERS NOMINAL 19") and limits
+  // ("INCHES MAXIMUM 0.875", labelled MAX so a limit is never shown as a nominal size).
+  const m = parseMeasure(reply);
+  if (m) {
+    const t = m.lo === m.hi ? fmt(m.lo) : `${fmt(m.lo)}–${fmt(m.hi)}`;
+    return { min: m.lo, max: m.hi, mid: m.mid, text: m.kind === 'max' ? `${t} MAX` : m.kind === 'min' ? `${t} MIN` : t };
+  }
   const nums = reply.match(/(\d+\.\d+)/g);
   if (!nums) return null;
   const vals = nums.map(Number).filter((n) => n > 0);
   if (vals.length === 0) return null;
   const min = Math.min(...vals);
   const max = Math.max(...vals);
-  const fmt = (n: number) => n.toFixed(4).replace(/0+$/, '').replace(/\.$/, '.0');
   return { min, max, mid: (min + max) / 2, text: min === max ? fmt(min) : `${fmt(min)}–${fmt(max)}` };
 }
 
@@ -1011,124 +1020,17 @@ export function buildPinDiagram(
 }
 
 // --- Threaded fastener (screw / bolt / stud) --------------------------
-// A head block plus a threaded shank: nominal thread/shank diameter and
-// overall length are required; head diameter/width is optional (FLIS
-// doesn't always carry it for every fastener) — when it's absent, or when
-// a matched value is smaller than the shank (a bad/irrelevant match), a
-// generic head sized ~1.6x the shank diameter is drawn instead so the
-// silhouette still reads as a fastener. Drawn as a single side view (the
-// head as a plain block, the shank hatched to denote threading) — same
-// dimensioning convention (extension/dimension lines, arrowheads) as
-// buildPinDiagram.
+// The drawing itself lives in diagram-shapes.ts (the fastener family, shared with rivets). It reads the
+// under-head FASTENER LENGTH or OVERALL LENGTH by exact name (never THREAD LENGTH or GRIP LENGTH), uses the
+// head height and head diameter / width across flats when the catalog has them, hatches only the stated
+// thread length, and says on the title block what it had to draw generically.
 export function buildScrewDiagram(
   entries: CharacteristicEntry[],
   opts: { nsnDashed: string; itemName: string | null }
 ): string | null {
-  const dia = findDim(entries, [
-    /\bNOMINAL THREAD (?:DIAMETER|SIZE)\b/i,
-    /\bTHREAD SIZE\b/i,
-    /\bNOMINAL DIAMETER\b/i,
-    /\bSHANK DIAMETER\b/i,
-  ]);
-  const len = findDim(entries, [/\b(?:OVERALL |NOMINAL )?LENGTH\b/i, /\bFASTENER LENGTH\b/i]);
-  if (!dia || !len) return null;
-  if (!(len.mid > dia.mid)) return null; // a screw/bolt/stud is longer than it is wide
-
-  let headD = findDim(entries, [/\bHEAD (?:DIAMETER|WIDTH|HEIGHT)\b/i, /\bWIDTH ACROSS FLATS\b/i]);
-  if (headD && !(headD.mid > dia.mid)) headD = null; // bad/irrelevant match — fall back to a generic head
-
-  const material = findText(entries, [/^MATERIAL$/i, /MATERIAL DOCUMENT/i]);
-  const threadClassText = findText(entries, [/THREAD CLASS/i]);
-  const unit = detectUnit(entries);
-
-  const line = (x1: number, y1: number, x2: number, y2: number, cls: string) =>
-    `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="${cls}"/>`;
-  const arrow = (x: number, y: number, dir: 'l' | 'r' | 'u' | 'd') => {
-    const d = 7, w = 2.6;
-    const p = dir === 'l' ? `${x},${y} ${x + d},${y - w} ${x + d},${y + w}`
-      : dir === 'r' ? `${x},${y} ${x - d},${y - w} ${x - d},${y + w}`
-      : dir === 'u' ? `${x},${y} ${x - w},${y + d} ${x + w},${y + d}`
-      : `${x},${y} ${x - w},${y - d} ${x + w},${y - d}`;
-    return `<polygon points="${p}" class="dg-fill"/>`;
-  };
-  const dimText = (x: number, y: number, t: string, anchor = 'middle') =>
-    `<text x="${x}" y="${y}" class="dg-dim" text-anchor="${anchor}">${esc(t)}</text>`;
-
-  const defs = `<defs><pattern id="dg-thread" width="5" height="5" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
-    <line x1="0" y1="0" x2="0" y2="5" style="stroke:var(--ink);stroke-width:1"/></pattern></defs>`;
-
-  // ---- Side view: head block + threaded shank, true relative scale ----
-  const headDiaReal = headD ? headD.mid : dia.mid * 1.6;
-  const headLenReal = Math.min(dia.mid * 0.75, len.mid * 0.3);
-  const shankLenReal = Math.max(dia.mid * 0.2, len.mid - headLenReal);
-  const totalReal = headLenReal + shankLenReal;
-  const scale = Math.min(430 / totalReal, 90 / headDiaReal);
-
-  const sx0 = 60, scy = 175;
-  const headLenPx = headLenReal * scale;
-  const shankLenPx = shankLenReal * scale;
-  const xHeadEnd = sx0 + headLenPx;
-  const xEnd = xHeadEnd + shankLenPx;
-  const Hh = Math.max(14, (headDiaReal / 2) * scale);
-  const Sh = Math.max(6, Math.min(Hh - 2, (dia.mid / 2) * scale));
-
-  const sideView = `
-    <text x="${(sx0 + xEnd) / 2}" y="40" class="dg-label" text-anchor="middle">SIDE VIEW</text>
-    <rect x="${sx0}" y="${scy - Hh}" width="${headLenPx}" height="${2 * Hh}" class="dg-edge"/>
-    <rect x="${xHeadEnd}" y="${scy - Sh}" width="${shankLenPx}" height="${2 * Sh}" class="dg-thread"/>
-    ${line(sx0 - 16, scy, xEnd + 16, scy, 'dg-center')}`;
-
-  const secDimY = scy - Hh - 30;
-  const lengthDim = `
-    ${line(sx0, scy - Hh - 6, sx0, secDimY - 6, 'dg-ext')}
-    ${line(xEnd, scy - Sh - 6, xEnd, secDimY - 6, 'dg-ext')}
-    ${line(sx0, secDimY, xEnd, secDimY, 'dg-dimline')}
-    ${arrow(sx0, secDimY, 'l')}${arrow(xEnd, secDimY, 'r')}
-    ${dimText((sx0 + xEnd) / 2, secDimY - 8, `${len.text} LG`)}`;
-
-  const diaDimX = xEnd + 30;
-  const diaDim = `
-    ${line(xEnd, scy - Sh, diaDimX + 4, scy - Sh, 'dg-ext')}
-    ${line(xEnd, scy + Sh, diaDimX + 4, scy + Sh, 'dg-ext')}
-    ${line(diaDimX, scy - Sh, diaDimX, scy + Sh, 'dg-dimline')}
-    ${arrow(diaDimX, scy - Sh, 'u')}${arrow(diaDimX, scy + Sh, 'd')}
-    <text x="${diaDimX + 8}" y="${scy + 4}" class="dg-dim" text-anchor="start">⌀${esc(dia.text)}</text>`;
-
-  const headDimX = Math.max(16, sx0 - 40);
-  const headDim = headD
-    ? `
-    ${line(sx0 - 6, scy - Hh, headDimX + 4, scy - Hh, 'dg-ext')}
-    ${line(sx0 - 6, scy + Hh, headDimX + 4, scy + Hh, 'dg-ext')}
-    ${line(headDimX, scy - Hh, headDimX, scy + Hh, 'dg-dimline')}
-    ${arrow(headDimX, scy - Hh, 'u')}${arrow(headDimX, scy + Hh, 'd')}
-    <text x="${headDimX - 8}" y="${scy + 4}" class="dg-dim" text-anchor="end">${esc(headD.text)}</text>`
-    : '';
-
-  const tbY = 462;
-  const threadCallout = threadClassText ? `THREAD ${threadClassText}` : null;
-  const tbItems = [opts.itemName ?? 'SCREW', material, threadCallout].filter(Boolean) as string[];
-  const style = `<style>
-    .dg-edge { stroke: var(--ink); stroke-width: 1.8; fill: none; }
-    .dg-thread { stroke: var(--ink); stroke-width: 1.8; fill: url(#dg-thread); }
-    .dg-ext, .dg-dimline { stroke: var(--ink-soft); stroke-width: 1; }
-    .dg-center { stroke: var(--ink-soft); stroke-width: 0.9; stroke-dasharray: 14 4 3 4; }
-    .dg-fill { fill: var(--ink-soft); }
-    .dg-dim, .dg-label, .dg-note, .dg-title { font-family: "IBM Plex Mono", monospace; fill: var(--ink); }
-    .dg-dim { font-size: 13px; }
-    .dg-label { font-size: 14px; font-weight: 600; letter-spacing: 0.05em; }
-    .dg-note { font-size: 10px; fill: var(--ink-soft); letter-spacing: 0.03em; }
-    .dg-title { font-size: 15px; font-weight: 600; letter-spacing: 0.06em; }
-  </style>`;
-  const title = `
-    ${line(28, tbY - 18, 732, tbY - 18, 'dg-edge')}
-    <text x="28" y="${tbY + 2}" class="dg-title">${esc(opts.nsnDashed)}</text>
-    <text x="732" y="${tbY + 2}" class="dg-note" text-anchor="end">ALL DIMENSIONS IN ${unit.long} · REFERENCE ONLY, NOT FOR MANUFACTURE</text>
-    <text x="28" y="${tbY + 22}" class="dg-note">${esc(tbItems.join('  ·  '))}</text>`;
-
-  const unitTag = `<text x="732" y="30" class="dg-note" text-anchor="end">UNITS: ${unit.long}</text>`;
-  return `<svg viewBox="0 0 760 505" role="img" aria-label="Dimensioned drawing of ${esc(opts.nsnDashed)} (${unit.long})" xmlns="http://www.w3.org/2000/svg">
-  ${style}${defs}${unitTag}${sideView}${lengthDim}${diaDim}${headDim}${title}
-</svg>`;
+  const root = (opts.itemName ?? '').toUpperCase().split(',')[0].trim();
+  const fsc = root === 'BOLT' ? '5306' : root === 'STUD' ? '5307' : '5305';
+  return resolveShape(entries, fsc, opts.itemName).shape?.draw(opts) ?? null;
 }
 
 // --- Helical compression spring ----------------------------------------
@@ -1312,40 +1214,6 @@ function thumbPin(entries: CharacteristicEntry[]): string | null {
   );
 }
 
-/** Head-rectangle + shank-rectangle silhouette for a screw/bolt/stud. */
-function thumbScrew(entries: CharacteristicEntry[]): string | null {
-  const dia = findDim(entries, [
-    /\bNOMINAL THREAD (?:DIAMETER|SIZE)\b/i,
-    /\bTHREAD SIZE\b/i,
-    /\bNOMINAL DIAMETER\b/i,
-    /\bSHANK DIAMETER\b/i,
-  ]);
-  const len = findDim(entries, [/\b(?:OVERALL |NOMINAL )?LENGTH\b/i, /\bFASTENER LENGTH\b/i]);
-  if (!dia || !len || !(len.mid > dia.mid)) return null;
-  let headD = findDim(entries, [/\bHEAD (?:DIAMETER|WIDTH|HEIGHT)\b/i, /\bWIDTH ACROSS FLATS\b/i]);
-  if (headD && !(headD.mid > dia.mid)) headD = null;
-
-  const headDiaReal = headD ? headD.mid : dia.mid * 1.6;
-  const headLenReal = Math.min(dia.mid * 0.75, len.mid * 0.3);
-  const shankLenReal = Math.max(dia.mid * 0.2, len.mid - headLenReal);
-  const totalReal = headLenReal + shankLenReal;
-
-  const maxW = 96, maxH = 40;
-  const scale = Math.min(maxW / totalReal, maxH / headDiaReal);
-  const headLenPx = headLenReal * scale;
-  const shankLenPx = shankLenReal * scale;
-  const totalPx = headLenPx + shankLenPx;
-  const Hh = Math.max(6, (headDiaReal / 2) * scale);
-  const Sh = Math.max(3, Math.min(Hh - 1, (dia.mid / 2) * scale));
-  const x0 = 60 - totalPx / 2;
-  const xHeadEnd = x0 + headLenPx;
-  const xEnd = x0 + totalPx;
-  return thumbWrap(
-    `<rect x="${x0.toFixed(2)}" y="${(60 - Hh).toFixed(2)}" width="${headLenPx.toFixed(2)}" height="${(2 * Hh).toFixed(2)}" ${THUMB_STROKE}/>
-     <rect x="${xHeadEnd.toFixed(2)}" y="${(60 - Sh).toFixed(2)}" width="${(xEnd - xHeadEnd).toFixed(2)}" height="${(2 * Sh).toFixed(2)}" ${THUMB_STROKE}/>`
-  );
-}
-
 /** A few zig-zag coil loops for a compression-spring card thumbnail. */
 function thumbSpring(entries: CharacteristicEntry[]): string | null {
   const wireD = findDim(entries, [/\bWIRE DIAMETER\b/i, /\bWIRE SIZE\b/i]);
@@ -1371,29 +1239,68 @@ function thumbSpring(entries: CharacteristicEntry[]): string | null {
   return thumbWrap(`<polyline points="${pts.join(' ')}" ${THUMB_STROKE}/>`);
 }
 
-// Full dimensioned drawing, dispatched by FSC archetype. Returns null when the
-// FSC has no archetype OR the specs lack the geometry a drawing needs — so a
-// drawing renders on every page whose specs support one, and never a wrong one.
-// New part families are added here (plus their generator above) as archetypes.
+// Names in a FSC that the older builders would draw wrongly (a cotter pin is not a plain cylinder, a torsion
+// spring is not a compression coil). They get no drawing rather than a wrong one.
+const PIN_NOT_PLAIN = /\b(COTTER|QUICK|RELEASE|TAPER(?:ED)?|HEADED|SHOULDER(?:ED)?|CLEVIS|NAIL|SPIKE|STAPLE|DETENT|LOCK|HANDLE|KNOB|RING)\b/;
+const SPRING_NOT_COMPRESSION = /\b(EXTENSION|TENSION|TORSION|LEAF|FLAT|BELLEVILLE|WAVE|DISK|CLOCK|SPIRAL|CONSTANT|VOLUTE|GARTER|CANTILEVER)\b/;
+// An outside flange only: "LEFT INTERNAL FLANGE WIDTH" describes a lip inside the bore, not a wider flange on the body.
+const hasFlange = (entries: CharacteristicEntry[]) => entries.some((e) => e.requirement && /\bFLANGE\b/i.test(e.requirement) && !/\bINTERNAL\b/i.test(e.requirement));
+
+interface Picked {
+  builder: string;
+  svg: string;
+}
+
+// The one place that decides which builder draws a part. buildDiagram() returns its SVG; diagramBuilder()
+// returns its name (used by web/scripts/diagram-coverage.mjs).
+function pickDiagram(
+  entries: CharacteristicEntry[],
+  fsc: string,
+  opts: { nsnDashed: string; itemName: string | null },
+): Picked | null {
+  const name = (opts.itemName ?? '').toUpperCase();
+  const as = (builder: string, svg: string | null | undefined): Picked | null => (svg ? { builder, svg } : null);
+
+  // Newer families (diagram-shapes.ts): fasteners, bearings, seals, shims, retaining rings, loop clamps, keys.
+  const r = resolveShape(entries, fsc, opts.itemName);
+  if (r.claimed) return r.shape ? as(r.shape.kind, r.shape.draw(opts)) : null;
+
+  if (fsc === '3120' || fsc === '5365') {
+    // A flanged part is only ever drawn by the flanged builder: the plain sleeve builder would pick whichever
+    // "OUTSIDE DIAMETER" comes first, which can be the flange.
+    if (hasFlange(entries)) return as('flanged-bearing', buildFlangedBearingDiagram(entries, opts));
+    return as('sleeve', buildSleeveDiagram(entries, opts));
+  }
+  if (fsc === '5310') {
+    if (/WASHER/.test(name)) return as('washer', buildWasherDiagram(entries, opts));
+    const plateNut = buildPlateNutDiagram(entries, opts);
+    if (plateNut) return as('plate-nut', plateNut);
+    return /NUT/.test(name) ? as('nut', buildNutDiagram(entries, opts)) : null;
+  }
+  if (fsc === '5315') return PIN_NOT_PLAIN.test(name) ? null : as('pin', buildPinDiagram(entries, opts));
+  if (fsc === '5330' || fsc === '5331') return as('ring', buildRingDiagram(entries, opts));
+  if (fsc === '5360') return SPRING_NOT_COMPRESSION.test(name) ? null : as('spring', buildSpringDiagram(entries, opts));
+  return null;
+}
+
+// Full dimensioned drawing, dispatched by FSC archetype and item name. Returns null when the FSC has no
+// archetype OR the specs lack the geometry a drawing needs, so a drawing renders on every page whose specs
+// support one, and never a wrong one. New part families are added in diagram-shapes.ts (resolveShape).
 export function buildDiagram(
   entries: CharacteristicEntry[],
   fsc: string,
   opts: { nsnDashed: string; itemName: string | null },
 ): string | null {
-  const name = (opts.itemName ?? '').toUpperCase();
-  if (fsc === '3120') return buildFlangedBearingDiagram(entries, opts) ?? buildSleeveDiagram(entries, opts);
-  if (fsc === '5310') {
-    if (/WASHER/.test(name)) return buildWasherDiagram(entries, opts);
-    const plateNut = buildPlateNutDiagram(entries, opts);
-    if (plateNut) return plateNut;
-    return /NUT/.test(name) ? buildNutDiagram(entries, opts) : null;
-  }
-  if (fsc === '5305' || fsc === '5306' || fsc === '5307') return buildScrewDiagram(entries, opts);
-  if (fsc === '5315') return buildPinDiagram(entries, opts);
-  if (fsc === '5330' || fsc === '5331') return buildRingDiagram(entries, opts);
-  if (fsc === '5360') return buildSpringDiagram(entries, opts);
-  if (fsc === '5365') return buildSleeveDiagram(entries, opts);
-  return null;
+  return pickDiagram(entries, fsc, opts)?.svg ?? null;
+}
+
+/** Name of the builder that draws this part, or null when there is no drawing. */
+export function diagramBuilder(
+  entries: CharacteristicEntry[],
+  fsc: string,
+  opts: { nsnDashed: string; itemName: string | null },
+): string | null {
+  return pickDiagram(entries, fsc, opts)?.builder ?? null;
 }
 
 export function buildThumbnail(entries: CharacteristicEntry[], fsc: string, itemName?: string | null): string | null {
@@ -1401,11 +1308,15 @@ export function buildThumbnail(entries: CharacteristicEntry[], fsc: string, item
   const cy = 60;
   const name = (itemName ?? '').toUpperCase();
 
+  // Newer families (diagram-shapes.ts): the thumbnail comes from the same model as the drawing.
+  const resolved = resolveShape(entries, fsc, itemName ?? null);
+  if (resolved.claimed) return resolved.shape ? resolved.shape.thumb() : null;
+
   // FSC 3120 — flanged sleeve bearings get an end-view silhouette with
   // three concentric circles (flange OD, body OD, bore); plain
   // bushings/sleeves in the same FSC that don't carry flange dimensions
   // fall back to the two-circle tube silhouette (OD, bore).
-  if (fsc === '3120') {
+  if (fsc === '3120' || fsc === '5365') {
     const g = (pat: RegExp) => {
       const e = entries.find((x) => x.requirement && pat.test(x.requirement));
       return e ? parseDimAll(e.reply) : null;
@@ -1420,6 +1331,8 @@ export function buildThumbnail(entries: CharacteristicEntry[], fsc: string, item
       const rBore = Math.max(6, (bodyID.mid / 2) * scale);
       return thumbWrap(`${thumbCircle(cx, cy, rFlange)}${thumbCircle(cx, cy, rBody)}${thumbCircle(cx, cy, rBore)}`);
     }
+    // A flanged part with an incomplete flange is not drawn as a plain tube (its "OUTSIDE DIAMETER" may be the flange).
+    if (hasFlange(entries)) return null;
     return thumbTube(
       entries,
       [/\bOUTSIDE DIAMETER\b/i, /\bBODY OUTSIDE DIAMETER\b/i, /\bOUTER DIAMETER\b/i, /\bOD\b/i],
@@ -1477,23 +1390,13 @@ export function buildThumbnail(entries: CharacteristicEntry[], fsc: string, item
     return /NUT/.test(name) ? thumbNut(entries) : null;
   }
 
-  // FSC 5305/5306/5307 — screws, bolts, studs: head + shank silhouette.
-  if (fsc === '5305' || fsc === '5306' || fsc === '5307') return thumbScrew(entries);
-
   // FSC 5315 — straight pins / dowels: capsule silhouette.
-  if (fsc === '5315') return thumbPin(entries);
+  if (fsc === '5315') return PIN_NOT_PLAIN.test(name) ? null : thumbPin(entries);
 
   // FSC 5360 — helical compression springs: coil silhouette.
-  if (fsc === '5360') return thumbSpring(entries);
+  if (fsc === '5360') return SPRING_NOT_COMPRESSION.test(name) ? null : thumbSpring(entries);
 
-  // FSC 5365 — sleeves, spacers, plain bushings: two-circle tube silhouette.
-  if (fsc === '5365') {
-    return thumbTube(
-      entries,
-      [/\bOUTSIDE DIAMETER\b/i, /\bBODY OUTSIDE DIAMETER\b/i, /\bOUTER DIAMETER\b/i, /\bOD\b/i],
-      [/\bINSIDE DIAMETER\b/i, /\bBORE\b/i, /\bINTERNAL DIAMETER\b/i, /\bINNER DIAMETER\b/i, /\bID\b/i]
-    );
-  }
+  // FSC 5365 (sleeves, spacers, plain bushings) is handled with 3120 above.
 
   // Ring FSCs (5331 packings, 5330 gaskets/seals) — o-ring silhouette:
   // two concentric circles (OD, ID), derived from cross-section when only
@@ -1519,3 +1422,22 @@ export function buildThumbnail(entries: CharacteristicEntry[], fsc: string, item
 
   return null;
 }
+
+export {
+  buildBearingDiagram,
+  buildBoltDiagram,
+  buildCompressionSpringDiagram,
+  buildFlatWasherDiagram,
+  buildGasketDiagram,
+  buildKeyDiagram,
+  buildLoopClampDiagram,
+  buildORingDiagram,
+  buildPackingDiagram,
+  buildRetainingRingDiagram,
+  buildRingSpacerDiagram,
+  buildRivetDiagram,
+  buildSealDiagram,
+  buildShimDiagram,
+  buildStraightPinDiagram,
+  buildStudDiagram,
+} from './diagram-shapes.ts';
