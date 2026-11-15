@@ -1,37 +1,41 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { loadSiteData } from '../lib/data';
+import { loadSiteData, formatUsd } from '../lib/data';
 import { SITE_URL } from '../consts';
 import CiteThis from '../components/CiteThis.astro';
 
 const data = await loadSiteData();
-// Ranked by total obligations (same dollar figure the agency page shows),
-// highest first; ties by name.
+// Ranked by obligated dollars on USAspending contract actions (the figure the
+// agency page leads with), highest first; ties by name. Price-point purchases
+// are shown in their own column only when some agency has any.
 const rows = data.agencies
   .map((a) => {
     const purchases = data.purchasesByAgency.get(a.agencyId) ?? [];
+    const prof = data.agencyProfiles.get(a.agencyId);
     return {
       agency: a,
       count: purchases.length,
-      total: purchases.reduce((sum, p) => sum + (p.totalValue ?? p.unitPrice * (p.quantity ?? 1)), 0),
+      actions: prof?.actions ?? 0,
+      obligated: prof?.obligated ?? 0,
     };
   })
-  .sort((a, b) => b.total - a.total || a.agency.name.localeCompare(b.agency.name));
+  .sort((a, b) => b.obligated - a.obligated || a.agency.name.localeCompare(b.agency.name));
 
 const fmtInt = (n: number) => n.toLocaleString('en-US');
 
 const A = rows.length;
-const P = rows.reduce((s, r) => s + r.count, 0);
+const P = rows.reduce((s, r) => s + r.actions, 0);
+const hasPurchases = rows.some((r) => r.count > 0);
 const hasA = A > 0;
 
 const title = hasA
   ? `Federal Parts Spending by Agency: ${fmtInt(A)} Agencies`
   : 'Federal Parts Spending by Agency';
 const description = hasA
-  ? `Federal parts spending by agency: ${fmtInt(A)} government agencies ranked by indexed parts purchases, from USAspending and DIBBS records. Free, updated daily.`
-  : 'Federal parts spending by agency: which government agencies buy parts, ranked by indexed purchases from USAspending and DIBBS records. Free, updated daily.';
+  ? `Federal parts spending by agency: ${fmtInt(A)} government agencies ranked by obligated dollars on contract actions, from USAspending records. Free, updated daily.`
+  : 'Federal parts spending by agency: which government agencies buy parts, ranked by obligated dollars on USAspending contract actions. Free, updated daily.';
 const h1 = hasA
-  ? `Federal parts spending by agency: ${fmtInt(A)} agencies, ${fmtInt(P)} purchases`
+  ? `Federal parts spending by agency: ${fmtInt(A)} agencies, ${fmtInt(P)} contract actions`
   : 'Federal parts spending by agency';
 const canonicalUrl = `${SITE_URL}/agencies/`;
 
@@ -49,17 +53,17 @@ const faq = [
   {
     question: 'Which government agencies buy the most parts?',
     answer:
-      'In these records the Defense Logistics Agency and the military services account for most parts purchases. The table ranks every indexed agency by purchase count.',
+      'In these records the Defense Logistics Agency and the military services account for most parts purchases. The table ranks every indexed agency by obligated dollars on contract actions.',
   },
   {
     question: 'Why is an agency missing?',
     answer:
-      'Only agencies named as the buyer on an indexed price point appear. As more federal supply classes are fully indexed, more agencies will show up.',
+      'Only agencies named as the buyer on an indexed contract action or price point appear. As more federal supply classes are fully indexed, more agencies will show up.',
   },
   {
     question: 'Is this total federal spending?',
     answer:
-      "No. It covers indexed parts purchases with a unit price, not an agency's whole budget. Contract action totals are shown separately on NSN pages.",
+      "No. It covers USAspending contract actions for the supply classes indexed here, not an agency's whole budget.",
   },
 ];
 ---
@@ -81,17 +85,18 @@ const faq = [
   <h1>{h1}</h1>
   <p class="lede">Agencies</p>
   <p class="lede">
-    Every agency that appears in an indexed price point, with a link to its purchase history.
+    Every agency that appears as the buyer on an indexed contract action, with a link to what it buys.
   </p>
 
   <section class="intro">
     <h2 class="section-title">Which government agencies buy parts</h2>
     <p class="gloss">
       This page shows federal parts spending by agency: every government agency that appears as
-      the buyer on an indexed purchase, ranked by how many purchases NSN Explorer has on record for
-      it. Open an agency to see the NSNs it buys, the prices it has paid and the source record for
-      each. Purchases come from USAspending contract actions and DLA DIBBS awards, the index is
-      rebuilt every day, and it is free to use.
+      the buyer on an indexed USAspending contract action, ranked by obligated dollars. Open an
+      agency to see its suppliers, the supply classes it buys, spending by fiscal year and its
+      latest actions, each linked to the source record. Totals cover the supply classes NSN
+      Explorer tracks, not an agency's whole budget, and include negative de-obligations. The index
+      is rebuilt every day, and it is free to use.
     </p>
   </section>
 
@@ -107,14 +112,18 @@ const faq = [
         <thead>
           <tr>
             <th>Agency</th>
-            <th class="num">Purchases</th>
+            <th class="num">Contract actions</th>
+            <th class="num">Obligated</th>
+            {hasPurchases && <th class="num">Purchases</th>}
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => (
             <tr>
               <td><a href={`/agency/${r.agency.slug}/`}>{r.agency.name}</a></td>
-              <td class="num mono">{fmtInt(r.count)}</td>
+              <td class="num mono">{fmtInt(r.actions)}</td>
+              <td class="num mono">{r.actions > 0 ? formatUsd(r.obligated) : '—'}</td>
+              {hasPurchases && <td class="num mono">{fmtInt(r.count)}</td>}
             </tr>
           ))}
         </tbody>

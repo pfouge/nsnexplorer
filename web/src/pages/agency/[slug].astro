@@ -1,9 +1,14 @@
 ---
+import '../../styles/supplier.css';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { SITE_NAME, SITE_URL } from '../../consts';
 import CiteThis from '../../components/CiteThis.astro';
 import Follow from '../../components/Follow.astro';
+import { assertSourceUrl } from '../../lib/shared';
 import { loadSiteData, toDashedNsn, formatDate, formatUsdPrecise, formatUsd, type AgencyRecord } from '../../lib/data';
+import { agencyLede, barWidth, compactUsd, fillFiscalYears, formatShare, truncateText } from '../../lib/agency-profile';
+import { fitDescription } from '../../lib/seo-copy';
+import { supplierPath } from '../../lib/entity';
 
 export async function getStaticPaths() {
   const data = await loadSiteData();
@@ -15,6 +20,10 @@ export async function getStaticPaths() {
 
 const { agency } = Astro.props as { agency: AgencyRecord };
 const data = await loadSiteData();
+const fmtInt = (n: number) => n.toLocaleString('en-US');
+
+const profile = data.agencyProfiles.get(agency.agencyId);
+const lede = agencyLede(profile);
 
 const purchases = (data.purchasesByAgency.get(agency.agencyId) ?? [])
   .slice()
@@ -25,8 +34,33 @@ const totalDollars = purchases.reduce(
   0
 );
 
-const title = agency.name;
-const description = `${purchases.length.toLocaleString('en-US')} purchases by ${agency.name} indexed on ${SITE_NAME}, every price linked to its official source record.`;
+// Fiscal-year table: every year between the first and last, newest first; bars scale to the largest year.
+const fyRows = fillFiscalYears(profile?.byFiscalYear ?? []).reverse();
+const fyMax = Math.max(0, ...fyRows.map((r) => r.obligated));
+const totalObligated = profile?.obligated ?? 0;
+const topRecipients = profile?.topRecipients ?? [];
+const topClasses = profile?.topClasses ?? [];
+const recent = profile?.recent ?? [];
+const fscPages = new Set(data.deepFscs.map((f) => f.fsc));
+
+const sections = [
+  fyRows.length > 0 && { id: 'by-year', label: 'By fiscal year' },
+  topRecipients.length > 0 && { id: 'suppliers', label: 'Top suppliers' },
+  topClasses.length > 0 && { id: 'buys', label: 'What it buys' },
+  recent.length > 0 && { id: 'recent', label: 'Recent actions' },
+  purchases.length > 0 && { id: 'purchases', label: 'Purchases' },
+].filter((x): x is { id: string; label: string } => Boolean(x));
+
+const title =
+  profile && `${agency.name}: ${compactUsd(profile.obligated)} in Contract Actions`.length <= 55
+    ? `${agency.name}: ${compactUsd(profile.obligated)} in Contract Actions`
+    : agency.name;
+const description = profile
+  ? fitDescription([
+      [`${agency.name}: ${lede} `, `${agency.name}: ${fmtInt(profile.actions)} contract actions on ${SITE_NAME}. `],
+      'Every action links to its USAspending record.',
+    ])
+  : `${fmtInt(purchases.length)} purchases by ${agency.name} indexed on ${SITE_NAME}, every price linked to its official source record.`;
 const canonicalUrl = `${SITE_URL}/agency/${agency.slug}/`;
 
 const breadcrumbSchema = {
@@ -55,26 +89,136 @@ const breadcrumbSchema = {
 
   <header class="hero">
     <h1>{agency.name}{agency.abbreviation && <span class="gloss"> ({agency.abbreviation})</span>}</h1>
-    <p class="lede">Purchases by this agency indexed from public price-point records.</p>
+    <p class="lede">{lede ?? (purchases.length > 0 ? 'Purchases by this agency indexed from public price-point records.' : 'No contract actions or purchases are indexed for this agency yet.')}</p>
     <Follow kind="agency" entity={agency.slug} label={agency.name} />
   </header>
 
-  <div class="stat-strip">
-    <div class="stat">
-      <div class="value">{purchases.length.toLocaleString('en-US')}</div>
-      <div class="label">Purchases</div>
+  {profile && (
+    <div class="stat-strip">
+      <div class="stat"><div class="value">{fmtInt(profile.actions)}</div><div class="label">Contract actions</div></div>
+      <div class="stat"><div class="value up">{formatUsd(profile.obligated)}</div><div class="label">Obligated</div></div>
+      <div class="stat"><div class="value">{fmtInt(profile.recipients)}</div><div class="label">Suppliers</div></div>
+      <div class="stat"><div class="value">{fmtInt(profile.classes)}</div><div class="label">Supply classes</div></div>
+      <div class="stat"><div class="value">{profile.lastDate ? formatDate(profile.lastDate) : '—'}</div><div class="label">Latest action</div></div>
     </div>
-    <div class="stat">
-      <div class="value up">{formatUsd(totalDollars)}</div>
-      <div class="label">Total $</div>
-    </div>
-  </div>
+  )}
 
-  <section>
-    <h2 class="section-title">Purchases</h2>
-    {purchases.length === 0 ? (
-      <p class="gloss">No purchases on record for this agency yet.</p>
-    ) : (
+  <nav class="tabs" aria-label="On this page">
+    {sections.map((s) => <a href={`#${s.id}`}>{s.label}</a>)}
+    <a href="#data-notes">About this data</a>
+  </nav>
+
+  {fyRows.length > 0 && (
+    <section class="sp-sec" id="by-year">
+      <h2>Obligations by fiscal year</h2>
+      <p class="gloss">Contract actions by federal fiscal year (1 October to 30 September). Bars are scaled to the largest year.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Fiscal year</th><th class="num">Actions</th><th class="num">Obligated</th><th>Relative size</th></tr>
+          </thead>
+          <tbody>
+            {fyRows.map((r) => (
+              <tr>
+                <td class="mono">FY{r.fy}</td>
+                <td class="num mono">{fmtInt(r.actions)}</td>
+                <td class="num mono">{formatUsd(r.obligated)}</td>
+                <td style="min-width:8rem;width:40%;">
+                  <div style="height:0.75rem;background:var(--paper-2);border-radius:3px;overflow:hidden;" aria-hidden="true">
+                    <div style={`height:100%;width:${barWidth(r.obligated, fyMax)}%;background:var(--green-tint);border-right:2px solid var(--green);`}></div>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )}
+
+  {topRecipients.length > 0 && (
+    <section class="sp-sec" id="suppliers">
+      <h2>Top suppliers</h2>
+      <p class="gloss">The {fmtInt(topRecipients.length)} suppliers with the most obligated dollars from this agency. A supplier links to its page when its SAM.gov UEI matches exactly one CAGE with a page here.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Supplier</th><th class="num">Actions</th><th class="num">Obligated</th><th class="num">Share of obligations</th></tr>
+          </thead>
+          <tbody>
+            {topRecipients.map((r) => {
+              const href = supplierPath(r.cage);
+              return (
+                <tr>
+                  <td class="wrap">{href ? <a href={href}>{r.name}</a> : r.name}</td>
+                  <td class="num mono">{fmtInt(r.actions)}</td>
+                  <td class="num mono">{formatUsd(r.obligated)}</td>
+                  <td class="num mono">{formatShare(r.obligated, totalObligated)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )}
+
+  {topClasses.length > 0 && (
+    <section class="sp-sec" id="buys">
+      <h2>What it buys</h2>
+      <p class="gloss">The {fmtInt(topClasses.length)} federal supply classes with the most obligated dollars from this agency.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Class</th><th>Name</th><th class="num">Actions</th><th class="num">Obligated</th><th class="num">Share of obligations</th></tr>
+          </thead>
+          <tbody>
+            {topClasses.map((c) => (
+              <tr>
+                <td class="mono">{fscPages.has(c.psc) ? <a href={`/fsc/${c.psc}/`}>{c.psc}</a> : c.psc}</td>
+                <td class="wrap">{c.name ?? '—'}</td>
+                <td class="num mono">{fmtInt(c.actions)}</td>
+                <td class="num mono">{formatUsd(c.obligated)}</td>
+                <td class="num mono">{formatShare(c.obligated, totalObligated)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )}
+
+  {recent.length > 0 && (
+    <section class="sp-sec" id="recent">
+      <h2>Recent contract actions</h2>
+      <p class="gloss">The {fmtInt(recent.length)} most recent actions. The amount links to the USAspending record.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Date</th><th>Supplier</th><th>Class</th><th>Description</th><th class="num">Obligated</th></tr>
+          </thead>
+          <tbody>
+            {recent.map((a) => (
+              <tr>
+                <td class="mono">{a.actionDate ? formatDate(a.actionDate) : '—'}</td>
+                <td class="wrap">{a.recipientName ?? 'Unknown'}</td>
+                <td class="mono">{a.psc && fscPages.has(a.psc) ? <a href={`/fsc/${a.psc}/`}>{a.psc}</a> : (a.psc ?? '—')}</td>
+                <td class="wrap">{truncateText(a.description, 80) || '—'}</td>
+                <td class="num mono">
+                  {a.obligation === null ? '—' : <a href={assertSourceUrl(a.sourceUrl, `agency recent action ${a.piid ?? ''}`)} target="_blank" rel="nofollow noopener">{formatUsd(a.obligation)} ↗</a>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )}
+
+  {purchases.length > 0 && (
+  <section class="sp-sec" id="purchases">
+    <h2>Purchases</h2>
+    <p class="gloss">Prices paid by this agency on indexed price points, {fmtInt(purchases.length)} purchases worth {formatUsd(totalDollars)}.</p>
       <div class="table-wrap">
         <table>
           <thead>
@@ -103,8 +247,21 @@ const breadcrumbSchema = {
           </tbody>
         </table>
       </div>
-    )}
   </section>
+  )}
 
-  <CiteThis title={agency.abbreviation ? `${agency.name} (${agency.abbreviation})` : agency.name} url={canonicalUrl} asOf={data.viz.today} />
+
+  <section class="card" id="data-notes" style="margin-top:1.5rem;">
+    <h2>About this data</h2>
+    <ul class="gloss">
+      <li>Contract actions come from <a href="https://www.usaspending.gov/" rel="noopener nofollow" target="_blank">USAspending</a> for the supply classes {SITE_NAME} tracks, so these totals are not this agency's whole spending.</li>
+      <li>Obligated dollars add each action's recorded obligation. De-obligations (reductions of earlier awards) are negative amounts and are included, so a total or a year can be lower than the awards it covers.</li>
+      <li>Shares are a supplier's or class's obligated dollars as a percentage of this agency's total here.</li>
+      <li>Suppliers are counted by SAM.gov UEI, or by name when an action carries no UEI.</li>
+      {purchases.length > 0 && <li>Purchases come from indexed price points with a unit price; they are separate from the contract-action totals above.</li>}
+      <li>The index is rebuilt every day. Latest action: {profile?.lastDate ? formatDate(profile.lastDate) : 'none indexed'}.</li>
+      <li><a href="/methodology/">Full methodology →</a></li>
+    </ul>
+    <CiteThis title={agency.abbreviation ? `${agency.name} (${agency.abbreviation})` : agency.name} url={canonicalUrl} asOf={data.viz.today} />
+  </section>
 </BaseLayout>
