@@ -2,7 +2,7 @@
 // (catalog -> department -> category -> product). Pure functions over the
 // already-loaded SiteData; no I/O here.
 
-import { withoutDuplicatedPricePoints } from './award-dedupe';
+import { classTotals, nsnRecords, type ClassLevelActions } from './class-totals';
 import { materialFamily, type MaterialFamily } from './material-family';
 import {
   competitionOf,
@@ -236,10 +236,13 @@ function computeDemandStats(
   data: SiteData,
   nsn: string
 ): { lastPurchased: string | null; purchaseRecords: number; perYear: number; totalDemand: number } {
-  // A contract ceiling (the base award of a long-term contract) is not a purchase: it adds no record and no dollars.
-  const contractActions = (data.contractActionsByNsn.get(nsn) ?? []).filter((c) => !c.isCeiling);
-  // A DIBBS award that produced a price point is also a DIBBS contract action: count it once.
-  const rawPoints = withoutDuplicatedPricePoints(data.pricePointsByNsn.get(nsn) ?? [], (n) => data.contractActionsByNsn.get(n) ?? []);
+  // class-totals.ts decides what counts: a long-term contract's base award is not a purchase, and a DIBBS award that is
+  // both a price point and a DIBBS contract action counts once.
+  const { points: rawPoints, actions: contractActions, records: recordCount, dollars: totalDemand } = nsnRecords(
+    data.pricePointsByNsn.get(nsn) ?? [],
+    data.contractActionsByNsn.get(nsn) ?? [],
+    (n) => data.contractActionsByNsn.get(n) ?? []
+  );
 
   const allDates = [
     ...rawPoints.map((p) => p.awardedOn),
@@ -247,15 +250,11 @@ function computeDemandStats(
   ].sort();
   const lastPurchased = allDates.at(-1) ?? null;
   const firstPurchased = allDates[0] ?? null;
-  const recordCount = rawPoints.length + contractActions.length;
   const spanYears =
     firstPurchased && lastPurchased
       ? Math.max(1, (new Date(lastPurchased).getTime() - new Date(firstPurchased).getTime()) / 31557600000)
       : 1;
   const perYear = recordCount / spanYears;
-  const totalDemand =
-    rawPoints.reduce((s, p) => s + (p.totalValue ?? p.unitPrice * (p.quantity ?? 1)), 0) +
-    contractActions.reduce((s, c) => s + (c.obligation ?? 0), 0);
 
   return { lastPurchased, purchaseRecords: recordCount, perYear, totalDemand };
 }
@@ -413,6 +412,23 @@ export function buildProductCards(data: SiteData, fsc: FscConfig): ProductCard[]
     if (dateCmp !== 0) return dateCmp;
     return b.totalDemand - a.totalDemand;
   });
+}
+
+/**
+ * Purchase records and dollars of one supply class: what the class page shows as "Purchase records" and "Total $",
+ * and what classes.csv and the class share card print (class-totals.ts).
+ */
+export function buildClassTotals(data: SiteData, fsc: string): { purchases: number; dollars: number } {
+  const summary = data.contractActionSummaryByFsc.get(fsc);
+  const classLevel: ClassLevelActions | undefined = summary
+    ? { count: summary.count, ceilingCount: summary.ceilingCount, obligated: summary.obligated }
+    : undefined;
+  return classTotals(
+    (data.nsnsByFsc.get(fsc) ?? []).map((n) => n.nsn),
+    (nsn) => data.pricePointsByNsn.get(nsn) ?? [],
+    (nsn) => data.contractActionsByNsn.get(nsn) ?? [],
+    classLevel
+  );
 }
 
 /** Groups the site's deep FSCs into Federal Supply Groups (departments). */

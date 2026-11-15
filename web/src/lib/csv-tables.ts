@@ -6,7 +6,7 @@
 // pub.contract_actions also holds DIBBS award rows (award_uid 'DIBBS-...'),
 // so the contract-action file filters those out.
 
-import { buildDepartments, fscDisplayName } from './browse';
+import { buildClassTotals, buildDepartments, fscDisplayName } from './browse';
 import type { SiteData } from './data';
 import { hasUsaspendingActions, usaspendingFiscalYears } from './class-actions';
 
@@ -40,14 +40,9 @@ function classStats(data: SiteData, fsc: string, asOf: string): ClassStats {
   const nsns = data.nsnsByFsc.get(fsc) ?? [];
   const sols = data.openByFsc.get(fsc)?.solicitations ?? [];
   const cutoff = plusDays(asOf, 7);
-  let purchases = 0;
-  let dollars = 0;
-  for (const n of nsns) {
-    for (const p of data.pricePointsByNsn.get(n.nsn) ?? []) {
-      purchases += 1;
-      dollars += p.totalValue ?? p.unitPrice * (p.quantity ?? 1);
-    }
-  }
+  // The class page's "Purchase records" and "Total $": each award once, long-term contract ceilings left out
+  // (lib/class-totals.ts), category-level contract actions included.
+  const { purchases, dollars } = buildClassTotals(data, fsc);
   return {
     nsns: nsns.length,
     open: sols.length,

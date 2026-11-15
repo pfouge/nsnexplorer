@@ -6,7 +6,7 @@ import CiteThis from '../../../components/CiteThis.astro';
 import Follow from '../../../components/Follow.astro';
 import { SITE_URL } from '../../../consts';
 import { loadSiteData, formatUsd, formatDate, type FscConfig } from '../../../lib/data';
-import { buildProductCards, competitionFromAmscAmc, fscDisplayName as classDisplayName, fsgName, isPlaceholderFscName, UNLISTED_FSC_NAME, type ProductCard } from '../../../lib/browse';
+import { buildClassTotals, buildProductCards, competitionFromAmscAmc, fscDisplayName as classDisplayName, fsgName, isPlaceholderFscName, UNLISTED_FSC_NAME, type ProductCard } from '../../../lib/browse';
 import CompetitionMix from '../../../components/viz/CompetitionMix.astro';
 import RepeatBuys from '../../../components/viz/RepeatBuys.astro';
 import DemandTrend from '../../../components/viz/DemandTrend.astro';
@@ -63,8 +63,8 @@ const recentActions = actionSummary?.recent ?? [];
 // The CSV holds this class's USAspending records only, and exists only when there are some.
 const hasActionsCsv = hasUsaspendingActions(actionSummary);
 
-const totalPurchases = allCards.reduce((sum, c) => sum + c.purchaseRecords, 0) + fscPurchaseCount;
-const totalDollars = allCards.reduce((sum, c) => sum + c.totalDemand, 0) + fscActionsObligated;
+// The same figures classes.csv and the class share card print (lib/class-totals.ts).
+const { purchases: totalPurchases, dollars: totalDollars } = buildClassTotals(data, fsc.fsc);
 
 const departmentName = fsgName(fsc.fsg);
 
