@@ -74,5 +74,7 @@ jobs:
           cat vr-out/summary.md || true
           echo "=============== shoot.log (errors) ==============="
           grep -n -i "error\|skipped\|failed" vr-out/shoot.log | head -60 || true
+          echo "=============== server errors from the signup check ==============="
+          grep -h "signup insert failed" vr-out/serve-*.log | sort | uniq -c | head -5 || true
           echo "=============== routes ==============="
           cat vr-out/routes.txt || true

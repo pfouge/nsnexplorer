@@ -86,6 +86,8 @@ def open_page(ctx, route, errs=None, wait='load'):
         page.on('pageerror', lambda e: errs.append('PAGEERROR ' + str(e)))
     page.goto(BASE + route, wait_until=wait)
     page.evaluate(SETTLE)
+    if route.startswith('/embed/'):
+        page.wait_for_timeout(1200)
     return page
 
 
@@ -94,11 +96,15 @@ def clean(errs):
     return [e for e in errs if 'net::' not in e and 'ERR_' not in e and 'Failed to load resource' not in e]
 
 
+FOOTNAV = "(() => { const n = document.querySelector('footer.site nav'); if (!n) return null; const r = n.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; })()"
+
+
 def shot_state(ctx, w, name, route, act):
     page = open_page(ctx, route)
     try:
         act(page)
         page.wait_for_timeout(500)
+        report[f'{name}_{w}'] = {'fn': page.evaluate(FOOTNAV), 'sw': 0, 'iw': 0, 'errors': []}  # viewport coordinates
         page.screenshot(path=f'{OUT}/{name}_{w}.png')
     except Exception as e:  # a control that is not shown at this width: record nothing, same in both builds
         print('state skipped', name, w, str(e).splitlines()[0][:100])
@@ -126,6 +132,7 @@ with sync_playwright() as p:
                 page = open_page(ctx, r, errs)
                 m = page.evaluate('() => ({sw: document.documentElement.scrollWidth, iw: window.innerWidth, sh: document.documentElement.scrollHeight})')
                 m['errors'] = clean(errs)
+                m['fn'] = page.evaluate("(() => { const n = document.querySelector('footer.site nav'); if (!n) return null; const r = n.getBoundingClientRect(); return [r.x, r.y + scrollY, r.width, r.height]; })()")
                 page.screenshot(path=f'{OUT}/{slug(r)}_{w}.png', full_page=True)
                 report[f'{slug(r)}_{w}'] = m
                 page.close()
@@ -181,7 +188,7 @@ with sync_playwright() as p:
                 boxes[f'{slug(r)}_{w}'] = page.evaluate('''() => [...document.querySelectorAll('body *')]
                   .filter(e => !['SCRIPT','STYLE'].includes(e.tagName) && !e.closest('canvas'))
                   .map(e => { const r = e.getBoundingClientRect();
-                    return e.tagName + '.' + (typeof e.className === 'string' ? e.className : '') +
+                    return (e.closest('footer.site') ? 'FOOT:' : '') + e.tagName + '.' + (typeof e.className === 'string' ? e.className : '') +
                       '|' + [r.x, r.y + scrollY, r.width, r.height].map(v => Math.round(v * 10) / 10).join(','); })''')
                 page.close()
             ctx.close()
@@ -233,11 +240,11 @@ with sync_playwright() as p:
             page.click('.search-pill'); page.keyboard.type('washer'); page.wait_for_timeout(2000)
             r = {'sections': page.evaluate("[...document.querySelectorAll('#site-search h2')].map(h => h.textContent)"),
                  'results': page.evaluate("document.querySelectorAll('#site-search a.result').length")}
-            page.keyboard.press('Enter'); page.wait_for_load_state('load')
+            page.keyboard.press('Enter'); page.wait_for_timeout(2500)
             r['enter_goes_to'] = re.sub(r'^https?://[^/]+', '', page.url)
             page.close()
             page = open_page(ctx, '/search/')
-            page.fill('#name-q', 'washer'); page.keyboard.press('Enter'); page.wait_for_load_state('load')
+            page.fill('#name-q', 'washer'); page.keyboard.press('Enter'); page.wait_for_timeout(2500)
             r['search_page_submit'] = re.sub(r'^https?://[^/]+', '', page.url)
             r['search_page_results'] = page.evaluate("document.querySelectorAll('main a[href^=\"/nsn/\"]').length")
             page.close()
@@ -264,9 +271,29 @@ with sync_playwright() as p:
                     cur.append(page.evaluate("[...document.querySelectorAll('nav.tabs a[aria-current]')].map(a => a.hash)"))
                 r['tab_current_by_scroll'] = cur
             r['listeners_registered'] = page.evaluate('window.__listeners')
+            page.close()
+            page = open_page(ctx, NSNPAGE)
+            tabs = page.evaluate("[...document.querySelectorAll('nav.tabs a[href^=\"#\"]')].map(a => a.hash)")
+            r['part_tabs'] = tabs
+            cur = {}
+            for h in tabs[:6]:
+                page.evaluate(f"document.querySelector('nav.tabs a[href=\"{h}\"]').click()"); page.wait_for_timeout(900)
+                cur[h] = page.evaluate("[...document.querySelectorAll('nav.tabs a[aria-current]')].map(a => a.hash)")
+            r['part_tab_current_after_click'] = cur
             ctx.close()
             return r
         guard('components', components)
+
+        def headers():
+            ctx = new_ctx(b, 1100, 800)
+            r = {}
+            for route in ('/', NSNPAGE, '/embed/fsc/5330/demand/' if '/embed/fsc/5330/demand/' in ROUTES else FIRST('/embed/', '/')):
+                resp = ctx.request.get(BASE + route)
+                h = resp.headers
+                r[route] = {'status': resp.status, 'csp': h.get('content-security-policy'), 'xfo': h.get('x-frame-options')}
+            ctx.close()
+            return r
+        guard('headers', headers)
 
         def forms():
             ctx = new_ctx(b, 1100, 800)
@@ -303,13 +330,11 @@ with sync_playwright() as p:
             ctx = new_ctx(b, 1100, 800, freeze=False)
             page = open_page(ctx, '/')
             r = page.evaluate("""() => ({
-              pulse: (() => { const e = document.querySelector('.datastrip .live'); return e ? getComputedStyle(e, '::before').animationName : 'absent'; })(),
               switchTransition: getComputedStyle(document.querySelector('.switch')).transitionDuration,
               switchKnobTransition: getComputedStyle(document.querySelector('.switch'), '::after').transitionDuration })""")
             page.close(); ctx.close()
             ctx = new_ctx(b, 1100, 800, reduced=False, freeze=False)
             page = open_page(ctx, '/')
-            r['motion_on_pulse'] = page.evaluate("(() => { const e = document.querySelector('.datastrip .live'); return e ? getComputedStyle(e, '::before').animationName : 'absent'; })()")
             r['motion_on_switchTransition'] = page.evaluate("getComputedStyle(document.querySelector('.switch')).transitionDuration")
             page.close(); ctx.close()
             return r
@@ -334,7 +359,7 @@ with sync_playwright() as p:
                         if '/g/collect' in u:
                             body = rq.post_data or ''
                             ens = re.findall(r'(?:^|[&?\n])en=([a-z_]+)', u + '\n' + body)
-                            gcs = re.findall(r'[&?]gcs=([A-Za-z0-9]+)', u)
+                            gcs = re.findall(r'[&?]gcs=([^&]+)', u)
                             hits.append({'en': ens, 'gcs': gcs})
                         if 'adsbygoogle.js' in u or 'gtag/js' in u:
                             tags.append(u.split('?')[0].split('/')[-1])

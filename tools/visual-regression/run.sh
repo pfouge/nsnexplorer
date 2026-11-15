@@ -50,7 +50,7 @@ python3 "$HERE/diff.py" "$W/a1" "$W/a2" | tail -40 | tee -a "$W/summary.md"
 python3 "$HERE/diff.py" "$W/a1/forced" "$W/a2/forced" | tail -10 | tee -a "$W/summary.md"
 python3 "$HERE/boxdiff.py" "$W/a1/boxes.json" "$W/a2/boxes.json" | tail -20 | tee -a "$W/summary.md"
 say '```'; say "## Baseline vs changed: pixels (default settings)"; say '```'
-python3 "$HERE/diff.py" "$W/a1" "$W/b" "$W/diff" | cut -c1-400 | tail -150 | tee -a "$W/summary.md"
+python3 "$HERE/diff.py" "$W/a1" "$W/b" "$W/diff" | cut -c1-400 | tail -170 | tee -a "$W/summary.md"
 say '```'; say "## Baseline vs changed: forced-colors emulation (differences expected from the Part 2 forced-colors fixes)"; say '```'
 python3 "$HERE/diff.py" "$W/a1/forced" "$W/b/forced" "$W/diff-forced" | tail -30 | tee -a "$W/summary.md"
 say '```'; say "## Baseline vs changed: layout boxes (motion on, 390/768/1440)"; say '```'

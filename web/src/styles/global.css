@@ -731,10 +731,9 @@ button.copy, .copy-btn { font: inherit; font-size: 0.8125rem; font-weight: 600; 
 .drawings-block .drawings-notes { margin: 0.75rem 0 0; padding-left: 1.2rem; }
 .drawings-block .drawings-notes li { margin: 0.35rem 0; }
 
-/* ---- Reduced motion: the remaining transitions and the live-dot pulse stand still. ---- */
+/* ---- Reduced motion: the remaining transitions stand still. ---- */
 @media (prefers-reduced-motion: reduce) {
   .section-title a.more::after, a.section-link::after, .switch, .switch::after { transition: none; }
-  .datastrip .live::before { animation: none; }
 }
 
 /* ---- Forced colors (Windows High Contrast): focus and selected state must not rely on
