@@ -60,6 +60,7 @@ const LOST_NAMES_FOR = new Set((opt('--lost-names-for', '') || '').split('|').fi
 const lostNameSamples = new Map();
 //   --sig-class 5306,5305   for parts WITHOUT a drawing in these classes: the top full item names, and the top
 //                           "signatures" (which measurable requirements the part carries) so a builder can be fitted
+const SIG_ROOT = new Set((opt('--sig-root', '') || '').split(',').map((x) => x.trim()).filter(Boolean));
 const SIG_CLASS = new Set((opt('--sig-class', '') || '').split(',').map((x) => x.trim()).filter(Boolean));
 const CLASS_ROOTS = new Set((opt('--class-roots', '') || '').split(',').map((x) => x.trim()).filter(Boolean));
 
@@ -245,22 +246,22 @@ outer: for (;;) {
       m.set(root, c);
       classRoots.set(row.fsc, m);
     }
-    if (SIG_CLASS.has(row.fsc)) {
+    for (const SK of [...(SIG_CLASS.has(row.fsc) ? [row.fsc] : []), ...(SIG_ROOT.has(root) ? [`ROOT ${root}`] : [])]) {
       const nm = (row.item_name ?? '').toUpperCase();
-      const mm = sigNames.get(row.fsc) ?? new Map();
+      const mm = sigNames.get(SK) ?? new Map();
       const c = mm.get(nm) ?? { noDraw: 0, total: 0 };
       c.total += 1;
       if (!svg) c.noDraw += 1;
       mm.set(nm, c);
-      sigNames.set(row.fsc, mm);
+      sigNames.set(SK, mm);
       if (!svg && hasChars) {
         const meas = [...new Set(entries.filter((e) => /(INCHES|MILLIMETERS|MILS|CENTIMETERS)/i.test(e.reply ?? '') && e.requirement).map((e) => e.requirement))].sort();
-        const sg = sigSigs.get(row.fsc) ?? new Map();
+        const sg = sigSigs.get(SK) ?? new Map();
         const key = meas.join(' + ').slice(0, 230) || '(no measurable requirement)';
         const g = sg.get(key) ?? { n: 0, nsn: row.nsn, name: row.item_name };
         g.n += 1;
         sg.set(key, g);
-        if (sg.size < 4000 || sg.has(key)) sigSigs.set(row.fsc, sg);
+        if (sg.size < 4000 || sg.has(key)) sigSigs.set(SK, sg);
       }
     }
     if (PROBE.has(root)) {
@@ -452,12 +453,12 @@ for (const [fsc, m] of classRoots) {
   P(`## Roots inside class ${fsc}: no-drawing / all parts`);
   for (const [root, c] of [...m.entries()].sort((a, b) => b[1].total - a[1].total).slice(0, 30)) P(`${String(c.total - c.draw).padStart(8)}  ${String(c.total).padStart(8)}  ${root}`);
 }
-for (const fsc of SIG_CLASS) {
+for (const fsc of [...SIG_CLASS, ...[...SIG_ROOT].map((r) => `ROOT ${r}`)]) {
   P();
   P(`## Class ${fsc}: top item names without a drawing (no-drawing / all)`);
-  for (const [nm, c] of [...(sigNames.get(fsc) ?? new Map()).entries()].filter(([, c]) => c.noDraw > 0).sort((a, b) => b[1].noDraw - a[1].noDraw).slice(0, 30)) P(`${String(c.noDraw).padStart(7)} ${String(c.total).padStart(7)}  ${nm}`);
+  for (const [nm, c] of [...(sigNames.get(fsc) ?? new Map()).entries()].filter(([, c]) => c.noDraw > 0).sort((a, b) => b[1].noDraw - a[1].noDraw).slice(0, 14)) P(`${String(c.noDraw).padStart(7)} ${String(c.total).padStart(7)}  ${nm}`);
   P(`## Class ${fsc}: top measurable-requirement signatures among parts without a drawing`);
-  for (const [k, g] of [...(sigSigs.get(fsc) ?? new Map()).entries()].sort((a, b) => b[1].n - a[1].n).slice(0, 25)) P(`${String(g.n).padStart(7)}  ${k}   e.g. ${g.nsn} ${g.name ?? ''}`);
+  for (const [k, g] of [...(sigSigs.get(fsc) ?? new Map()).entries()].sort((a, b) => b[1].n - a[1].n).slice(0, 14)) P(`${String(g.n).padStart(7)}  ${k}   e.g. ${g.nsn} ${g.name ?? ''}`);
 }
 for (const root of PROBE) {
   const agg = probeReq.get(root);
