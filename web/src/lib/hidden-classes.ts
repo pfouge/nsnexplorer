@@ -45,3 +45,9 @@ export function toggleHidden(list: readonly string[], code: string): string[] {
   if (!isClassCode(c)) return base;
   return base.includes(c) ? base.filter((x) => x !== c) : cleanClasses([...base, c]);
 }
+
+/** How many of `codes` (a row's class, or null when unknown) are not hidden. Rows without a class always count. */
+export function visibleCount(codes: readonly (string | null)[], hidden: readonly string[]): number {
+  const set = new Set(hidden);
+  return codes.filter((c) => c === null || !set.has(c)).length;
+}

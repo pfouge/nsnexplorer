@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanClasses, isClassCode, parseHidden, serialiseHidden, toggleHidden } from './hidden-classes.ts';
+import { cleanClasses, isClassCode, parseHidden, serialiseHidden, toggleHidden, visibleCount } from './hidden-classes.ts';
 
 test('isClassCode wants exactly four digits or capitals', () => {
   assert.equal(isClassCode('5340'), true);
@@ -33,4 +33,12 @@ test('toggleHidden adds, removes, ignores invalid and does not mutate', () => {
 test('cleanClasses caps the list size', () => {
   const many = Array.from({ length: 800 }, (_, i) => String(1000 + i));
   assert.equal(cleanClasses(many).length, 500);
+});
+
+test('visibleCount drops rows in hidden classes and keeps rows with no class', () => {
+  const rows = ['5340', '5310', null, '5340', '1005'];
+  assert.equal(visibleCount(rows, []), 5);
+  assert.equal(visibleCount(rows, ['5340']), 3);
+  assert.equal(visibleCount(rows, ['5340', '1005', '0173']), 2);
+  assert.equal(visibleCount(rows, ['0173']), 5);
 });

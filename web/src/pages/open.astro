@@ -247,11 +247,15 @@ const buildDate = now.toLocaleDateString('en-US', { year: 'numeric', month: 'lon
         )}
         {departments.length > 0 && (
           <div class="hc-wrap">
-            <p class="gloss hc-bar" id="hc-bar" hidden>
-              <span id="hc-count">0 classes hidden</span> ·
-              <button type="button" class="hc-link" id="hc-showall">Show all</button> ·
-              <button type="button" class="hc-link" id="hc-manage-btn" aria-expanded="false" aria-controls="hc-manage">Manage</button>
-              <span class="hc-note">Counts above and on the group chips include hidden classes.</span>
+            <p class="gloss hc-bar" id="hc-bar">
+              <span id="hc-intro">Hide supply classes you don't sell.</span>
+              <span id="hc-status" hidden>
+                <span id="hc-count">0 classes hidden</span> ·
+                <button type="button" class="hc-link" id="hc-showall">Show all</button> ·
+                <button type="button" class="hc-link" id="hc-manage-btn" aria-expanded="false" aria-controls="hc-manage">Manage</button> ·
+              </span>
+              <button type="button" class="btn btn-ghost hc-choose" id="hc-choose" aria-pressed="false">Choose classes</button>
+              <span class="hc-note" id="hc-note" hidden>Counts above and on the group chips include hidden classes.</span>
             </p>
             <div id="hc-manage" class="hc-manage" hidden>
               <ul id="hc-list"></ul>
@@ -275,7 +279,7 @@ const buildDate = now.toLocaleDateString('en-US', { year: 'numeric', month: 'lon
                         <h3>{cls}</h3>
                         <p>{fmtInt(count)} open {count === 1 ? 'solicitation' : 'solicitations'}</p>
                       </a>
-                      <button type="button" class="btn btn-ghost hc-hide" data-hide={fsc.fsc} aria-label={`Hide class ${fsc.fsc} ${cls}`}>Hide</button>
+                      <button type="button" class="btn btn-ghost hc-hide" hidden data-hide={fsc.fsc} aria-label={`Hide class ${fsc.fsc} ${cls}`}>Hide</button>
                     </div>
                   );
                 })}
@@ -312,11 +316,13 @@ const buildDate = now.toLocaleDateString('en-US', { year: 'numeric', month: 'lon
 </BaseLayout>
 
 <style is:global>
-  /* Hide-a-class controls. The Hide button is always in the layout (reserved row under each tile), so nothing shifts when it is used. */
+  /* Hide-a-class controls: Hide buttons exist only in edit mode ("Choose classes"); the extra bottom padding is added only then. */
   .dept-item { position: relative; }
-  .dept-item .dept-card.card { height: 100%; box-sizing: border-box; padding-bottom: 3.1rem; }
+  .dept-item .dept-card.card { height: 100%; box-sizing: border-box; }
+  #categories[data-hc-edit] .dept-item .dept-card.card { padding-bottom: 3.1rem; }
+  .hc-choose { min-height: 32px; padding: 0.2rem 0.7rem; font-size: 0.8125rem; margin-left: 0.25rem; }
   .dept-item .hc-hide { position: absolute; right: 0.6rem; bottom: 0.5rem; min-height: 32px; padding: 0.2rem 0.7rem; font-size: 0.8125rem; }
-  .hc-bar { margin: 0.5rem 0; }
+  .hc-bar { margin: 0.5rem 0; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 0.4rem; }
   .hc-bar .hc-note { display: block; font-size: 0.8125rem; }
   .hc-link { font: inherit; color: var(--ink); background: none; border: 0; padding: 4px 2px; text-decoration: underline; cursor: pointer; }
   .hc-manage ul { list-style: none; margin: 0 0 0.75rem; padding: 0; display: grid; gap: 6px; }

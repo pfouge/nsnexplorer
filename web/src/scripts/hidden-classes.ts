@@ -3,7 +3,7 @@
 // tiles and table rows). Every storage access is guarded: without localStorage
 // the page works, the buttons just last until reload. Labels are written with
 // textContent only.
-import { HIDDEN_CLASSES_KEY, parseHidden, serialiseHidden, toggleHidden } from '../lib/hidden-classes';
+import { HIDDEN_CLASSES_KEY, parseHidden, serialiseHidden, toggleHidden, visibleCount } from '../lib/hidden-classes';
 
 let hidden: string[] = [];
 try {
@@ -12,7 +12,12 @@ try {
   hidden = [];
 }
 
-const bar = document.getElementById('hc-bar');
+const section = document.getElementById('categories');
+const chooseBtn = document.getElementById('hc-choose') as HTMLButtonElement | null;
+const statusEl = document.getElementById('hc-status');
+const introEl = document.getElementById('hc-intro');
+const noteEl = document.getElementById('hc-note');
+let editing = false;
 const countEl = document.getElementById('hc-count');
 const manage = document.getElementById('hc-manage');
 const manageBtn = document.getElementById('hc-manage-btn') as HTMLButtonElement | null;
@@ -46,11 +51,24 @@ function render() {
   });
   const closing = document.getElementById('hc-closing-count');
   if (closing) {
-    const rows = document.querySelectorAll<HTMLElement>('#closing tbody tr:not([hidden])').length;
-    closing.textContent = String(rows);
+    const codes = [...document.querySelectorAll<HTMLElement>('#closing tbody tr')].map((r) => r.dataset.fsc ?? null);
+    closing.textContent = String(visibleCount(codes, hidden));
   }
-  if (bar && countEl) {
-    bar.hidden = hidden.length === 0;
+  document.querySelectorAll<HTMLElement>('[data-hide]').forEach((b) => {
+    b.hidden = !editing;
+  });
+  if (section) {
+    if (editing) section.setAttribute('data-hc-edit', '');
+    else section.removeAttribute('data-hc-edit');
+  }
+  if (chooseBtn) {
+    chooseBtn.textContent = editing ? 'Done' : 'Choose classes';
+    chooseBtn.setAttribute('aria-pressed', String(editing));
+  }
+  if (introEl) introEl.hidden = hidden.length > 0;
+  if (statusEl) statusEl.hidden = hidden.length === 0;
+  if (noteEl) noteEl.hidden = hidden.length === 0;
+  if (countEl) {
     countEl.textContent = `${hidden.length} ${hidden.length === 1 ? 'class' : 'classes'} hidden`;
   }
   if (hidden.length === 0 && manage && manageBtn) {
@@ -87,6 +105,11 @@ document.addEventListener('click', (e) => {
     return;
   }
   save();
+  render();
+});
+
+chooseBtn?.addEventListener('click', () => {
+  editing = !editing;
   render();
 });
 
