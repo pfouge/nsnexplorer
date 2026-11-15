@@ -293,6 +293,7 @@ main { padding-block: 1.5rem 4rem; }
 .tabs a { flex: none; padding: 12px 0 10px; font-weight: 600; font-size: 1rem; color: var(--ink); border-bottom: 3px solid transparent; white-space: nowrap; }
 .tabs a:hover { text-decoration: none; border-bottom-color: var(--line); }
 .tabs a[aria-current] { border-bottom-color: var(--ink); }
+.tab-count { margin-left: 0.25em; font-size: 0.8125rem; font-weight: 400; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 
 /* ---- Page head ---- */
 .hero { position: relative; padding-block: 0.25rem 0.5rem; }

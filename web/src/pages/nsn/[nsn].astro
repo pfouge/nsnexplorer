@@ -40,6 +40,8 @@ import { buildTimeToAward } from '../../lib/viz-nsn-timing';
 import { buildWinners, type WinAward } from '../../lib/viz-nsn-winners';
 import { supplierLabel } from '../../lib/viz-nsn-common';
 import { solicitationPath, supplierPath } from '../../lib/entity';
+import { priceSummary, valueAtLastPrice } from '../../lib/sol-history';
+import { competitionRead } from '../../lib/competition-read';
 
 // Rendered ON REQUEST by the Cloudflare Pages Function, not at build time.
 // Cloudflare Pages caps a deployment at 20,000 files and the catalog is far
@@ -219,6 +221,21 @@ const winners = buildWinners(
 );
 const hasDemandCharts = rhythm !== null || timing !== null || winners !== null;
 
+// Price headline: newest positive price (the same rule priceSummary uses; sortedPoints
+// is newest first and stable, so ties keep the loader's order).
+const headlineSummary = priceSummary(points);
+const headlinePoint = sortedPoints.find((p) => Number.isFinite(p.unitPrice) && p.unitPrice > 0) ?? null;
+const lastPrice = headlineSummary?.latest ?? null;
+const openQtyTotal = openSols.reduce((sum, s) => sum + (s.quantity !== null && s.quantity > 0 ? s.quantity : 0), 0);
+const openValueAtLastPrice = valueAtLastPrice(openQtyTotal, lastPrice);
+const solValueAtLastPrice = (qty: number | null): number | null => valueAtLastPrice(qty, lastPrice);
+
+// Competition read: last 10 awards with a supplier (price points, else dated contract actions).
+const compRead = competitionRead({ coded: competition, awards: winAwards.map((a) => ({ cage: a.cage, date: a.date })) });
+const streakName = compRead.streakCage ? (winAwards.find((a) => a.cage === compRead.streakCage && a.name)?.name ?? null) : null;
+const listedSources = new Set(partNumbers.map((pn) => (pn.cage ?? '').trim()).filter((c) => c !== '')).size;
+const readBadgeClass = compRead.tone === 'neutral' ? 'badge' : `badge ${compRead.tone}`;
+
 const breadcrumbSchema = {
   '@context': 'https://schema.org',
   '@type': 'BreadcrumbList',
@@ -265,19 +282,60 @@ const datasetSchema = {
     <p class="ident">
       <span class="code">{dashed}</span>
       <button type="button" class="copy" onclick={`navigator.clipboard && navigator.clipboard.writeText('${dashed}')`} aria-label="Copy NSN">Copy</button>
+      <span class="code">{nsn.nsn}</span>
+      <span class="code">NIIN {nsn.nsn.slice(4)}</span>
       {fsc ? <a class="code" href={`/fsc/${fsc.fsc}/`}>FSC {fsc.fsc}</a> : <span class="code">FSC {nsn.fsc}</span>}
     </p>
     <p class="lede">{summary}</p>
     <Follow kind="nsn" entity={nsn.nsn} label={itemLabel} />
   </header>
 
+  {headlineSummary && headlinePoint && (
+    <div class="stat-strip roomy">
+      <div class="stat">
+        <div class="value up"><a href={headlinePoint.sourceUrl} target="_blank" rel="noopener noreferrer">{formatUsdPrecise(headlinePoint.unitPrice)}</a></div>
+        <div class="label">Most recent price</div>
+        <div class="gloss">Awarded {formatDate(headlinePoint.awardedOn)}</div>
+      </div>
+      {headlineSummary.n >= 2 && (
+        <div class="stat">
+          <div class="value">{formatUsdPrecise(headlineSummary.low)} – {formatUsdPrecise(headlineSummary.high)}</div>
+          <div class="label">Last {headlineSummary.n} awards</div>
+        </div>
+      )}
+      {headlineSummary.n >= 2 && (
+        <div class="stat">
+          <div class="value">{formatUsdPrecise(headlineSummary.average)}</div>
+          <div class="label">Average of last {headlineSummary.n}</div>
+        </div>
+      )}
+      <div class="stat">
+        <div class="value">{points.length.toLocaleString('en-US')}</div>
+        <div class="label">Prices on record</div>
+      </div>
+      {openQtyTotal > 0 && (
+        <div class="stat">
+          <div class="value">{openSols.length.toLocaleString('en-US')} solicitation{openSols.length === 1 ? '' : 's'} · {openQtyTotal.toLocaleString('en-US')} unit{openQtyTotal === 1 ? '' : 's'}</div>
+          <div class="label">Open now</div>
+        </div>
+      )}
+      {openQtyTotal > 0 && openValueAtLastPrice !== null && (
+        <div class="stat">
+          <div class="value">≈ ${Math.round(openValueAtLastPrice).toLocaleString('en-US')}</div>
+          <div class="label">Value at last price</div>
+          <div class="gloss">Open quantity × last unit price</div>
+        </div>
+      )}
+    </div>
+  )}
+
   <nav class="tabs" aria-label="On this page">
-    <a href="#open">Open bids</a>
+    <a href="#open">Open bids <span class="tab-count">{openSols.length}</span></a>
     <a href="#competition">Competition</a>
     {(diagram || characteristics.length > 0 || partNumbers.length > 0) && <a href="#specs">Specs</a>}
-    <a href="#prices">Prices</a>
-    <a href="#purchases">Purchases</a>
-    {(allSols.length > 0 || hasDemandCharts) && <a href="#demand">Demand</a>}
+    <a href="#prices">Prices <span class="tab-count">{points.length.toLocaleString('en-US')}</span></a>
+    <a href="#purchases">Purchases <span class="tab-count">{sortedPoints.length.toLocaleString('en-US')}</span></a>
+    {(allSols.length > 0 || hasDemandCharts) && <a href="#demand">Demand{allSols.length > 0 && <> <span class="tab-count">{allSols.length.toLocaleString('en-US')}</span></>}</a>}
     <a href="#about">About</a>
   </nav>
 
@@ -311,7 +369,12 @@ const datasetSchema = {
                       <a href={s.sourceUrl} target="_blank" rel="nofollow noopener">{s.solNumber}</a>
                     )}
                   </td>
-                  <td class="num mono">{s.quantity !== null ? s.quantity.toLocaleString('en-US') : '—'}</td>
+                  <td class="num mono">
+                    {s.quantity !== null ? s.quantity.toLocaleString('en-US') : '—'}
+                    {solValueAtLastPrice(s.quantity) !== null && (
+                      <div class="gloss">≈ ${Math.round(solValueAtLastPrice(s.quantity)!).toLocaleString('en-US')} at last price</div>
+                    )}
+                  </td>
                   <td><span class={`badge ${badge.cls}`}>{badge.text}</span></td>
                   <td><a href={s.sourceUrl} target="_blank" rel="nofollow noopener">Bid →</a></td>
                 </tr>
@@ -336,6 +399,7 @@ const datasetSchema = {
   <!-- 2. Can you win it? — the acquisition method codes on record (DFARS PGI 217.7506). -->
   <section class="card" id="competition">
     <h2 class="section-title" style="margin-top:0;">Can you win it?</h2>
+    <p style="margin:0 0 0.6rem;"><span class={readBadgeClass}>{compRead.label}</span> {compRead.reason}</p>
     <p class="gloss">{competitionSentence(nsn.amc, nsn.amsc)}</p>
     <div class="datastrip" style="margin-top:0.9rem;">
       <div class="cell">
@@ -355,6 +419,33 @@ const datasetSchema = {
             <span class={`badge ${competitionOpen ? 'green' : 'amber'}`}>{COMPETITION_BADGE[competition]}</span>
           )}
         </div>
+      </div>
+      <div class="cell">
+        <div class="k">Awards with a supplier (last 10)</div>
+        <div class="v">{compRead.considered}</div>
+      </div>
+      <div class="cell">
+        <div class="k">Distinct winners</div>
+        <div class="v">{compRead.considered > 0 ? compRead.distinctWinners : '—'}</div>
+      </div>
+      <div class="cell">
+        <div class="k">Current streak</div>
+        <div class="v">
+          {compRead.streak < 2 ? (
+            '—'
+          ) : (
+            <>
+              {compRead.streak} in a row
+              {compRead.streakCage && (
+                <span class="gloss" style="display:block; font-size:0.8125rem; font-weight:400; line-height:1.35;">{supplierPath(compRead.streakCage) ? <a href={supplierPath(compRead.streakCage)!}>{streakName ?? compRead.streakCage}</a> : (streakName ?? compRead.streakCage)}</span>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+      <div class="cell">
+        <div class="k">Listed sources</div>
+        <div class="v">{listedSources}</div>
       </div>
     </div>
     {(nsn.amc || nsn.amsc) && (
