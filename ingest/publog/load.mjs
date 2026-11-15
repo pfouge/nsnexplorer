@@ -121,7 +121,7 @@ export function splitCsvLine(line) {
 // Small header-index helpers
 // ---------------------------------------------------------------------------
 
-function findColumnIndex(headers, candidates) {
+export function findColumnIndex(headers, candidates) {
   const upper = headers.map((h) => h.trim().toUpperCase());
   for (const cand of candidates) {
     const idx = upper.indexOf(cand.trim().toUpperCase());
@@ -175,7 +175,7 @@ async function readFirstLine(filePath) {
 // Pure row-mapping helpers (no DB access — unit testable)
 // ---------------------------------------------------------------------------
 
-const NIIN_RE = /^\d{9}$/;
+export const NIIN_RE = /^\d{9}$/;
 const CAGE_RE = /^[A-Z0-9]{5}$/;
 
 /**
@@ -781,7 +781,7 @@ export function isBetterMoeRow(cur, cand) {
  * (caller then falls back to the full parse), so this can never wrongly drop
  * a row.
  */
-function quickNiinTracked(line, trackedByNiin) {
+export function quickNiinTracked(line, trackedByNiin) {
   if (line.charCodeAt(0) === 34) {
     if (line.charCodeAt(10) !== 34) return null;
     return trackedByNiin.has(line.slice(1, 10));
@@ -797,7 +797,7 @@ function quickNiinTracked(line, trackedByNiin) {
  *
  * @param {string} filePath
  * @param {Map<string,string>} trackedByNiin
- * @param {{log?: (msg: string) => void, today?: string}} [opts]
+ * @param {{log?: (msg: string) => void, today?: string, tap?: object}} [opts]
  */
 export async function collectMoeRule(filePath, trackedByNiin, opts = {}) {
   const log = opts.log || ((m) => console.log(m));
@@ -809,6 +809,14 @@ export async function collectMoeRule(filePath, trackedByNiin, opts = {}) {
   };
   let cols = null;
   let columnsLog = null;
+  // Optional side channel (opts.tap = {header(fields, looksLikeData), row(fields)}): lets
+  // another loader (load-flis.mjs loadMoeRulesAll) consume the SAME pass over this 1.7 GB
+  // file. row() is awaited for every row on a tracked NIIN; this function's own results do
+  // not depend on it.
+  const tap = opts.tap || null;
+  const tapRow = async (fields) => {
+    if (trackedByNiin.has((fields[cols.niin] || '').trim())) await tap.row(fields);
+  };
 
   const rl = createInterface({
     input: createReadStream(filePath, { encoding: 'utf8' }),
@@ -863,7 +871,11 @@ export async function collectMoeRule(filePath, trackedByNiin, opts = {}) {
           `obs=${cols.obs}(${cols.via.obs}) of ${fields.length} column(s)` +
           (looksLikeData ? '' : ` [headers: ${fields.join(', ')}]`);
         log(`load.mjs: ${MOE_RULE_FILENAME} resolved columns (0-based): ${columnsLog}`);
-        if (looksLikeData) handleFields(fields);
+        if (tap) tap.header(fields, looksLikeData);
+        if (looksLikeData) {
+          if (tap) await tapRow(fields);
+          handleFields(fields);
+        }
         continue;
       }
       if (cols.niin === 0) {
@@ -873,7 +885,9 @@ export async function collectMoeRule(filePath, trackedByNiin, opts = {}) {
           continue;
         }
       }
-      handleFields(splitCsvLine(line));
+      const fields = splitCsvLine(line);
+      if (tap) await tapRow(fields);
+      handleFields(fields);
     }
   } finally {
     rl.close();
@@ -1001,6 +1015,19 @@ function report(filename, result) {
   console.log(`load.mjs: ${filename}: ${result.loaded} loaded, ${result.scanned} rows scanned`);
 }
 
+/** Runs an optional loader: a failure is a ::warning:: and the run continues. */
+async function optional(name, fn) {
+  try {
+    const r = await fn();
+    console.log(`load.mjs: ${name}: ${r.kept} kept, ${r.written} written, ${r.scanned} rows scanned`);
+    return r;
+  } catch (err) {
+    console.error(err);
+    console.log(`::warning::load.mjs: ${name} load failed (${err.message}); continuing`);
+    return null;
+  }
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const filesOnDisk = await readdir(args.dir);
@@ -1041,17 +1068,41 @@ async function main() {
   // AMC/AMSC ("Can you win it?"). Optional enrichment from an unconfirmed
   // layout: a missing file is skipped, and a failure is logged loudly but does
   // not fail the run (it would otherwise block the chained deploy).
+  // The same single pass over the 1.7 GB file also feeds pub.moe_rules (load-flis.mjs).
+  const flis = await import('./load-flis.mjs');
   const moeFile = findFile(filesOnDisk, MOE_RULE_FILENAME);
   if (moeFile) {
+    const allRules = flis.createMoeRulesAllLoader(trackedByNiin);
+    let moeScanned = 0;
     try {
-      const result = await loadMoeRule(path.join(args.dir, moeFile), trackedByNiin);
+      const result = await loadMoeRule(path.join(args.dir, moeFile), trackedByNiin, { tap: allRules.tap });
+      moeScanned = result.scanned;
       report(MOE_RULE_FILENAME, result);
     } catch (err) {
       console.error(err);
       console.log(`::warning::load.mjs: ${MOE_RULE_FILENAME} load failed (${err.message}); continuing`);
     }
+    await optional('V_MOE_RULE.CSV (all rules)', () => allRules.finish({ scanned: moeScanned }));
   } else {
     console.log(`load.mjs: ${MOE_RULE_FILENAME} not found in ${args.dir} (MOE_RULE.zip missing?), skipping AMC/AMSC load`);
+  }
+
+  // FLIS identification extras (migration 0014). Each is optional: a missing file or a failure
+  // is a warning, never a failed run.
+  const flisJobs = [
+    ['V_FLIS_IDENTIFICATION.CSV', (f) => flis.loadFlisIdentification(f, trackedByNiin)],
+    ['V_FLIS_STANDARDIZATION.CSV', (f) => flis.loadStandardization(f, trackedByNiin)],
+    ['V_FLIS_CANCELLED_NIIN.CSV', (f) => flis.loadCancelledNiin(f, trackedByNiin)],
+    ['P_HELP.CSV', (f) => flis.loadFlisCodes(f)],
+    ['V_COLLOQUIAL_NAME.CSV', (f) => flis.loadColloquialNames(f)],
+  ];
+  for (const [name, run] of flisJobs) {
+    const file = findFile(filesOnDisk, name);
+    if (!file) {
+      console.log(`::warning::load.mjs: ${name} not found in ${args.dir}, skipping`);
+      continue;
+    }
+    await optional(name, () => run(path.join(args.dir, file)));
   }
 
   const cageFile = findFile(filesOnDisk, 'P_CAGE.CSV');
