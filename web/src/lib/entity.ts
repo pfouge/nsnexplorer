@@ -90,6 +90,8 @@ export interface SupplierCopyInput {
   classes: number;
   /** ISO date of the most recent award, or null. */
   latest: string | null;
+  /** Long-term contract base awards on record (not purchases); only used when `awards` is 0. */
+  ceilings?: number;
 }
 
 const subject = (name: string | null, cage: string): string => (name ? `${name} (CAGE ${cage})` : `CAGE ${cage}`);
@@ -99,6 +101,9 @@ export function supplierLede(i: SupplierCopyInput, nameMax = Infinity): string {
   const n = cleanName(i.name);
   const who = subject(n ? trimName(n, nameMax) : null, i.cage);
   const when = monthYear(i.latest);
+  if (i.awards === 0 && (i.ceilings ?? 0) > 0) {
+    return `${who} appears as the awardee on ${plural(i.ceilings ?? 0, 'long-term government parts contract')}${when ? `, most recently in ${when}` : ''}, with no orders in the indexed records yet.`;
+  }
   return (
     `${who} appears as the awardee on ${plural(i.awards, 'indexed government parts award')} ` +
     `across ${plural(i.classes, 'federal supply class', 'federal supply classes')}${when ? `, most recently in ${when}` : ''}.`

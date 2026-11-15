@@ -136,8 +136,9 @@ export interface SupplierStats {
   nsns: number;
   fscs: number;
   agencies: number;
-  firstAward: string;
-  lastAward: string;
+  /** Dates of the first and last purchase; null for a supplier whose only awards are long-term contracts. */
+  firstAward: string | null;
+  lastAward: string | null;
   rankDollars12m: number | null;
   rankDollarsAll: number | null;
   rankWins12m: number | null;
@@ -146,6 +147,15 @@ export interface SupplierStats {
   rankFscs: number | null;
   rankRising: number | null;
   risingDelta: number | null;
+  /** Last 90 days (awarded_on > today - 90). */
+  awards90d: number;
+  dollars90d: number;
+  rankDollars90d: number | null;
+  rankWins90d: number | null;
+  /** 12-month dollar rank as of 30 days ago; null when there were no dollars then. */
+  rankDollars12mPrev: number | null;
+  /** Long-term contract base awards: counted here only, never in awards or dollars. */
+  longTermContracts: number;
   refreshedAt: string;
 }
 export interface SupplierMonth {
@@ -185,6 +195,13 @@ export interface SupplierPart {
   fsc: string;
   /** True when /fsc/<fsc>/ exists (pub.fsc.render_depth = 'deep'). */
   fscLink: boolean;
+}
+/** One class in the filter menu: every class the supplier has listed parts in, with its part-row count. */
+export interface SupplierPartClassOption {
+  fsc: string;
+  name: string | null;
+  /** Listed part rows (NSN and part number pairs) in the class. */
+  count: number;
 }
 export interface SupplierPartClass {
   fsc: string;
@@ -251,6 +268,14 @@ export interface SupplierPageData {
     byClass: SupplierPartClass[];
     /** Distinct classes over ALL listed part numbers. */
     classTotal: number;
+    /** The class the rows are filtered to (four digits), or null for all classes. */
+    fsc: string | null;
+    /** Listed part rows in the chosen class (equal to `count` when not filtered): what `rows` pages through. */
+    matching: number;
+    /** 1-based page of `rows` within the matching parts, PARTS_PAGE_SIZE per page. */
+    page: number;
+    /** Every class with listed parts, in code order, for the class menu (at most PARTS_CLASS_MENU_MAX). */
+    classOptions: SupplierPartClassOption[];
   };
   openBids: { total: number; rows: SupplierOpenBid[] };
 }
@@ -260,6 +285,27 @@ export const SUPPLIER_AGENCY_ROWS = 15;
 export const SUPPLIER_USA_ROWS = 25;
 export const SUPPLIER_PART_ROWS = 50;
 export const SUPPLIER_PART_CLASSES = 12;
+/** Parts per page of the listed-parts table (same as SUPPLIER_PART_ROWS). */
+export const PARTS_PAGE_SIZE = SUPPLIER_PART_ROWS;
+/** Most classes offered in the class menu (there are fewer than 700 federal supply classes). */
+export const PARTS_CLASS_MENU_MAX = 700;
+/** Deepest page of listed parts the loader will serve. */
+export const PARTS_MAX_PAGE = 2000;
+
+export interface PartsQuery {
+  fsc: string | null;
+  page: number;
+}
+
+/**
+ * The listed-parts options from the page URL (?class=5340&pp=3): a four-digit class and a 1-based page.
+ * Anything else is ignored (no class, page 1), so the loader only ever sees values it can bind safely.
+ */
+export function parsePartsQuery(classParam: string | null | undefined, pageParam: string | null | undefined): PartsQuery {
+  const fsc = typeof classParam === 'string' && /^[0-9]{4}$/.test(classParam.trim()) ? classParam.trim() : null;
+  const raw = typeof pageParam === 'string' && /^[0-9]{1,4}$/.test(pageParam.trim()) ? Number(pageParam.trim()) : 1;
+  return { fsc, page: Math.min(PARTS_MAX_PAGE, Math.max(1, raw)) };
+}
 export const SUPPLIER_OPEN_ROWS = 25;
 export const SUPPLIER_MONTHS = 24;
 
@@ -394,15 +440,26 @@ SELECT st.*,
      WHERE c.recipient_uei = (SELECT uei FROM ident) AND c.award_uid NOT LIKE 'DIBBS-%') AS usa,
   (SELECT jsonb_build_object(
             'count', (SELECT count(*) FROM pub.part_numbers pn WHERE pn.cage = $1),
+            -- $2 is the class filter (four digits, or NULL for all classes) and $3 the row offset of the page.
+            'matching', (SELECT count(*) FROM pub.part_numbers pn WHERE pn.cage = $1 AND ($2::text IS NULL OR left(pn.nsn, 4) = $2::text)),
             'rows', COALESCE((SELECT jsonb_agg(to_jsonb(r) ORDER BY r.nsn, r.part_number)
                                FROM (SELECT pn.nsn, n.item_name, pn.part_number, left(pn.nsn, 4) AS fsc,
                                             COALESCE(f.render_depth = 'deep', false) AS fsc_link
                                      FROM pub.part_numbers pn
                                      JOIN pub.nsns n ON n.nsn = pn.nsn
                                      LEFT JOIN pub.fsc f ON f.fsc = left(pn.nsn, 4)
-                                     WHERE pn.cage = $1
+                                     WHERE pn.cage = $1 AND ($2::text IS NULL OR left(pn.nsn, 4) = $2::text)
                                      ORDER BY pn.nsn, pn.part_number
-                                     LIMIT ${SUPPLIER_PART_ROWS}) r), '[]'::jsonb),
+                                     LIMIT ${PARTS_PAGE_SIZE} OFFSET $3::int) r), '[]'::jsonb),
+            'class_options', COALESCE((SELECT jsonb_agg(to_jsonb(o) ORDER BY o.fsc)
+                                        FROM (SELECT g.fsc, f.name, g.count
+                                              FROM (SELECT left(pn.nsn, 4) AS fsc, count(*)::int AS count
+                                                    FROM pub.part_numbers pn
+                                                    WHERE pn.cage = $1
+                                                    GROUP BY 1
+                                                    ORDER BY 1
+                                                    LIMIT ${PARTS_CLASS_MENU_MAX}) g
+                                              LEFT JOIN pub.fsc f ON f.fsc = g.fsc) o), '[]'::jsonb),
             'by_class', COALESCE((SELECT jsonb_agg(to_jsonb(c) ORDER BY c.count DESC, c.fsc)
                                    FROM (SELECT g.fsc, f.name, g.count, COALESCE(f.render_depth = 'deep', false) AS link
                                          FROM (SELECT left(pn.nsn, 4) AS fsc, count(DISTINCT pn.nsn)::int AS count
@@ -564,8 +621,8 @@ export function mapStats(r: JsonRow | null): SupplierStats | null {
     nsns: num(r.nsns),
     fscs: num(r.fscs),
     agencies: num(r.agencies),
-    firstAward: isoDate(r.first_award),
-    lastAward: isoDate(r.last_award),
+    firstAward: isoDateOrNull(r.first_award),
+    lastAward: isoDateOrNull(r.last_award),
     rankDollars12m: numOrNull(r.rank_dollars_12m),
     rankDollarsAll: numOrNull(r.rank_dollars_all),
     rankWins12m: numOrNull(r.rank_wins_12m),
@@ -574,6 +631,12 @@ export function mapStats(r: JsonRow | null): SupplierStats | null {
     rankFscs: numOrNull(r.rank_fscs),
     rankRising: numOrNull(r.rank_rising),
     risingDelta: numOrNull(r.rising_delta),
+    awards90d: num(r.awards_90d ?? 0),
+    dollars90d: num(r.dollars_90d ?? 0),
+    rankDollars90d: numOrNull(r.rank_dollars_90d),
+    rankWins90d: numOrNull(r.rank_wins_90d),
+    rankDollars12mPrev: numOrNull(r.rank_dollars_12m_prev),
+    longTermContracts: num(r.long_term_contracts ?? 0),
     refreshedAt: String(r.refreshed_at),
   };
 }
@@ -583,10 +646,12 @@ export function mapStats(r: JsonRow | null): SupplierStats | null {
  * database round-trip. Returns null when the CAGE has no rows in
  * pub.price_points (the route answers 404).
  */
-export async function loadSupplierPage(sql: Sql, cage: string): Promise<SupplierPageData | null> {
+export async function loadSupplierPage(sql: Sql, cage: string, opts: Partial<PartsQuery> = {}): Promise<SupplierPageData | null> {
   if (!/^[A-Z0-9]{5}$/.test(cage)) return null;
 
-  const res = await sql.unsafe(SUPPLIER_PAGE_SQL, [cage]);
+  // Re-validated here so the statement only ever binds a four-digit class (or NULL) and a page offset.
+  const q = parsePartsQuery(opts.fsc ?? null, opts.page === undefined ? null : String(opts.page));
+  const res = await sql.unsafe(SUPPLIER_PAGE_SQL, [cage, q.fsc, (q.page - 1) * PARTS_PAGE_SIZE]);
   const st = res[0];
   if (!st || Number(st.awards) + Number(st.ceilings) === 0) return null;
 
@@ -686,6 +751,13 @@ export async function loadSupplierPage(sql: Sql, cage: string): Promise<Supplier
         return { fsc: String(r.fsc), name: name === null || name === `FSC ${r.fsc}` ? null : name, count: num(r.count), link: r.link === true };
       }),
       classTotal: num(parts.class_total),
+      fsc: q.fsc,
+      matching: num(parts.matching),
+      page: q.page,
+      classOptions: (parts.class_options as JsonRow[]).map((r) => {
+        const name = clean(r.name);
+        return { fsc: String(r.fsc), name: name === null || name === `FSC ${r.fsc}` ? null : name, count: num(r.count) };
+      }),
     },
     openBids: {
       total: num(bids.total),

@@ -33,6 +33,15 @@ export interface BoardSupplier {
   rankNsns: number | null;
   rankFscs: number | null;
   rankRising: number | null;
+  /** Last 90 days (awarded_on > today - 90). Purchases only: long-term contract base awards never count. */
+  awards90d: number;
+  dollars90d: number;
+  rankDollars90d: number | null;
+  rankWins90d: number | null;
+  /** 12-month dollar rank as of 30 days ago (365 days ending 30 days ago); null when there were no dollars then. */
+  rankDollars12mPrev: number | null;
+  /** Long-term contract base awards (contract ceilings): counted here, never in awards or dollars. */
+  longTermContracts: number;
 }
 
 export interface BoardHeadline {
@@ -48,6 +57,10 @@ export interface BoardHeadline {
   states: number;
   /** supplier_stats.refreshed_at, ISO date, or null when the table is empty. */
   asOf: string | null;
+  /** First day (ISO) from which DIBBS award rows are dense (same rule as SiteData.awardCoverageFrom), or null. */
+  coverageFrom: string | null;
+  /** Suppliers whose only awards are long-term contracts (no orders yet), all of them, not just the listed ones. */
+  longTermOnly: number;
 }
 
 export interface StateRow {
@@ -63,7 +76,8 @@ export interface BoardData {
   states: StateRow[];
 }
 
-export type ListKey = 'dollars-12m' | 'dollars-all' | 'wins-12m' | 'wins-all' | 'breadth-nsns' | 'breadth-fscs' | 'rising';
+export type ListKey =
+  | 'dollars-90d' | 'dollars-12m' | 'dollars-all' | 'wins-90d' | 'wins-12m' | 'wins-all' | 'breadth-nsns' | 'breadth-fscs' | 'rising';
 
 interface ListDef {
   key: ListKey;
@@ -73,8 +87,10 @@ interface ListDef {
 }
 
 export const LISTS: ListDef[] = [
+  { key: 'dollars-90d', csv: 'dollars_90d', rank: 'rankDollars90d' },
   { key: 'dollars-12m', csv: 'dollars_12m', rank: 'rankDollars12m' },
   { key: 'dollars-all', csv: 'dollars_all', rank: 'rankDollarsAll' },
+  { key: 'wins-90d', csv: 'wins_90d', rank: 'rankWins90d' },
   { key: 'wins-12m', csv: 'wins_12m', rank: 'rankWins12m' },
   { key: 'wins-all', csv: 'wins_all', rank: 'rankWinsAll' },
   { key: 'breadth-nsns', csv: 'nsns', rank: 'rankNsns' },
@@ -92,6 +108,62 @@ export function listFor(suppliers: BoardSupplier[], key: ListKey, size = BOARD_S
       return typeof r === 'number' && r >= 1 && r <= size;
     })
     .sort((a, b) => (a[def.rank] as number) - (b[def.rank] as number) || a.cage.localeCompare(b.cage));
+}
+
+/** True for a supplier whose only awards are long-term contracts: no orders yet, no dollars, no rank. */
+export function isLongTermOnly(s: Pick<BoardSupplier, 'awardsAll' | 'longTermContracts'>): boolean {
+  return s.awardsAll === 0 && s.longTermContracts > 0;
+}
+
+/**
+ * The suppliers with long-term contracts and no orders yet, most contracts first, ties by CAGE (code-point
+ * order). They sit below every dollar list and never take a rank.
+ */
+export function longTermOnlyList(suppliers: BoardSupplier[], size = BOARD_SIZE): BoardSupplier[] {
+  return suppliers
+    .filter(isLongTermOnly)
+    .sort((a, b) => b.longTermContracts - a.longTermContracts || (a.cage < b.cage ? -1 : a.cage > b.cage ? 1 : 0))
+    .slice(0, size);
+}
+
+/** "1 long-term contract, no orders yet" / "3 long-term contracts, no orders yet". */
+export function longTermText(n: number): string {
+  return `${n.toLocaleString('en-US')} long-term contract${n === 1 ? '' : 's'}, no orders yet`;
+}
+
+// ---------------------------------------------------------------------------
+// Rank trend (12-month dollar rank now against about 30 days ago)
+
+export interface RankTrend {
+  kind: 'up' | 'down' | 'same' | 'new';
+  /** Places moved (0 for same and new). */
+  places: number;
+  /** Visible, compact: an arrow and a number ("▲ 3"), "=" for no change, "new". */
+  glyph: string;
+  /** Plain words for screen readers and tooltips. */
+  text: string;
+}
+
+/**
+ * Movement of a 12-month dollar rank: `now` is today's rank, `before` the rank for the 365 days ending 30 days ago
+ * (null when the supplier had no dollars then). A smaller number is a better rank, so a drop in the number is "up".
+ * Null when the supplier has no rank today.
+ */
+export function rankTrend(now: number | null, before: number | null): RankTrend | null {
+  if (typeof now !== 'number') return null;
+  if (typeof before !== 'number') return { kind: 'new', places: 0, glyph: 'new', text: 'New: no award dollars 30 days ago' };
+  const places = Math.abs(before - now);
+  const noun = places === 1 ? 'place' : 'places';
+  if (before > now) return { kind: 'up', places, glyph: `\u25B2 ${places}`, text: `Up ${places} ${noun} since 30 days ago` };
+  if (before < now) return { kind: 'down', places, glyph: `\u25BC ${places}`, text: `Down ${places} ${noun} since 30 days ago` };
+  return { kind: 'same', places: 0, glyph: '=', text: 'No change since 30 days ago' };
+}
+
+/** One sentence about "All time" for the leaderboard: its start date is when DIBBS award rows become dense. */
+export function allTimeNote(coverageLabel: string | null): string {
+  return coverageLabel
+    ? `All time means since ${coverageLabel}: our DIBBS award records are dense only from that date.`
+    : 'All time means every award we have indexed so far, which is not everything a supplier has won.';
 }
 
 // ---------------------------------------------------------------------------
@@ -121,9 +193,19 @@ export const SMALL_FOOTNOTE =
 export const leaderboardHeaders = [
   'list', 'rank', 'cage', 'supplier', 'city', 'state', 'awards_12m', 'dollars_12m', 'awards_prior_12m', 'dollars_prior_12m',
   'awards_all', 'dollars_all', 'nsns', 'supply_classes', 'as_of',
+  // Added after as_of so existing column positions did not move.
+  'awards_90d', 'dollars_90d', 'long_term_contracts', 'rank_dollars_12m_30_days_ago',
 ] as const;
 
 const cents = (n: number) => Math.round(n * 100) / 100;
+
+function csvRow(list: string, rank: number | null, s: BoardSupplier, asOf: string | null): (string | number | null)[] {
+  return [
+    list, rank, s.cage, s.name, s.city, s.state, s.awards12m, cents(s.dollars12m), s.awardsPrior12m,
+    cents(s.dollarsPrior12m), s.awardsAll, cents(s.dollarsAll), s.nsns, s.fscs, asOf,
+    s.awards90d, cents(s.dollars90d), s.longTermContracts, s.rankDollars12mPrev,
+  ];
+}
 
 /** One row per (list, supplier) for every ranked list; lists in LISTS order, each in rank order. */
 export function leaderboardRows(data: BoardData): (string | number | null)[][] {
@@ -131,12 +213,11 @@ export function leaderboardRows(data: BoardData): (string | number | null)[][] {
   const out: (string | number | null)[][] = [];
   for (const def of LISTS) {
     for (const s of listFor(data.suppliers, def.key)) {
-      out.push([
-        def.csv, s[def.rank] as number, s.cage, s.name, s.city, s.state, s.awards12m, cents(s.dollars12m), s.awardsPrior12m,
-        cents(s.dollarsPrior12m), s.awardsAll, cents(s.dollarsAll), s.nsns, s.fscs, asOf,
-      ]);
+      out.push(csvRow(def.csv, s[def.rank] as number, s, asOf));
     }
   }
+  // Last, unranked: suppliers with long-term contracts and no orders yet (rank column empty).
+  for (const s of longTermOnlyList(data.suppliers)) out.push(csvRow('long_term_only', null, s, asOf));
   return out;
 }
 

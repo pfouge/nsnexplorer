@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fillMonths, mapSam, mapStats, mapWeb, safeHttpUrl } from './supplier-page.ts';
+import { fillMonths, mapSam, mapStats, mapWeb, parsePartsQuery, safeHttpUrl } from './supplier-page.ts';
 
 test('fillMonths: 24 calendar months ending with today, zero-filled, across a year boundary', () => {
   const m = fillMonths('2026-02-15', [
@@ -81,4 +81,35 @@ test('mapStats keeps null ranks null and numbers numeric', () => {
   assert.equal(s.rankRising, null);
   assert.equal(s.rankWins12m, null);
   assert.equal(s.risingDelta, 500);
+});
+
+test('parsePartsQuery: only a four-digit class and a bounded page number get through', () => {
+  assert.deepEqual(parsePartsQuery('5340', '3'), { fsc: '5340', page: 3 });
+  assert.deepEqual(parsePartsQuery(' 5340 ', ' 2 '), { fsc: '5340', page: 2 });
+  assert.deepEqual(parsePartsQuery(null, null), { fsc: null, page: 1 });
+  assert.deepEqual(parsePartsQuery('', ''), { fsc: null, page: 1 });
+  assert.deepEqual(parsePartsQuery('53', '0'), { fsc: null, page: 1 });
+  assert.deepEqual(parsePartsQuery('53400', '-4'), { fsc: null, page: 1 });
+  assert.deepEqual(parsePartsQuery("5340'; DROP TABLE x;--", '1e3'), { fsc: null, page: 1 });
+  assert.deepEqual(parsePartsQuery('abcd', '99999'), { fsc: null, page: 1 });
+  assert.equal(parsePartsQuery(undefined, '9999').page, 2000);
+});
+
+test('mapStats: the new period, trend and long-term columns; a long-term-only supplier has no purchase dates', () => {
+  const base = {
+    awards_all: 0, dollars_all: '0', awards_12m: 0, dollars_12m: '0', awards_prior_12m: 0, dollars_prior_12m: '0', nsns: 0, fscs: 0, agencies: 0,
+    first_award: null, last_award: null, rank_dollars_12m: null, refreshed_at: '2026-11-15T00:00:00Z',
+  };
+  const only = mapStats({ ...base, long_term_contracts: 1, awards_90d: 0, dollars_90d: '0' })!;
+  assert.equal(only.firstAward, null);
+  assert.equal(only.lastAward, null);
+  assert.equal(only.longTermContracts, 1);
+  assert.equal(only.rankDollars12mPrev, null);
+  const full = mapStats({ ...base, awards_all: 4, first_award: '2026-08-01', last_award: '2026-11-01', rank_dollars_12m: 3, rank_dollars_12m_prev: 7,
+    awards_90d: 2, dollars_90d: '125.5', rank_dollars_90d: 4, rank_wins_90d: 9 })!;
+  assert.equal(full.firstAward, '2026-08-01');
+  assert.deepEqual([full.awards90d, full.dollars90d, full.rankDollars90d, full.rankWins90d, full.rankDollars12mPrev], [2, 125.5, 4, 9, 7]);
+  // A row from before the migration has none of the new columns.
+  const old = mapStats({ ...base, first_award: '2026-08-01', last_award: '2026-08-02' })!;
+  assert.deepEqual([old.awards90d, old.longTermContracts, old.rankDollars90d], [0, 0, null]);
 });

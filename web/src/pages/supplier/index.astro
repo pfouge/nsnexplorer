@@ -9,9 +9,11 @@ import CiteThis from '../../components/CiteThis.astro';
 import SupplierBoardTable from '../../components/SupplierBoardTable.astro';
 import { SITE_URL } from '../../consts';
 import { formatDate, formatUsd } from '../../lib/shared';
-import { schemaText, supplierPath } from '../../lib/entity';
+import { schemaText, supplierPath, supplierPlace } from '../../lib/entity';
 import { loadSupplierBoard } from '../../lib/supplier-board-data';
-import { BOARD_H1, BOARD_SIZE, BOARD_TITLE, SMALL_FOOTNOTE, boardDescription, compactUsd, listFor, type ListKey } from '../../lib/supplier-board';
+import {
+  BOARD_H1, BOARD_SIZE, BOARD_TITLE, SMALL_FOOTNOTE, allTimeNote, boardDescription, compactUsd, listFor, longTermOnlyList, longTermText, type ListKey,
+} from '../../lib/supplier-board';
 
 const data = await loadSupplierBoard();
 const { headline: h, suppliers, states } = data;
@@ -20,8 +22,11 @@ const int = (n: number) => n.toLocaleString('en-US');
 const canonicalUrl = `${SITE_URL}/supplier/`;
 
 const lists = Object.fromEntries(
-  (['dollars-12m', 'dollars-all', 'wins-12m', 'wins-all', 'breadth-nsns', 'breadth-fscs', 'rising'] as ListKey[]).map((k) => [k, listFor(suppliers, k)])
+  (['dollars-90d', 'dollars-12m', 'dollars-all', 'wins-90d', 'wins-12m', 'wins-all', 'breadth-nsns', 'breadth-fscs', 'rising'] as ListKey[]).map((k) => [k, listFor(suppliers, k)])
 ) as Record<ListKey, ReturnType<typeof listFor>>;
+// Suppliers whose only awards are long-term contracts: listed below the dollar lists, never ranked.
+const longTermOnly = longTermOnlyList(suppliers);
+const coverageLabel = h.coverageFrom ? formatDate(h.coverageFrom) : null;
 
 const title = BOARD_TITLE;
 const description = boardDescription(h.suppliers);
@@ -40,7 +45,7 @@ const faq = [
   {
     question: 'How are the suppliers ranked?',
     answer:
-      "Four ways: total award dollars, number of awards won, breadth (distinct NSNs and supply classes supplied), and rising suppliers (last 12 months against the 12 months before). Each list shows the top 100 and is rebuilt every day from indexed award records.",
+      "Four ways: total award dollars and number of awards won (each for the last 90 days, the last 12 months, or all time), breadth (distinct NSNs and supply classes supplied), and rising suppliers (last 12 months against the 12 months before). Each list shows the top 100 and is rebuilt every day from indexed award records. The 12-month dollars list also shows how each supplier's rank moved against about 30 days ago.",
   },
   {
     question: 'Does a high rank mean a supplier is better?',
@@ -125,28 +130,79 @@ const asOf = h.asOf;
         <a href="#method">How it works</a>
       </nav>
 
+      <p class="gloss board-note" id="all-time-note">{allTimeNote(coverageLabel)}</p>
+
       <div class="board">
         <section class="board-section" id="dollars">
           <h2>Award dollars</h2>
-          <p class="gloss">Suppliers ranked by the total value of the awards recorded for them.</p>
+          <p class="gloss">
+            Suppliers ranked by the total value of the awards recorded for them. Long-term contracts are not money spent, so
+            they are left out.{' '}
+            Beside each supplier in the last 12 months list, the trend shows how its rank moved against about 30 days ago.
+          </p>
           <div class="viz-seg" data-seg-group="board-dollars" role="group" aria-label="Period">
+            <button type="button" aria-pressed="false" data-seg-show="dollars-90d">Last 90 days</button>
             <button type="button" aria-pressed="true" data-seg-show="dollars-12m">Last 12 months</button>
             <button type="button" aria-pressed="false" data-seg-show="dollars-all">All time</button>
           </div>
+          <div class="board-panel" id="dollars-90d" data-seg-panel="board-dollars" hidden>
+            <SupplierBoardTable rows={lists['dollars-90d']} kind="dollars-90d" caption="Suppliers ranked by award dollars, last 90 days" />
+          </div>
           <div class="board-panel" id="dollars-12m" data-seg-panel="board-dollars">
-            <SupplierBoardTable rows={lists['dollars-12m']} kind="dollars-12m" caption="Suppliers ranked by award dollars, last 12 months" />
+            <SupplierBoardTable rows={lists['dollars-12m']} kind="dollars-12m" caption="Suppliers ranked by award dollars, last 12 months, with rank movement against about 30 days ago" />
           </div>
           <div class="board-panel" id="dollars-all" data-seg-panel="board-dollars" hidden>
             <SupplierBoardTable rows={lists['dollars-all']} kind="dollars-all" caption="Suppliers ranked by award dollars, all time" />
           </div>
+
+          {longTermOnly.length > 0 && (
+            <div id="long-term">
+              <h3 class="board-subhead">Long-term contracts, no orders yet</h3>
+              <p class="gloss board-note">
+                {int(h.longTermOnly)} {h.longTermOnly === 1 ? 'supplier appears' : 'suppliers appear'} in the awards only as the holder of a long-term contract.
+                A long-term contract lists the most it can ever be worth, not money spent, so these suppliers have no award dollars and no
+                rank. They are listed here, most contracts first{h.longTermOnly > longTermOnly.length ? `, first ${int(longTermOnly.length)} shown` : ''}.
+              </p>
+              <div class="table-wrap">
+                <table>
+                  <caption class="sr-only">Suppliers with long-term contracts and no orders yet</caption>
+                  <thead>
+                    <tr><th>Supplier</th><th class="loc">Location</th><th class="ltc hide-sm">Long-term contracts</th></tr>
+                  </thead>
+                  <tbody>
+                    {longTermOnly.map((s) => {
+                      const href = supplierPath(s.cage);
+                      const label = s.name ?? `CAGE ${s.cage}`;
+                      const place = supplierPlace(s.city, s.state);
+                      return (
+                        <tr>
+                          <td class="who">
+                            {href ? <a href={href}>{label}</a> : label}
+                            {place && <span class="sub">{place}</span>}
+                            <span class="sub show-sm">{longTermText(s.longTermContracts)}</span>
+                          </td>
+                          <td class="loc">{place ?? ''}</td>
+                          <td class="ltc hide-sm">{longTermText(s.longTermContracts)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </section>
 
         <section class="board-section" id="wins">
           <h2>Wins</h2>
-          <p class="gloss">Suppliers ranked by the number of awards recorded for them, whatever each was worth.</p>
+          <p class="gloss">Suppliers ranked by the number of awards recorded for them, whatever each was worth. Long-term contracts are not counted as wins.</p>
           <div class="viz-seg" data-seg-group="board-wins" role="group" aria-label="Period">
+            <button type="button" aria-pressed="false" data-seg-show="wins-90d">Last 90 days</button>
             <button type="button" aria-pressed="true" data-seg-show="wins-12m">Last 12 months</button>
             <button type="button" aria-pressed="false" data-seg-show="wins-all">All time</button>
+          </div>
+          <div class="board-panel" id="wins-90d" data-seg-panel="board-wins" hidden>
+            <SupplierBoardTable rows={lists['wins-90d']} kind="wins-90d" caption="Suppliers ranked by awards won, last 90 days" />
           </div>
           <div class="board-panel" id="wins-12m" data-seg-panel="board-wins">
             <SupplierBoardTable rows={lists['wins-12m']} kind="wins-12m" caption="Suppliers ranked by awards won, last 12 months" />
@@ -231,7 +287,13 @@ const asOf = h.asOf;
             <a href="https://www.usaspending.gov/" rel="noopener" target="_blank">USAspending</a> contract data. Each award on a supplier's page links to its government record.
           </li>
           <li>Award value is the recorded total, or unit price times quantity when no total is recorded. Awards with neither add nothing to dollars but still count as wins.</li>
-          <li>Last 12 months means the 365 days ending on the date below; the prior 12 months are the 365 days before that. Ties are broken by CAGE code.</li>
+          <li>Last 90 days means the 90 days ending on the date below, last 12 months the 365 days ending then, and the prior 12 months the 365 days before that. Ties are broken by CAGE code.</li>
+          <li>
+            Rank movement compares each supplier's 12-month dollar rank today with the rank the same records give for the 365 days ending 30 days ago
+            (an arrow and a number, "=" for no change, "new" when the supplier had no award dollars then). It is worked out again every day, not saved,
+            so an award recorded late can change an earlier rank too.
+          </li>
+          <li>A long-term contract (an indefinite-delivery contract, a basic ordering agreement or a blanket purchase agreement) is first awarded for the most it may ever be worth. That ceiling is not money spent, so it is left out of dollars and counts; the orders placed against it are what count.</li>
           <li>Only suppliers with at least one indexed award are ranked. These lists cover the awards NSN Explorer has indexed, not everything a supplier has won, and say nothing about quality.</li>
           <li>Names and locations come from the public CAGE file (from SAM.gov when that file has no name); registration details come from <a href="https://sam.gov/" rel="noopener" target="_blank">SAM.gov</a> public entity data.</li>
           {asOf && <li>Totals and ranks as of <strong>{formatDate(asOf)}</strong>. The page is rebuilt every day.</li>}

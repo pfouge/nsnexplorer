@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  aboutMode, addressLines, allRanks, changeSentence, loadedClasses, longDate, mailHref, moreClassesText, partClassLabel, partFilterStatus, rankBadges, registrationBadge, samEntityUrl, sameAddress, siteDomain, telHref,
+  aboutMode, addressLines, allRanks, changeSentence, loadedClasses, longDate, mailHref, moreClassesText, partClassLabel, partFilterStatus, partsHref, partsRange, partsStatusText, rankBadges, rankTrendSentence, registrationBadge, samEntityUrl, sameAddress, siteDomain, telHref,
 } from './supplier-view.ts';
 import type { SupplierAddress, SupplierSam, SupplierStats, SupplierWeb } from './supplier-page.ts';
 
@@ -57,7 +57,8 @@ test('registration badge: active only until the expiry date passes', () => {
 const stats = (o: Partial<SupplierStats>): SupplierStats => ({
   awardsAll: 1, dollarsAll: 1, awards12m: 1, dollars12m: 1, awardsPrior12m: 0, dollarsPrior12m: 0, nsns: 1, fscs: 1, agencies: 1, firstAward: '2026-01-01',
   lastAward: '2026-02-01', rankDollars12m: null, rankDollarsAll: null, rankWins12m: null, rankWinsAll: null, rankNsns: null, rankFscs: null, rankRising: null,
-  risingDelta: null, refreshedAt: '2026-10-11T00:00:00Z', ...o,
+  risingDelta: null, awards90d: 0, dollars90d: 0, rankDollars90d: null, rankWins90d: null, rankDollars12mPrev: null, longTermContracts: 0,
+  refreshedAt: '2026-10-11T00:00:00Z', ...o,
 });
 
 test('rank badges: only ranks on a published list, best first, linking to the list anchor', () => {
@@ -103,4 +104,34 @@ test('part class chip label, more-classes text, loaded classes and filter status
   assert.deepEqual(partFilterStatus(rows, 'all'), { shown: 3, text: 'Showing 3 of 3 loaded' });
   assert.deepEqual(partFilterStatus(rows, '5340'), { shown: 2, text: 'Showing 2 of 3 loaded' });
   assert.deepEqual(partFilterStatus(rows, '9999'), { shown: 0, text: 'Showing 0 of 3 loaded' });
+});
+
+test('rank trend sentence: up, down, same, new, and nothing without a rank', () => {
+  assert.equal(rankTrendSentence(stats({ rankDollars12m: 3, rankDollars12mPrev: 8 })), 'Up 5 places in the 12-month dollar ranking since about 30 days ago.');
+  assert.equal(rankTrendSentence(stats({ rankDollars12m: 8, rankDollars12mPrev: 7 })), 'Down 1 place in the 12-month dollar ranking since about 30 days ago.');
+  assert.equal(rankTrendSentence(stats({ rankDollars12m: 5, rankDollars12mPrev: 5 })), 'No change in the 12-month dollar ranking since about 30 days ago.');
+  assert.match(rankTrendSentence(stats({ rankDollars12m: 5, rankDollars12mPrev: null })) ?? '', /^New in the 12-month dollar ranking/);
+  assert.equal(rankTrendSentence(stats({ rankDollars12m: null, rankDollars12mPrev: 5 })), null);
+  assert.equal(rankTrendSentence(null), null);
+});
+
+test('90-day ranks appear as badges and in the rank list', () => {
+  const st = stats({ rankDollars90d: 4, rankWins90d: 120 });
+  assert.deepEqual(rankBadges(st).map((b) => [b.text, b.href]), [['#4 by award dollars, last 90 days', '/supplier/#dollars-90d']]);
+  assert.deepEqual(allRanks(st), [{ label: 'Award dollars, last 90 days', rank: 4 }, { label: 'Awards won, last 90 days', rank: 120 }]);
+});
+
+test('listed parts pager: range, status text and links', () => {
+  assert.deepEqual(partsRange(6422, 1, 50, 50), { from: 1, to: 50, pages: 129 });
+  assert.deepEqual(partsRange(6422, 129, 50, 22), { from: 6401, to: 6422, pages: 129 });
+  assert.deepEqual(partsRange(0, 1, 50, 0), { from: 0, to: 0, pages: 1 });
+  assert.equal(partsStatusText({ from: 1, to: 50 }, 6422, null), 'Showing 1 to 50 of 6,422 listed parts');
+  assert.equal(partsStatusText({ from: 1, to: 50 }, 3100, '5340'), 'Showing 1 to 50 of 3,100 listed parts in class 5340');
+  assert.equal(partsStatusText({ from: 1, to: 1 }, 1, '5340'), 'Showing 1 to 1 of 1 listed part in class 5340');
+  assert.equal(partsStatusText({ from: 0, to: 0 }, 0, '5340'), 'No listed parts in class 5340');
+  assert.equal(partsStatusText({ from: 0, to: 0 }, 140, '5315'), 'This page is past the end of the 140 listed parts in class 5315');
+  assert.equal(partsHref('75Q65', null, 1), '/supplier/75Q65/#sp-parts');
+  assert.equal(partsHref('75Q65', '5340', 1), '/supplier/75Q65/?class=5340#sp-parts');
+  assert.equal(partsHref('75Q65', '5340', 3), '/supplier/75Q65/?class=5340&pp=3#sp-parts');
+  assert.equal(partsHref('75Q65', null, 2), '/supplier/75Q65/?pp=2#sp-parts');
 });

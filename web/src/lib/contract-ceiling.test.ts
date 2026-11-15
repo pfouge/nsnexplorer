@@ -88,3 +88,12 @@ test('migration 0015 spells out the same rules, for the aliases it uses', () => 
   assert.equal(code.match(/pub\.price_points(?! q)/g)?.length, 1, 'only refresh_supplier_stats reads pub.price_points directly');
   assert.equal(code.match(/pub\.contract_actions(?! q)/g)?.length ?? 0, 0, 'every pub.contract_actions read is filtered');
 });
+
+test('migration 0017 (leaderboard periods) writes the same ceiling rule for refresh_supplier_stats', () => {
+  const sql = readFileSync(new URL('../../../db/migrations/0017_supplier_board_periods.sql', import.meta.url), 'utf8');
+  assert.ok(sql.includes(`NOT ${ceilingPricePointSql('pp')}`), 'refresh_supplier_stats (alias pp)');
+  const code = sql.split('\n').filter((l) => !l.trimStart().startsWith('--')).join('\n');
+  assert.equal(code.match(/pub\.price_points/g)?.length, 1, 'price points are read once, through the is_purchase flag');
+  // Every purchase figure is filtered on the flag; only the long-term contract count uses its negation.
+  assert.ok(code.includes('count(*) FILTER (WHERE NOT p.is_purchase)'), 'long_term_contracts counts ceilings');
+});

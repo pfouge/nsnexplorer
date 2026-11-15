@@ -21,7 +21,7 @@ import { formatDate, formatUsd, formatUsdPrecise, toDashedNsn } from '../../lib/
 import { databaseUrlFrom } from '../../lib/runtime-env';
 import { openSql } from '../../lib/nsn-page';
 import { CEILING_LABEL, ceilingAmountText } from '../../lib/contract-ceiling';
-import { loadSupplierPage, safeHttpUrl, SUPPLIER_AWARD_ROWS, SUPPLIER_OPEN_ROWS, SUPPLIER_PART_ROWS, SUPPLIER_USA_ROWS } from '../../lib/supplier-page';
+import { loadSupplierPage, parsePartsQuery, safeHttpUrl, PARTS_PAGE_SIZE, SUPPLIER_AWARD_ROWS, SUPPLIER_OPEN_ROWS, SUPPLIER_USA_ROWS } from '../../lib/supplier-page';
 import {
   parseCageParam,
   schemaText,
@@ -37,11 +37,14 @@ import {
   allRanks,
   changeSentence,
   longDate,
-  loadedClasses,
   mailHref,
   moreClassesText,
   partClassLabel,
+  partsHref,
+  partsRange,
+  partsStatusText,
   rankBadges,
+  rankTrendSentence,
   registrationBadge,
   samEntityUrl,
   sameAddress,
@@ -49,7 +52,7 @@ import {
   telHref,
 } from '../../lib/supplier-view';
 import { chartable } from '../../lib/viz-supplier';
-import { isSmallBusiness } from '../../lib/supplier-board';
+import { isSmallBusiness, longTermText } from '../../lib/supplier-board';
 
 export const prerender = false;
 
@@ -66,9 +69,11 @@ if (!databaseUrl) {
   return new Response('Database is not configured for this environment.', { status: 503 });
 }
 const sql = openSql(databaseUrl);
+// Listed parts: ?class=5340 filters ALL of the supplier's listed parts to one class, ?pp=2 is the page (50 rows each).
+const partsQuery = parsePartsQuery(Astro.url.searchParams.get('class'), Astro.url.searchParams.get('pp'));
 let page;
 try {
-  page = await loadSupplierPage(sql, parsed.cage);
+  page = await loadSupplierPage(sql, parsed.cage, partsQuery);
 } finally {
   await sql.end({ timeout: 1 }).catch(() => {});
 }
@@ -80,15 +85,20 @@ const { cage, name, awards, classRows, sam, web, stats, optout, today } = page;
 const displayName = sam?.legalName ?? name;
 const heading = displayName ?? `CAGE ${cage}`;
 const place = supplierPlace(page.city, page.state);
-const copy = { cage, name: displayName, awards, classes: page.classes, latest: page.latestAward };
+const copy = { cage, name: displayName, awards, classes: page.classes, latest: page.latestAward, ceilings: page.ceilings };
 const lede = supplierLede(copy);
 const title = supplierTitle(displayName, cage);
 const description = supplierDescription(copy);
 const canonicalUrl = `${SITE_URL}/supplier/${cage}/`;
 const capped = awards + page.ceilings > page.rows.length;
 const fmtInt = (n: number): string => n.toLocaleString('en-US');
-const partClasses = loadedClasses(page.parts.rows);
-const partClassNames = new Map(page.parts.byClass.map((c) => [c.fsc, c.name]));
+// The class menu covers every class the supplier lists parts in, not just the rows loaded.
+const partClasses = page.parts.classOptions;
+const partsFiltered = page.parts.fsc !== null || page.parts.page > 1;
+const partsShown = partsRange(page.parts.matching, page.parts.page, PARTS_PAGE_SIZE, page.parts.rows.length);
+const partsStatus = partsStatusText(partsShown, page.parts.matching, page.parts.fsc);
+const partsPrev = page.parts.page > 1 ? partsHref(cage, page.parts.fsc, page.parts.page - 1) : null;
+const partsNext = page.parts.page < partsShown.pages ? partsHref(cage, page.parts.fsc, page.parts.page + 1) : null;
 const moreClasses = moreClassesText(page.parts.classTotal, page.parts.byClass.length);
 
 // ---- header
@@ -142,7 +152,7 @@ const regRows: [string, string][] = sam
 
 // ---- performance
 const cmpRows =
-  stats === null
+  stats === null || stats.awardsAll === 0
     ? []
     : [
         { label: 'Last 12 months', awards: stats.awards12m, dollars: stats.dollars12m },
@@ -150,6 +160,7 @@ const cmpRows =
       ];
 const dollarChange = stats ? changeSentence(stats.dollars12m, stats.dollarsPrior12m) : null;
 const rankList = allRanks(stats);
+const trendSentence = rankTrendSentence(stats);
 const showChart = chartable(page.months);
 const haveSeries = page.valuedAwards > 0;
 
@@ -214,6 +225,7 @@ const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Suppl
   canonicalUrl={canonicalUrl}
   breadcrumbs={breadcrumbs}
   extraSchema={[orgSchema]}
+  noindex={partsFiltered ? 'follow' : undefined}
 >
   <nav class="breadcrumb" aria-label="Breadcrumb">
     <a href="/">Home</a> › <a href="/supplier/">Suppliers</a> › {heading}
@@ -465,6 +477,10 @@ const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Suppl
       </div>
     </div>
 
+    {awards === 0 && page.ceilings > 0 && (
+      <p class="gloss">{longTermText(page.ceilings)}. A long-term contract lists the most it can ever be worth, not money spent, so it adds no award dollars, counts or ranks here.</p>
+    )}
+
     {(cmpRows.length > 0 || rankList.length > 0) && (
       <div class="sp-two">
         {cmpRows.length > 0 && (
@@ -495,6 +511,7 @@ const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Suppl
             <ul class="sp-ranks">
               {rankList.map((r) => <li><span>{r.label}</span><span>#{fmtInt(r.rank)}</span></li>)}
             </ul>
+            {trendSentence && <p class="gloss">{trendSentence}</p>}
             <p class="gloss"><a href="/supplier/">See the top 100 lists →</a></p>
           </div>
         )}
@@ -641,20 +658,23 @@ const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Suppl
           </ul>
         </>
       )}
-      <details class="state-more">
-        <summary>Parts listed for this supplier ({fmtInt(parts.count)}){parts.count > parts.rows.length ? `, first ${fmtInt(SUPPLIER_PART_ROWS)} shown` : ''}</summary>
+      <details class="state-more" id="sp-parts" open={partsFiltered}>
+        <summary>Parts listed for this supplier ({fmtInt(parts.count)}){!partsFiltered && parts.count > parts.rows.length ? `, first ${fmtInt(PARTS_PAGE_SIZE)} shown` : ''}</summary>
         {partClasses.length > 1 && (
-          <div class="sp-part-filter">
+          <form class="sp-part-filter" method="get" action={`/supplier/${cage}/`} id="sp-part-form">
             <div class="filter-group">
               <label class="filter-label" for="sp-part-class">Class</label>
-              <select id="sp-part-class">
-                <option value="all">All</option>
-                {partClasses.map((f) => <option value={f}>{f}{partClassNames.get(f) ? ` ${partClassNames.get(f)}` : ''}</option>)}
+              <select id="sp-part-class" name="class">
+                <option value="">All classes</option>
+                {partClasses.map((c) => (
+                  <option value={c.fsc} selected={c.fsc === parts.fsc}>{c.fsc}{c.name ? ` ${c.name}` : ''} ({fmtInt(c.count)})</option>
+                ))}
               </select>
             </div>
-            <span class="gloss" id="sp-part-status" aria-live="polite">Showing {fmtInt(parts.rows.length)} of {fmtInt(parts.rows.length)} loaded</span>
-          </div>
+            <noscript><button type="submit" class="chip outline">Show this class</button></noscript>
+          </form>
         )}
+        <p class="gloss sp-part-status" id="sp-part-status" role="status">{partsStatus}</p>
         <div class="table-wrap">
           <table id="sp-part-table">
             <thead>
@@ -672,6 +692,13 @@ const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Suppl
             </tbody>
           </table>
         </div>
+        {(partsPrev || partsNext) && (
+          <nav class="sp-pager" aria-label="Listed parts pages">
+            {partsPrev ? <a href={partsPrev} rel="prev nofollow">‹ Previous {fmtInt(PARTS_PAGE_SIZE)}</a> : <span></span>}
+            <span class="gloss">Page {fmtInt(page.parts.page)} of {fmtInt(partsShown.pages)}</span>
+            {partsNext ? <a href={partsNext} rel="next nofollow">Next {fmtInt(PARTS_PAGE_SIZE)} ›</a> : <span></span>}
+          </nav>
+        )}
       </details>
     </section>
   )}
@@ -774,17 +801,16 @@ const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Suppl
 </BaseLayout>
 
 <script>
-  import { partFilterStatus } from '../../lib/supplier-view';
+  // The class menu reloads the page with ?class=<fsc>: the filter is applied by the server to ALL listed parts.
+  import { partsHref } from '../../lib/supplier-view';
+  const partsBox = document.getElementById('sp-parts') as HTMLDetailsElement | null;
+  if (partsBox && location.hash === '#sp-parts') partsBox.open = true;
   const select = document.getElementById('sp-part-class') as HTMLSelectElement | null;
-  const status = document.getElementById('sp-part-status');
-  const body = document.querySelector('#sp-part-table tbody');
-  if (select && status && body) {
-    const trs = Array.from(body.querySelectorAll<HTMLTableRowElement>('tr'));
-    const rows = trs.map((tr) => ({ fsc: tr.dataset.fsc ?? '' }));
+  const form = document.getElementById('sp-part-form') as HTMLFormElement | null;
+  const cage = form ? new URL(form.action, location.href).pathname.split('/').filter(Boolean).pop() : null;
+  if (select && form && cage) {
     select.addEventListener('change', () => {
-      const v = select.value;
-      trs.forEach((tr) => { tr.hidden = v !== 'all' && tr.dataset.fsc !== v; });
-      status.textContent = partFilterStatus(rows, v).text;
+      location.assign(partsHref(cage, /^[0-9]{4}$/.test(select.value) ? select.value : null, 1));
     });
   }
 </script>

@@ -673,15 +673,24 @@ async function checkSupplierProfile(db, cage, page, seen) {
   else {
     const t = page.stats;
     eq('stats copy', [t.awardsAll, t.dollarsAll, t.awards12m, t.dollars12m, t.awardsPrior12m, t.dollarsPrior12m, t.nsns, t.fscs, t.agencies, t.firstAward, t.lastAward,
-      t.rankDollars12m, t.rankDollarsAll, t.rankWins12m, t.rankWinsAll, t.rankNsns, t.rankFscs, t.rankRising, t.risingDelta],
+      t.rankDollars12m, t.rankDollarsAll, t.rankWins12m, t.rankWinsAll, t.rankNsns, t.rankFscs, t.rankRising, t.risingDelta,
+      t.awards90d, t.dollars90d, t.rankDollars90d, t.rankWins90d, t.rankDollars12mPrev, t.longTermContracts],
       [st.awards_all, Number(st.dollars_all), st.awards_12m, Number(st.dollars_12m), st.awards_prior_12m, Number(st.dollars_prior_12m), st.nsns, st.fscs, st.agencies, cl(st.first_award), cl(st.last_award),
-        numOrNull(st.rank_dollars_12m), numOrNull(st.rank_dollars_all), numOrNull(st.rank_wins_12m), numOrNull(st.rank_wins_all), numOrNull(st.rank_nsns), numOrNull(st.rank_fscs), numOrNull(st.rank_rising), numOrNull(st.rising_delta)]);
+        numOrNull(st.rank_dollars_12m), numOrNull(st.rank_dollars_all), numOrNull(st.rank_wins_12m), numOrNull(st.rank_wins_all), numOrNull(st.rank_nsns), numOrNull(st.rank_fscs), numOrNull(st.rank_rising), numOrNull(st.rising_delta),
+        st.awards_90d, Number(st.dollars_90d), numOrNull(st.rank_dollars_90d), numOrNull(st.rank_wins_90d), numOrNull(st.rank_dollars_12m_prev), st.long_term_contracts]);
+    seen.statsRows = (seen.statsRows ?? 0) + 1;
+    if (st.awards_all === 0 && st.long_term_contracts > 0) seen.longTermOnly = (seen.longTermOnly ?? 0) + 1;
   }
 
   // The stored row (rebuilt by pub.refresh_supplier_stats() in the clone) against a naive recomputation without ceilings.
   if (st) {
     const [nv] = await q(`select count(*)::int as n, coalesce(sum(${value}), 0) as d from pub.price_points pp join pub.nsns nn on nn.nsn = pp.nsn where pp.cage = $1 and ${NAIVE_NOT_CEIL_PP('pp')}`);
     eq('stats vs naive recount (no ceilings)', [st.awards_all, Number(st.dollars_all)], [nv.n, Number(nv.d)]);
+    // 90 days and long-term contracts, counted without the loader's SQL (day arithmetic, the ceiling rule spelled out again).
+    const [n90] = await q(`select count(*)::int as n, coalesce(sum(${value}), 0) as d from pub.price_points pp join pub.nsns nn on nn.nsn = pp.nsn
+      where pp.cage = $1 and ${NAIVE_NOT_CEIL_PP('pp')} and current_date - pp.awarded_on < 90`);
+    const [lt] = await q(`select count(*)::int as n from pub.price_points pp join pub.nsns nn on nn.nsn = pp.nsn where pp.cage = $1 and not (${NAIVE_NOT_CEIL_PP('pp')})`);
+    eq('stats 90 days and long-term contracts vs naive', [st.awards_90d, Number(st.dollars_90d), st.long_term_contracts], [n90.n, Number(n90.d), lt.n]);
   }
 
   // ---- awards by month (24 calendar months ending with this month)
@@ -753,6 +762,53 @@ async function checkSupplierProfile(db, cage, page, seen) {
   eq('bids', [page.openBids.total, page.openBids.rows.map((r) => [r.solNumber, r.nsn, r.itemName, r.quantity, r.unitOfIssue, r.returnBy, r.source, r.sourceUrl])],
     [bids.length, bids.slice(0, 25).map((r) => [r.sol_number, r.nsn, cl(r.item_name), numOrNull(r.quantity), cl(r.unit_of_issue), isoD(r.return_by), r.source, r.source_url])]);
   if (bids.length > 0) seen.bids++;
+}
+
+/**
+ * The class filter and paging of the listed parts (?class=5340&pp=2): ALL of the supplier's part numbers are filtered, in ONE statement.
+ * The expected values are computed in JavaScript from every part row of the CAGE (read in the same order the page uses).
+ */
+async function checkPartsClassFilter(cmp, db, cage, full, seen) {
+  const all = await db.unsafe(`select pn.nsn, nn.item_name, pn.part_number from pub.part_numbers pn join pub.nsns nn on nn.nsn = pn.nsn where pn.cage = $1 order by pn.nsn, pn.part_number`, [cage]);
+  if (all.length === 0) return;
+  const fscInfo = new Map((await db.unsafe(`select fsc, name from pub.fsc`, [])).map((r) => [r.fsc, r.name]));
+  const byClass = new Map();
+  for (const r of all) {
+    const k = String(r.nsn).slice(0, 4);
+    byClass.set(k, (byClass.get(k) ?? 0) + 1);
+  }
+  const options = [...byClass].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)).map(([fsc, n]) => {
+    const nm = cl(fscInfo.get(fsc));
+    return [fsc, nm === null || nm === `FSC ${fsc}` ? null : nm, n];
+  });
+  const expected = (fsc, page) => {
+    const m = all.filter((r) => fsc === null || String(r.nsn).slice(0, 4) === fsc);
+    return {
+      fsc, page, matching: m.length, count: all.length, options,
+      rows: m.slice((page - 1) * 50, page * 50).map((r) => [r.nsn, cl(r.item_name), r.part_number, String(r.nsn).slice(0, 4)]),
+    };
+  };
+  const project = (v) => v === null ? null : ({
+    fsc: v.parts.fsc, page: v.parts.page, matching: v.parts.matching, count: v.parts.count, options: v.parts.classOptions.map((o) => [o.fsc, o.name, o.count]),
+    rows: v.parts.rows.map((r) => [r.nsn, r.itemName, r.partNumber, r.fsc]),
+  });
+  const top = [...byClass].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))[0];
+  const variants = [{ fsc: top[0], page: 1 }, { fsc: '0000', page: 1 }, { fsc: null, page: 2 }];
+  if (top[1] > 50) variants.push({ fsc: top[0], page: 2 }, { fsc: top[0], page: Math.ceil(top[1] / 50) });
+  for (const v of variants) {
+    const label = `class ${v.fsc ?? 'all'} page ${v.page}`;
+    const r = await cmp(
+      'loadSupplierPage (class filter)', `${cage} ${label}`,
+      async () => expected(v.fsc, v.page),
+      (s) => N.loadSupplierPage(s, cage, v).then(project)
+    );
+    if (v.fsc === top[0] && v.fsc !== null) seen.classFilter++;
+    if (v.page === 2 && v.fsc !== null && r.new.value && r.new.value.rows.length > 0) seen.classFilterPage2++;
+  }
+  // A class the supplier has no parts in answers an empty page, not an error; an unusable value is ignored.
+  for (const bad of ['5340; drop table pub.nsns', '12', '']) {
+    await cmp('loadSupplierPage (class filter)', `${cage} ignored ${JSON.stringify(bad)}`, async () => expected(null, 1), (s) => N.loadSupplierPage(s, cage, { fsc: bad }).then(project));
+  }
 }
 
 // ------------------------------------------------ contract ceilings: the rows seeded by verify-single-query-seed.sql
@@ -974,7 +1030,11 @@ async function main() {
     }
     // Migration 0015 (contract ceilings) redefines pub.refresh_supplier_stats(); the supplier seed refreshes the stats at its end.
     psql(dbUrl, ['-1', '-f', path.join(here, '../../db/migrations/0015_contract_ceilings.sql')]);
+    // Migration 0017 (leaderboard periods, rank trend, long-term-contract-only rows) redefines it again and adds columns.
+    psql(dbUrl, ['-1', '-f', path.join(here, '../../db/migrations/0017_supplier_board_periods.sql')]);
     psql(dbUrl, ['-1', '-f', path.join(here, 'supplier-seed.sql')]);
+    // Rank movers, long-term-contract-only suppliers and a supplier that lists 190 parts in three classes.
+    psql(dbUrl, ['-1', '-f', path.join(here, 'leaderboard-seed.sql')]);
     // FLIS tables (migration 0014) and their seed rows.
     if (psql(dbUrl, ['-At', '-c', `select to_regclass('pub.nsn_identification') is not null`]).trim() !== 't') {
       psql(dbUrl, ['-1', '-f', path.join(here, '../../db/migrations/0014_flis_identification.sql')]);
@@ -1074,6 +1134,8 @@ async function main() {
       { label: 'most awards (200-row cap)', rows: await col(`select cage from pub.price_points where cage is not null group by cage order by count(*) desc, cage limit 3`) },
       { label: 'blank/null name or city', rows: await col(`select cage from pub.suppliers where name is null or btrim(name) = '' or city is null or btrim(city) = '' order by md5(cage) limit 10`) },
       { label: 'supplier profile rows (sam/web/stats)', rows: await col(`select s.cage from pub.suppliers s where exists (select 1 from pub.price_points p where p.cage = s.cage) and (exists (select 1 from pub.supplier_sam x where x.cage = s.cage) or exists (select 1 from pub.supplier_web w where w.cage = s.cage)) order by md5(s.cage) limit 40`) },
+      { label: 'long-term contracts only (stats row, no purchases)', rows: await col(`select cage from pub.supplier_stats where awards_all = 0 and long_term_contracts > 0 order by cage limit 10`) },
+      { label: 'most listed parts (class filter and paging)', rows: await col(`select cage from pub.part_numbers where cage is not null group by cage order by count(*) desc, cage limit 4`) },
       { label: 'opted out (any flag)', rows: await col(`select cage from pub.supplier_optouts where exists (select 1 from pub.price_points p where p.cage = supplier_optouts.cage) order by cage`) },
       { label: 'with USAspending actions by UEI', rows: await col(`select s.cage from pub.suppliers s where s.uei is not null and exists (select 1 from pub.contract_actions c where c.recipient_uei = s.uei) and exists (select 1 from pub.price_points p where p.cage = s.cage) order by cage limit 10`) },
     ];
@@ -1092,7 +1154,7 @@ async function main() {
     // Old-vs-new compares the fields the old loader returned (same keys, same order); the new profile
     // sections are checked separately against independent queries.
     const OLD_SUPPLIER_KEYS = ['cage', 'name', 'city', 'state', 'awards', 'ceilings', 'dollars', 'valuedAwards', 'nsns', 'classes', 'firstAward', 'latestAward', 'rows', 'classRows', 'makesParts', 'refreshedOn'];
-    const sawProfile = { sam: 0, web: 0, optout: 0, partialWeb: 0, partialContact: 0, usa: 0, bids: 0, parts: 0, chart: 0 };
+    const sawProfile = { sam: 0, web: 0, optout: 0, partialWeb: 0, partialContact: 0, usa: 0, bids: 0, parts: 0, chart: 0, longTermOnly: 0, classFilter: 0, classFilterPage2: 0 };
     for (const c of supSample) {
       let full = null;
       await compare(
@@ -1106,6 +1168,7 @@ async function main() {
           })
       );
       if (full) await checkSupplierProfile(direct, c, full, sawProfile);
+      if (full) await checkPartsClassFilter(compare, direct, c, full, sawProfile);
     }
     console.log('   profile cases seen:', JSON.stringify(sawProfile));
     for (const [k, v] of Object.entries(sawProfile)) if (v === 0) fail('loadSupplierPage profile', k, 'no sampled supplier exercised this case');

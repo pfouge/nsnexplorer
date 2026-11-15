@@ -16,6 +16,9 @@
 .board td.rank, .board th.rank { width: 2.75rem; color: var(--ink-soft); font-weight: 600; text-align: right; padding-right: 4px; }
 .board td.who { white-space: normal; min-width: 11rem; line-height: 1.3; }
 .board td.who a { font-weight: 600; overflow-wrap: anywhere; }
+/* In the long-term list the supplier is the first column: keep its link a plain link like the ranked lists, not a ticker tag. */
+.board td.who:first-child > a { display: inline; background: none; padding: 0; font-size: inherit; white-space: normal; border-radius: 0; color: var(--ink); }
+.board td.who:first-child > a:hover { background: none; color: var(--ink); text-decoration: none; }
 .board td.who .sub { display: block; font-size: 0.8125rem; color: var(--ink-soft); margin-top: 1px; }
 .board td.loc, .board th.loc { display: none; color: var(--ink-soft); }
 .board td.num strong { font-weight: 600; }
@@ -23,6 +26,15 @@
 .board td.num .down { color: var(--red); }
 .board .show-sm { display: block; font-size: 0.8125rem; color: var(--ink-soft); margin-top: 1px; font-weight: 400; }
 .board .hide-sm { display: none; }
+/* Rank trend: an arrow and a number (up, down), "=" (no change) or "new"; colour is only a second signal. */
+.board .trend-chip { font-size: 0.8125rem; font-weight: 600; white-space: nowrap; color: var(--ink-soft); }
+.board .trend-chip.up { color: var(--green); }
+.board .trend-chip.down { color: var(--red); }
+.board th.trend, .board td.trend { width: 6.5rem; text-align: right; }
+.board th.trend { white-space: normal; line-height: 1.2; }
+.board td.ltc, .board th.ltc { white-space: normal; text-align: left; }
+.board .board-subhead { margin: 1.5rem 0 0.25rem; font-size: 1.0625rem; }
+.board .board-note { margin: 0.25rem 0 0.5rem; max-width: 70ch; overflow-wrap: anywhere; }
 .datastrip .k sup { line-height: 0; }
 @media (min-width: 700px) {
   .board .show-sm { display: none; }
@@ -39,6 +51,10 @@
 .state-more > summary { cursor: pointer; font-weight: 600; font-size: 0.9375rem; padding: 6px 0; }
 .sp-part-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0.5rem 0 0.75rem; }
 .sp-part-filter .gloss { margin: 0; }
+.sp-part-status { margin: 0.25rem 0 0.5rem; overflow-wrap: anywhere; }
+.sp-part-filter select { max-width: 100%; }
+.sp-pager { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 12px; margin: 0.75rem 0; }
+.sp-pager .gloss { margin: 0; }
 .board-foot { font-size: 0.8125rem; color: var(--ink-soft); margin-top: 0.5rem; }
 .board-method h2 { margin-top: 0; }
 .board-method li { margin-bottom: 0.35rem; }
