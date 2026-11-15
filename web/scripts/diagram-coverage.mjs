@@ -44,6 +44,19 @@ const SHARE = Number(opt('--share', 0.6));
 const PAGE = Number(opt('--page', 5000));
 const LIMIT = Number(opt('--limit', 0)) || Infinity;
 const jsonOut = opt('--json', null);
+// Round-2 diagnostics (all read-only, all optional):
+//   --probe WASHER,O-RING   per root: the 25 most common requirement names (share of the root's parts with
+//                           characteristics, reply shapes, 3 example replies) and N sample parts WITHOUT a drawing
+//   --samples 15            samples per probed root (default 15)
+//   --compare-lib <file>    a second diagram.ts (usually main's): tally which builder drew each part before and
+//                           now, and print samples of parts that LOST a drawing
+//   --lost-samples 6        samples per (old builder, root) that lost a drawing (default 6)
+//   --class-roots 5330,5331 top roots inside these classes (all parts, drawn or not)
+const PROBE = new Set((opt('--probe', '') || '').split(',').map((x) => x.trim().toUpperCase()).filter(Boolean));
+const SAMPLES = Number(opt('--samples', 15));
+const cmpLibArg = opt('--compare-lib', null);
+const LOST_SAMPLES = Number(opt('--lost-samples', 6));
+const CLASS_ROOTS = new Set((opt('--class-roots', '') || '').split(',').map((x) => x.trim()).filter(Boolean));
 
 // ---- load the drawing code ------------------------------------------------------------------
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'diagram-coverage-'));
@@ -62,6 +75,15 @@ const builders = Object.entries(D).filter(([k, v]) => /^build.*Diagram$/.test(k)
 if (typeof D.buildDiagram !== 'function' || typeof D.buildThumbnail !== 'function') {
   console.error('diagram-coverage: the library must export buildDiagram and buildThumbnail');
   process.exit(2);
+}
+
+let C = null; // the comparison (usually main's) drawing code
+let cbuilders = [];
+if (cmpLibArg) {
+  const cout = path.join(tmp, 'diagram-cmp.mjs');
+  await build({ entryPoints: [path.resolve(cmpLibArg)], bundle: true, format: 'esm', platform: 'node', outfile: cout, logLevel: 'error', loader: { '.ts': 'ts' } });
+  C = await import(pathToFileURL(cout).href);
+  cbuilders = Object.entries(C).filter(([k, v]) => /^build.*Diagram$/.test(k) && k !== 'buildDiagram' && typeof v === 'function');
 }
 
 // ---- helpers ----------------------------------------------------------------------------------
@@ -90,6 +112,25 @@ function replyShape(reply) {
   return 'text/code';
 }
 
+function whoDrew(builderList, svg, entries, row, dashed) {
+  for (const [bname, fn] of builderList) {
+    let out = null;
+    try {
+      out = fn(entries, { nsnDashed: dashed, itemName: row.item_name });
+    } catch {
+      out = null;
+    }
+    if (out === svg) return bname;
+  }
+  return 'unknown';
+}
+function fmtSample(row, entries) {
+  const lines = [`    ${row.nsn} ${row.fsc} ${row.item_name ?? ''}`.slice(0, 160)];
+  for (const e of entries.slice(0, 16)) lines.push(`      ${e.mrc ?? '-'} | ${e.requirement ?? ''} | ${(e.reply ?? '').replace(/\s+/g, ' ').slice(0, 80)}`);
+  if (entries.length > 16) lines.push(`      ... ${entries.length - 16} more`);
+  return lines.join('\n');
+}
+
 // ---- counters ---------------------------------------------------------------------------------
 let parts = 0;
 let withChars = 0;
@@ -104,6 +145,13 @@ const unknownBuilder = new Map();
 const rootsAll = new Map(); // root -> {parts, chars, draw}
 const classesNo = new Map(); // fsc -> {name, noDraw, total, withChars}
 const rootReq = new Map(); // root -> {n, req: Map(key -> {n, mrc, name, example, shapes: Map})}  (parts WITHOUT a drawing, with characteristics)
+const probeReq = new Map(); // root -> {n, req: Map(name -> {n, mrc, ex: Set, shapes: Map})}  (ALL parts of the root with characteristics)
+const probeSamples = new Map(); // root -> [{...}]  (parts without a drawing)
+const probeCount = new Map();
+const transitions = new Map(); // "before -> after" -> n
+const lostSamples = new Map(); // "before | root" -> [...]
+const lostCount = new Map();
+const classRoots = new Map(); // fsc -> Map(root -> {total, draw})
 const REQ_CAP = 400; // distinct requirement keys kept per root
 
 const client = new pg.Client({
@@ -150,6 +198,68 @@ outer: for (;;) {
     } catch (err) {
       errors += 1;
       if (errors <= 5) console.error('builder threw for', row.nsn, String(err?.message ?? err));
+    }
+    if (C) {
+      let oldSvg = null;
+      try {
+        oldSvg = C.buildDiagram(entries, row.fsc, { nsnDashed: dashed, itemName: row.item_name });
+      } catch {
+        oldSvg = null;
+      }
+      const oldWho = oldSvg ? whoDrew(cbuilders, oldSvg, entries, row, dashed) : 'none';
+      const newWho = svg ? whoDrew(builders, svg, entries, row, dashed) : 'none';
+      inc(transitions, `${oldWho} -> ${newWho}`);
+      if (oldSvg && !svg) {
+        const key = `${oldWho} | ${root}`;
+        inc(lostCount, key);
+        const arr = lostSamples.get(key) ?? [];
+        if (arr.length < LOST_SAMPLES) {
+          arr.push(fmtSample(row, entries));
+          lostSamples.set(key, arr);
+        }
+      } else if (oldSvg && svg && oldSvg !== svg && oldWho !== newWho) {
+        inc(transitions, `(changed builder) ${oldWho} -> ${newWho}`);
+      }
+    }
+    if (CLASS_ROOTS.has(row.fsc)) {
+      const m = classRoots.get(row.fsc) ?? new Map();
+      const c = m.get(root) ?? { total: 0, draw: 0 };
+      c.total += 1;
+      if (svg) c.draw += 1;
+      m.set(root, c);
+      classRoots.set(row.fsc, m);
+    }
+    if (PROBE.has(root)) {
+      inc(probeCount, root);
+      if (hasChars) {
+        const agg = probeReq.get(root) ?? { n: 0, req: new Map() };
+        agg.n += 1;
+        const seen = new Set();
+        for (const e of entries) {
+          if (!e.requirement || seen.has(e.requirement)) continue;
+          seen.add(e.requirement);
+          let q = agg.req.get(e.requirement);
+          if (!q) {
+            if (agg.req.size >= 300) continue;
+            q = { n: 0, mrc: e.mrc, ex: new Set(), shapes: new Map() };
+            agg.req.set(e.requirement, q);
+          }
+          q.n += 1;
+          inc(q.shapes, replyShape(e.reply));
+          if (q.ex.size < 3 && e.reply) q.ex.add(e.reply.replace(/\s+/g, ' ').slice(0, 80));
+        }
+        probeReq.set(root, agg);
+      }
+      if (!svg && hasChars) {
+        const arr = probeSamples.get(root) ?? [];
+        // spread the samples across the catalog: take every k-th undrawn part instead of the first N
+        const k = (probeSamples.get(root + '#k') ?? 0) + 1;
+        probeSamples.set(root + '#k', k);
+        if (arr.length < SAMPLES && k % 7 === 1) {
+          arr.push(fmtSample(row, entries));
+          probeSamples.set(root, arr);
+        }
+      }
     }
     const r = rootsAll.get(root) ?? { parts: 0, chars: 0, draw: 0 };
     r.parts += 1;
@@ -278,6 +388,41 @@ for (const r of noDrawRoots.slice(0, TOP_ROOTS)) {
     P(`  ${q.name} [${q.mrc ?? '-'}]  ${Math.round(q.share * 100)}%  | ${shapes}  | ${(q.example ?? '').replace(/\s+/g, ' ').slice(0, 70)}`);
   }
   jsonRoots.push({ root: r.root, noDraw: r.noDraw, partsWithChars: agg.n, reliable: rel.map((q) => ({ name: q.name, mrc: q.mrc, share: +q.share.toFixed(3) })) });
+}
+
+if (C) {
+  P();
+  P('## Old builder -> new builder (every part; "none" = no drawing)');
+  for (const [k, v] of [...transitions.entries()].sort((a, b) => b[1] - a[1])) P(`${String(v).padStart(8)}  ${k}`);
+  P();
+  P('## Parts that HAD a drawing with the comparison library and have none now: counts by (old builder | root)');
+  const lostSorted = [...lostCount.entries()].sort((a, b) => b[1] - a[1]);
+  for (const [k, v] of lostSorted.slice(0, 40)) P(`${String(v).padStart(8)}  ${k}`);
+  P();
+  P('## Samples of those lost drawings');
+  for (const [k, v] of lostSorted.slice(0, 20)) {
+    P(`### ${k}  (${v})`);
+    for (const smp of lostSamples.get(k) ?? []) P(smp);
+  }
+}
+for (const [fsc, m] of classRoots) {
+  P();
+  P(`## Roots inside class ${fsc}: no-drawing / all parts`);
+  for (const [root, c] of [...m.entries()].sort((a, b) => b[1].total - a[1].total).slice(0, 30)) P(`${String(c.total - c.draw).padStart(8)}  ${String(c.total).padStart(8)}  ${root}`);
+}
+for (const root of PROBE) {
+  const agg = probeReq.get(root);
+  P();
+  P(`## PROBE ${root}: ${probeCount.get(root) ?? 0} parts, ${agg?.n ?? 0} with characteristics`);
+  if (agg) {
+    P('requirement [MRC]  share of parts | reply shapes | examples');
+    for (const [name, q] of [...agg.req.entries()].sort((a, b) => b[1].n - a[1].n).slice(0, 25)) {
+      const shapes = [...q.shapes.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([sh, n]) => `${sh} ${Math.round((100 * n) / q.n)}%`).join(', ');
+      P(`  ${name} [${q.mrc ?? '-'}]  ${Math.round((100 * q.n) / agg.n)}%  | ${shapes}  | ${[...q.ex].join('  //  ')}`);
+    }
+  }
+  P(`  -- ${probeSamples.get(root)?.length ?? 0} sample parts without a drawing --`);
+  for (const smp of probeSamples.get(root) ?? []) P(smp);
 }
 
 console.log(out.join('\n'));

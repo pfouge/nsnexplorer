@@ -35,7 +35,8 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
           DB_POOL_MAX: '1'
-        run: node web/scripts/diagram-coverage.mjs --json /tmp/after.json --roots 60 --classes 30 | cut -c1-400
+        run: |
+          node web/scripts/diagram-coverage.mjs --json /tmp/after.json --roots 60 --classes 30 --compare-lib /tmp/before/diagram.ts --lost-samples 5 --class-roots 5330,5331,5310,5305,5306,5315,5365,5325,5360,3120 --probe WASHER,O-RING,GASKET,SPRING,SEAL,PACKING,NUT,BOLT,SCREW,PIN,BUSHING,SPACER,RING,STUD --samples 10 | cut -c1-300
       - name: Summary
         run: |
           node -e "
