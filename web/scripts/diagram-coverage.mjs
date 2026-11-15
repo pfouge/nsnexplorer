@@ -154,6 +154,7 @@ const probeCount = new Map();
 const transitions = new Map(); // "before -> after" -> n
 const lostSamples = new Map(); // "before | root" -> [...]
 const lostCount = new Map();
+const lostNames = new Map(); // "before | full item name" -> n
 const classRoots = new Map();
 const sigNames = new Map(); // fsc -> Map(full name -> {noDraw, total})
 const sigSigs = new Map(); // fsc -> Map(signature -> {n, nsn, name}) // fsc -> Map(root -> {total, draw})
@@ -217,6 +218,7 @@ outer: for (;;) {
       if (oldSvg && !svg) {
         const key = `${oldWho} | ${root}`;
         inc(lostCount, key);
+        inc(lostNames, `${oldWho} | ${row.item_name}`);
         const arr = lostSamples.get(key) ?? [];
         if (arr.length < LOST_SAMPLES) {
           arr.push(fmtSample(row, entries));
@@ -421,6 +423,9 @@ if (C) {
   P('## Parts that HAD a drawing with the comparison library and have none now: counts by (old builder | root)');
   const lostSorted = [...lostCount.entries()].sort((a, b) => b[1] - a[1]);
   for (const [k, v] of lostSorted.slice(0, 40)) P(`${String(v).padStart(8)}  ${k}`);
+  P();
+  P('## Lost drawings by full item name (top 60)');
+  for (const [k, v] of [...lostNames.entries()].sort((a, b) => b[1] - a[1]).slice(0, 60)) P(`${String(v).padStart(8)}  ${k}`);
   P();
   P('## Samples of those lost drawings');
   for (const [k, v] of lostSorted.slice(0, 20)) {
