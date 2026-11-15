@@ -125,6 +125,7 @@ test('saved searches: filters that cannot be mirrored are refused with a reason'
   assert.ok('reason' in filtersFromBar({ ...bar, status: 'closed' }, '5340'));
   assert.ok('reason' in filtersFromBar({ ...bar, status: 'all' }, '5340'));
   assert.ok('reason' in filtersFromBar({ ...bar, hasDrawing: true }, '5340'));
+  assert.ok('reason' in filtersFromBar({ ...bar, repost: true }, '5340'));
 });
 
 const nsnCard: NsnCard = { name: 'WASHER,FLAT', fsc: '5310', fsc_name: 'Nuts and Washers', amc: '2', amsc: null, award_count: 3, prices: [['2026-01-01', 1.5], ['2026-02-01', 1.75]],

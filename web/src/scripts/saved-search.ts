@@ -14,7 +14,7 @@ function readBar(): FilterBar | null {
   if (!status) return null;   // the /open/ hub has no filter bar: it saves "all"
   const val = (id: string): string => (document.getElementById(id) as HTMLSelectElement | null)?.value ?? 'any';
   const comp = document.querySelector<HTMLInputElement>('input[name="f-competition"]:checked')?.value ?? 'all';
-  return { status: status.value, closes: val('f-closes'), minqty: val('f-minqty'), competition: comp, hasDrawing: !!(document.getElementById('f-hasdrawing') as HTMLInputElement | null)?.checked };
+  return { status: status.value, closes: val('f-closes'), minqty: val('f-minqty'), competition: comp, hasDrawing: !!(document.getElementById('f-hasdrawing') as HTMLInputElement | null)?.checked, repost: !!(document.getElementById('f-repost') as HTMLInputElement | null)?.checked };
 }
 
 function current(b: HTMLButtonElement): { key: string; label: string } | { reason: string } {
@@ -56,7 +56,7 @@ if (ACCOUNTS_ENABLED && btn) {
   const repaint = (): void => { void loadMe().then((me) => paint(b, me)); };
   repaint();
   document.addEventListener('nsn:me', (e) => paint(b, (e as CustomEvent<Me>).detail));
-  for (const el of document.querySelectorAll('#f-status, #f-closes, #f-minqty, #f-hasdrawing, input[name="f-competition"]')) el.addEventListener('change', repaint);
+  for (const el of document.querySelectorAll('#f-status, #f-closes, #f-minqty, #f-hasdrawing, #f-repost, input[name="f-competition"]')) el.addEventListener('change', repaint);
   document.getElementById('clear-filters')?.addEventListener('click', () => setTimeout(repaint, 0));
   b.addEventListener('click', async () => {
     const c = current(b);

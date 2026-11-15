@@ -19,6 +19,7 @@ import { nomen } from '../../../lib/seo-copy';
 import { PAGE_SIZE, pageCount, pageItems, pageNumbers, pageParam, pageRange, pageUrl, rangeLabel, pagedDescriptionPrefix, pagedTitle } from '../../../lib/paginate';
 import { memo, release } from '../../../lib/paged-cache';
 import { openDescription, openTitle } from '../../../lib/seo-copy';
+import { sumOpenTotals, totalsLine } from '../../../lib/open-signals';
 
 // /open/<code>/ is page 1; /open/<code>/page/<n>/ holds the next PAGE_SIZE cards.
 export async function getStaticPaths() {
@@ -81,6 +82,11 @@ const firstPaintCount = pages > 1
     : rangeLabel(offsets.open + 1, offsets.open + openOnPage)
   : openOnPage.toLocaleString('en-US');
 
+// First-paint totals line: the open cards on this page (the client script recomputes it on every filter change).
+const firstPaintTotals = totalsLine(
+  sumOpenTotals(cards.filter(isOpenCard).map((c) => ({ qty: c.openQuantity ?? 0, estValue: c.estValue ?? 0 }))),
+  pages > 1
+);
 const fmtInt = (n: number) => n.toLocaleString('en-US');
 const fmtDollars = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`;
 // "Jul 2026": where our DIBBS award records begin (null hides the past-due option).
@@ -298,6 +304,10 @@ const breadcrumbSchema = {
           </div>
 
           <div class="filter-group">
+            <label title="Solicited again within 30 days of an earlier solicitation"><input type="checkbox" id="f-repost" /> Reposts</label>
+          </div>
+
+          <div class="filter-group">
             <label class="filter-label" for="f-sort">Sort</label>
             <select id="f-sort">
               <option value="closes">Closing soonest</option>
@@ -312,6 +322,12 @@ const breadcrumbSchema = {
           </div>
 
           <p class="filter-count" id="filter-count" aria-live="polite">{firstPaintCount} of {totalOpen.toLocaleString('en-US')} shown</p>
+
+          <div class="filter-group view-toggle" role="radiogroup" aria-labelledby="f-view-label">
+            <span class="filter-label" id="f-view-label">View</span>
+            <label><input type="radio" name="f-view" value="cards" checked /> Cards</label>
+            <label><input type="radio" name="f-view" value="table" /> Table</label>
+          </div>
         </aside>
         {coverageLabel && (
           <p class="gloss" style="margin:0.6rem 0 0.75rem; font-size:0.78rem;">
@@ -319,6 +335,21 @@ const breadcrumbSchema = {
           </p>
         )}
 
+        <p class="gloss open-totals" id="open-totals" aria-live="polite">{firstPaintTotals}</p>
+
+        <div class="product-table-scroll">
+        <div class="product-table-inner">
+        <div class="table-head" id="table-head">
+          <span>NSN</span>
+          <button type="button" data-sort="name">Item</button>
+          <button type="button" data-sort="closes">Closes</button>
+          <button type="button" class="r" data-sort="qty">Qty</button>
+          <button type="button" class="r" data-sort="value">Value at last price</button>
+          <span>Competition</span>
+          <span>Tech docs</span>
+          <span>Flags</span>
+          <span>Solicitations (open/closed)</span>
+        </div>
         <div
           class="product-grid"
           id="product-grid"
@@ -355,6 +386,7 @@ const breadcrumbSchema = {
                 data-pastdue={c.pastDueSince ?? ''}
                 data-estvalue={c.estValue ?? 0}
                 data-techdocs={c.techDocs ?? ''}
+                data-repost={c.repost ? '1' : '0'}
               >
                 <a class="product-thumb" href={c.href} aria-label={`View ${c.itemName ?? c.dashed}`} {...externalAttrs}>
                   {c.thumbnail ? (
@@ -367,28 +399,50 @@ const breadcrumbSchema = {
                   <a class="product-nsn mono" href={c.href} {...externalAttrs}>{c.dashed}</a>
                   <h3 class="product-name">{c.itemName ?? 'Unnamed item'}</h3>
                   <div class="product-signals">
-                    <span class={`badge ${badge.cls}`}>{badge.text}</span>
-                    <span class="signal mono">{(c.openQuantity ?? c.pastDueQuantity) !== null ? (c.openQuantity ?? c.pastDueQuantity)!.toLocaleString('en-US') : '—'} units</span>
-                    {c.pastDueCount > 0 && <span class="badge amber">Past due</span>}
-                    {(c.techDocs === 'tech_docs' || c.techDocs === 'spec_only') && (
-                      <span class="badge">{c.techDocs === 'spec_only' ? 'Tech docs · Spec/standard only' : 'Tech docs'}</span>
+                    <span class={`badge ${badge.cls}`} data-col="closes" title={badge.text}>{badge.text}</span>
+                    <span class="signal mono" data-col="qty">{(c.openQuantity ?? c.pastDueQuantity) !== null ? (c.openQuantity ?? c.pastDueQuantity)!.toLocaleString('en-US') : '—'}<span class="card-only"> units</span></span>
+                    {(c.pastDueCount > 0 || c.repost) && (
+                      <span class="flags" data-col="flags">
+                        {c.pastDueCount > 0 && <span class="badge amber">Past due</span>}
+                        {c.repost && <span class="badge" title="Solicited again within 30 days of an earlier solicitation">Repost</span>}
+                      </span>
                     )}
-                    {c.estValue !== null && <span class="signal mono">≈ {fmtDollars(c.estValue)} at last price</span>}
+                    {(c.techDocs === 'tech_docs' || c.techDocs === 'spec_only') && (
+                      <span class="badge" data-col="tech" title={c.techDocs === 'spec_only' ? 'Tech docs · Spec/standard only' : 'Tech docs'}>Tech docs{c.techDocs === 'spec_only' && <span class="card-only"> · Spec/standard only</span>}</span>
+                    )}
+                    {c.estValue !== null && <span class="signal mono" data-col="value">≈ {fmtDollars(c.estValue)}<span class="card-only"> at last price</span></span>}
                     {c.competition !== 'unknown' && (
-                      <span class={`badge ${c.competition === 'open' ? 'green' : 'amber'}`}>
+                      <span class={`badge ${c.competition === 'open' ? 'green' : 'amber'}`} data-col="comp">
                         {c.competition === 'open' ? 'Competed' : 'Named source'}
                       </span>
                     )}
                   </div>
-                  <p class="gloss" style="margin:0.35rem 0 0; font-size:0.78rem;">
-                    {fmtInt(c.solicitationCount)} solicitation{c.solicitationCount === 1 ? '' : 's'}
-                    {' '}({fmtInt(c.openCount)} open · {fmtInt(c.closedCount)} closed)
+                  <p class="gloss" data-col="sols" style="margin:0.35rem 0 0; font-size:0.78rem;" title={`${fmtInt(c.openCount)} open, ${fmtInt(c.closedCount)} closed`}>
+                    <span class="card-only">
+                      {fmtInt(c.solicitationCount)} solicitation{c.solicitationCount === 1 ? '' : 's'}
+                      {' '}({fmtInt(c.openCount)} open · {fmtInt(c.closedCount)} closed)
+                    </span>
+                    <span class="tbl-only mono">{fmtInt(c.openCount)} / {fmtInt(c.closedCount)}</span>
                   </p>
                 </div>
               </article>
             );
           })}
         </div>
+        </div>
+        </div>
+        <script is:inline>
+          // Restore the Cards/Table choice before first paint.
+          (() => {
+            let v = 'cards';
+            try { v = localStorage.getItem('nsn:open-view') === 'table' ? 'table' : 'cards'; } catch {}
+            const g = document.getElementById('product-grid');
+            if (!g) return;
+            g.dataset.view = v;
+            const r = document.querySelector('input[name="f-view"][value="' + v + '"]');
+            if (r) r.checked = true;
+          })();
+        </script>
       </div>
       <Pager base={baseUrl} page={page} pages={pages} />
       <p class="gloss" id="empty-state" hidden>
@@ -400,7 +454,7 @@ const breadcrumbSchema = {
 
   <script>
     import { createPagedLoader, rangeLabel, readPagedConfig } from '../../../lib/paged-client';
-    import { inPastDueWindow } from '../../../lib/open-signals';
+    import { inPastDueWindow, sumOpenTotals, totalsLine } from '../../../lib/open-signals';
 
     const grid = document.getElementById('product-grid');
     const countEl = document.getElementById('filter-count');
@@ -410,6 +464,8 @@ const breadcrumbSchema = {
     const techDocsSelect = document.getElementById('f-techdocs');
     const hasDrawingCheckbox = document.getElementById('f-hasdrawing');
     const sortSelect = document.getElementById('f-sort');
+    const repostCheckbox = document.getElementById('f-repost');
+    const totalsEl = document.getElementById('open-totals');
 
     if (
       grid &&
@@ -418,6 +474,7 @@ const breadcrumbSchema = {
       minQtySelect instanceof HTMLSelectElement &&
       techDocsSelect instanceof HTMLSelectElement &&
       hasDrawingCheckbox instanceof HTMLInputElement &&
+      repostCheckbox instanceof HTMLInputElement &&
       sortSelect instanceof HTMLSelectElement
     ) {
       const cards = Array.from(grid.querySelectorAll<HTMLElement>(':scope > .product-card'));
@@ -441,10 +498,12 @@ const breadcrumbSchema = {
         const minQty = minQtySelect.value === 'any' ? null : Number(minQtySelect.value);
         const techDocs = techDocsSelect.value; // 'any' | 'listed' | 'none'
         const needsDrawing = hasDrawingCheckbox.checked;
+        const needsRepost = repostCheckbox.checked;
         const today = todayIso();
         const todayMs = new Date(`${today}T00:00:00Z`).getTime();
 
         let visibleCount = 0;
+        const shown: { qty: number; estValue: number }[] = [];
         let scopeCount = 0;
         for (const card of cards) {
           const el = card as HTMLElement;
@@ -477,8 +536,12 @@ const breadcrumbSchema = {
             if (techDocs === 'listed' ? !listed : kind !== 'none') visible = false;
           }
           if (visible && needsDrawing && el.dataset.hasdrawing !== '1') visible = false;
+          if (visible && needsRepost && el.dataset.repost !== '1') visible = false;
           el.style.display = visible ? '' : 'none';
-          if (visible) visibleCount++;
+          if (visible) {
+            visibleCount++;
+            shown.push({ qty: Number(el.dataset.qty ?? 0), estValue: Number(el.dataset.estvalue ?? 0) });
+          }
         }
         if (!loader.complete && !loader.failed && status !== 'pastdue') {
           // Before the first interaction only this page is present: show the
@@ -491,6 +554,8 @@ const breadcrumbSchema = {
         } else {
           loader.setCount(`${fmt(visibleCount)} of ${fmt(scopeCount)} shown`);
         }
+        // Totals follow the visible cards; until the other pages are in, say so.
+        if (totalsEl) totalsEl.textContent = totalsLine(sumOpenTotals(shown), cfg.pages > 1 && !loader.complete);
         const emptyEl = document.getElementById('empty-state');
         if (emptyEl) emptyEl.hidden = visibleCount !== 0;
       };
@@ -504,6 +569,7 @@ const breadcrumbSchema = {
           if (el instanceof HTMLInputElement) el.checked = el.value === 'all';
         });
         hasDrawingCheckbox.checked = false;
+        repostCheckbox.checked = false;
       };
 
       const sortCards = () => {
@@ -562,7 +628,38 @@ const breadcrumbSchema = {
       minQtySelect.addEventListener('change', schedule);
       techDocsSelect.addEventListener('change', schedule);
       hasDrawingCheckbox.addEventListener('change', schedule);
+      repostCheckbox.addEventListener('change', schedule);
       sortSelect.addEventListener('change', schedule);
+
+      // Cards / Table view: a data-view attribute on the grid (CSS does the rest), remembered locally.
+      // The change is stopped here so shell.ts's "Show all" does not treat it as a filter change.
+      const viewGroup = document.querySelector('.view-toggle');
+      viewGroup?.addEventListener('change', (e) => {
+        e.stopPropagation();
+        const r = document.querySelector('input[name="f-view"]:checked');
+        const v = r instanceof HTMLInputElement && r.value === 'table' ? 'table' : 'cards';
+        grid.dataset.view = v;
+        try { localStorage.setItem('nsn:open-view', v); } catch {}
+      });
+
+      // Column headers reuse the sort select: set its value and fire its own change handler.
+      const sortButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('#table-head button[data-sort]'));
+      const markSort = () => sortButtons.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.sort === sortSelect.value)));
+      for (const b of sortButtons) {
+        b.addEventListener('click', () => {
+          sortSelect.value = b.dataset.sort ?? sortSelect.value;
+          sortSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+      }
+      sortSelect.addEventListener('change', markSort);
+      markSort();
+
+      // The sticky column header sits under the (sticky, possibly wrapped) filter rail.
+      const rail = document.querySelector<HTMLElement>('.filter-rail');
+      if (rail && 'ResizeObserver' in window) {
+        const root = rail.closest<HTMLElement>('.products-layout') ?? rail;
+        new ResizeObserver(() => root.style.setProperty('--rail-h', `${rail.offsetHeight}px`)).observe(rail);
+      }
 
       apply();
     }

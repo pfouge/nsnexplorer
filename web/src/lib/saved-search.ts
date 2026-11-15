@@ -13,6 +13,8 @@
 //   Has drawing   NOT saved. The page derives it from the NSN's characteristics in the browser
 //                 build (diagram.ts); there is no column to match on, so a search with it set
 //                 is not offered for saving.
+//   Reposts       NOT saved, for the same reason: it is derived from the NSN's solicitation history in the
+//                 page build, not matched by search_sols(). A search with it set is not offered for saving.
 //   Sort          not a filter, never saved.
 // The class (FSC) comes from the page: /open/<fsc>/ saves that class; /open/ saves none.
 
@@ -61,7 +63,7 @@ export function searchLabel(f: SearchFilters, fscName?: string | null): string {
 }
 
 /** What the filter bar on /open/<fsc>/ holds, read from its controls (values as the controls use them). */
-export interface FilterBar { status: string; closes: string; minqty: string; competition: string; hasDrawing: boolean }
+export interface FilterBar { status: string; closes: string; minqty: string; competition: string; hasDrawing: boolean; repost?: boolean }
 
 /**
  * The filters to save, or a plain-text reason this bar cannot be saved. `fsc` is the page's class
@@ -70,6 +72,7 @@ export interface FilterBar { status: string; closes: string; minqty: string; com
 export function filtersFromBar(bar: FilterBar, fsc: string | null): { filters: SearchFilters } | { reason: string } {
   if (bar.status !== 'open') return { reason: 'Only open solicitations can be saved. Set Status to Open now.' };
   if (bar.hasDrawing) return { reason: 'A search with "Has drawing" cannot be saved, because the site has no record field to match it on. Clear that filter to save.' };
+  if (bar.repost) return { reason: 'A search with "Reposts" cannot be saved, because the site has no record field to match it on. Clear that filter to save.' };
   const closes = bar.closes === 'any' ? null : Number(bar.closes);
   const minqty = bar.minqty === 'any' ? null : Number(bar.minqty);
   if ((closes !== null && !(closes > 0)) || (minqty !== null && !(minqty > 0))) return { reason: 'These filters cannot be saved.' };

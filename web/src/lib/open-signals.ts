@@ -56,3 +56,51 @@ export function estimatedValue(quantity: number | null, unitPrice: number | null
   if (quantity === null || unitPrice === null || !(quantity > 0) || !(unitPrice > 0)) return null;
   return Math.round(quantity * unitPrice * 100) / 100;
 }
+
+/** A solicitation is a "repost" when it was issued this many days (or fewer) after an earlier one closed. */
+export const REPOST_WINDOW_DAYS = 30;
+
+/**
+ * Repost read for one NSN's solicitations: true when an OPEN solicitation was issued (issuedOn, falling back
+ * to returnBy) 0..30 days AFTER the returnBy of a different solicitation that is expired or cancelled.
+ * `priorReturnBy` is the latest such earlier returnBy. Prior rows with no returnBy, or a returnBy after
+ * `todayIso` (bad data), are ignored. ISO dates, YYYY-MM-DD.
+ */
+export function isRepost(
+  sols: { solNumber: string; status: string; issuedOn: string | null; returnBy: string | null }[],
+  todayIso: string
+): { repost: boolean; priorReturnBy: string | null } {
+  let prior: string | null = null;
+  for (const open of sols) {
+    if (open.status !== 'open') continue;
+    const start = open.issuedOn ?? open.returnBy;
+    if (!start) continue;
+    for (const p of sols) {
+      if (p.solNumber === open.solNumber || (p.status !== 'expired' && p.status !== 'cancelled')) continue;
+      if (!p.returnBy || p.returnBy.slice(0, 10) > todayIso.slice(0, 10)) continue;
+      const gap = Math.round((isoMs(start) - isoMs(p.returnBy)) / DAY_MS);
+      if (gap >= 0 && gap <= REPOST_WINDOW_DAYS && (prior === null || p.returnBy > prior)) prior = p.returnBy;
+    }
+  }
+  return { repost: prior !== null, priorReturnBy: prior };
+}
+
+export interface OpenTotals { parts: number; units: number; value: number; priced: number }
+
+/** Sums the visible rows: `qty` is units, `estValue` is dollars with 0 meaning "no estimate". */
+export function sumOpenTotals(rows: { qty: number; estValue: number }[]): OpenTotals {
+  const t: OpenTotals = { parts: 0, units: 0, value: 0, priced: 0 };
+  for (const r of rows) {
+    t.parts++;
+    if (r.qty > 0) t.units += r.qty;
+    if (r.estValue > 0) { t.value += r.estValue; t.priced++; }
+  }
+  return t;
+}
+
+/** "N parts · Q units · ≈ $V at last price (M of N priced)"; `partial` appends " on this page". */
+export function totalsLine(t: OpenTotals, partial = false): string {
+  const n = (x: number) => x.toLocaleString('en-US');
+  const price = t.priced > 0 ? `≈ $${n(Math.round(t.value))} at last price` : 'no last price on record';
+  return `${n(t.parts)} ${t.parts === 1 ? 'part' : 'parts'} · ${n(t.units)} ${t.units === 1 ? 'unit' : 'units'} · ${price} (${n(t.priced)} of ${n(t.parts)} priced)${partial ? ' on this page' : ''}`;
+}
