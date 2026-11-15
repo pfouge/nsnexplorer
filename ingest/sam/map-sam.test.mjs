@@ -93,3 +93,30 @@ test('mapSamRecord: missing responseDeadLine maps return_by to null', () => {
   assert.ok(!result.skip);
   assert.equal(result.row.return_by, null);
 });
+
+// ---- attachment links (resourceLinks): kept in raw, secrets never stored
+
+const FILE = 'https://sam.gov/api/prod/opps/v3/opportunities/resources/files/b74dff59617b459fbfc6462042b34523/download';
+
+test('mapSamRecord: resourceLinks stay in raw untouched (same object) when they carry no secret', () => {
+  const rec = baseRecord({ resourceLinks: [FILE, `${FILE}2?api_key=null&token=`] });
+  const { row } = mapSamRecord(rec);
+  assert.equal(row.raw, rec);
+  assert.deepEqual(row.raw.resourceLinks, [FILE, `${FILE}2?api_key=null&token=`]);
+});
+
+test('mapSamRecord: a key or token value in a link is replaced before the record is stored; the input is not changed', () => {
+  const rec = baseRecord({ resourceLinks: [`${FILE}?api_key=AbCd1234&x=1`, `${FILE}2?token=zzz`, FILE] });
+  const { row } = mapSamRecord(rec);
+  assert.deepEqual(row.raw.resourceLinks, [`${FILE}?api_key=REDACTED&x=1`, `${FILE}2?token=REDACTED`, FILE]);
+  assert.equal(rec.resourceLinks[0], `${FILE}?api_key=AbCd1234&x=1`);
+  assert.doesNotMatch(JSON.stringify(row.raw), /AbCd1234|zzz/);
+  assert.equal(row.raw.title, rec.title);
+});
+
+test('mapSamRecord: resourceLinks null or missing is stored as the record came', () => {
+  const a = baseRecord({ resourceLinks: null });
+  assert.equal(mapSamRecord(a).row.raw, a);
+  const b = baseRecord();
+  assert.equal(mapSamRecord(b).row.raw, b);
+});

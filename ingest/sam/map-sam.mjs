@@ -11,6 +11,8 @@
 // NSN-keyed catalog/browse pages until a follow-up view is built to list
 // null-nsn open solicitations directly (see load.mjs's module header).
 
+import { cleanResourceLinks } from './resource-links.mjs';
+
 /** Extracts just the YYYY-MM-DD date portion from an ISO-ish timestamp. */
 function toDateOnly(raw) {
   if (raw === null || raw === undefined) return null;
@@ -69,7 +71,8 @@ export function mapSamRecord(rec) {
     nomenclature: rec?.title ?? null,
     fsc,
     source_url: sourceUrl,
-    raw: rec,
+    // The whole record is kept, so the attachment links (`resourceLinks`) are kept too; a secret in one is redacted first.
+    raw: cleanResourceLinks(rec),
   };
 
   return { row };
