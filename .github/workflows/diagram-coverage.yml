@@ -1,0 +1,44 @@
+name: diagram-coverage
+
+# Read-only report: how many parts get a drawing with the diagram code on this
+# branch compared with main. Runs only for branches named coverage/**. It
+# issues SELECTs in a READ ONLY transaction and writes nothing.
+on:
+  push:
+    branches: ['coverage/**']
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Coverage with main's drawing code
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+          DB_POOL_MAX: '1'
+        run: |
+          mkdir -p /tmp/before
+          git show origin/main:web/src/lib/diagram.ts > /tmp/before/diagram.ts
+          node web/scripts/diagram-coverage.mjs --lib /tmp/before/diagram.ts --json /tmp/before.json --roots 5 --classes 3 | head -60
+      - name: Coverage with this branch's drawing code
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+          DB_POOL_MAX: '1'
+        run: node web/scripts/diagram-coverage.mjs --json /tmp/after.json --roots 60 --classes 30 | cut -c1-400
+      - name: Summary
+        run: |
+          node -e "
+          const b=require('/tmp/before.json'),a=require('/tmp/after.json');
+          const pick=o=>JSON.stringify(Object.fromEntries(Object.entries(o).filter(([k,v])=>typeof v!=='object'||k.toLowerCase().includes('builder'))));
+          console.log('BEFORE',pick(b));console.log('AFTER',pick(a));"
