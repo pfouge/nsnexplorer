@@ -19,6 +19,7 @@ import { fscDescription, fscTitle } from '../../../lib/seo-copy';
 import { contractActionsPath, usaspendingActionsByFsc } from '../../../lib/csv-tables';
 import { fscEmbedPath } from '../../../lib/embed';
 import { familyCounts } from '../../../lib/material-family';
+import { withoutDuplicatedPricePoints } from '../../../lib/award-dedupe';
 import { buildClassPulse, supplierKey, type PulseAward } from '../../../lib/class-pulse';
 
 // /fsc/<code>/ is page 1; /fsc/<code>/page/<n>/ holds the next PAGE_SIZE cards.
@@ -73,12 +74,12 @@ const openCount = data.openByFsc.get(fsc.fsc)?.solicitations.length ?? 0;
 
 // "Right now" stats (page 1 only). Awards are the same records "Purchase records" / "Total $"
 // count: price points and NSN-attached contract actions for this class's NSNs, plus the
-// class's category-level contract actions. Dollars use the same formula as computeDemandStats.
+// class's category-level contract actions, with DIBBS price points that duplicate a DIBBS action dropped (lib/award-dedupe.ts). Dollars use the same formula as computeDemandStats.
 const pulse = (() => {
   if (page !== 1) return null;
   const awards: PulseAward[] = [];
   for (const n of data.nsnsByFsc.get(fsc.fsc) ?? []) {
-    for (const p of data.pricePointsByNsn.get(n.nsn) ?? []) {
+    for (const p of withoutDuplicatedPricePoints(data.pricePointsByNsn.get(n.nsn) ?? [], (x) => data.contractActionsByNsn.get(x) ?? [])) {
       awards.push({ date: p.awardedOn, amount: p.totalValue ?? p.unitPrice * (p.quantity ?? 1), supplierKey: supplierKey(p.cage, p.supplierName) });
     }
     for (const c of data.contractActionsByNsn.get(n.nsn) ?? []) {
