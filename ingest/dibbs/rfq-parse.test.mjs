@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseAwardGrid, parseRfqGrid } from './parse.mjs';
+import { parseAwardGrid, parseRfqGrid, cleanSolicitation } from './parse.mjs';
 import { joinAwardRfq } from './join-validate.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -39,21 +39,45 @@ test('parseRfqGrid: record 1 (the first row in document order) matches known val
   const { records } = parseRfqGrid(html);
   const first = records[0];
 
-  // The fixture's first grid row (ctl03) is DIBBS internal RowNum 910
-  // (grid rows are not in RowNum order) — an NSN 8455-01-024-2960 line
-  // with a 'Mil-Spec' qualifier, solicitation SPE1C1-26-Q-0372, PR
-  // 7017413272 / QTY 20000. Confirmed by direct inspection of the fixture,
-  // not assumed.
-  assert.equal(first.nsnRaw, '8455010242960');
-  assert.equal(first.nsnQualifier, 'Mil-Spec');
-  assert.equal(first.nomenclature, 'INSIGNIA, GRADE, ENLISTE');
-  assert.equal(first.techDocs, null);
-  assert.equal(first.solicitation, 'SPE1C1-26-Q-0372');
-  assert.equal(first.status, 'Removed');
-  assert.equal(first.purchaseRequest, '7017413272');
-  assert.equal(first.quantity, 20000);
-  assert.equal(first.issued, '2026-07-15');
-  assert.equal(first.returnBy, '2026-07-22');
+  // The fixture was re-captured 2026-09-06 (capture-meta.json; posting date 09-04-2026). Its first grid row is
+  // an NSN 8410-01-732-9585 line, solicitation SPE1C1-26-Q-0487, PR 7017750970 / QTY 240. Values confirmed by
+  // direct inspection of the fixture, not assumed.
+  assert.equal(first.nsnRaw, '8410017329585');
+  assert.equal(first.nsnQualifier, null);
+  assert.equal(first.nomenclature, "SKIRT, CURVY, WOMAN'S,");
+  assert.equal(first.techDocs, 'None');
+  assert.equal(first.solicitation, 'SPE1C1-26-Q-0487');
+  assert.match(first.status, /^Open\b/);
+  assert.equal(first.purchaseRequest, '7017750970');
+  assert.equal(first.quantity, 240);
+  assert.equal(first.issued, '2026-09-03');
+  assert.equal(first.returnBy, '2026-09-17');
+});
+
+test('parseRfqGrid: the Mil-Spec qualifier is read from the NSN cell', async () => {
+  const html = await loadRfqFixture();
+  const { records } = parseRfqGrid(html);
+  const milSpec = records.filter((r) => r.nsnQualifier === 'Mil-Spec');
+  assert.equal(milSpec.length, 4);
+  for (const r of milSpec) assert.match(r.nsnRaw, /^\d{13}$/);
+});
+
+test('parseRfqGrid: the attachments marker is not part of the solicitation number', async () => {
+  const html = await loadRfqFixture();
+  const { records } = parseRfqGrid(html);
+  // 28 of the 50 fixture rows carry "<br />--&raquo;Attachments" in the solicitation cell.
+  for (const r of records) {
+    assert.match(r.solicitation, /^[A-Z0-9]{6}-\d{2}-[A-Z]-[A-Z0-9]{4}$/, `bad solicitation ${JSON.stringify(r.solicitation)}`);
+  }
+  assert.equal(new Set(records.map((r) => r.solicitation)).size, new Set(records.map((r) => r.solicitation.replace(/\W/g, ''))).size);
+});
+
+test('cleanSolicitation: strips the dangling attachment marker only', () => {
+  assert.equal(cleanSolicitation('SPE1C1-26-Q-0487 --'), 'SPE1C1-26-Q-0487');
+  assert.equal(cleanSolicitation('SPE1C1-26-Q-0487'), 'SPE1C1-26-Q-0487');
+  assert.equal(cleanSolicitation('  SPE1C126Q0487  -- '), 'SPE1C126Q0487');
+  assert.equal(cleanSolicitation('--'), null);
+  assert.equal(cleanSolicitation(null), null);
 });
 
 test('parseRfqGrid: solicitation is cleaned of the "» Package View" suffix', async () => {

@@ -100,6 +100,18 @@ function textFromSpanContent(raw) {
   return text.length > 0 ? text : null;
 }
 
+/**
+ * Solicitation cell text without DIBBS's attachment marker. When a row has attachments the cell reads
+ * "SPE1C1-26-Q-0487<br />--&raquo;Attachments"; the raquo cut in textFromSpanContent leaves a dangling " --"
+ * behind. Left in, it was stored as part of the solicitation number ("SPE1C1-26-Q-0487 --"), which is not a
+ * valid number for /solicitation/ pages and splits one solicitation into two rows when the marker comes and goes.
+ */
+export function cleanSolicitation(text) {
+  if (text === null || text === undefined) return null;
+  const t = String(text).replace(/\s*-{2,}\s*$/, '').trim();
+  return t.length > 0 ? t : null;
+}
+
 /** Parses a '$8,644.84'-style total into a Number, or null if unparseable (e.g. 'See Award Doc'). */
 function parseTotal(raw) {
   const text = textFromSpanContent(raw);
@@ -197,7 +209,7 @@ export function parseAwardGrid(html) {
       nsnRaw: textFromSpanContent(f.lblNsn),
       nomenclature: textFromSpanContent(f.lblNomenclature),
       purchaseRequest: textFromSpanContent(f.lblPurchaseRequest),
-      solicitation: textFromSpanContent(f.lblSolicitation),
+      solicitation: cleanSolicitation(textFromSpanContent(f.lblSolicitation)),
     };
   });
 
@@ -290,7 +302,7 @@ export function parseRfqGrid(html) {
       nsnQualifier,
       nomenclature: textFromSpanContent(f.lblNomenclature),
       techDocs: textFromSpanContent(f.lblTechnicalDocuments),
-      solicitation: textFromSpanContent(f.lblSolicitation),
+      solicitation: cleanSolicitation(textFromSpanContent(f.lblSolicitation)),
       status: textFromSpanContent(f.lblStatus),
       purchaseRequest,
       quantity,
