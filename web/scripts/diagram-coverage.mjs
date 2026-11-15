@@ -56,6 +56,8 @@ const PROBE = new Set((opt('--probe', '') || '').split(',').map((x) => x.trim().
 const SAMPLES = Number(opt('--samples', 15));
 const cmpLibArg = opt('--compare-lib', null);
 const LOST_SAMPLES = Number(opt('--lost-samples', 6));
+const LOST_NAMES_FOR = new Set((opt('--lost-names-for', '') || '').split('|').filter(Boolean)); // exact item names, '|' separated
+const lostNameSamples = new Map();
 //   --sig-class 5306,5305   for parts WITHOUT a drawing in these classes: the top full item names, and the top
 //                           "signatures" (which measurable requirements the part carries) so a builder can be fitted
 const SIG_CLASS = new Set((opt('--sig-class', '') || '').split(',').map((x) => x.trim()).filter(Boolean));
@@ -219,6 +221,13 @@ outer: for (;;) {
         const key = `${oldWho} | ${root}`;
         inc(lostCount, key);
         inc(lostNames, `${oldWho} | ${row.item_name}`);
+        if (LOST_NAMES_FOR.has(row.item_name)) {
+          const a2 = lostNameSamples.get(row.item_name) ?? [];
+          if (a2.length < 3) {
+            a2.push(fmtSample(row, entries));
+            lostNameSamples.set(row.item_name, a2);
+          }
+        }
         const arr = lostSamples.get(key) ?? [];
         if (arr.length < LOST_SAMPLES) {
           arr.push(fmtSample(row, entries));
@@ -426,6 +435,11 @@ if (C) {
   P();
   P('## Lost drawings by full item name (top 60)');
   for (const [k, v] of [...lostNames.entries()].sort((a, b) => b[1] - a[1]).slice(0, 60)) P(`${String(v).padStart(8)}  ${k}`);
+  P();
+  for (const [nm, arr] of lostNameSamples) {
+    P(`### LOST SAMPLES for ${nm}`);
+    for (const smp of arr) P(smp);
+  }
   P();
   P('## Samples of those lost drawings');
   for (const [k, v] of lostSorted.slice(0, 20)) {
