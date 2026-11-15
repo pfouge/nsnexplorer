@@ -573,7 +573,7 @@ footer.site .disclaimer { color: var(--inv-softer); max-width: 78ch; }
    #product-grid has data-view="table" (set from the Cards/Table chips, remembered in localStorage). */
 .open-totals { margin: 0.6rem 0 0.5rem; font-size: 0.8125rem; font-variant-numeric: tabular-nums; max-width: none; }
 .product-table-scroll { max-width: 100%; }
-.product-table-inner { --tcols: 8.75rem minmax(8rem, 1fr) 10rem 5rem 6.25rem 6.5rem 5.25rem 8rem 5.5rem; --tgap: 6px; --tpad: 14px; }
+.product-table-inner { --tcols: 8.75rem minmax(8rem, 1fr) 10rem 5rem 6.25rem 6.5rem 5.25rem 8rem 5.5rem; --tgap: 10px; --tpad: 14px; }
 .flags { display: contents; }
 .table-head, .tbl-only { display: none; }
 .product-grid[data-view='table'] .card-only { display: none; }
