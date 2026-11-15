@@ -8,6 +8,7 @@ import { competitionRead } from './competition-read';
 import { priceSummary } from './sol-history';
 import { niinDashed, nomen, nsnSummary } from './seo-copy';
 import { NO_DEFINITION, alsoCalled, catalogCells, foreignSummary, moeView } from './nsn-flis';
+import { CEILING_LABEL, ceilingAmountText } from './contract-ceiling';
 
 const MAX_PRICE_ROWS = 50;
 const MAX_AWARD_ROWS = 25;
@@ -21,7 +22,11 @@ const int = (n: number): string => n.toLocaleString('en-US');
 
 export function nsnMarkdown(page: NsnPageData, siteUrl: string): string {
   const copy = nsnCopyInputFrom(page);
-  const { nsn, fsc, pricePoints, contractActions, solicitations, partNumbers } = page;
+  const { nsn, fsc, solicitations, partNumbers, contractActions } = page;
+  // Base awards of long-term contracts carry a ceiling, not a price: they stay in the award list and the win
+  // record, and are left out of the price headline and history (lib/contract-ceiling.ts).
+  const allPricePoints = page.pricePoints;
+  const pricePoints = allPricePoints.filter((p) => !p.isCeiling);
   const dashed = toDashedNsn(nsn.nsn);
   const out: string[] = [`# NSN ${dashed}: ${nomen(nsn.itemName)}`, '', nsnSummary(copy), ''];
 
@@ -74,8 +79,8 @@ export function nsnMarkdown(page: NsnPageData, siteUrl: string): string {
   }
 
   const awardsForRead =
-    pricePoints.length > 0
-      ? pricePoints.map((p) => ({ cage: p.cage, date: p.awardedOn }))
+    allPricePoints.length > 0
+      ? allPricePoints.map((p) => ({ cage: p.cage, date: p.awardedOn }))
       : contractActions.filter((c) => c.actionDate !== null).map((c) => ({ cage: c.cage, date: c.actionDate! }));
   const read = competitionRead({ coded: competitionOf(nsn.amc, nsn.amsc), awards: awardsForRead });
   out.push('## Competition', '', `- Read: ${read.label}. ${read.reason}`, `- Awards with a supplier considered (last 10): ${read.considered}`, '');
@@ -103,7 +108,7 @@ export function nsnMarkdown(page: NsnPageData, siteUrl: string): string {
   if (contractActions.length > 0) {
     const newest = [...contractActions].sort((a, b) => (b.actionDate ?? '').localeCompare(a.actionDate ?? ''));
     out.push('## Contract awards', '', `Newest first${newest.length > MAX_AWARD_ROWS ? `; the ${MAX_AWARD_ROWS} most recent of ${int(newest.length)} awards` : ''}.`, '');
-    out.push(table(['Date', 'Award', 'Description', 'Recipient', 'Amount'], newest.slice(0, MAX_AWARD_ROWS).map((c) => [c.actionDate, link(c.piid ?? 'record', c.sourceUrl), (c.description ?? '').slice(0, 120), c.recipientName, c.obligation !== null ? formatUsdPrecise(c.obligation) : null])), '');
+    out.push(table(['Date', 'Award', 'Description', 'Recipient', 'Amount'], newest.slice(0, MAX_AWARD_ROWS).map((c) => [c.actionDate, link(c.piid ?? 'record', c.sourceUrl), (c.description ?? '').slice(0, 120), c.isCeiling ? `${CEILING_LABEL}: ${c.recipientName ?? 'recipient not named'}` : c.recipientName, c.obligation === null ? null : c.isCeiling ? ceilingAmountText(formatUsdPrecise(c.obligation)) : formatUsdPrecise(c.obligation)])), '');
   }
 
   const sources = [

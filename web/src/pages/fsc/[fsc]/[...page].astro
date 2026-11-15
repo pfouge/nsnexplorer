@@ -21,6 +21,7 @@ import { hasUsaspendingActions, pulseAwardRows, usaspendingFiscalYears } from '.
 import { fscEmbedPath } from '../../../lib/embed';
 import { familyCounts } from '../../../lib/material-family';
 import { withoutDuplicatedPricePoints } from '../../../lib/award-dedupe';
+import { CEILING_LABEL, ceilingAmountText } from '../../../lib/contract-ceiling';
 import { buildClassPulse, supplierKey, type PulseAward } from '../../../lib/class-pulse';
 
 // /fsc/<code>/ is page 1; /fsc/<code>/page/<n>/ holds the next PAGE_SIZE cards.
@@ -54,13 +55,15 @@ const materialFamilies = familyCounts(allCards.map((c) => c.material));
 // Counts, the obligation sum, the newest rows and the CSV years come from the per-class
 // SQL summary (lib/class-actions.ts); the page never holds every row.
 const actionSummary = data.contractActionSummaryByFsc.get(fsc.fsc);
-const fscActionCount = actionSummary?.count ?? 0;
+const fscActionCount = actionSummary?.count ?? 0; // every listed row, long-term contracts included
+const fscCeilingCount = actionSummary?.ceilingCount ?? 0; // long-term contract awards: listed, but not purchases and not dollars
+const fscPurchaseCount = fscActionCount - fscCeilingCount;
 const fscActionsObligated = actionSummary?.obligated ?? 0;
 const recentActions = actionSummary?.recent ?? [];
 // The CSV holds this class's USAspending records only, and exists only when there are some.
 const hasActionsCsv = hasUsaspendingActions(actionSummary);
 
-const totalPurchases = allCards.reduce((sum, c) => sum + c.purchaseRecords, 0) + fscActionCount;
+const totalPurchases = allCards.reduce((sum, c) => sum + c.purchaseRecords, 0) + fscPurchaseCount;
 const totalDollars = allCards.reduce((sum, c) => sum + c.totalDemand, 0) + fscActionsObligated;
 
 const departmentName = fsgName(fsc.fsg);
@@ -85,6 +88,7 @@ const pulse = (() => {
       awards.push({ date: p.awardedOn, amount: p.totalValue ?? p.unitPrice * (p.quantity ?? 1), supplierKey: supplierKey(p.cage, p.supplierName) });
     }
     for (const c of data.contractActionsByNsn.get(n.nsn) ?? []) {
+      if (c.isCeiling) continue; // a contract ceiling is neither a purchase nor dollars spent
       awards.push({ date: c.actionDate, amount: c.obligation ?? 0, supplierKey: supplierKey(c.recipientUei, c.recipientName) });
     }
   }
@@ -464,9 +468,13 @@ const breadcrumbSchema = {
   <section id="awards">
     <h2 class="section-title">Contract awards in this category</h2>
     <p class="gloss">
-      {fscActionCount.toLocaleString('en-US')} award {fscActionCount === 1 ? 'record' : 'records'} totaling{' '}
+      {fscPurchaseCount.toLocaleString('en-US')} award {fscPurchaseCount === 1 ? 'record' : 'records'} totaling{' '}
       {formatUsd(fscActionsObligated)} where the public description doesn't identify a specific
       part. Newest first; every row links to its official USAspending record.
+      {fscCeilingCount > 0 && (
+        <> {fscCeilingCount.toLocaleString('en-US')} more {fscCeilingCount === 1 ? 'is a long-term contract' : 'are long-term contracts'}:
+        the amount shown is the most the contract can be worth, so it is not counted in these totals.</>
+      )}
     </p>
     {hasActionsCsv && (
       <ul class="chips wrap-wide" aria-label="Free downloads">
@@ -504,9 +512,9 @@ const breadcrumbSchema = {
                   <a href={a.sourceUrl} target="_blank" rel="nofollow noopener">{a.piid ?? 'record'} ↗</a>
                 </td>
                 <td>{(a.description ?? '—').slice(0, 80)}</td>
-                <td>{a.recipientName ?? '—'}</td>
+                <td>{a.recipientName ?? '—'}{a.isCeiling && <> <span class="badge">{CEILING_LABEL}</span></>}</td>
                 <td>{a.agencyName ?? '—'}</td>
-                <td class="num mono">{a.obligation !== null ? formatUsd(a.obligation) : '—'}</td>
+                <td class="num mono">{a.obligation === null ? '—' : a.isCeiling ? ceilingAmountText(formatUsd(a.obligation)) : formatUsd(a.obligation)}</td>
               </tr>
             ))}
           </tbody>

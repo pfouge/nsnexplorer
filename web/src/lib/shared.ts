@@ -45,6 +45,8 @@ export interface PricePointRecord {
   source: string;
   sourceUrl: string;
   ingestedAt: string;
+  /** True for the base award of a long-term contract: its total is the contract ceiling, not money spent (contract-ceiling.ts). */
+  isCeiling?: boolean;
 }
 
 export interface ContractActionRecord {
@@ -62,6 +64,8 @@ export interface ContractActionRecord {
   recipientUei: string | null;
   sourceUrl: string;
   ingestedAt: string;
+  /** True for the base award of a long-term contract: `obligation` is its ceiling, not money spent (contract-ceiling.ts). */
+  isCeiling?: boolean;
 }
 
 export interface AgencyRecord {

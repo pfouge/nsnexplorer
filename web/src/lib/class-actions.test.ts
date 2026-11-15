@@ -16,7 +16,7 @@ import { AWARD_WINDOW_DAYS, buildClassPulse, SUPPLIER_WINDOW_DAYS } from './clas
 import { csvFiscalYear, latestYearFloor, latestYearActions } from './csv-split.ts';
 
 const summary = (over: Partial<ClassActionSummary> = {}): ClassActionSummary => ({
-  count: 0, obligated: 0, recent: [], usaspendingCount: 0, usaspendingFiscalYears: [], latestDate: null, pulseRows: [], ...over,
+  count: 0, ceilingCount: 0, obligated: 0, recent: [], usaspendingCount: 0, usaspendingFiscalYears: [], latestDate: null, pulseRows: [], ...over,
 });
 
 test('the pulse look-back covers the longest window class-pulse reads', () => {

@@ -17,6 +17,7 @@
 
 import { writeFileSync } from 'node:fs';
 import { getPool, closePool } from '../shared/db.mjs';
+import { NOT_CONTRACT_CEILING_SQL } from '../shared/contract-ceiling.mjs';
 
 // Hours a source may go without landing anything before it counts as stale.
 // DIBBS posts awards on business days only, so the award lanes get a long
@@ -228,8 +229,9 @@ export async function recordDailyStats(pool) {
          (SELECT count(*) FROM pub.solicitations s
             WHERE s.status = 'open' AND s.return_by >= CURRENT_DATE AND s.return_by < CURRENT_DATE + 7
               AND (s.fsc IS NULL OR s.fsc ~ '^[0-9]{4}$')),
-         (SELECT coalesce(sum(obligation), 0) FROM pub.contract_actions
-            WHERE award_uid LIKE 'DIBBS-%' AND action_date >= CURRENT_DATE - 7),
+         -- A contract ceiling is a contract's maximum value, not money spent (shared/contract-ceiling.mjs).
+         (SELECT coalesce(sum(ca.obligation), 0) FROM pub.contract_actions ca
+            WHERE ca.award_uid LIKE 'DIBBS-%' AND ca.action_date >= CURRENT_DATE - 7 AND ${NOT_CONTRACT_CEILING_SQL}),
          (SELECT count(*) FROM pub.solicitations s
             WHERE s.source = 'sam_gov' AND s.status = 'open'
               AND (s.return_by IS NULL OR s.return_by >= CURRENT_DATE) AND s.fsc ~ '^[A-Za-z]')

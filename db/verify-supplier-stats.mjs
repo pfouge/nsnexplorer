@@ -16,29 +16,33 @@
 
 import { getPool, closePool } from '../shared/db.mjs';
 
+// A DIBBS award that is the base of a long-term contract carries the contract's ceiling, not money spent
+// (web/src/lib/contract-ceiling.ts). Written out differently from the fragment in migration 0015 on purpose.
+const NOT_CEIL = `NOT (p.source = 'dibbs_award' AND substr(p.award_ref, 9, 1) IN ('D', 'G', 'A') AND p.award_ref NOT LIKE '%-%')`;
+
 const NAIVE_SQL = `
 SELECT s.cage,
-  (SELECT count(*)::int FROM pub.price_points p WHERE p.cage = s.cage) AS awards_all,
+  (SELECT count(*)::int FROM pub.price_points p WHERE p.cage = s.cage AND ${NOT_CEIL}) AS awards_all,
   (SELECT trim_scale(COALESCE(sum(CASE WHEN p.total_value IS NOT NULL THEN p.total_value
                                        WHEN p.quantity IS NOT NULL THEN p.unit_price * p.quantity END), 0))
-     FROM pub.price_points p WHERE p.cage = s.cage)::text AS dollars_all,
-  (SELECT count(*)::int FROM pub.price_points p WHERE p.cage = s.cage AND CURRENT_DATE - p.awarded_on < 365) AS awards_12m,
+     FROM pub.price_points p WHERE p.cage = s.cage AND ${NOT_CEIL})::text AS dollars_all,
+  (SELECT count(*)::int FROM pub.price_points p WHERE p.cage = s.cage AND ${NOT_CEIL} AND CURRENT_DATE - p.awarded_on < 365) AS awards_12m,
   (SELECT trim_scale(COALESCE(sum(CASE WHEN p.total_value IS NOT NULL THEN p.total_value
                                        WHEN p.quantity IS NOT NULL THEN p.unit_price * p.quantity END), 0))
-     FROM pub.price_points p WHERE p.cage = s.cage AND CURRENT_DATE - p.awarded_on < 365)::text AS dollars_12m,
-  (SELECT count(*)::int FROM pub.price_points p WHERE p.cage = s.cage
+     FROM pub.price_points p WHERE p.cage = s.cage AND ${NOT_CEIL} AND CURRENT_DATE - p.awarded_on < 365)::text AS dollars_12m,
+  (SELECT count(*)::int FROM pub.price_points p WHERE p.cage = s.cage AND ${NOT_CEIL}
       AND CURRENT_DATE - p.awarded_on >= 365 AND CURRENT_DATE - p.awarded_on < 730) AS awards_prior_12m,
   (SELECT trim_scale(COALESCE(sum(CASE WHEN p.total_value IS NOT NULL THEN p.total_value
                                        WHEN p.quantity IS NOT NULL THEN p.unit_price * p.quantity END), 0))
-     FROM pub.price_points p WHERE p.cage = s.cage
+     FROM pub.price_points p WHERE p.cage = s.cage AND ${NOT_CEIL}
       AND CURRENT_DATE - p.awarded_on >= 365 AND CURRENT_DATE - p.awarded_on < 730)::text AS dollars_prior_12m,
-  (SELECT count(*)::int FROM (SELECT DISTINCT p.nsn FROM pub.price_points p WHERE p.cage = s.cage) x) AS nsns,
-  (SELECT count(*)::int FROM (SELECT DISTINCT n.fsc FROM pub.price_points p JOIN pub.nsns n ON n.nsn = p.nsn WHERE p.cage = s.cage) x) AS fscs,
-  (SELECT count(*)::int FROM (SELECT DISTINCT p.agency_id FROM pub.price_points p WHERE p.cage = s.cage AND p.agency_id IS NOT NULL) x) AS agencies,
-  (SELECT min(p.awarded_on)::text FROM pub.price_points p WHERE p.cage = s.cage) AS first_award,
-  (SELECT max(p.awarded_on)::text FROM pub.price_points p WHERE p.cage = s.cage) AS last_award
+  (SELECT count(*)::int FROM (SELECT DISTINCT p.nsn FROM pub.price_points p WHERE p.cage = s.cage AND ${NOT_CEIL}) x) AS nsns,
+  (SELECT count(*)::int FROM (SELECT DISTINCT n.fsc FROM pub.price_points p JOIN pub.nsns n ON n.nsn = p.nsn WHERE p.cage = s.cage AND ${NOT_CEIL}) x) AS fscs,
+  (SELECT count(*)::int FROM (SELECT DISTINCT p.agency_id FROM pub.price_points p WHERE p.cage = s.cage AND ${NOT_CEIL} AND p.agency_id IS NOT NULL) x) AS agencies,
+  (SELECT min(p.awarded_on)::text FROM pub.price_points p WHERE p.cage = s.cage AND ${NOT_CEIL}) AS first_award,
+  (SELECT max(p.awarded_on)::text FROM pub.price_points p WHERE p.cage = s.cage AND ${NOT_CEIL}) AS last_award
 FROM pub.suppliers s
-WHERE EXISTS (SELECT 1 FROM pub.price_points p WHERE p.cage = s.cage)
+WHERE EXISTS (SELECT 1 FROM pub.price_points p WHERE p.cage = s.cage AND ${NOT_CEIL})
 ORDER BY s.cage COLLATE "C"`;
 
 const ACTUAL_SQL = `
@@ -92,7 +96,7 @@ async function seed(client) {
     await client.query(`INSERT INTO pub.nsns (nsn, fsc) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [nsnOf(i), fscs[i % fscs.length]]);
   }
   // [cage, awards[{daysAgo, nsnIdx, agencyIdx|null, total|null, unit, qty|null}]]
-  const A = (daysAgo, nsnIdx, agencyIdx, total, unit = 10, qty = null) => ({ daysAgo, nsnIdx, agencyIdx, total, unit, qty });
+  const A = (daysAgo, nsnIdx, agencyIdx, total, unit = 10, qty = null, kind = null) => ({ daysAgo, nsnIdx, agencyIdx, total, unit, qty, kind });
   const suppliers = {
     // two suppliers with identical metrics: the tie goes to the lower CAGE
     T0001: [A(10, 0, 0, 5000), A(20, 1, 0, 5000), A(30, 2, 1, 1000)],
@@ -115,6 +119,10 @@ async function seed(client) {
     T0010: [A(2, 0, 0, 90000), A(4, 1, 0, 90000), A(6, 2, 0, 90000), A(500, 0, 0, 100)],
     // a future-dated award (counts in the 12m window per the spec's literal definition)
     T0011: [A(-3, 2, 1, 250), A(1, 2, 1, 250), A(2, 2, 1, 250)],
+    // contract ceilings: the $9e9 base award is ignored, the order and the standalone P award count
+    T0012: [A(5, 0, 0, 1000), A(6, 1, 0, 9e9, 10, null, 'ceiling'), A(7, 2, 1, 40, 10, null, 'order'), A(8, 2, 1, 60, 10, null, 'standalone')],
+    // only ceilings: no stats row at all
+    T0013: [A(5, 0, 0, 5e9, 10, null, 'ceiling'), A(9, 1, 0, 7e9, 10, null, 'ceiling')],
   };
   let ref = 0;
   for (const [cage, awards] of Object.entries(suppliers)) {
@@ -123,8 +131,10 @@ async function seed(client) {
       ref += 1;
       await client.query(
         `INSERT INTO pub.price_points (nsn, awarded_on, unit_price, quantity, total_value, cage, agency_id, award_ref, source, source_url, raw)
-         VALUES ($1, CURRENT_DATE - $2::int, $3, $4, $5, $6, $7, $8, 'dibbs_awd', 'https://www.dibbs.bsm.dla.mil/', '{}')`,
-        [nsnOf(a.nsnIdx), a.daysAgo, a.unit, a.qty, a.total, cage, a.agencyIdx === null ? null : agencies[a.agencyIdx], `VERIFY-${ref}`]
+         VALUES ($1, CURRENT_DATE - $2::int, $3, $4, $5, $6, $7, $8, $9, 'https://www.dibbs.bsm.dla.mil/', '{}')`,
+        [nsnOf(a.nsnIdx), a.daysAgo, a.unit, a.qty, a.total, cage, a.agencyIdx === null ? null : agencies[a.agencyIdx],
+          a.kind === 'ceiling' ? `SPE7M126D${String(ref).padStart(4, '0')}` : a.kind === 'order' ? `SPE7M126D${String(ref).padStart(4, '0')}-SPE7M126F0001` : a.kind === 'standalone' ? `SPE7M126P${String(ref).padStart(4, '0')}` : `VERIFY-${ref}`,
+          a.kind ? 'dibbs_award' : 'dibbs_awd']
       );
     }
   }

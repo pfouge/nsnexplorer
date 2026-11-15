@@ -18,6 +18,7 @@ import { openSql } from '../../lib/nsn-page';
 import { loadSolicitationPage } from '../../lib/solicitation-page';
 import { countdownBadge, daysUntilClose, isSolNumber, solicitationPath, statusBadge, supplierPath } from '../../lib/entity';
 import { priceSummary, repeatWinner, valueAtLastPrice, winners } from '../../lib/sol-history';
+import { CEILING_LABEL, ceilingAmountText } from '../../lib/contract-ceiling';
 
 export const prerender = false;
 
@@ -50,14 +51,17 @@ const itemLabel = sol.nomenclature ?? sol.itemName ?? sol.solNumber;
 const sourceName = sol.source === 'sam_gov' ? 'SAM.gov' : 'DIBBS';
 
 const techDocsLabel = techDocs === 'tech_docs' ? 'Listed on DIBBS' : techDocs === 'spec_only' ? 'Spec or standard only' : techDocs === 'none' ? 'None listed' : null;
-const summary = priceSummary(partPrices);
+// Base awards of long-term contracts (lib/contract-ceiling.ts) carry a ceiling, not a price: they stay in
+// the winners and award lists, and are left out of every price figure.
+const pricedParts = partPrices.filter((p) => !p.isCeiling);
+const summary = priceSummary(pricedParts);
 const lastPriceValue = valueAtLastPrice(sol.quantity, summary?.latest ?? null);
 const lastPricePoint = summary
-  ? ([...partPrices].sort((a, b) => (a.awardedOn < b.awardedOn ? 1 : a.awardedOn > b.awardedOn ? -1 : 0)).find((p) => p.unitPrice === summary.latest) ?? null)
+  ? ([...pricedParts].sort((a, b) => (a.awardedOn < b.awardedOn ? 1 : a.awardedOn > b.awardedOn ? -1 : 0)).find((p) => p.unitPrice === summary.latest) ?? null)
   : null;
 const winnerRows = winners(partPrices).slice(0, 8);
 const repeat = repeatWinner(partPrices);
-const priceRows = partPrices.slice(0, 10);
+const priceRows = pricedParts.slice(0, 10);
 
 const status = statusBadge(sol.status);
 const countdown = isOpen ? countdownBadge(daysUntilClose(sol.returnBy, new Date())) : null;
@@ -207,7 +211,7 @@ const primaryLabel = isOpen
                     {href ? <a href={href}>{m.supplierName ?? `CAGE ${m.cage}`}</a> : (m.supplierName ?? m.cage ?? 'Unknown')}
                     {m.cage && m.supplierName && <span class="cage"> ({m.cage})</span>}
                   </td>
-                  <td class="num price">{m.total !== null ? formatUsd(m.total) : '—'}</td>
+                  <td class="num price">{m.total === null ? '—' : m.isCeiling ? <>{ceilingAmountText(formatUsd(m.total))} <span class="badge">{CEILING_LABEL}</span></> : formatUsd(m.total)}</td>
                 </tr>
               );
             })}
@@ -218,12 +222,12 @@ const primaryLabel = isOpen
     </section>
   )}
 
-  {partPrices.length > 0 && (
+  {pricedParts.length > 0 && (
     <section id="part-prices">
       <h2 class="section-title">What this part has sold for</h2>
       {summary && (
         <p class="gloss">
-          Last {summary.n} award{summary.n === 1 ? '' : 's'}: {formatUsdPrecise(summary.low)} – {formatUsdPrecise(summary.high)}, average {formatUsdPrecise(summary.average)}; most recent {formatUsdPrecise(summary.latest)} on {formatDate(partPrices[0].awardedOn)}
+          Last {summary.n} award{summary.n === 1 ? '' : 's'}: {formatUsdPrecise(summary.low)} – {formatUsdPrecise(summary.high)}, average {formatUsdPrecise(summary.average)}; most recent {formatUsdPrecise(summary.latest)} on {formatDate(pricedParts[0].awardedOn)}
         </p>
       )}
       <div class="table-wrap">
@@ -300,7 +304,7 @@ const primaryLabel = isOpen
                   </td>
                   <td class="num mono">{w.wins}</td>
                   <td class="mono">{formatDate(w.lastWon)}</td>
-                  <td class="num price">{last ? <a href={last.sourceUrl} target="_blank" rel="nofollow noopener">{formatUsdPrecise(w.lastPrice)}</a> : formatUsdPrecise(w.lastPrice)}</td>
+                  <td class="num price">{last?.isCeiling ? <a href={last.sourceUrl} target="_blank" rel="nofollow noopener">{CEILING_LABEL}</a> : last ? <a href={last.sourceUrl} target="_blank" rel="nofollow noopener">{formatUsdPrecise(w.lastPrice)}</a> : formatUsdPrecise(w.lastPrice)}</td>
                 </tr>
               );
             })}
@@ -334,8 +338,8 @@ const primaryLabel = isOpen
                     {href ? <a href={href}>{a.supplierName ?? `CAGE ${a.cage}`}</a> : (a.supplierName ?? 'Unknown')}
                     {a.cage && a.supplierName && <span class="cage"> ({a.cage})</span>}
                   </td>
-                  <td class="num price">{formatUsdPrecise(a.unitPrice)}</td>
-                  <td class="num mono">{a.quantity !== null ? a.quantity.toLocaleString('en-US') : '—'}</td>
+                  <td class="num price">{a.isCeiling ? <>{a.ceilingAmount !== null ? <>{ceilingAmountText(formatUsd(a.ceilingAmount))} </> : null}<span class="badge">{CEILING_LABEL}</span></> : formatUsdPrecise(a.unitPrice)}</td>
+                  <td class="num mono">{!a.isCeiling && a.quantity !== null ? a.quantity.toLocaleString('en-US') : '—'}</td>
                 </tr>
               );
             })}

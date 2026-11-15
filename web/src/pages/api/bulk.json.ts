@@ -7,6 +7,7 @@ import type { APIRoute } from 'astro';
 import { dbErrorTag, openSql } from '../../lib/nsn-page';
 import { databaseUrlFrom } from '../../lib/runtime-env';
 import { NSN_WITH_AMSC_SELECT, assertSourceUrl, competitionOf, COMPETITION_BADGE, toDashedNsn, type Competition } from '../../lib/shared';
+import { ceilingPricePointSql } from '../../lib/contract-ceiling';
 
 export const prerender = false;
 
@@ -53,14 +54,15 @@ SELECT b.nsn, b.niin, b.fsc, b.item_name, b.amc, b.amsc,
        so.n AS open_count, so.earliest AS earliest_return_by, so.qty AS open_qty
 FROM base b
 LEFT JOIN pub.fsc f ON f.fsc = b.fsc
-LEFT JOIN LATERAL (SELECT count(*) AS n FROM pub.price_points p WHERE p.nsn = b.nsn) pc ON true
+-- Long-term contract base awards carry a ceiling, not a price (lib/contract-ceiling.ts): no price figure below counts them.
+LEFT JOIN LATERAL (SELECT count(*) AS n FROM pub.price_points p WHERE p.nsn = b.nsn AND NOT ${ceilingPricePointSql('p')}) pc ON true
 LEFT JOIN LATERAL (
   SELECT p.unit_price, p.awarded_on, p.source_url FROM pub.price_points p
-  WHERE p.nsn = b.nsn ORDER BY p.awarded_on DESC, p.id DESC LIMIT 1
+  WHERE p.nsn = b.nsn AND NOT ${ceilingPricePointSql('p')} ORDER BY p.awarded_on DESC, p.id DESC LIMIT 1
 ) lp ON true
 LEFT JOIN LATERAL (
   SELECT min(x.unit_price) AS lo, max(x.unit_price) AS hi
-  FROM (SELECT p.unit_price FROM pub.price_points p WHERE p.nsn = b.nsn
+  FROM (SELECT p.unit_price FROM pub.price_points p WHERE p.nsn = b.nsn AND NOT ${ceilingPricePointSql('p')}
         ORDER BY p.awarded_on DESC, p.id DESC LIMIT 5) x
 ) r5 ON true
 LEFT JOIN LATERAL (

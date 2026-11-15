@@ -20,6 +20,7 @@ import { CONTACT_EMAIL, SITE_URL } from '../../consts';
 import { formatDate, formatUsd, formatUsdPrecise, toDashedNsn } from '../../lib/shared';
 import { databaseUrlFrom } from '../../lib/runtime-env';
 import { openSql } from '../../lib/nsn-page';
+import { CEILING_LABEL, ceilingAmountText } from '../../lib/contract-ceiling';
 import { loadSupplierPage, safeHttpUrl, SUPPLIER_AWARD_ROWS, SUPPLIER_OPEN_ROWS, SUPPLIER_PART_ROWS, SUPPLIER_USA_ROWS } from '../../lib/supplier-page';
 import {
   parseCageParam,
@@ -84,7 +85,7 @@ const lede = supplierLede(copy);
 const title = supplierTitle(displayName, cage);
 const description = supplierDescription(copy);
 const canonicalUrl = `${SITE_URL}/supplier/${cage}/`;
-const capped = awards > page.rows.length;
+const capped = awards + page.ceilings > page.rows.length;
 const fmtInt = (n: number): string => n.toLocaleString('en-US');
 const partClasses = loadedClasses(page.parts.rows);
 const partClassNames = new Map(page.parts.byClass.map((c) => [c.fsc, c.name]));
@@ -712,8 +713,8 @@ const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Suppl
       <table>
         <caption>
           {capped
-            ? `Showing the latest ${fmtInt(SUPPLIER_AWARD_ROWS)} of ${fmtInt(awards)}`
-            : `${fmtInt(awards)} award${awards === 1 ? '' : 's'} on record`}
+            ? `Showing the latest ${fmtInt(SUPPLIER_AWARD_ROWS)} of ${fmtInt(awards + page.ceilings)}`
+            : `${fmtInt(awards)} award${awards === 1 ? '' : 's'} on record`}{page.ceilings > 0 ? `, plus ${fmtInt(page.ceilings)} long-term contract${page.ceilings === 1 ? '' : 's'} (the amount shown is a ceiling, not money spent)` : ''}
         </caption>
         <thead>
           <tr>
@@ -732,10 +733,10 @@ const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Suppl
             <tr>
               <td class="mono"><a href={`/nsn/${toDashedNsn(r.nsn)}/`}>{toDashedNsn(r.nsn)}</a></td>
               <td class="mono">{formatDate(r.awardedOn)}</td>
-              <td>{r.itemName ?? '—'}</td>
-              <td class="num mono">{r.quantity !== null ? r.quantity.toLocaleString('en-US') : '—'}</td>
-              <td class="num price">{formatUsdPrecise(r.unitPrice)}</td>
-              <td class="num mono">{r.total !== null ? formatUsd(r.total) : '—'}</td>
+              <td>{r.itemName ?? '—'}{r.isCeiling && <> <span class="badge">{CEILING_LABEL}</span></>}</td>
+              <td class="num mono">{!r.isCeiling && r.quantity !== null ? r.quantity.toLocaleString('en-US') : '—'}</td>
+              <td class="num price">{r.isCeiling ? '—' : formatUsdPrecise(r.unitPrice)}</td>
+              <td class="num mono">{r.total === null ? '—' : r.isCeiling ? ceilingAmountText(formatUsd(r.total)) : formatUsd(r.total)}</td>
               <td>
                 {r.agencySlug && r.agencyName ? <a href={`/agency/${r.agencySlug}/`}>{r.agencyName}</a> : (r.agencyName ?? '—')}
               </td>
@@ -763,6 +764,7 @@ const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Suppl
       <li>Registration, address and points of contact come from <a href="https://sam.gov/" rel="noopener nofollow" target="_blank">SAM.gov</a> public entity data. Phone, email and the website summary come from the company's own website, read by NSNExplorerBot (<a href="/about/#crawler">how it behaves</a>).</li>
       <li>This list covers the awards NSN Explorer has indexed, not everything this supplier has won.</li>
       <li>Award dollars add each award's recorded total, or unit price times quantity when no total is recorded; awards with neither are not counted{page.valuedAwards < awards ? ` (${fmtInt(awards - page.valuedAwards)} of ${fmtInt(awards)} here)` : ''}.</li>
+      {page.ceilings > 0 && <li>A long-term contract is listed with the most it can be worth. That ceiling is not money spent, so it is left out of the award counts, dollars, charts and ranks; the orders placed against it are what count.</li>}
       {page.refreshedOn && <li>Data last refreshed: {page.refreshedOn}.</li>}
       {stats && <li>Totals and ranks as of {formatDate(stats.refreshedAt.slice(0, 10))}.</li>}
       <li><a href="/methodology/">Full methodology →</a></li>

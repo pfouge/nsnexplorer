@@ -76,7 +76,8 @@ await build({
       export { NSN_WITH_AMSC_SELECT, mapNsnRow, assertSourceUrl, slugify } from './shared.ts';
       export { isSolNumber, parseSupplierQuery } from './entity.ts';
       export { humanizeLabel, moeKind } from './flis-codes.ts';
-      export { nomen } from './seo-copy.ts';`,
+      export { nomen } from './seo-copy.ts';
+      export { isContractCeiling, isCeilingPricePoint, CONTRACT_CEILING_SQL, CEILING_PRICE_POINT_SQL } from './contract-ceiling.ts';`,
     resolveDir: libDir,
     loader: 'ts',
   },
@@ -89,7 +90,12 @@ await build({
   banner: { js: "import { createRequire as __cr } from 'node:module'; const require = __cr(import.meta.url);" },
 });
 const N = await import(pathToFileURL(path.join(tmp, 'new-loaders.mjs')).href);
-const { NSN_WITH_AMSC_SELECT, mapNsnRow, assertSourceUrl, slugify, isSolNumber, SUPPLIER_AWARD_ROWS } = N;
+const { NSN_WITH_AMSC_SELECT, mapNsnRow, assertSourceUrl, slugify, isSolNumber, SUPPLIER_AWARD_ROWS, isContractCeiling, isCeilingPricePoint } = N;
+
+// Contract ceilings (web/src/lib/contract-ceiling.ts). The OLD loaders below and the independent checks decide
+// "ceiling" in JavaScript (isContractCeiling / isCeilingPricePoint) or with this deliberately different, naive SQL,
+// never with the shared SQL fragment the NEW loaders use, so a slip in the fragment shows up as a difference.
+const NAIVE_NOT_CEIL_PP = (a) => `NOT (${a}.source = 'dibbs_award' AND substr(${a}.award_ref, 9, 1) IN ('D', 'G', 'A') AND ${a}.award_ref NOT LIKE '%-%')`;
 
 // ------------------------------------------------ OLD loaders (copied verbatim)
 // Source: web/src/lib/{nsn-page,supplier-page,solicitation-page}.ts at origin/main
@@ -121,7 +127,7 @@ async function oldLoadNsnPage(sql, nsnCode) {
       `SELECT ca.id, ca.award_uid, ca.piid, ca.psc, ca.naics, ca.description, ca.action_date,
               ca.obligation, ca.agency_id, ag.name AS agency_name, ca.recipient_name,
               ca.recipient_uei, ca.source_url, ca.ingested_at,
-              NULLIF(btrim(ca.raw ->> 'cage'), '') AS cage
+              NULLIF(btrim(ca.raw ->> 'cage'), '') AS cage, ca.raw ->> 'deliveryOrder' AS delivery_order
        FROM pub.contract_actions ca
        LEFT JOIN pub.agencies ag ON ag.agency_id = ca.agency_id
        WHERE (ca.raw ->> 'nsn') = $1
@@ -176,6 +182,7 @@ async function oldLoadNsnPage(sql, nsnCode) {
       source: r.source,
       sourceUrl: assertSourceUrl(r.source_url, `price_points.id=${r.id} nsn=${r.nsn}`),
       ingestedAt: new Date(r.ingested_at).toISOString(),
+      isCeiling: isCeilingPricePoint(r.source, r.award_ref),
     };
     if (rec.agencyId !== null && !agencyMap.has(rec.agencyId)) {
       agencyMap.set(rec.agencyId, {
@@ -203,6 +210,7 @@ async function oldLoadNsnPage(sql, nsnCode) {
     recipientUei: r.recipient_uei,
     sourceUrl: assertSourceUrl(r.source_url, `contract_actions.id=${r.id}`),
     ingestedAt: new Date(r.ingested_at).toISOString(),
+    isCeiling: isContractCeiling(r.award_uid, r.piid, r.delivery_order),
     cage: r.cage ?? null,
   }));
 
@@ -247,12 +255,18 @@ const isoDateReq = (v) => new Date(v).toISOString().slice(0, 10);
 async function oldLoadSupplierPage(sql, cage) {
   if (!/^[A-Z0-9]{5}$/.test(cage)) return null;
 
+  // Ceiling price points are found in JavaScript, then kept out of every aggregate by id.
+  const ceilIds = (await sql.unsafe(`SELECT id, source, award_ref FROM pub.price_points WHERE cage = $1`, [cage]))
+    .filter((r) => isCeilingPricePoint(r.source, r.award_ref))
+    .map((r) => String(r.id));
+  const ceilArr = `{${ceilIds.join(',')}}`;
   const statRows = await sql.unsafe(
-    `SELECT count(*)::int AS awards,
-            COALESCE(sum(${VALUE_SQL}), 0) AS dollars,
-            count(${VALUE_SQL})::int AS valued,
-            count(DISTINCT pp.nsn)::int AS nsns,
-            count(DISTINCT n.fsc)::int AS classes,
+    `SELECT (count(*) FILTER (WHERE pp.id <> ALL($2::bigint[])))::int AS awards,
+            (count(*) FILTER (WHERE pp.id = ANY($2::bigint[])))::int AS ceilings,
+            COALESCE(sum(${VALUE_SQL}) FILTER (WHERE pp.id <> ALL($2::bigint[])), 0) AS dollars,
+            (count(${VALUE_SQL}) FILTER (WHERE pp.id <> ALL($2::bigint[])))::int AS valued,
+            (count(DISTINCT pp.nsn) FILTER (WHERE pp.id <> ALL($2::bigint[])))::int AS nsns,
+            (count(DISTINCT n.fsc) FILTER (WHERE pp.id <> ALL($2::bigint[])))::int AS classes,
             min(pp.awarded_on) AS first_award,
             max(pp.awarded_on) AS latest_award,
             max(pp.ingested_at) AS refreshed,
@@ -260,10 +274,10 @@ async function oldLoadSupplierPage(sql, cage) {
      FROM pub.price_points pp
      JOIN pub.nsns n ON n.nsn = pp.nsn
      WHERE pp.cage = $1`,
-    [cage]
+    [cage, ceilArr]
   );
   const st = statRows[0];
-  if (!st || Number(st.awards) === 0) return null;
+  if (!st || Number(st.awards) + Number(st.ceilings) === 0) return null;
 
   const [supplierRows, awardRows, classRows] = await Promise.all([
     sql.unsafe(`SELECT name, city, state FROM pub.suppliers WHERE cage = $1`, [cage]),
@@ -287,12 +301,12 @@ async function oldLoadSupplierPage(sql, cage) {
          SELECT n.fsc, count(*)::int AS awards
          FROM pub.price_points pp
          JOIN pub.nsns n ON n.nsn = pp.nsn
-         WHERE pp.cage = $1
+         WHERE pp.cage = $1 AND pp.id <> ALL($2::bigint[])
          GROUP BY n.fsc
        ) g
        LEFT JOIN pub.fsc f ON f.fsc = g.fsc
        ORDER BY g.awards DESC, g.fsc`,
-      [cage]
+      [cage, ceilArr]
     ),
   ]);
 
@@ -310,6 +324,7 @@ async function oldLoadSupplierPage(sql, cage) {
       agencySlug: r.agency_id !== null ? slugify(agencyName ?? `agency-${r.agency_id}`) : null,
       source: r.source,
       sourceUrl: assertSourceUrl(r.source_url, `price_points.id=${r.id} cage=${cage}`),
+      isCeiling: ceilIds.includes(String(r.id)),
     };
   });
 
@@ -319,6 +334,7 @@ async function oldLoadSupplierPage(sql, cage) {
     city: clean(sup?.city),
     state: clean(sup?.state),
     awards: Number(st.awards),
+    ceilings: Number(st.ceilings),
     dollars: Number(st.dollars),
     valuedAwards: Number(st.valued),
     nsns: Number(st.nsns),
@@ -342,7 +358,7 @@ async function oldLoadSupplierPage(sql, cage) {
 
 // Fields added to the new solicitation loader after the old one was frozen (price history, matched awards).
 // Old-vs-new compares only the pre-existing fields; the new ones are not checked here.
-const NEW_SOL_FIELDS = ['purchaseRequest', 'techDocs', 'partPrices', 'partPriceCount', 'matchedAwards'];
+const NEW_SOL_FIELDS = ['purchaseRequest', 'techDocs', 'partPrices', 'partPriceCount', 'matchedAwards']; // checked by checkCeilings below
 function withoutNewSolFields(page) {
   if (!page) return page;
   const out = { ...page };
@@ -367,7 +383,7 @@ async function oldLoadSolicitationPage(sql, solNumber) {
       [solNumber]
     ),
     sql.unsafe(
-      `SELECT pp.awarded_on, pp.cage, su.name AS supplier_name, pp.unit_price, pp.quantity
+      `SELECT pp.awarded_on, pp.cage, su.name AS supplier_name, pp.unit_price, pp.quantity, pp.source, pp.award_ref, pp.total_value
        FROM pub.price_points pp
        LEFT JOIN pub.suppliers su ON su.cage = pp.cage
        WHERE pp.sol_number = $1
@@ -408,20 +424,22 @@ async function oldLoadSolicitationPage(sql, solNumber) {
       supplierName: a.supplier_name,
       unitPrice: Number(a.unit_price),
       quantity: a.quantity !== null ? Number(a.quantity) : null,
+      isCeiling: isCeilingPricePoint(a.source, a.award_ref),
+      ceilingAmount: isCeilingPricePoint(a.source, a.award_ref) && a.total_value !== null ? Number(a.total_value) : null,
     })),
   };
 }
 
 // Old supplier search (api/suppliers.json.ts before the change): two sequential queries on the fallback path.
 const OLD_BY_CAGE = `
-  SELECT s.cage, s.name, s.city, s.state, count(*)::int AS awards
+  SELECT s.cage, s.name, s.city, s.state, (count(*) FILTER (WHERE ${NAIVE_NOT_CEIL_PP('pp')}))::int AS awards
   FROM pub.suppliers s
   JOIN pub.price_points pp ON pp.cage = s.cage
   WHERE s.cage = $1
   GROUP BY s.cage, s.name, s.city, s.state
   LIMIT 8`;
 const OLD_BY_NAME = `
-  SELECT s.cage, s.name, s.city, s.state, count(*)::int AS awards
+  SELECT s.cage, s.name, s.city, s.state, (count(*) FILTER (WHERE ${NAIVE_NOT_CEIL_PP('pp')}))::int AS awards
   FROM pub.suppliers s
   JOIN pub.price_points pp ON pp.cage = s.cage
   WHERE s.name ILIKE $1 ESCAPE '\\'
@@ -660,10 +678,16 @@ async function checkSupplierProfile(db, cage, page, seen) {
         numOrNull(st.rank_dollars_12m), numOrNull(st.rank_dollars_all), numOrNull(st.rank_wins_12m), numOrNull(st.rank_wins_all), numOrNull(st.rank_nsns), numOrNull(st.rank_fscs), numOrNull(st.rank_rising), numOrNull(st.rising_delta)]);
   }
 
+  // The stored row (rebuilt by pub.refresh_supplier_stats() in the clone) against a naive recomputation without ceilings.
+  if (st) {
+    const [nv] = await q(`select count(*)::int as n, coalesce(sum(${value}), 0) as d from pub.price_points pp join pub.nsns nn on nn.nsn = pp.nsn where pp.cage = $1 and ${NAIVE_NOT_CEIL_PP('pp')}`);
+    eq('stats vs naive recount (no ceilings)', [st.awards_all, Number(st.dollars_all)], [nv.n, Number(nv.d)]);
+  }
+
   // ---- awards by month (24 calendar months ending with this month)
   const [{ today }] = await q(`select to_char(current_date, 'YYYY-MM-DD') as today`, []);
   eq('today', page.today, today);
-  const monthRows = await q(`select to_char(pp.awarded_on, 'YYYY-MM') as m, count(*)::int as n, coalesce(sum(${value}), 0) as d from pub.price_points pp where pp.cage = $1 group by 1`);
+  const monthRows = await q(`select to_char(pp.awarded_on, 'YYYY-MM') as m, count(*)::int as n, coalesce(sum(${value}), 0) as d from pub.price_points pp where pp.cage = $1 and ${NAIVE_NOT_CEIL_PP('pp')} group by 1`);
   const byM = new Map(monthRows.map((r) => [r.m, [r.n, Number(r.d)]]));
   const expMonths = [];
   for (let i = 23; i >= 0; i--) {
@@ -679,12 +703,12 @@ async function checkSupplierProfile(db, cage, page, seen) {
   const top = await q(`select nsn, item_name, n, d, last from (
       select pp.nsn, nn.item_name, count(*)::int n, coalesce(sum(${value}), 0) d, max(pp.awarded_on) last,
              row_number() over (order by count(*) desc, max(pp.awarded_on) desc, pp.nsn) rn
-      from pub.price_points pp join pub.nsns nn on nn.nsn = pp.nsn where pp.cage = $1 group by pp.nsn, nn.item_name) x where rn <= 10 order by rn`);
+      from pub.price_points pp join pub.nsns nn on nn.nsn = pp.nsn where pp.cage = $1 and ${NAIVE_NOT_CEIL_PP('pp')} group by pp.nsn, nn.item_name) x where rn <= 10 order by rn`);
   eq('top nsns', page.topNsns, top.map((r) => ({ nsn: r.nsn, itemName: cl(r.item_name), awards: r.n, dollars: Number(r.d), lastAward: isoD(r.last) })));
 
   // ---- agencies
   const ag = await q(`select pp.agency_id, a.name, count(*)::int n, coalesce(sum(${value}), 0) d, max(pp.awarded_on) last
-      from pub.price_points pp join pub.agencies a on a.agency_id = pp.agency_id where pp.cage = $1 group by pp.agency_id, a.name
+      from pub.price_points pp join pub.agencies a on a.agency_id = pp.agency_id where pp.cage = $1 and ${NAIVE_NOT_CEIL_PP('pp')} group by pp.agency_id, a.name
       order by n desc, d desc, pp.agency_id limit 15`);
   eq('agencies', page.agencyRows.map((a) => [a.name, a.awards, a.dollars, a.lastAward]), ag.map((r) => [cl(r.name) ?? `Agency ${r.agency_id}`, r.n, Number(r.d), isoD(r.last)]));
 
@@ -729,6 +753,64 @@ async function checkSupplierProfile(db, cage, page, seen) {
   eq('bids', [page.openBids.total, page.openBids.rows.map((r) => [r.solNumber, r.nsn, r.itemName, r.quantity, r.unitOfIssue, r.returnBy, r.source, r.sourceUrl])],
     [bids.length, bids.slice(0, 25).map((r) => [r.sol_number, r.nsn, cl(r.item_name), numOrNull(r.quantity), cl(r.unit_of_issue), isoD(r.return_by), r.source, r.source_url])]);
   if (bids.length > 0) seen.bids++;
+}
+
+// ------------------------------------------------ contract ceilings: the rows seeded by verify-single-query-seed.sql
+/**
+ * With --seed: the six D/G/A base rows of the seed ("SEED CEILING") are ceilings and every other row is not.
+ * Checks, against expectations built in JavaScript from the raw rows, that the three on-request loaders flag
+ * them, keep them in their lists, and leave them out of every count, dollar total and price figure.
+ */
+async function checkCeilings(db) {
+  const check = (label, actual, expected) => {
+    results.checks++;
+    try {
+      assert.deepStrictEqual(actual, expected);
+    } catch (e) {
+      fail('contract ceilings', label, String(e.message).split('\n').slice(0, 14).join('\n'));
+    }
+  };
+  const rows = await db.unsafe(`select award_uid, piid, obligation, raw->>'deliveryOrder' as dord, raw->>'nsn' as nsn, raw->>'cage' as cage
+                                from pub.contract_actions where description like 'SEED CEILING %' or award_uid like 'CONT_AWD_SPE7M126D0006%' order by piid`);
+  // The SQL fragment against the JavaScript rule on EVERY row of both tables (not just the seeded ones).
+  const sqlCa = await db.unsafe(`select ca.id, ca.award_uid, ca.piid, ca.raw->>'deliveryOrder' as dord, ${N.CONTRACT_CEILING_SQL} as c from pub.contract_actions ca`);
+  check('contract_actions: SQL fragment == JS rule on every row', sqlCa.filter((r) => r.c !== isContractCeiling(r.award_uid, r.piid, r.dord)).map((r) => r.id), []);
+  const sqlPp = await db.unsafe(`select pp.id, pp.source, pp.award_ref, ${N.CEILING_PRICE_POINT_SQL} as c from pub.price_points pp`);
+  check('price_points: SQL fragment == JS rule on every row', sqlPp.filter((r) => r.c !== isCeilingPricePoint(r.source, r.award_ref)).map((r) => r.id), []);
+  console.log(`   ceiling rule checked on ${sqlCa.length} contract_actions rows (${sqlCa.filter((r) => r.c).length} ceilings) and ${sqlPp.length} price_points rows (${sqlPp.filter((r) => r.c).length} ceilings)`);
+  const ceilingPiids = rows.filter((r) => isContractCeiling(r.award_uid, r.piid, r.dord)).map((r) => r.piid);
+  check('JS rule picks the six seeded base rows', ceilingPiids, ['SPE7M126A0004', 'SPE7M126D0001', 'SPE7M126D0008', 'SPE7M126G0003']);
+  const nsn = rows.find((r) => r.nsn)?.nsn;
+
+  // ---- NSN page: flags per row, rows all present
+  const page = await N.loadNsnPage(db, nsn);
+  const want = new Map(rows.map((r) => [r.award_uid, isContractCeiling(r.award_uid, r.piid, r.dord)]));
+  const got = new Map(page.contractActions.filter((c) => want.has(c.awardUid)).map((c) => [c.awardUid, c.isCeiling]));
+  check('nsn page: every seeded action present with the right flag', [...got].sort(), [...want].sort());
+  const pp = new Map(page.pricePoints.filter((p) => p.awardRef.startsWith('SPE7M126')).map((p) => [p.awardRef, p.isCeiling]));
+  check('nsn page: price point flags', [...pp].sort(), [['SPE7M126D0001', true], ['SPE7M126D0001-SPE7M126F0001', false], ['SPE7M126G0003', true], ['SPE7M126P0002', false]]);
+
+  // ---- supplier pages
+  const zc1 = await N.loadSupplierPage(db, 'ZC001');
+  check('ZC001 counts', [zc1.awards, zc1.ceilings, zc1.dollars, zc1.valuedAwards], [1, 1, 1250, 1]);
+  check('ZC001 rows listed with flags', zc1.rows.map((r) => [r.isCeiling, r.total]).sort(), [[false, 1250], [true, 60000000000]]);
+  check('ZC001 months/top/agencies/classes leave the ceiling out', [zc1.months.reduce((a, m) => a + m.awards, 0), zc1.months.reduce((a, m) => a + m.dollars, 0), zc1.topNsns.map((t) => [t.awards, t.dollars]), zc1.classRows.map((c) => c.awards)], [1, 1250, [[1, 1250]], [1]]);
+  check('ZC001 stats row', [zc1.stats?.awardsAll, zc1.stats?.dollarsAll], [1, 1250]);
+  const zc2 = await N.loadSupplierPage(db, 'ZC002');
+  check('ZC002 counts', [zc2.awards, zc2.ceilings, zc2.dollars], [1, 1, 5000]);
+  check('ZC002 stats row', [zc2.stats?.awardsAll, zc2.stats?.dollarsAll], [1, 5000]);
+  const found = await N.searchSupplierRows(db, { kind: 'cage', cage: 'ZC001', nameFallback: null });
+  check('supplier search counts purchases only', found.map((r) => [r.cage, r.awards]), [['ZC001', 1]]);
+
+  // ---- solicitation page
+  const sol = await N.loadSolicitationPage(db, 'SEED-CEIL-1');
+  check('sol awards flags', sol.awards.map((a) => [a.isCeiling, a.ceilingAmount]).sort(), [[false, null], [false, null], [true, 100000000], [true, 60000000000]].sort());
+  const ppRows = await db.unsafe(`select id, source, award_ref from pub.price_points where nsn = $1 order by awarded_on desc, id desc`, [nsn]);
+  const priced = ppRows.filter((r) => !isCeilingPricePoint(r.source, r.award_ref));
+  check('sol partPriceCount excludes ceilings', sol.partPriceCount, priced.length);
+  check('sol partPrices keeps ceilings flagged (newest 20 price points of the NSN)', sol.partPrices.filter((p) => p.isCeiling).length, ppRows.slice(0, 20).filter((r) => isCeilingPricePoint(r.source, r.award_ref)).length);
+  check('sol matchedAwards: all eight with flags', sol.matchedAwards.map((m) => [m.awardNumber, m.deliveryOrder, m.isCeiling]).sort(),
+    [['SPE7M126A0004', '', true], ['SPE7M126D0001', null, true], ['SPE7M126D0001', 'SPE7M126F0001', false], ['SPE7M126D0001', 'SPE7M126F0002', false], ['SPE7M126D0008', '   ', true], ['SPE7M126G0003', null, true], ['SPE7M126P0002', null, false], ['SPE7M126V0005', null, false]]);
 }
 
 // ------------------------------------------------------- counting TCP proxy
@@ -890,6 +972,8 @@ async function main() {
     if (psql(dbUrl, ['-At', '-c', `select to_regclass('pub.supplier_sam') is not null`]).trim() !== 't') {
       psql(dbUrl, ['-1', '-f', path.join(here, '../../db/migrations/0011_supplier_profiles.sql')]);
     }
+    // Migration 0015 (contract ceilings) redefines pub.refresh_supplier_stats(); the supplier seed refreshes the stats at its end.
+    psql(dbUrl, ['-1', '-f', path.join(here, '../../db/migrations/0015_contract_ceilings.sql')]);
     psql(dbUrl, ['-1', '-f', path.join(here, 'supplier-seed.sql')]);
     // FLIS tables (migration 0014) and their seed rows.
     if (psql(dbUrl, ['-At', '-c', `select to_regclass('pub.nsn_identification') is not null`]).trim() !== 't') {
@@ -1007,7 +1091,7 @@ async function main() {
     for (const s of supStrata) console.log(`   stratum "${s.label}": ${s.rows.length}`);
     // Old-vs-new compares the fields the old loader returned (same keys, same order); the new profile
     // sections are checked separately against independent queries.
-    const OLD_SUPPLIER_KEYS = ['cage', 'name', 'city', 'state', 'awards', 'dollars', 'valuedAwards', 'nsns', 'classes', 'firstAward', 'latestAward', 'rows', 'classRows', 'makesParts', 'refreshedOn'];
+    const OLD_SUPPLIER_KEYS = ['cage', 'name', 'city', 'state', 'awards', 'ceilings', 'dollars', 'valuedAwards', 'nsns', 'classes', 'firstAward', 'latestAward', 'rows', 'classRows', 'makesParts', 'refreshedOn'];
     const sawProfile = { sam: 0, web: 0, optout: 0, partialWeb: 0, partialContact: 0, usa: 0, bids: 0, parts: 0, chart: 0 };
     for (const c of supSample) {
       let full = null;
@@ -1072,6 +1156,8 @@ async function main() {
       const r = await compare('loadSolicitationPage (malformed)', JSON.stringify(bad), (s) => oldLoadSolicitationPage(s, bad), async (s) => withoutNewSolFields(await N.loadSolicitationPage(s, bad)), { expectQueries: 0 });
       if (r.new.value !== null) fail('loadSolicitationPage (malformed)', bad, 'expected null');
     }
+
+    if (withSeed) await checkCeilings(direct);
 
     // ---- supplier search (/api/suppliers.json): same rows, one statement even on the CAGE-then-name fallback
     const searches = [];

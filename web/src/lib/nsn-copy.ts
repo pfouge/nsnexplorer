@@ -6,7 +6,10 @@ import { parseCharacteristics, toDashedNsn } from './shared';
 import { listedFscName, type NsnCopyInput } from './seo-copy';
 
 export function nsnCopyInputFrom(page: NsnPageData): NsnCopyInput & { nsn13: string } {
-  const { nsn, fsc, pricePoints, contractActions, solicitations, partNumbers } = page;
+  const { nsn, fsc, solicitations, partNumbers } = page;
+  // Long-term contract base awards are neither prices nor purchases (lib/contract-ceiling.ts).
+  const pricePoints = page.pricePoints.filter((p) => !p.isCeiling);
+  const contractActions = page.contractActions.filter((c) => !c.isCeiling);
   const dates = [
     ...pricePoints.map((p) => p.awardedOn),
     ...contractActions.map((c) => c.actionDate).filter((d): d is string => d !== null),
