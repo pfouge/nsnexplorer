@@ -1,7 +1,9 @@
 // Vanilla-TS home search box: accepts a 13-digit NSN (dashed or not), a
 // 9-digit NIIN, or a manufacturer part number, asks /api/lookup.json (a
 // request-time endpoint backed by the catalog database) and navigates to the
-// canonical /nsn/<dashed>/ page.
+// canonical /nsn/<dashed>/ page. Anything else with a word in it ("lock washer") goes to /search/,
+// which finds parts by item name and by the catalog's "also called" names.
+import { parseNameQuery, searchPageUrl } from '../lib/item-search';
 
 interface LookupResult {
   ok: boolean;
@@ -43,6 +45,12 @@ function init(): void {
     const raw = input.value.trim();
     if (!raw) return;
     const digits = raw.replace(/[^0-9]/g, '');
+    // An NSN or NIIN, or text with digits that could be a part number, goes to the lookup; plain words go to the name search.
+    const idLike = /^[\d\s-]+$/.test(raw) ? digits.length === 9 || digits.length === 13 : /\d/.test(raw) && raw.replace(/[^A-Za-z0-9]/g, '').length >= 4;
+    if (!idLike && parseNameQuery(raw).ok) {
+      window.location.href = searchPageUrl(raw);
+      return;
+    }
 
     setMessage(message, 'Looking that up…', 'idle');
 

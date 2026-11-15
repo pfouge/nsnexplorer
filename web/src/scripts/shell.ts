@@ -1,6 +1,7 @@
 // scripts/shell.ts — the site shell's behaviour: the navigation drawer, the
 // search dialog, in-page tabs, folded introductions and "show all" on long
 // lists. Everything degrades to plain links and full content without it.
+import { NAME_DIALOG_ROWS, displayName, hitMeta, parseNameQuery, searchPageUrl, type NameSearchResult } from '../lib/item-search';
 
 /* ---------- dialogs ---------- */
 function openDialog(id: string): void {
@@ -63,6 +64,11 @@ interface Hit {
   code?: string;
   name: string;
   meta?: string;
+  /** A part row: name, then the matched everyday name, then NSN and class on their own lines. */
+  part?: boolean;
+  sub?: string;
+  /** Extra meta lines under a part row. */
+  meta2?: string;
 }
 
 const form = document.querySelector<HTMLFormElement>('[data-site-search]');
@@ -88,7 +94,7 @@ if (form && input && out) {
     f.append(h);
     for (const hit of hits) {
       const a = document.createElement('a');
-      a.className = 'result';
+      a.className = hit.part ? 'result part' : 'result';
       a.href = hit.href;
       if (hit.code) {
         const c = document.createElement('span');
@@ -100,11 +106,23 @@ if (form && input && out) {
       n.className = 'nm';
       n.textContent = hit.name;
       a.append(n);
+      if (hit.sub) {
+        const sb = document.createElement('span');
+        sb.className = 'sub';
+        sb.textContent = hit.sub;
+        a.append(sb);
+      }
       if (hit.meta) {
         const m = document.createElement('span');
         m.className = 'meta';
         m.textContent = hit.meta;
         a.append(m);
+      }
+      if (hit.meta2) {
+        const m2 = document.createElement('span');
+        m2.className = 'meta';
+        m2.textContent = hit.meta2;
+        a.append(m2);
       }
       f.append(a);
     }
@@ -185,6 +203,32 @@ if (form && input && out) {
     }
   };
 
+  // Parts by item name or by the catalog's everyday ("also called") names. Only for text that has a word of
+  // three or more letters; a failed request shows nothing here (the rest of the dialog still works).
+  interface NameHits { hits: Hit[]; total: number; failed: boolean }
+  const searchNames = async (q: string): Promise<NameHits> => {
+    if (!parseNameQuery(q).ok) return { hits: [], total: 0, failed: false };
+    try {
+      const res = await fetch(`/api/names.json?q=${encodeURIComponent(q)}&limit=${NAME_DIALOG_ROWS}`);
+      const body = (await res.json()) as NameSearchResult;
+      if (!res.ok || !body.ok || !Array.isArray(body.results)) return { hits: [], total: 0, failed: res.status >= 500 };
+      return {
+        total: body.total,
+        failed: false,
+        hits: body.results.map<Hit>((h) => ({
+          href: `/nsn/${h.nsn}/`,
+          part: true,
+          name: displayName(h.name),
+          sub: h.alsoCalled ? `Also called: ${displayName(h.alsoCalled)}` : undefined,
+          meta: `NSN ${h.nsn}`,
+          meta2: hitMeta(h),
+        })),
+      };
+    } catch {
+      return { hits: [], total: 0, failed: true };
+    }
+  };
+
   const render = async (submitted: boolean): Promise<void> => {
     const q = input.value.trim();
     const mine = ++seq;
@@ -193,6 +237,8 @@ if (form && input && out) {
       return;
     }
     const suppliers = searchSuppliers(q); // runs alongside the index and lookup requests
+    const idLike = looksLikeId(q);
+    let names: Promise<NameHits> | null = idLike ? null : searchNames(q);
     const ix = await loadIndex();
     if (mine !== seq) return;
     const groups = ix ? localHits(ix, q) : [];
@@ -213,18 +259,32 @@ if (form && input && out) {
         const digits = q.replace(/\D/g, '');
         const what = r.kind === 'part_number' ? `No indexed NSN references part number “${q}”.` : r.ok ? `${digits.length === 13 ? 'NSN' : 'NIIN'} ${q} is not in the catalog yet.` : '';
         if (what) note = message(what, true);
+        // Something like "5/8 lock washer" looks like an id because of its digits; if no NSN or part number matched, try names.
+        if (r.ok && r.matches.length === 0 && r.kind === 'part_number') names = searchNames(q);
       }
     }
 
     const supplierHits = await suppliers;
+    const nameResult = names ? await names : null;
     if (mine !== seq) return;
+    const nameHits = nameResult?.hits ?? [];
+    if (note && nameHits.length > 0) note = null;
 
     frag.append(section('National stock numbers', nsnHits));
+    frag.append(section('Parts by name', nameHits));
+    if (nameResult && nameResult.total > nameHits.length) {
+      const all = document.createElement('a');
+      all.className = 'result more';
+      all.href = searchPageUrl(q);
+      all.textContent = `See all ${fmt(nameResult.total)} parts named “${q}”`;
+      frag.append(all);
+    }
     for (const g of groups) frag.append(section(g.title, g.hits));
     frag.append(section('Suppliers', supplierHits));
-    const total = nsnHits.length + supplierHits.length + groups.reduce((n, g) => n + g.hits.length, 0);
+    const total = nsnHits.length + nameHits.length + supplierHits.length + groups.reduce((n, g) => n + g.hits.length, 0);
     if (note) frag.prepend(note);
-    else if (total === 0) frag.append(message(`Nothing matches “${q}”. Try a 13-digit NSN, a part number, or a category name.`));
+    else if (total === 0 && nameResult?.failed) frag.append(message('Part name search is temporarily unavailable. Please try again shortly.', true));
+    else if (total === 0) frag.append(message(`Nothing matches “${q}”. Try a part name, a 13-digit NSN, a part number, or a category name.`));
     out.replaceChildren(frag);
   };
 
@@ -237,7 +297,10 @@ if (form && input && out) {
     window.clearTimeout(timer);
     // Enter goes to the only result when there is exactly one; otherwise it runs the lookup.
     const links = out.querySelectorAll<HTMLAnchorElement>('a.result');
+    const typed = input.value.trim();
     if (links.length === 1) window.location.href = links[0].href;
+    // Words that are not an NSN, a NIIN or a part number go to the full list of parts with that name.
+    else if (typed && !looksLikeId(typed) && parseNameQuery(typed).ok) window.location.href = searchPageUrl(typed);
     else void render(true);
   });
   // Arrow keys move through results.

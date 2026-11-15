@@ -4,6 +4,8 @@ Allow: /
 Disallow: /auth/
 Disallow: /api/me
 Disallow: /api/account/
+# Search result pages are one per query, so there is nothing to index there.
+Disallow: /search/
 
 User-agent: GPTBot
 Allow: /

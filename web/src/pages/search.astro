@@ -1,0 +1,157 @@
+---
+// /search/?q=… finds parts by item name and by the federal catalog's "also called" names.
+// Rendered ON REQUEST like /nsn/: one SQL statement through Hyperdrive, edge-cached for an hour.
+// The only thing in the URL is the search text (and n, how many rows to show); nothing personal.
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE_URL } from '../consts';
+import { openSql } from '../lib/nsn-page';
+import { databaseUrlFrom } from '../lib/runtime-env';
+import { searchItemNames } from '../lib/item-search-sql';
+import { shapeNameRows } from '../lib/item-search-result';
+import {
+  NAME_PAGE_SIZE,
+  NAME_QUERY_MAX_CHARS,
+  displayName,
+  hitMeta,
+  nameQueryProblem,
+  parseNameQuery,
+  rowsFromParam,
+  searchPageUrl,
+} from '../lib/item-search';
+
+export const prerender = false;
+
+const rawQ = (Astro.url.searchParams.get('q') ?? '').slice(0, 200);
+const trimmed = rawQ.trim();
+const digits = trimmed.replace(/\D/g, '');
+// A pasted 13-digit NSN is not a name: go straight to its page.
+if (/^[\d\s-]+$/.test(trimmed) && digits.length === 13) return Astro.redirect(`/nsn/${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 9)}-${digits.slice(9)}/`, 302);
+
+const rows = rowsFromParam(Astro.url.searchParams.get('n'));
+const parsed = trimmed === '' ? null : parseNameQuery(trimmed);
+let result = null;
+let failed = false;
+if (parsed && parsed.ok) {
+  const databaseUrl = databaseUrlFrom(Astro);
+  if (!databaseUrl) {
+    failed = true;
+  } else {
+    const sql = openSql(databaseUrl);
+    try {
+      result = shapeNameRows(parsed.phrase, await searchItemNames(sql, parsed, rows, 0), 0);
+    } catch {
+      failed = true;
+    } finally {
+      await sql.end({ timeout: 1 }).catch(() => {});
+    }
+  }
+}
+Astro.response.headers.set('Cache-Control', failed ? 'no-store' : 'public, max-age=0, s-maxage=3600');
+
+const shown = trimmed.slice(0, NAME_QUERY_MAX_CHARS);
+const problem = parsed && !parsed.ok && parsed.reason !== 'empty' ? nameQueryProblem(parsed.reason) : '';
+const title = result ? `Parts named “${shown}”` : 'Find a part by name';
+const nextRows = Math.min(rows + NAME_PAGE_SIZE, 200);
+const canonicalUrl = `${SITE_URL}/search/`;
+---
+
+<BaseLayout
+  title={`${title} · NSN Explorer`}
+  description="Search federal catalog parts by item name or by the everyday name people use for them, such as lock washer or o-ring."
+  canonicalUrl={canonicalUrl}
+  noindex="follow"
+>
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a> › Find a part by name
+  </nav>
+
+  <section class="hero">
+    <h1>Find a part by name</h1>
+    <p class="lede">Type what you call the part. We match the federal catalog's item names and the everyday names listed for them, so “grip washer” finds lock washers.</p>
+  </section>
+
+  <form class="name-form" action="/search/" method="get" role="search" aria-label="Find a part by name">
+    <label for="name-q">Part name</label>
+    <div class="name-row">
+      <input id="name-q" type="search" name="q" value={shown} maxlength={NAME_QUERY_MAX_CHARS} placeholder="lock washer, o-ring, hose clamp" autocomplete="off" enterkeyhint="search" />
+      <button class="btn" type="submit">Search</button>
+    </div>
+  </form>
+
+  {trimmed === '' && (
+    <p class="name-note" role="status">Type a part name above, such as lock washer, o-ring or hose clamp. For an NSN, a NIIN or a part number, use the search box in the header.</p>
+  )}
+
+  {problem !== '' && <p class="name-note" role="status">{problem}</p>}
+
+  {failed && (
+    <p class="name-note name-error" role="alert">Search is temporarily unavailable. Please try again in a few minutes.</p>
+  )}
+
+  {result && result.results.length === 0 && (
+    <div class="name-note" role="status">
+      <p>No parts found for “{shown}”.</p>
+      <p>Try fewer or shorter words, or the singular (washer, not washers). You can also <a href="/catalog/">browse every supply class</a> or search an NSN or part number from the header.</p>
+    </div>
+  )}
+
+  {result && result.results.length > 0 && (
+    <section aria-labelledby="name-results-h">
+      <h2 id="name-results-h" class="name-count">
+        {result.total.toLocaleString('en-US')} {result.total === 1 ? 'part' : 'parts'} match “{shown}”
+      </h2>
+      <p class="gloss name-sub">Best name matches first. Parts with an open solicitation or a recent award come first within each group of matches.</p>
+      <ul class="name-list">
+        {result.results.map((h) => (
+          <li>
+            <a class="name-hit" href={`/nsn/${h.nsn}/`}>
+              <span class="name-title">{displayName(h.name)}</span>
+              {h.alsoCalled && <span class="name-also">Also called: {displayName(h.alsoCalled)}</span>}
+              <span class="name-nsn">NSN {h.nsn}</span>
+              <span class="name-meta">{hitMeta(h)}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+      {result.total > result.results.length && (
+        <p class="name-more">
+          <span class="gloss">Showing {result.results.length.toLocaleString('en-US')} of {result.total.toLocaleString('en-US')}.</span>
+          {rows < 200 ? (
+            <a class="btn btn-ghost" href={searchPageUrl(shown, nextRows)}>Show more</a>
+          ) : (
+            <span class="gloss">Add a word to narrow the search.</span>
+          )}
+        </p>
+      )}
+    </section>
+  )}
+</BaseLayout>
+
+<style>
+  .name-form { margin: 1rem 0 0.75rem; max-width: 640px; }
+  .name-form label { font-size: 0.8rem; color: var(--ink-soft); margin-bottom: 0.4rem; }
+  .name-row { display: flex; gap: 0.5rem; width: 100%; }
+  .name-row input {
+    flex: 1; min-width: 0; font: inherit; font-size: 1rem; padding: 0.65rem 0.8rem; min-height: 44px;
+    border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); box-sizing: border-box;
+  }
+  .name-row .btn { flex: none; min-height: 44px; }
+  .name-note { margin: 1rem 0; padding: 0.85rem 1rem; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--card); color: var(--ink); max-width: 640px; overflow-wrap: anywhere; }
+  .name-note p { margin: 0 0 0.4rem; }
+  .name-note p:last-child { margin-bottom: 0; }
+  .name-error { color: var(--red); }
+  .name-count { font-size: 1.1rem; margin: 1.25rem 0 0.2rem; overflow-wrap: anywhere; }
+  .name-sub { margin: 0 0 0.75rem; }
+  .name-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.5rem; max-width: 760px; }
+  .name-hit {
+    display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.15rem; padding: 0.75rem 1rem; border: 1px solid var(--line); border-radius: var(--radius-sm);
+    background: var(--card); color: var(--ink); overflow-wrap: anywhere; min-width: 0;
+  }
+  .name-hit:hover { background: var(--hover); text-decoration: none; }
+  .name-title { font-weight: 600; }
+  .name-also { color: var(--green); font-size: 0.9rem; }
+  .name-nsn { font-variant-numeric: tabular-nums; font-size: 0.9rem; }
+  .name-meta { color: var(--ink-soft); font-size: 0.8125rem; }
+  .name-more { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.9rem; margin: 1rem 0 0; }
+  .name-more .gloss { margin: 0; }
+</style>

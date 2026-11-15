@@ -29,7 +29,7 @@ const EMBED_HEADERS: Record<string, string> = Object.fromEntries(
 // becomes a 503 with Retry-After instead of a blank 500.
 // /supplier/ (the prerendered leaderboard) and /supplier/leaderboard.csv are static files and read no
 // database, so only /supplier/<5-character CAGE>/ counts as a database route.
-const DB_ROUTE = /^\/(nsn|solicitation)\/|^\/supplier\/[A-Za-z0-9]{5}\/?$|^\/api\/(lookup|nsn\/|suppliers)/;
+const DB_ROUTE = /^\/(nsn|solicitation)\/|^\/supplier\/[A-Za-z0-9]{5}\/?$|^\/api\/(lookup|names|nsn\/|suppliers)|^\/search\/?$/;
 
 // Account routes (/auth/*, /api/me, /api/account/*) answer one visitor each: never put them in
 // the edge cache, and mark every answer private (src/lib/account.ts holds the path rule).

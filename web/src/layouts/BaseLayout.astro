@@ -165,7 +165,7 @@ const secondary = allLinks.filter((l) => !l.primary);
         </a>
         <button class="search-pill" type="button" data-open="site-search" aria-haspopup="dialog" aria-label="Search">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></svg>
-          <span>Search an NSN, part number or category</span>
+          <span>Search parts, NSNs or categories</span>
           <kbd aria-hidden="true">/</kbd>
         </button>
         <nav class="site" aria-label="Site">
@@ -219,13 +219,13 @@ const secondary = allLinks.filter((l) => !l.primary);
     <dialog class="sheet" id="site-search" aria-label="Search">
       <form class="search-head" data-site-search role="search" method="dialog">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></svg>
-        <input type="text" inputmode="search" name="q" data-site-search-input placeholder="NSN, part number or category" aria-label="Search an NSN, part number or category" autocomplete="off" enterkeyhint="search" />
+        <input type="text" inputmode="search" name="q" data-site-search-input placeholder="Part name, NSN, part number or category" aria-label="Search by part name, NSN, part number or category" autocomplete="off" enterkeyhint="search" />
         <button class="icon-btn" type="button" data-close aria-label="Close search">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
         </button>
       </form>
       <div class="search-body" data-site-search-results aria-live="polite">
-        <p class="search-msg">Type a 13-digit NSN, a 9-digit NIIN, a manufacturer part number, or a category name such as “gasket”.</p>
+        <p class="search-msg">Type a part name such as “lock washer”, a 13-digit NSN, a 9-digit NIIN, a manufacturer part number, or a category name.</p>
         <h2>Jump to</h2>
         <div class="chips wrap-wide">
           <a class="chip" href="/open/">Open demand</a>
