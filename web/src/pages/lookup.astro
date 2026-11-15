@@ -1,0 +1,59 @@
+---
+// /lookup/ — bulk NSN lookup. Prerendered: the page is a textarea and a mount
+// point; the bundled script parses the pasted list in the browser, calls
+// /api/bulk.json in chunks of 50 and draws the table. Nothing is stored and the
+// pasted text never goes into the URL.
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE_URL } from '../consts';
+
+const canonicalUrl = `${SITE_URL}/lookup/`;
+const breadcrumbs = [
+  { name: 'Home', url: `${SITE_URL}/` },
+  { name: 'Bulk lookup', url: canonicalUrl },
+];
+---
+
+<BaseLayout
+  title="Bulk NSN Lookup: Prices, Competition and Open Bids"
+  description="Paste a list of NSNs or NIINs and get one table: last price with its government record, competition coding, open bids and class. Free; download it as CSV."
+  canonicalUrl={canonicalUrl}
+  breadcrumbs={breadcrumbs}
+>
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a> › Bulk lookup
+  </nav>
+
+  <section class="hero">
+    <h1>Bulk NSN lookup</h1>
+    <p class="lede">Paste up to 500 NSNs or NIINs, one per line or separated by commas, and get the last price, competition coding and open bids for each in one table.</p>
+  </section>
+
+  <form class="bulk-form" id="bulk-form" autocomplete="off" novalidate>
+    <label for="bulk-input">NSNs or NIINs</label>
+    <textarea id="bulk-input" name="ids" rows="8" spellcheck="false" placeholder={'5340-01-396-7260\n5340002303256, 013967260'}></textarea>
+    <div class="bulk-actions">
+      <button class="btn" type="submit" id="bulk-run">Look up</button>
+      <button class="btn btn-ghost" type="button" id="bulk-csv" hidden>Download CSV</button>
+      <span class="gloss" id="bulk-count" aria-live="polite">0 NSNs</span>
+    </div>
+  </form>
+  <p class="gloss" id="bulk-status" role="status" aria-live="polite"></p>
+  <div id="bulk-out"></div>
+  <noscript><p class="gloss">The bulk lookup needs JavaScript. You can still look up one item at a time with the search on the home page.</p></noscript>
+</BaseLayout>
+
+<style>
+  .bulk-form { display: grid; gap: 0.4rem; margin: 1rem 0 0.5rem; }
+  .bulk-form label { font-size: 0.8rem; color: var(--ink-soft); }
+  .bulk-form textarea {
+    font: inherit; font-family: var(--font-mono); font-size: 0.9rem; padding: 0.6rem 0.7rem;
+    border: 1px solid var(--line); border-radius: 4px; background: var(--card); color: var(--ink);
+    width: 100%; box-sizing: border-box; resize: vertical; min-width: 0;
+  }
+  .bulk-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 0.9rem; }
+  .bulk-actions .gloss { margin: 0; }
+</style>
+
+<script>
+  import '../scripts/bulk-lookup';
+</script>

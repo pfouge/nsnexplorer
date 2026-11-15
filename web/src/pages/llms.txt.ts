@@ -69,6 +69,7 @@ NSN Explorer indexes ${int(data.stats.totalNsns)} National Stock Numbers (NSNs) 
 - [Home](${SITE_URL}/) — search any NSN for its full recorded price history.
 - [Services](${SITE_URL}/services/) — open federal service notices from SAM.gov by service category.
 - [Compare items](${SITE_URL}/compare/) — unit price history of up to three NSNs side by side.
+- [Bulk lookup](${SITE_URL}/lookup/) — paste up to 500 NSNs or NIINs; one table of last price, competition and open bids, downloadable as CSV.
 - [Browse deep categories](${SITE_URL}/browse/) — Federal Supply Classes with fully-indexed price history.
 - [Open demand](${SITE_URL}/open/) — every open DLA solicitation by supply class.
 - [Agencies](${SITE_URL}/agencies/) — purchases grouped by buying agency.
