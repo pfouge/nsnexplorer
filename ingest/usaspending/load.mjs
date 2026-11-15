@@ -160,8 +160,10 @@ export async function loadRecord(record, psc) {
          (award_uid, piid, psc, naics, description, action_date, obligation,
           agency_id, recipient_name, recipient_uei, source_url, raw)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
-       ON CONFLICT (award_uid, action_date) DO NOTHING
-       RETURNING id`,
+       ON CONFLICT (award_uid, action_date) DO UPDATE
+         SET recipient_uei = EXCLUDED.recipient_uei
+         WHERE pub.contract_actions.recipient_uei IS NULL AND EXCLUDED.recipient_uei IS NOT NULL
+       RETURNING (xmax = 0) AS inserted`,
       [
         awardUid,
         field(record, 'Award ID', 'award_id'),
@@ -172,13 +174,14 @@ export async function loadRecord(record, psc) {
         parseAmount(field(record, 'Award Amount', 'amount')),
         agencyId,
         field(record, 'Recipient Name', 'recipient'),
-        field(record, 'recipient_uei'),
+        field(record, 'Recipient UEI', 'recipient_uei'),
         `https://www.usaspending.gov/award/${awardUid}`,
         JSON.stringify(raw),
       ]
     );
 
-    return { awardUid, nsn, inserted: res.rowCount > 0 };
+    // A conflicting row that only gains its UEI is an update, not a new record.
+    return { awardUid, nsn, inserted: res.rows[0]?.inserted === true };
   });
 }
 
