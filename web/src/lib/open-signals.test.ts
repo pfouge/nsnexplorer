@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { PAST_DUE_MAX_DAYS, PAST_DUE_MIN_DAYS, estimatedValue, inPastDueWindow, isPastDueUnawarded, lastUnitPrice, techDocsKind } from './open-signals.ts';
+import { isRepost, sumOpenTotals, totalsLine, PAST_DUE_MAX_DAYS, PAST_DUE_MIN_DAYS, estimatedValue, inPastDueWindow, isPastDueUnawarded, lastUnitPrice, techDocsKind } from './open-signals.ts';
 
 const TODAY = '2026-11-14';
 const daysAgo = (n: number) => new Date(Date.parse(`${TODAY}T00:00:00Z`) - n * 86400000).toISOString().slice(0, 10);
@@ -85,4 +85,47 @@ test('estimatedValue needs both inputs positive and rounds to cents', () => {
   assert.equal(estimatedValue(0, 5), null);
   assert.equal(estimatedValue(5, 0), null);
   assert.equal(estimatedValue(-1, 5), null);
+});
+
+const sol = (solNumber: string, status: string, issuedOn: string | null, returnBy: string | null) => ({ solNumber, status, issuedOn, returnBy });
+
+test('isRepost: open solicitation issued within 30 days after an expired one closed', () => {
+  const r = isRepost([sol('B', 'open', '2026-11-01', '2026-12-01'), sol('A', 'expired', '2026-09-20', '2026-10-10')], TODAY);
+  assert.deepEqual(r, { repost: true, priorReturnBy: '2026-10-10' });
+});
+
+test('isRepost: cancelled counts, 30-day boundary inclusive, 31 is out, same day is in', () => {
+  const prior = sol('A', 'cancelled', '2026-08-01', '2026-10-01');
+  assert.equal(isRepost([sol('B', 'open', '2026-10-31', null), prior], TODAY).repost, true);
+  assert.equal(isRepost([sol('B', 'open', '2026-11-01', null), prior], TODAY).repost, false);
+  assert.equal(isRepost([sol('B', 'open', '2026-10-01', null), prior], TODAY).repost, true);
+});
+
+test('isRepost: needs an open solicitation after (not before) a non-open prior', () => {
+  assert.equal(isRepost([sol('B', 'open', '2026-09-01', '2026-12-01'), sol('A', 'expired', '2026-09-20', '2026-10-10')], TODAY).repost, false);
+  assert.equal(isRepost([sol('B', 'expired', '2026-11-01', '2026-11-05'), sol('A', 'expired', '2026-09-20', '2026-10-10')], TODAY).repost, false);
+  assert.equal(isRepost([sol('B', 'open', '2026-11-01', '2026-12-01'), sol('A', 'open', '2026-10-01', '2026-10-10')], TODAY).repost, false);
+  assert.equal(isRepost([sol('B', 'open', '2026-11-01', '2026-12-01'), sol('A', 'awarded', '2026-09-20', '2026-10-10')], TODAY).repost, false);
+});
+
+test('isRepost: falls back to returnBy, ignores same solicitation, null returnBy and empty input', () => {
+  assert.equal(isRepost([sol('B', 'open', null, '2026-10-20'), sol('A', 'expired', null, '2026-10-10')], TODAY).repost, true);
+  assert.equal(isRepost([sol('A', 'open', '2026-10-01', '2026-10-10'), sol('A', 'expired', '2026-09-01', '2026-10-01')], TODAY).repost, false);
+  assert.equal(isRepost([sol('B', 'open', '2026-11-01', null), sol('A', 'expired', null, null)], TODAY).repost, false);
+  assert.equal(isRepost([sol('B', 'open', null, null), sol('A', 'expired', null, '2026-10-10')], TODAY).repost, false);
+  assert.deepEqual(isRepost([], TODAY), { repost: false, priorReturnBy: null });
+});
+
+test('isRepost: priorReturnBy is the latest qualifying prior', () => {
+  const r = isRepost([sol('C', 'open', '2026-11-05', null), sol('A', 'expired', null, '2026-10-20'), sol('B', 'cancelled', null, '2026-11-01'), sol('D', 'expired', null, '2026-06-01')], TODAY);
+  assert.deepEqual(r, { repost: true, priorReturnBy: '2026-11-01' });
+});
+
+test('sumOpenTotals and totalsLine', () => {
+  const t = sumOpenTotals([{ qty: 1200, estValue: 5000.4 }, { qty: 30, estValue: 0 }, { qty: 0, estValue: 250 }]);
+  assert.deepEqual(t, { parts: 3, units: 1230, value: 5250.4, priced: 2 });
+  assert.equal(totalsLine(t), '3 parts · 1,230 units · ≈ $5,250 at last price (2 of 3 priced)');
+  assert.equal(totalsLine(t, true), '3 parts · 1,230 units · ≈ $5,250 at last price (2 of 3 priced) on this page');
+  assert.equal(totalsLine(sumOpenTotals([{ qty: 1, estValue: 0 }])), '1 part · 1 unit · no last price on record (0 of 1 priced)');
+  assert.equal(totalsLine(sumOpenTotals([])), '0 parts · 0 units · no last price on record (0 of 0 priced)');
 });

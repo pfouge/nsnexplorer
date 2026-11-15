@@ -569,6 +569,51 @@ footer.site .disclaimer { color: var(--inv-softer); max-width: 78ch; }
 .product-grid:not(.expanded) > .product-card:nth-child(n + 61) { display: none; }
 .show-all { display: flex; justify-content: center; margin: 1rem 0 0; }
 
+/* Open demand: totals line, Reposts flag, and the dense Table view. The same cards render as one-line rows when
+   #product-grid has data-view="table" (set from the Cards/Table chips, remembered in localStorage). */
+.open-totals { margin: 0.6rem 0 0.5rem; font-size: 0.8125rem; font-variant-numeric: tabular-nums; max-width: none; }
+.product-table-scroll { max-width: 100%; }
+.product-table-inner { --tcols: 8.75rem minmax(8rem, 1fr) 11.25rem 5rem 6.25rem 6.5rem 5.75rem 8.5rem 6.25rem; --tgap: 6px; --tpad: 14px; }
+.flags { display: contents; }
+.table-head, .tbl-only { display: none; }
+.product-grid[data-view='table'] .card-only { display: none; }
+.product-grid[data-view='table'] .tbl-only { display: inline; }
+.product-table-inner:has(> .product-grid[data-view='table']) { min-width: 71rem; }
+.product-table-inner:has(> .product-grid[data-view='table']) > .table-head {
+  display: grid; grid-template-columns: var(--tcols); column-gap: var(--tgap); align-items: end; padding: 8px var(--tpad);
+  font-size: 0.8125rem; line-height: 1.25; color: var(--ink-soft); background: var(--paper); box-shadow: inset 0 -1px 0 var(--line);
+  position: sticky; top: calc(var(--header-h) + 47px + var(--rail-h, 54px)); z-index: 14;
+}
+.table-head > * { min-width: 0; }
+.table-head .r { justify-self: end; text-align: right; }
+.table-head button { font: inherit; color: inherit; background: none; border: 0; padding: 0; text-align: left; cursor: pointer; }
+.table-head button:hover { color: var(--ink); }
+.table-head button[aria-pressed='true'] { color: var(--ink); font-weight: 600; }
+.table-head button[aria-pressed='true']::after { content: ' ▾'; }
+.table-head button:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.product-grid[data-view='table'] > .product-card {
+  grid-template-columns: var(--tcols); column-gap: var(--tgap); align-items: center; padding: 6px var(--tpad);
+}
+.product-grid[data-view='table'] .product-thumb { display: none; }
+.product-grid[data-view='table'] .product-body,
+.product-grid[data-view='table'] .product-signals { display: contents; }
+.product-grid[data-view='table'] .product-nsn,
+.product-grid[data-view='table'] .product-name,
+.product-grid[data-view='table'] [data-col] {
+  grid-row: 1; min-width: 0; margin: 0 !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.product-grid[data-view='table'] .product-nsn { grid-column: 1; justify-self: start; max-width: 100%; }
+.product-grid[data-view='table'] .product-name { grid-column: 2; font-size: 0.9375rem; }
+.product-grid[data-view='table'] [data-col='closes'] { grid-column: 3; justify-self: start; max-width: 100%; }
+.product-grid[data-view='table'] [data-col='qty'] { grid-column: 4; justify-self: end; }
+.product-grid[data-view='table'] [data-col='value'] { grid-column: 5; justify-self: end; }
+.product-grid[data-view='table'] [data-col='comp'] { grid-column: 6; justify-self: start; max-width: 100%; }
+.product-grid[data-view='table'] [data-col='tech'] { grid-column: 7; justify-self: start; max-width: 100%; }
+.product-grid[data-view='table'] .flags { display: flex; gap: 4px; grid-column: 8; }
+.product-grid[data-view='table'] [data-col='sols'] { grid-column: 9; }
+/* Wide table: scroll inside the wrapper, never the page. Where it fits (1200px and up) the header stays sticky. */
+@media (max-width: 1199px) { .product-table-scroll:has(> .product-table-inner > .product-grid[data-view='table']) { overflow-x: auto; } }
+
 /* Open demand: "open for bid" panel on the NSN page, and the home callout. */
 .open-panel { border-color: transparent; background: var(--paper-2); }
 .open-panel table { background: transparent; }
