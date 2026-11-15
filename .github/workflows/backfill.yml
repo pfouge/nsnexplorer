@@ -1,7 +1,8 @@
 name: backfill-usaspending
 
 # One-shot historical backfill: fiscal years of USAspending contract
-# actions per PSC, read month by month, run from US-hosted GitHub runners (compliance fence:
+# actions per PSC, read month by month (never before the class's history floor, see
+# ingest/usaspending/history-floor.mjs), run from US-hosted GitHub runners (compliance fence:
 # docs/architecture.md #3). Loads are idempotent (upserts), so re-running
 # a year is safe. Dispatch manually; delete or ignore once the catalog is
 # seeded — the nightly ingest-daily keeps it current from there.
@@ -58,11 +59,18 @@ jobs:
           FY=${{ matrix.fy }}
           PSC=${{ matrix.psc }}
           TODAY=$(date -u +%F)
+          # History floor (ingest/usaspending/history-floor.mjs): empty for 5330 and 5331 (full history),
+          # 2021-10-01 for every other class. Months that start before it are not read, whatever fys says.
+          FLOOR=$(node ingest/usaspending/history-floor.mjs --psc "$PSC")
           for i in $(seq 0 11); do
             START=$(date -u -d "$((FY - 1))-10-01 +$i month" +%F)
             END=$(date -u -d "$START +1 month -1 day" +%F)
             if [[ "$START" > "$TODAY" ]]; then break; fi
             if [[ "$END" > "$TODAY" ]]; then END="$TODAY"; fi
+            if [[ -n "$FLOOR" && "$START" < "$FLOOR" ]]; then
+              echo "month $START..$END: skipped, before the $FLOOR history floor for PSC $PSC"
+              continue
+            fi
             OUT="/tmp/usaspending-$PSC-$START.jsonl"
             node ingest/usaspending/fetch.mjs --psc "$PSC" --start-date "$START" --end-date "$END" --out "$OUT"
             N=$(wc -l < "$OUT")

@@ -1,0 +1,55 @@
+name: usaspending-storage-cleanup
+
+# One-off (re-runnable) cleanup of USAspending rows already stored, per the 2026-11-15 storage decisions
+# (migration 0021): delete rows of floored classes older than the history floor, slim contract_actions.raw,
+# VACUUM so the space is reusable. Batched, one short transaction per id range; see
+# db/usaspending-storage-cleanup.mjs. Dispatch manually. Run it AFTER the backfill that is loading the new
+# classes has finished (its rows are written with the loader the backfill started with), first with
+# dry_run = true to read the counts. Re-running is safe and only touches what still needs it.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Count only, write nothing'
+        type: boolean
+        default: true
+      vacuum:
+        description: 'Run a plain VACUUM (ANALYZE) at the end (never blocks readers)'
+        type: boolean
+        default: true
+      max_minutes:
+        description: 'Stop cleanly after this many minutes (0 = no limit); the log prints --from-id to resume'
+        type: string
+        default: '0'
+
+concurrency:
+  group: usaspending-storage-cleanup
+  cancel-in-progress: false
+
+env:
+  DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      # Creates the 0021 functions the script calls (a no-op once applied).
+      - run: bash .github/scripts/retry-pool-full.sh /tmp/migrate.log node db/migrate.mjs
+      - name: cleanup
+        run: |
+          set -euo pipefail
+          ARGS="--max-minutes ${{ inputs.max_minutes }}"
+          if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+          if [ "${{ inputs.vacuum }}" != "true" ]; then ARGS="$ARGS --no-vacuum"; fi
+          node db/usaspending-storage-cleanup.mjs $ARGS 2>&1 | tee /tmp/cleanup.log
+      - name: summary
+        if: always()
+        run: |
+          { echo '### USAspending storage cleanup'; echo '```'; grep -E '^cleanup:' /tmp/cleanup.log 2>/dev/null || echo 'no output'; echo '```'; } >> "$GITHUB_STEP_SUMMARY"

@@ -13,12 +13,34 @@
 // loadRecord (the original single-record path), so a bad record behaves exactly
 // as it always did.
 //
+// Stored raw is minimal (minimalRaw): only the keys something reads, '{}' when there are none.
+// Records dated before the class's history floor (history-floor.mjs) are dropped by loadRecords unless they attach to a part (parse an NSN).
+//
 // CLI:
 //   node load.mjs --file x.jsonl --psc 5331
 
 import { readFile } from 'node:fs/promises';
 import { tx, upsert, chunk, closePool } from '../../shared/db.mjs';
 import { extractNiin, extractNsn } from '../../shared/nsn.mjs';
+import { floorFor } from './history-floor.mjs';
+
+// What a stored USAspending row keeps in pub.contract_actions.raw (owner decision 2026-11-15: no raw API record).
+// Only keys that some reader of raw can see on a non-DIBBS row (audit of every reader: the 2026-11 storage-limits report):
+//   nsn   the part the action is attached to (index contract_actions_raw_nsn_idx; every NSN page, class pages)
+//   cage  read from raw by the NSN page, the class winners/states queries; USAspending records carry none,
+//         so it is kept only if a record ever does (the readers would then see it exactly as before)
+// Everything else the API returns is already in a real column (Award ID -> piid, amounts, names, dates, uid -> source_url).
+// raw is NOT NULL, so a row with nothing to keep stores '{}'.
+export const USASPENDING_RAW_KEYS = Object.freeze(['nsn', 'cage']);
+
+/** The raw object stored for a record: only USASPENDING_RAW_KEYS, nsn from the description parse. */
+export function minimalRaw(record, nsn) {
+  const out = {};
+  if (nsn) out.nsn = nsn;
+  const cage = record?.cage;
+  if (typeof cage === 'string' && cage.trim() !== '') out.cage = cage;
+  return out;
+}
 
 // Small built-in FSC name map. Anything else falls back to 'FSC <code>' —
 // see docs: FSC rows are also created/kept by publog loads with fuller data.
@@ -159,7 +181,7 @@ export async function loadRecord(record, psc) {
       throw new Error('loadRecord: record missing generated_internal_id');
     }
 
-    const raw = nsn ? { ...record, nsn } : record;
+    const raw = minimalRaw(record, nsn);
 
     const res = await client.query(
       `INSERT INTO pub.contract_actions
@@ -221,7 +243,7 @@ export function prepareRecord(record, psc) {
   if (!awardUid) {
     throw new Error('loadRecord: record missing generated_internal_id');
   }
-  const raw = nsn ? { ...record, nsn } : record;
+  const raw = minimalRaw(record, nsn);
   return {
     awardUid,
     nsn,
@@ -369,11 +391,32 @@ async function writeBatch(client, plans, psc, knownAgencies) {
  * for each record in order. A batch that cannot be prepared or written is re-run
  * row by row through loadRecord, which reports or throws exactly as before.
  *
- * @returns {Promise<{ inserted: number, withNsn: number }>}  skipped = records.length - inserted
+ * Records dated before the class's history floor (history-floor.mjs; none for 5330 and 5331) are not
+ * loaded unless they parse an NSN (part-attached records are always kept): `onDropped(n)` is told how many (the return value keeps its shape). A record with no date is never
+ * dropped. `floor` overrides the class floor (null = keep everything), for tests.
+ *
+ * @returns {Promise<{ inserted: number, withNsn: number }>}  skipped = records.length - inserted - dropped
  */
-export async function loadRecords(records, psc, { batchSize = BATCH_SIZE, agencies = new Map(), onFallback } = {}) {
+export async function loadRecords(records, psc, { batchSize = BATCH_SIZE, agencies = new Map(), onFallback, onDropped, floor } = {}) {
   let inserted = 0;
   let withNsn = 0;
+  const keepFrom = floor === undefined ? floorFor(psc) : floor;
+  let dropped = 0;
+  if (keepFrom) {
+    const kept = records.filter((r) => {
+      const d = parseDate(field(r ?? {}, 'Start Date', 'start_date'));
+      if (!(d && d < keepFrom)) return true;
+      // Owner decision 2026-11-15: a pre-floor record that attaches to a part (parses an NSN) is kept.
+      try {
+        return Boolean(prepareRecord(r, psc).nsn);
+      } catch {
+        return false;
+      }
+    });
+    dropped = records.length - kept.length;
+    records = kept;
+    if (dropped && onDropped) onDropped(dropped);
+  }
   for (const part of chunk(records, batchSize)) {
     let plans;
     try {
@@ -413,6 +456,7 @@ async function main() {
   let inserted = 0;
   let skipped = 0;
   let withNsn = 0;
+  let dropped = 0;
   const agencies = new Map();
   const onFallback = (err, n) =>
     console.error(`load.mjs: batch of ${n} failed (${err.code || err.message}); retrying its records one at a time`);
@@ -420,9 +464,11 @@ async function main() {
   let pending = [];
   const flush = async () => {
     if (pending.length === 0) return;
-    const out = await loadRecords(pending, args.psc, { agencies, onFallback });
+    let droppedHere = 0;
+    const out = await loadRecords(pending, args.psc, { agencies, onFallback, onDropped: (n) => { droppedHere = n; } });
     inserted += out.inserted;
-    skipped += pending.length - out.inserted;
+    skipped += pending.length - droppedHere - out.inserted;
+    dropped += droppedHere;
     withNsn += out.withNsn;
     pending = [];
   };
@@ -442,7 +488,8 @@ async function main() {
   await flush();
 
   console.log(
-    `load.mjs: ${lines.length} record(s) read, ${inserted} inserted, ${skipped} skipped (dupes/errors), ${withNsn} with parsed NSN`
+    `load.mjs: ${lines.length} record(s) read, ${inserted} inserted, ${skipped} skipped (dupes/errors), ${withNsn} with parsed NSN` +
+      (floorFor(args.psc) ? `, ${dropped} dropped (unattached, dated before the ${floorFor(args.psc)} history floor)` : '')
   );
 }
 

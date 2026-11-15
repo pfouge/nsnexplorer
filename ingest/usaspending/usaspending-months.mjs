@@ -11,13 +11,18 @@
 //
 // The one-shot backfill (backfill.yml, FY2022-26) loaded before the ledger existed, so those
 // months have no row: the walk re-verifies them first (anything missing is inserted, the `extra`
-// column says how many), then extends history back toward --floor (FY2008, where USAspending's
-// contract data starts). It stops by itself after 6 empty months in a row.
+// column says how many), then extends history back toward the floor. The floor is the class's history
+// floor (history-floor.mjs: 2021-10-01 for every class except 5330 and 5331, which keep going to
+// --floor, default FY2008 where USAspending's contract data starts). --floor can only move a class
+// floor later, never earlier. The walk stops by itself after 6 empty months in a row, or at the floor:
+// once every month from the daily window back to the floor is complete, a run reads nothing and
+// returns complete: true, so the lane costs nothing from then on.
 //
 // CLI: node ingest/usaspending/usaspending-months.mjs --psc 5331 [--months 2] [--floor 2007-10-01]
 
 import { fetchAllPages } from './fetch.mjs';
 import { loadRecords } from './load.mjs';
+import { effectiveFloor, floorFor } from './history-floor.mjs';
 import { readLane, recordPeriod, backfillCandidates, prevMonth, addDaysIso, isoOf } from '../ledger.mjs';
 import { getPool, closePool } from '../../shared/db.mjs';
 
@@ -76,11 +81,16 @@ export async function runUsaspendingMonths({
   // Start with the last whole month that ends before the daily lane's window begins.
   const windowStart = addDaysIso(isoOf(now), -windowDays);
   const start = prevMonth(`${windowStart.slice(0, 7)}-01`);
-  const walk = backfillCandidates(ledger, { start, step: prevMonth, count: months, floor, emptyStreak: 6 });
+  const walkFloor = effectiveFloor(psc, floor);
+  const walk = backfillCandidates(ledger, { start, step: prevMonth, count: months, floor: walkFloor, emptyStreak: 6 });
+  const classFloor = floorFor(psc);
   log(`${tag}: months to verify [${walk.days.join(', ')}]` +
-    (walk.exhausted || walk.reachedFloor ? `; history complete back to ${walk.reachedFloor ? floor : 'where the data runs out'}` : ''));
+    (walk.exhausted || walk.reachedFloor
+      ? `; history complete back to ${walk.reachedFloor ? walkFloor : 'where the data runs out'}` +
+        (walk.reachedFloor && classFloor ? ` (the ${classFloor} history floor for class ${psc}; older months are not loaded)` : '')
+      : ''));
 
-  const result = { months: [], incomplete: [], inserted: 0, exhausted: walk.exhausted || walk.reachedFloor };
+  const result = { months: [], incomplete: [], inserted: 0, dropped: 0, exhausted: walk.exhausted || walk.reachedFloor, complete: false };
   for (const m of walk.days) {
     const startDate = m;
     const endDate = monthEnd(m);
@@ -93,7 +103,7 @@ export async function runUsaspendingMonths({
         if (r?.inserted) inserted += 1;
       }
     } else {
-      inserted = (await (loadMany || loadRecords)(records, psc)).inserted;
+      inserted = (await (loadMany || loadRecords)(records, psc, { onDropped: (n) => { result.dropped += n; } })).inserted;
     }
     const matches = records.length === expected;
     const row = await recordPeriod(pool, lane, { day: m, expected, records: records.length, pages: Math.ceil(records.length / 100), loaded: records.length, extra: inserted, matches });
@@ -102,7 +112,11 @@ export async function runUsaspendingMonths({
     result.months.push(m);
     log(`${tag}: ${m.slice(0, 7)} ${records.length} of ${expected} awards (${row.complete ? 'complete' : 'INCOMPLETE, will be read again'}), ${inserted} were missing and are now added`);
   }
-  log(`${tag}: done. verified ${result.months.length} months, ${result.inserted} rows added, incomplete ${result.incomplete.length}`);
+  // Nothing left to read and nothing incomplete: the lane is finished (at the floor or where the data ends).
+  result.complete = result.exhausted && result.months.length === 0;
+  log(`${tag}: done. verified ${result.months.length} months, ${result.inserted} rows added, incomplete ${result.incomplete.length}` +
+    (result.dropped ? `, ${result.dropped} records dated before the floor not loaded` : '') +
+    (result.complete ? '; lane complete, nothing more to read' : ''));
   return result;
 }
 
