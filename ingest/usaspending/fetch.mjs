@@ -23,6 +23,7 @@ const RETRY_BASE_MS = 1000;
 const FIELDS = [
   'Award ID',
   'Recipient Name',
+  'Recipient UEI',
   'Award Amount',
   'Description',
   'Awarding Agency',
