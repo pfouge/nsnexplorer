@@ -10,6 +10,7 @@ import {
   moeKind,
 } from './flis-codes.ts';
 import { nomen } from './seo-copy.ts';
+import { type NsnMgmt, mapMgmt } from './nsn-mgmt.ts';
 
 // Same output as shared.ts formatDate / toDashedNsn; copied (shared.ts is not loadable under node --test).
 const formatDate = (iso: string): string =>
@@ -111,6 +112,8 @@ export interface NsnFlis {
   cancellations: FlisCancellation[];
   cancellationsTotal: number;
   moeRules: FlisMoeRule[];
+  /** PUB LOG management data (migration 0020): standard unit price, unit of issue, shelf life, source of supply per file / service. */
+  management: NsnMgmt;
 }
 
 export const COLLOQUIAL_CAP = 8;
@@ -139,7 +142,7 @@ export function stockNumber(fsc: string | null, niin: string): string {
   return /^\d{9}$/.test(n) ? `${n.slice(0, 2)}-${n.slice(2, 5)}-${n.slice(5)}` : n;
 }
 
-export function mapFlis(row: { flis_ident?: J | null; flis_colloquial?: unknown; flis_related?: J[] | null; flis_cancel?: J[] | null; flis_moe?: J[] | null }): NsnFlis {
+export function mapFlis(row: { flis_ident?: J | null; flis_colloquial?: unknown; flis_related?: J[] | null; flis_cancel?: J[] | null; flis_moe?: J[] | null; flis_mgmt?: J[] | null }): NsnFlis {
   const i = row.flis_ident ?? null;
   const identification: FlisIdentification | null = i
     ? {
@@ -233,6 +236,7 @@ export function mapFlis(row: { flis_ident?: J | null; flis_colloquial?: unknown;
     cancellations,
     cancellationsTotal: canRows.length > 0 ? Number(canRows[0].total) : 0,
     moeRules,
+    management: mapMgmt(row.flis_mgmt),
   };
 }
 

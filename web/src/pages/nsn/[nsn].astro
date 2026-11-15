@@ -48,6 +48,7 @@ import { priceSummary, valueAtLastPrice } from '../../lib/sol-history';
 import { competitionRead } from '../../lib/competition-read';
 import { CEILING_LABEL, ceilingAmountText } from '../../lib/contract-ceiling';
 import { NO_DEFINITION, alsoCalled, catalogCells, foreignSummary, moeView } from '../../lib/nsn-flis';
+import { PRICE_EXPLAINER, SHELF_LIFE_SOURCE_LABEL, SHELF_LIFE_SOURCE_URL, calculatorReference, mgmtView } from '../../lib/nsn-mgmt';
 
 // Rendered ON REQUEST by the Cloudflare Pages Function, not at build time.
 // Cloudflare Pages caps a deployment at 20,000 files and the catalog is far
@@ -248,6 +249,10 @@ const headlinePoint = sortedPoints.find((p) => Number.isFinite(p.unitPrice) && p
 const lastPrice = headlineSummary?.latest ?? null;
 const openQtyTotal = openSols.reduce((sum, s) => sum + (s.quantity !== null && s.quantity > 0 ? s.quantity : 0), 0);
 const openUnits = [...new Set(openSols.map((s) => s.unitOfIssue).filter((u): u is string => !!u))];
+// Government supply record (PUB LOG management data): standard unit price, shelf life, source of supply, per-service rows.
+// The newest positive award price (the price headline) is what the standard price is compared with.
+const mgmt = mgmtView(flis.management, headlinePoint ? { price: headlinePoint.unitPrice, awardedOn: headlinePoint.awardedOn } : null);
+const standardRef = calculatorReference(flis.management);
 const openValueAtLastPrice = valueAtLastPrice(openQtyTotal, lastPrice);
 const solValueAtLastPrice = (qty: number | null): number | null => valueAtLastPrice(qty, lastPrice);
 
@@ -532,6 +537,95 @@ const datasetSchema = {
         )}
       </>
     )}
+    {mgmt.has && (
+      <>
+        <h3 class="section-title" id="supply-record" style="margin-top:1.5rem;">Government supply record</h3>
+        {mgmt.price ? (
+          <p class="gloss">{PRICE_EXPLAINER}</p>
+        ) : (
+          <p class="gloss">Supply-management data the federal catalog (DLA FLIS) holds for this NSN.</p>
+        )}
+        <div class="datastrip" style="margin-top:0.9rem;">
+          {mgmt.priceLine && (
+            <div class="cell">
+              <div class="k">Government standard price</div>
+              <div class="v">
+                {mgmt.priceLine}
+                <span class="gloss" style="display:block; font-size:0.8125rem; font-weight:400; line-height:1.35;">
+                  Catalog price, not an award price{mgmt.effectiveLine ? `. Effective ${mgmt.effectiveLine}` : ''}
+                </span>
+              </div>
+            </div>
+          )}
+          {mgmt.shelfParts && (
+            <div class="cell">
+              <div class="k">Shelf life</div>
+              <div class="v">
+                {mgmt.shelfParts.headline}
+                {mgmt.shelfParts.note && <span class="gloss" style="display:block; font-size:0.8125rem; font-weight:400; line-height:1.35;">{mgmt.shelfParts.note}</span>}
+              </div>
+            </div>
+          )}
+          {mgmt.shelfMixed && (
+            <div class="cell">
+              <div class="k">Shelf life</div>
+              <div class="v">Differs by service</div>
+            </div>
+          )}
+          {mgmt.sosParts && (
+            <div class="cell">
+              <div class="k">Source of supply</div>
+              <div class="v">
+                <span class="badge mono">{mgmt.sosParts.code}</span>
+                {mgmt.sosParts.meaning && <span class="gloss" style="display:block; font-size:0.8125rem; font-weight:400; line-height:1.35;">{mgmt.sosParts.meaning}</span>}
+              </div>
+            </div>
+          )}
+          {mgmt.sosMixed && (
+            <div class="cell">
+              <div class="k">Source of supply</div>
+              <div class="v">Differs by service</div>
+            </div>
+          )}
+        </div>
+        {mgmt.compare && <p class="gloss" style="margin-top:0.9rem;">{mgmt.compare}</p>}
+        {mgmt.table.length > 0 && (
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Service or agency</th>
+                  <th class="num">Unit price</th>
+                  <th>Unit of issue</th>
+                  <th>Shelf life</th>
+                  <th>Source of supply</th>
+                  <th>Acquisition advice</th>
+                  <th>Effective</th>
+                </tr>
+              </thead>
+              <tbody>
+                {mgmt.table.map((r) => (
+                  <tr>
+                    <td>{r.scope}</td>
+                    <td class="num mono">{r.price}</td>
+                    <td>{r.ui}</td>
+                    <td>{r.shelfLife}</td>
+                    <td>{r.sos}</td>
+                    <td>{r.aac}</td>
+                    <td class="mono">{r.effective}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {mgmt.shelfParts !== null || mgmt.shelfMixed ? (
+          <p class="gloss" style="margin-top:0.75rem;">
+            Shelf life codes: <a href={SHELF_LIFE_SOURCE_URL} rel="noopener">{SHELF_LIFE_SOURCE_LABEL}</a>.
+          </p>
+        ) : null}
+      </>
+    )}
   </section>
 
   <!-- 3. What it is / can you make it — drawing, specs, and qualified part numbers together. -->
@@ -760,6 +854,7 @@ const datasetSchema = {
       context="nsn"
       quantity={openQtyTotal > 0 ? openQtyTotal : null}
       unitOfIssue={openUnits.length === 1 ? openUnits[0] : null}
+      standard={standardRef}
       summary={headlineSummary}
       latestAwardedOn={headlinePoint?.awardedOn ?? null}
       latestSourceUrl={headlinePoint?.sourceUrl ?? null}
