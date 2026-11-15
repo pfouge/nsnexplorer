@@ -133,7 +133,18 @@ with sync_playwright() as p:
                 m = page.evaluate('() => ({sw: document.documentElement.scrollWidth, iw: window.innerWidth, sh: document.documentElement.scrollHeight})')
                 m['errors'] = clean(errs)
                 m['fn'] = page.evaluate("(() => { const n = document.querySelector('footer.site nav'); if (!n) return null; const r = n.getBoundingClientRect(); return [r.x, r.y + scrollY, r.width, r.height]; })()")
-                page.screenshot(path=f'{OUT}/{slug(r)}_{w}.png', full_page=True)
+                if r.startswith('/embed/'):
+                    # chart redraws can land between frames: keep the first frame that equals its successor
+                    prev = page.screenshot(full_page=True)
+                    for _ in range(6):
+                        page.wait_for_timeout(400)
+                        cur = page.screenshot(full_page=True)
+                        if cur == prev:
+                            break
+                        prev = cur
+                    open(f'{OUT}/{slug(r)}_{w}.png', 'wb').write(cur)
+                else:
+                    page.screenshot(path=f'{OUT}/{slug(r)}_{w}.png', full_page=True)
                 report[f'{slug(r)}_{w}'] = m
                 page.close()
             states = [
