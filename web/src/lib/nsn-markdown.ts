@@ -2,8 +2,10 @@
 // Built from the same loader result as the HTML page; only sections that have
 // data are emitted. Pure: no I/O.
 import type { NsnPageData } from './nsn-page';
-import { amscGloss, formatUsdPrecise, parseCharacteristics, toDashedNsn } from './shared';
+import { amscGloss, competitionOf, formatUsdPrecise, parseCharacteristics, toDashedNsn } from './shared';
 import { nsnCopyInputFrom } from './nsn-copy';
+import { competitionRead } from './competition-read';
+import { priceSummary } from './sol-history';
 import { niinDashed, nomen, nsnSummary } from './seo-copy';
 
 const MAX_PRICE_ROWS = 50;
@@ -44,6 +46,13 @@ export function nsnMarkdown(page: NsnPageData, siteUrl: string): string {
     out.push('## Part numbers', '', table(['Part number', 'CAGE', 'Supplier', 'Source'], partNumbers.map((p) => [p.partNumber, p.cage, p.supplierName, link(p.source, p.sourceUrl)])), '');
   }
 
+  const awardsForRead =
+    pricePoints.length > 0
+      ? pricePoints.map((p) => ({ cage: p.cage, date: p.awardedOn }))
+      : contractActions.filter((c) => c.actionDate !== null).map((c) => ({ cage: c.cage, date: c.actionDate! }));
+  const read = competitionRead({ coded: competitionOf(nsn.amc, nsn.amsc), awards: awardsForRead });
+  out.push('## Competition', '', `- Read: ${read.label}. ${read.reason}`, `- Awards with a supplier considered (last 10): ${read.considered}`, '');
+
   const open = solicitations
     .filter((s) => s.status === 'open')
     .sort((a, b) => (a.returnBy ?? '9999').localeCompare(b.returnBy ?? '9999'));
@@ -53,6 +62,13 @@ export function nsnMarkdown(page: NsnPageData, siteUrl: string): string {
 
   if (pricePoints.length > 0) {
     const newest = [...pricePoints].sort((a, b) => b.awardedOn.localeCompare(a.awardedOn));
+    const sum = priceSummary(pricePoints);
+    const top = newest.find((p) => Number.isFinite(p.unitPrice) && p.unitPrice > 0);
+    if (sum && top) {
+      out.push('## Price headline', '', `- Most recent price: ${formatUsdPrecise(top.unitPrice)} (${top.awardedOn}, ${link('record', top.sourceUrl)})`);
+      if (sum.n >= 2) out.push(`- Last ${sum.n} awards: ${formatUsdPrecise(sum.low)} to ${formatUsdPrecise(sum.high)}`, `- Average of last ${sum.n}: ${formatUsdPrecise(sum.average)}`);
+      out.push(`- Prices on record: ${int(pricePoints.length)}`, '');
+    }
     out.push('## Price history', '', `Newest first${newest.length > MAX_PRICE_ROWS ? `; the ${MAX_PRICE_ROWS} most recent of ${int(newest.length)} purchases` : ''}.`, '');
     out.push(table(['Date', 'Unit price', 'Quantity', 'Supplier', 'Agency', 'Source'], newest.slice(0, MAX_PRICE_ROWS).map((p) => [p.awardedOn, formatUsdPrecise(p.unitPrice), p.quantity !== null ? int(p.quantity) : null, p.supplierName ?? p.cage, p.agencyName, link('record', p.sourceUrl)])), '');
   }
