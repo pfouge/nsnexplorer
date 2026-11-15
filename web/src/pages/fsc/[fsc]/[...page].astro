@@ -19,6 +19,7 @@ import { fscDescription, fscTitle } from '../../../lib/seo-copy';
 import { contractActionsPath, usaspendingActionsByFsc } from '../../../lib/csv-tables';
 import { fscEmbedPath } from '../../../lib/embed';
 import { familyCounts } from '../../../lib/material-family';
+import { buildClassPulse, supplierKey, type PulseAward } from '../../../lib/class-pulse';
 
 // /fsc/<code>/ is page 1; /fsc/<code>/page/<n>/ holds the next PAGE_SIZE cards.
 export async function getStaticPaths() {
@@ -69,6 +70,28 @@ const hasRealFscName = !isPlaceholderFscName(fsc.fsc, fsc.name);
 const fscDisplayName = hasRealFscName ? fsc.name : UNLISTED_FSC_NAME;
 
 const openCount = data.openByFsc.get(fsc.fsc)?.solicitations.length ?? 0;
+
+// "Right now" stats (page 1 only). Awards are the same records "Purchase records" / "Total $"
+// count: price points and NSN-attached contract actions for this class's NSNs, plus the
+// class's category-level contract actions. Dollars use the same formula as computeDemandStats.
+const pulse = (() => {
+  if (page !== 1) return null;
+  const awards: PulseAward[] = [];
+  for (const n of data.nsnsByFsc.get(fsc.fsc) ?? []) {
+    for (const p of data.pricePointsByNsn.get(n.nsn) ?? []) {
+      awards.push({ date: p.awardedOn, amount: p.totalValue ?? p.unitPrice * (p.quantity ?? 1), supplierKey: supplierKey(p.cage, p.supplierName) });
+    }
+    for (const c of data.contractActionsByNsn.get(n.nsn) ?? []) {
+      awards.push({ date: c.actionDate, amount: c.obligation ?? 0, supplierKey: supplierKey(c.recipientUei, c.recipientName) });
+    }
+  }
+  for (const c of fscActions) {
+    awards.push({ date: c.actionDate, amount: c.obligation ?? 0, supplierKey: supplierKey(c.recipientUei, c.recipientName) });
+  }
+  return buildClassPulse(data.viz.today, data.openByFsc.get(fsc.fsc)?.solicitations ?? [], awards);
+})();
+const hasOpenPage = data.solicitationsByFsc.has(fsc.fsc);
+const pulseStats = pulse ? [pulse.awarded90, pulse.suppliers12].filter(Boolean).length + 1 : 0;
 
 // "Market view" charts: page 1 only. Each chart is null (and renders nothing)
 // when its data is below that chart's minimum.
@@ -161,7 +184,7 @@ const breadcrumbSchema = {
     <a href="#awards">Contract awards</a>
   </nav>
 
-  <div class="stat-strip" id="overview">
+  <div class:list={['stat-strip', { roomy: pulseStats >= 3 }]} id="overview">
     <div class="stat">
       <div class="value">{total.toLocaleString('en-US')}</div>
       <div class="label">NSNs tracked</div>
@@ -174,6 +197,29 @@ const breadcrumbSchema = {
       <div class="value up">{formatUsd(totalDollars)}</div>
       <div class="label">Total $</div>
     </div>
+    {pulse && (
+      <div class="stat">
+        <div class="value">
+          {hasOpenPage ? <a href={`/open/${fsc.fsc}/`}>{pulse.open.count.toLocaleString('en-US')}</a> : pulse.open.count.toLocaleString('en-US')}
+        </div>
+        <div class="label">Open bids</div>
+        {pulse.open.count > 0 && <div class="gloss">{pulse.open.closingSoon.toLocaleString('en-US')} closing within 7 days</div>}
+      </div>
+    )}
+    {pulse?.awarded90 && (
+      <div class="stat">
+        <div class="value up">{formatUsd(pulse.awarded90.dollars)}</div>
+        <div class="label">Awarded, last 90 days</div>
+        <div class="gloss">across {pulse.awarded90.count.toLocaleString('en-US')} {pulse.awarded90.count === 1 ? 'award' : 'awards'} on record</div>
+      </div>
+    )}
+    {pulse?.suppliers12 && (
+      <div class="stat">
+        <div class="value">{pulse.suppliers12.count.toLocaleString('en-US')}</div>
+        <div class="label">Suppliers, last 12 months</div>
+        <div class="gloss">distinct winners on record</div>
+      </div>
+    )}
   </div>
 
   {hasMarket && market && (
