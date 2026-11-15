@@ -43,6 +43,7 @@ import {
   threadCallout,
   txt,
 } from './diagram-kit.ts';
+import { resolveMore } from './diagram-more.ts';
 
 export interface ShapeOpts {
   nsnDashed: string;
@@ -542,6 +543,7 @@ export function annulusKindFor(fsc: string, itemName: string | null): AnnulusKin
     if (root === 'SEAL' && rest.every((t) => t === 'PLAIN' || t === 'ENCASED')) return 'seal';
     if (root === 'GASKET' && rest.every((t) => t === 'SPIRAL' || t === 'WOUND')) return 'gasket';
     if (root === 'PACKING' && rest.length === 1 && rest[0] === 'PREFORMED') return 'packing';
+    if (root === 'RETAINER' && rest.length === 1 && rest[0] === 'PACKING') return 'packing';
   }
   if (fsc === '5365' && root === 'SHIM' && rest.length === 0) return 'shim';
   if (fsc === '5365' && root === 'SPACER' && rest.length === 1 && rest[0] === 'RING') return 'spacer';
@@ -551,6 +553,8 @@ export function annulusKindFor(fsc: string, itemName: string | null): AnnulusKin
 
 export function annulusModel(entries: CharacteristicEntry[], kind: AnnulusKind, itemName: string | null = null): AnnulusModel | null {
   const spec = ANNULUS[kind];
+  // both a height and a thickness stated: the section is not a plain square, so it is not drawn
+  if (kind === 'packing' && hasReq(entries, /^CROSS-SECTIONAL HEIGHT$/i) && hasReq(entries, /^CROSS-SECTIONAL THICKNESS$/i)) return null;
   const od = getMeas(entries, spec.od);
   const id = getMeas(entries, spec.id);
   const depth = getMeas(entries, spec.depth);
@@ -686,15 +690,22 @@ export interface SpringModel {
   wireG: number;
   coils: number | null;
   material: string | null;
+  variant: SpringVariant;
 }
 
-export function springKindFor(fsc: string, itemName: string | null): boolean {
-  if (fsc !== '5360' || rootOf(itemName) !== 'SPRING') return false;
+export type SpringVariant = 'compression' | 'extension' | 'torsion';
+
+export function springKindFor(fsc: string, itemName: string | null): SpringVariant | null {
+  if (fsc !== '5360' || rootOf(itemName) !== 'SPRING') return null;
   const rest = tokensOf(itemName).slice(1);
-  return rest.length === 2 && rest[0] === 'HELICAL' && (rest[1] === 'COMPRESSION' || rest[1] === 'COMP');
+  if (rest.length !== 2 || rest[0] !== 'HELICAL') return null;
+  if (/^COMP(?:RES|RESSION)?$/.test(rest[1])) return 'compression';
+  if (rest[1] === 'EXTENSION') return 'extension';
+  if (rest[1] === 'TORSION' || rest[1] === 'TORS') return 'torsion';
+  return null;
 }
 
-export function springModel(entries: CharacteristicEntry[]): SpringModel | null {
+export function springModel(entries: CharacteristicEntry[], variant: SpringVariant = 'compression'): SpringModel | null {
   const len = getMeas(entries, [/^SPRING FREE LENGTH$/i]);
   const od = getMeas(entries, [/^SPRING FREE OUTSIDE DIAMETER$/i]);
   const id = getMeas(entries, [/^INSIDE DIAMETER$/i]);
@@ -709,7 +720,7 @@ export function springModel(entries: CharacteristicEntry[]): SpringModel | null 
   if (wire && id && Math.abs((od.mid - id.mid) / 2 - wire.mid) > 0.2 * wire.mid) return null;
   const cq = getText(entries, [/^COIL QUANTITY$/i]);
   const coils = cq && /^\d{1,2}(?:\.\d)?$/.test(cq) && Number(cq) >= 2 ? Number(cq) : null;
-  return { unit, len, od, id, wire, wireG, coils, material: materialLabel(entries) };
+  return { unit, len, od, id, wire, wireG, coils, material: materialLabel(entries), variant };
 }
 
 function springPoints(x0: number, lenPx: number, yTop: number, yBot: number, turns: number): string {
@@ -745,11 +756,12 @@ function drawSpring(m: SpringModel, o: ShapeOpts): string | null {
   const dimOd = dimV(top, bot, x0 + lenPx + 34, x0 + lenPx, x0 + lenPx, `⌀${m.od.text} O.D.`, 'right');
   const dimId = m.id ? dimV(top + wPx, bot - wPx, x0 - 34, x0, x0, `⌀${m.id.text} I.D.`, 'left') : '';
   if (x0 + lenPx + 34 + 9 + textWidth(`⌀${m.od.text} O.D.`) > 740 || x0 - 34 - 9 - textWidth(m.id ? `⌀${m.id.text} I.D.` : '') < 20) return null;
-  const notes = ['END FORM NOT DRAWN', generic ? 'TURN COUNT SHOWN GENERIC' : 'TURNS AS STATED'];
+  const endNote = m.variant === 'extension' ? 'HOOKS NOT DRAWN, LENGTH AS STATED' : m.variant === 'torsion' ? 'LEGS NOT DRAWN' : 'END FORM NOT DRAWN';
+  const notes = [endNote, generic ? 'TURN COUNT SHOWN GENERIC' : 'TURNS AS STATED'];
   return frame(view + dimLen + dimOd + dimId, {
     nsnDashed: o.nsnDashed,
     unit: m.unit,
-    items: [o.itemName ?? 'SPRING, HELICAL, COMPRESSION', m.wire ? `WIRE ⌀${m.wire.text}` : null, m.material],
+    items: [o.itemName ?? `SPRING, HELICAL, ${m.variant.toUpperCase()}`, m.wire ? `WIRE ⌀${m.wire.text}` : null, m.material],
     notes,
   });
 }
@@ -1053,6 +1065,8 @@ const NONE: Resolved = { claimed: false, shape: null };
 const OLD_FALLBACK = new Set<AnnulusKind>(['washer', 'oring', 'packing', 'gasket', 'spacer']);
 
 export function resolveShape(entries: CharacteristicEntry[], fsc: string, itemName: string | null): Resolved {
+  const more = resolveMore(entries, fsc, itemName);
+  if (more) return more;
   const fk = fastenerKindFor(fsc, itemName);
   if (fsc === '5305' || fsc === '5306' || fsc === '5307' || fk === 'rivet' || fk === 'pin') {
     // 5315 names that are not a straight pin stay with the older pin builder (and its name filter)
@@ -1066,8 +1080,9 @@ export function resolveShape(entries: CharacteristicEntry[], fsc: string, itemNa
     // washers, o-rings, packings, gaskets and ring spacers the data cannot draw may still be drawn by an older builder
     return { claimed: !!m || !OLD_FALLBACK.has(ak), shape: m ? { kind: ak, draw: (o) => drawAnnulus(m, o), thumb: () => thumbAnnulus(m) } : null };
   }
-  if (springKindFor(fsc, itemName)) {
-    const m = springModel(entries);
+  const sk = springKindFor(fsc, itemName);
+  if (sk) {
+    const m = springModel(entries, sk);
     // a spring the data cannot draw may still be drawn by the older spring builder
     return m ? { claimed: true, shape: { kind: 'spring', draw: (o) => drawSpring(m, o), thumb: () => thumbSpring2(m) } } : NONE;
   }
@@ -1094,6 +1109,20 @@ const viaShape = (want: (fsc: string, name: string | null) => boolean, fsc: stri
 export const buildBoltDiagram = viaShape((f, nm) => fastenerKindFor(f, nm) === 'bolt', '5306');
 export const buildStudDiagram = viaShape((f, nm) => fastenerKindFor(f, nm) === 'stud', '5307');
 export const buildStraightPinDiagram = viaShape((f, nm) => fastenerKindFor(f, nm) === 'pin', '5315');
+const viaMore = (kind: string, fscs: string[]) => (entries: CharacteristicEntry[], o: ShapeOpts): string | null => {
+  for (const f of fscs) {
+    const r = resolveMore(entries, f, o.itemName);
+    if (r?.shape && r.shape.kind === kind) return r.shape.draw(o);
+  }
+  return null;
+};
+export const buildShoulderDiagram = viaMore('shoulder', ['5305', '5306']);
+export const buildExtendedWasherNutDiagram = viaMore('extnut', ['5310']);
+export const buildQuickReleasePinDiagram = viaMore('qrpin', ['5315']);
+export const buildCotterPinDiagram = viaMore('cotter', ['5315']);
+export const buildElbowDiagram = viaMore('elbow', ['4730']);
+export const buildStraightFittingDiagram = viaMore('straight', ['4730']);
+export const buildHoseClampDiagram = viaMore('hoseclamp', ['4730', '5340']);
 export const buildRivetDiagram = viaShape((f, nm) => fastenerKindFor(f, nm) === 'rivet', '5320');
 export const buildBearingDiagram = viaShape((f, nm) => annulusKindFor(f, nm) === 'bearing', '3110');
 export const buildSealDiagram = viaShape((f, nm) => annulusKindFor(f, nm) === 'seal', '5330');
@@ -1105,7 +1134,7 @@ export const buildRingSpacerDiagram = viaShape((f, nm) => annulusKindFor(f, nm) 
 export const buildShimDiagram = viaShape((f, nm) => annulusKindFor(f, nm) === 'shim', '5365');
 export const buildRetainingRingDiagram = viaShape((f, nm) => retainingKindFor(f, nm), '5325');
 export const buildLoopClampDiagram = viaShape((f, nm) => loopKindFor(f, nm), '5340');
-export const buildCompressionSpringDiagram = viaShape((f, nm) => springKindFor(f, nm), '5360');
+export const buildCompressionSpringDiagram = viaShape((f, nm) => springKindFor(f, nm) !== null, '5360');
 export const buildKeyDiagram = viaShape((f, nm) => keyKindFor(f, nm), '5315');
 
 // clip and arrow are re-exported for tests that build their own fixtures

@@ -1438,6 +1438,13 @@ export {
   buildRivetDiagram,
   buildSealDiagram,
   buildShimDiagram,
+  buildShoulderDiagram,
+  buildExtendedWasherNutDiagram,
+  buildQuickReleasePinDiagram,
+  buildCotterPinDiagram,
+  buildElbowDiagram,
+  buildStraightFittingDiagram,
+  buildHoseClampDiagram,
   buildStraightPinDiagram,
   buildStudDiagram,
 } from './diagram-shapes.ts';
