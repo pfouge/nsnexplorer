@@ -14,7 +14,7 @@ export const classesHeaders = [
   'closing_within_7_days', 'priced_purchases', 'priced_dollars', 'as_of',
 ] as const;
 export const groupsHeaders = ['fsg', 'name', 'classes', 'nsns_tracked', 'open_solicitations', 'as_of'] as const;
-export const agenciesHeaders = ['agency', 'abbreviation', 'purchases_indexed', 'dollars_indexed', 'as_of'] as const;
+export const agenciesHeaders = ['agency', 'abbreviation', 'purchases_indexed', 'dollars_indexed', 'contract_actions', 'obligated', 'as_of'] as const;
 export const contractActionHeaders = [
   'action_date', 'piid', 'psc', 'naics', 'description', 'obligation', 'agency', 'recipient_name', 'source_url',
 ] as const;
@@ -83,10 +83,11 @@ export function agenciesRows(data: SiteData) {
     .map((a) => {
       const purchases = data.purchasesByAgency.get(a.agencyId) ?? [];
       const dollars = purchases.reduce((sum, p) => sum + (p.totalValue ?? p.unitPrice * (p.quantity ?? 1)), 0);
-      return { a, count: purchases.length, dollars: cents(dollars) };
+      const prof = data.agencyProfiles.get(a.agencyId);
+      return { a, count: purchases.length, dollars: cents(dollars), actions: prof?.actions ?? 0, obligated: cents(prof?.obligated ?? 0) };
     })
-    .sort((x, y) => y.dollars - x.dollars || x.a.name.localeCompare(y.a.name))
-    .map(({ a, count, dollars }) => [a.name, a.abbreviation, count, dollars, asOf]);
+    .sort((x, y) => y.obligated - x.obligated || y.dollars - x.dollars || x.a.name.localeCompare(y.a.name))
+    .map(({ a, count, dollars, actions, obligated }) => [a.name, a.abbreviation, count, dollars, actions, obligated, asOf]);
 }
 
 function isUsaspending(a: ContractActionRecord): boolean {
