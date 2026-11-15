@@ -212,6 +212,8 @@ async function oldLoadNsnPage(sql, nsnCode) {
     status: r.status,
     setaside: r.setaside,
     buyerOffice: r.buyer_office,
+    techDocs: null,
+    awardFound: false,
     source: r.source,
     sourceUrl: assertSourceUrl(r.source_url, `solicitations.sol_number=${r.sol_number}`),
   }));
@@ -384,6 +386,8 @@ async function oldLoadSolicitationPage(sql, solNumber) {
     status: r.status,
     setaside: r.setaside,
     buyerOffice: r.buyer_office,
+    techDocs: null,
+    awardFound: false,
     source: r.source,
     sourceUrl: assertSourceUrl(r.source_url, `solicitations.sol_number=${r.sol_number}`),
   };
