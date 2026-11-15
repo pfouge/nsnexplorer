@@ -244,5 +244,28 @@ FROM (SELECT nsn FROM pub.nsns WHERE fsc = '5340' ORDER BY nsn OFFSET 7 LIMIT 1)
        ('SPE9Z126T0007',    'sam_gov',   'expired',   CURRENT_DATE - 1,  'G')
      ) AS v(sol, src, st, ret, grp);
 
+-- Drawing pointers (web/src/lib/standard-refs.ts): one NSN with standard-sheet part numbers and spec replies, one solicitation
+-- per DIBBS tech-docs kind, one unrecognised text, and one DIBBS row with no NSN. Hand-checked in checkDrawingPointers.
+INSERT INTO pub.nsns (nsn, fsc, item_name, characteristics, hazmat)
+VALUES ('5340009990001', '5340', 'SEED BOLT, STANDARD SHEET',
+        '[{"mrc":"CBBL","requirement":"SPECIFICATION/STANDARD DATA","reply":"81349-MIL-DTL-25988 CLASS 1"},{"mrc":"MATT","requirement":"MATERIAL","reply":"AMS7276"}]'::jsonb,
+        NULL);
+INSERT INTO pub.part_numbers (nsn, part_number, cage, source, source_url) VALUES
+  ('5340009990001', 'MS35338-44',     '96906', 'flis', 'https://www.dla.mil/seed/pn1'),
+  ('5340009990001', 'AN960-10',       '88044', 'flis', 'https://www.dla.mil/seed/pn2'),
+  ('5340009990001', 'NAS1352-4-6',    '80205', 'flis', 'https://www.dla.mil/seed/pn3'),
+  ('5340009990001', 'AMS7276',        '12345', 'flis', 'https://www.dla.mil/seed/pn4'),
+  ('5340009990001', 'KIT-MS35338-44', '12345', 'flis', 'https://www.dla.mil/seed/pn5');
+INSERT INTO pub.solicitations (sol_number, nsn, fsc, nomenclature, quantity, issued_on, return_by, status, source_url, source, raw)
+SELECT v.sol, v.nsn, '5340', 'SEED DRAWING POINTER', 10, CURRENT_DATE - 2, CURRENT_DATE + 14, 'open',
+       'https://www.dibbs.bsm.dla.mil/RFQ/RFQNsn.aspx?value=seeddraw&category=nsn', 'dibbs_rfq', jsonb_build_object('techDocs', v.td)
+FROM (VALUES
+  ('SEED-DRAW-TD',     '5340009990001', 'Tech Docs'),
+  ('SEED-DRAW-SP',     '5340009990001', 'Tech Docs *Spec/Stnd Only'),
+  ('SEED-DRAW-NO',     '5340009990001', 'None'),
+  ('SEED-DRAW-ODD',    '5340009990001', 'Tech Docs maybe'),
+  ('SEED-DRAW-ORPHAN', NULL,            'Tech Docs')
+) AS v(sol, nsn, td);
+
 COMMIT;
 ANALYZE;

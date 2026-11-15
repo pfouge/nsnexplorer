@@ -11,8 +11,9 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import CiteThis from '../../components/CiteThis.astro';
 import Follow from '../../components/Follow.astro';
 import BidCalculator from '../../components/BidCalculator.astro';
+import DrawingsBlock from '../../components/DrawingsBlock.astro';
 import { SITE_URL } from '../../consts';
-import { toDashedNsn, formatDate, formatUsd, formatUsdPrecise } from '../../lib/shared';
+import { toDashedNsn, formatDate, formatUsd, formatUsdPrecise, parseCharacteristics } from '../../lib/shared';
 import { databaseUrlFrom } from '../../lib/runtime-env';
 import { openSql } from '../../lib/nsn-page';
 import { loadSolicitationPage } from '../../lib/solicitation-page';
@@ -20,6 +21,9 @@ import { countdownBadge, daysUntilClose, isSolNumber, solicitationPath, statusBa
 import { priceSummary, repeatWinner, valueAtLastPrice, winners } from '../../lib/sol-history';
 import { CEILING_LABEL, ceilingAmountText } from '../../lib/contract-ceiling';
 import { twinLine } from '../../lib/sol-twin';
+import { collectStandardDocs } from '../../lib/standard-refs';
+import { drawingsBlock } from '../../lib/drawings-copy';
+import { buildDiagram } from '../../lib/diagram';
 
 export const prerender = false;
 
@@ -63,6 +67,15 @@ const lastPricePoint = summary
 const winnerRows = winners(partPrices).slice(0, 8);
 const repeat = repeatWinner(partPrices);
 const priceRows = pricedParts.slice(0, 10);
+
+// "Drawings and technical data" (DIBBS rows only): official pointers, never a copy of any drawing. The part's standard
+// documents (MS/AN/NAS sheets, MIL specs) come from its part numbers and FLIS characteristics; the generated diagram is
+// the same one the part page shows, with its "drawn from catalog data" caveat.
+const characteristics = parseCharacteristics(page.characteristics);
+const standardDocs = collectStandardDocs({ characteristics, partNumbers: page.partNumbers });
+const drawings = drawingsBlock(techDocs, sol.source, standardDocs.length > 0, sol.sourceUrl);
+const drawingDiagram =
+  drawings && dashed && sol.fsc ? buildDiagram(characteristics, sol.fsc, { nsnDashed: dashed, itemName: page.sol.itemName }) : null;
 
 const status = statusBadge(sol.status);
 const countdown = isOpen ? countdownBadge(daysUntilClose(sol.returnBy, new Date())) : null;
@@ -194,6 +207,10 @@ const primaryLabel = isOpen
       </a>
     )}
   </p>
+
+  {drawings && <DrawingsBlock block={drawings} docs={standardDocs} diagram={drawingDiagram} />}
+  {/* INSERTION POINT (SAM.gov rows): notice attachments and resource links for source === 'sam_gov' are handled by another
+      change. drawingsBlock() returns null for sam_gov on purpose; nothing here reads raw notice attachments. */}
 
   {matchedAwards.length > 0 && (
     <section id="award-on-record">

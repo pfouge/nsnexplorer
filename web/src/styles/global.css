@@ -726,3 +726,7 @@ button.copy, .copy-btn { font: inherit; font-size: 0.8125rem; font-weight: 600; 
 .std-what { color: var(--ink-soft); font-size: 0.9375rem; }
 .std-sentence { font-size: 0.9375rem; }
 .std-action { font-size: 0.9375rem; }
+.drawings-block ol { margin: 0.75rem 0 0; padding-left: 1.4rem; }
+.drawings-block li { margin: 0.5rem 0; overflow-wrap: anywhere; }
+.drawings-block .drawings-notes { margin: 0.75rem 0 0; padding-left: 1.2rem; }
+.drawings-block .drawings-notes li { margin: 0.35rem 0; }

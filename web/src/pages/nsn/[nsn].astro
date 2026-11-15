@@ -14,6 +14,7 @@ import StandardDrawings from '../../components/StandardDrawings.astro';
 import { SITE_URL } from '../../consts';
 import { buildDiagram } from '../../lib/diagram';
 import { ASSIST_QUICK_SEARCH_URL, collectStandardDocs, extractStandardRefs } from '../../lib/standard-refs';
+import { DRAWINGS_ANCHOR, techDocsLineForPart } from '../../lib/drawings-copy';
 import {
   toDashedNsn,
   undashNsn,
@@ -180,6 +181,7 @@ const hasMoe = moe.us.length > 0 || moeForeign !== null;
 // link goes to the site and the id to type is shown beside it.
 const standardDocs = collectStandardDocs({ characteristics, partNumbers });
 const specDoc = (text: string): string | null => extractStandardRefs(text)[0]?.id ?? null;
+const techDocsLine = techDocsLineForPart(openSols);
 
 // Dimensioned drawing: generated at build time from catalog dimensions for
 // every NSN whose specs support a known archetype (dispatched by FSC in
@@ -402,6 +404,12 @@ const datasetSchema = {
           </tbody>
         </table>
       </div>
+      {techDocsLine && (
+        <p class="gloss" id="open-tech-docs">
+          {techDocsLine.text}{' '}
+          <a href={`/solicitation/${techDocsLine.solNumber}/#${DRAWINGS_ANCHOR}`}>How to get the drawings</a>
+        </p>
+      )}
     </section>
   ) : (
     <section class="panel" id="open">

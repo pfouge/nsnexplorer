@@ -73,6 +73,7 @@ NSN Explorer indexes ${int(data.stats.totalNsns)} National Stock Numbers (NSNs) 
 - [Browse deep categories](${SITE_URL}/browse/) — Federal Supply Classes with fully-indexed price history.
 - [Open demand](${SITE_URL}/open/) — every open DLA solicitation by supply class.
 - [Agencies](${SITE_URL}/agencies/) — purchases grouped by buying agency.
+- [Guides](${SITE_URL}/guides/) — plain-language guides, including [how to get the drawings for a DLA solicitation](${SITE_URL}/guides/how-to-get-the-drawings-for-a-dla-solicitation/).
 - [Methodology](${SITE_URL}/methodology/) — how prices are sourced and linked to public records.
 - [About](${SITE_URL}/about/) — who runs this site and how to reach us.
 

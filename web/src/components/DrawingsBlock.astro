@@ -1,0 +1,63 @@
+---
+// DrawingsBlock: "Drawings and technical data" on a DIBBS solicitation page. Copy and official links live in
+// src/lib/drawings-copy.ts (each tied to a DLA page); the part's standard documents come from src/lib/standard-refs.ts.
+// Never hosts or copies a drawing or attachment: links and instructions only.
+import StandardDrawings from './StandardDrawings.astro';
+import { DRAWINGS_ANCHOR, GUIDE_PATH, type DrawingsBlock as Model } from '../lib/drawings-copy';
+import type { StandardDoc } from '../lib/standard-refs';
+
+interface Props {
+  block: Model;
+  docs: StandardDoc[];
+  /** Pre-rendered generated diagram (diagram.ts buildDiagram) or null. */
+  diagram: string | null;
+}
+const { block, docs, diagram } = Astro.props;
+---
+
+<section id={DRAWINGS_ANCHOR} class="panel drawings-block" aria-labelledby="drawings-h">
+  <h2 class="section-title" id="drawings-h" style="margin-top:0;">{block.heading}</h2>
+  <p><span class="badge">{block.badge}</span></p>
+  <p>{block.intro}</p>
+
+  <ol>
+    {block.steps.map((s) => (
+      <li>
+        {s.text}
+        {s.link && (
+          <>
+            {' '}
+            {s.link.external ? (
+              <a href={s.link.href} target="_blank" rel="nofollow noopener">{s.link.label} ↗</a>
+            ) : (
+              <a href={s.link.href}>{s.link.label}</a>
+            )}
+          </>
+        )}
+      </li>
+    ))}
+  </ol>
+
+  {block.showStandards && docs.length > 0 && (
+    <>
+      <h3 class="section-title" id="drawings-std-h">Standard documents for this part</h3>
+      <StandardDrawings docs={docs} headingId="drawings-std-h" />
+    </>
+  )}
+  {block.showStandards && docs.length === 0 && block.noStandardsNote && <p class="gloss">{block.noStandardsNote}</p>}
+
+  {diagram && (
+    <>
+      <h3 class="section-title">Generated diagram</h3>
+      <p class="gloss">Drawn from catalog data for this NSN. Reference only, not a manufacturing drawing.</p>
+      <div class="card" style="padding:1rem;" set:html={diagram} />
+    </>
+  )}
+
+  {block.notes.length > 0 && (
+    <ul class="drawings-notes gloss">
+      {block.notes.map((n) => <li>{n}</li>)}
+    </ul>
+  )}
+  <p><a href={GUIDE_PATH}>How to get the drawings for a DLA solicitation: the full guide</a></p>
+</section>
