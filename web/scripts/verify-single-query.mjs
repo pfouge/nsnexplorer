@@ -559,6 +559,26 @@ async function checkSupplierProfile(db, cage, page, seen) {
   const pn = await q(`select pn.nsn, nn.item_name, pn.part_number from pub.part_numbers pn join pub.nsns nn on nn.nsn = pn.nsn where pn.cage = $1 order by pn.nsn, pn.part_number`);
   const [{ n: pnCount }] = await q(`select count(*)::int as n from pub.part_numbers where cage = $1`);
   eq('parts', [page.parts.count, page.parts.rows.map((r) => [r.nsn, r.itemName, r.partNumber])], [pnCount, pn.slice(0, 50).map((r) => [r.nsn, cl(r.item_name), r.part_number])]);
+  // ---- listed parts by supply class: ALL part numbers for the CAGE, distinct NSNs per class (first 4 NSN digits), top 12 by count desc then fsc
+  const fscRows = await q(`select fsc, name, render_depth from pub.fsc`, []);
+  const fscInfo = new Map(fscRows.map((r) => [r.fsc, r]));
+  const perClass = new Map();
+  for (const r of await q(`select nsn from pub.part_numbers where cage = $1`)) {
+    const k = String(r.nsn).slice(0, 4);
+    if (!perClass.has(k)) perClass.set(k, new Set());
+    perClass.get(k).add(r.nsn);
+  }
+  const classesExpected = [...perClass].map(([fsc, set]) => ({ fsc, n: set.size })).sort((a, b) => b.n - a.n || (a.fsc < b.fsc ? -1 : a.fsc > b.fsc ? 1 : 0));
+  eq('parts.byClass', page.parts.byClass.map((c) => [c.fsc, c.name, c.count, c.link]),
+    classesExpected.slice(0, 12).map((c) => {
+      const f = fscInfo.get(c.fsc);
+      const nm = cl(f?.name);
+      return [c.fsc, nm === null || nm === `FSC ${c.fsc}` ? null : nm, c.n, f?.render_depth === 'deep'];
+    }));
+  eq('parts.classTotal', page.parts.classTotal, classesExpected.length);
+  eq('parts.rows fsc/fscLink', page.parts.rows.map((r) => [r.fsc, r.fscLink]), pn.slice(0, 50).map((r) => [String(r.nsn).slice(0, 4), fscInfo.get(String(r.nsn).slice(0, 4))?.render_depth === 'deep']));
+  if (classesExpected.length > 1) seen.partClasses = (seen.partClasses ?? 0) + 1;
+  if (classesExpected.length > 12) seen.partClassesOver12 = (seen.partClassesOver12 ?? 0) + 1;
   if (pnCount > 0) seen.parts++;
   const nsns = [...new Set((await q(`select nsn from pub.part_numbers where cage = $1`)).map((r) => r.nsn))];
   const bids = nsns.length

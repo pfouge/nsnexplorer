@@ -36,7 +36,10 @@ import {
   allRanks,
   changeSentence,
   longDate,
+  loadedClasses,
   mailHref,
+  moreClassesText,
+  partClassLabel,
   rankBadges,
   registrationBadge,
   samEntityUrl,
@@ -83,6 +86,9 @@ const description = supplierDescription(copy);
 const canonicalUrl = `${SITE_URL}/supplier/${cage}/`;
 const capped = awards > page.rows.length;
 const fmtInt = (n: number): string => n.toLocaleString('en-US');
+const partClasses = loadedClasses(page.parts.rows);
+const partClassNames = new Map(page.parts.byClass.map((c) => [c.fsc, c.name]));
+const moreClasses = moreClassesText(page.parts.classTotal, page.parts.byClass.length);
 
 // ---- header
 const website = safeHttpUrl(sam?.entityUrl) ?? safeHttpUrl(web?.finalUrl) ?? safeHttpUrl(web?.url);
@@ -623,17 +629,41 @@ const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Suppl
           </table>
         </div>
       )}
+      {page.parts.byClass.length > 0 && (
+        <>
+          <p class="sp-chip-label" id="parts-class-label">Listed parts by supply class (distinct NSNs)</p>
+          <ul class="sp-chips" aria-labelledby="parts-class-label">
+            {page.parts.byClass.map((c) => (
+              <li>{c.link ? <a href={`/fsc/${c.fsc}/`}>{partClassLabel(c)}</a> : partClassLabel(c)}</li>
+            ))}
+            {moreClasses && <li>{moreClasses}</li>}
+          </ul>
+        </>
+      )}
       <details class="state-more">
         <summary>Parts listed for this supplier ({fmtInt(parts.count)}){parts.count > parts.rows.length ? `, first ${fmtInt(SUPPLIER_PART_ROWS)} shown` : ''}</summary>
+        {partClasses.length > 1 && (
+          <div class="sp-part-filter">
+            <div class="filter-group">
+              <label class="filter-label" for="sp-part-class">Class</label>
+              <select id="sp-part-class">
+                <option value="all">All</option>
+                {partClasses.map((f) => <option value={f}>{f}{partClassNames.get(f) ? ` ${partClassNames.get(f)}` : ''}</option>)}
+              </select>
+            </div>
+            <span class="gloss" id="sp-part-status" aria-live="polite">Showing {fmtInt(parts.rows.length)} of {fmtInt(parts.rows.length)} loaded</span>
+          </div>
+        )}
         <div class="table-wrap">
-          <table>
+          <table id="sp-part-table">
             <thead>
-              <tr><th>NSN</th><th>Item</th><th>Part number</th></tr>
+              <tr><th>NSN</th><th>Class</th><th>Item</th><th>Part number</th></tr>
             </thead>
             <tbody>
               {parts.rows.map((p) => (
-                <tr>
+                <tr data-fsc={p.fsc}>
                   <td class="mono"><a href={`/nsn/${toDashedNsn(p.nsn)}/`}>{toDashedNsn(p.nsn)}</a></td>
+                  <td class="mono">{p.fscLink ? <a href={`/fsc/${p.fsc}/`}>{p.fsc}</a> : p.fsc}</td>
                   <td>{p.itemName ?? '—'}</td>
                   <td class="mono">{p.partNumber}</td>
                 </tr>
@@ -740,3 +770,19 @@ const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Suppl
     <CiteThis title={heading} url={canonicalUrl} asOf={new Date().toISOString().slice(0, 10)} />
   </section>
 </BaseLayout>
+
+<script>
+  import { partFilterStatus } from '../../lib/supplier-view';
+  const select = document.getElementById('sp-part-class') as HTMLSelectElement | null;
+  const status = document.getElementById('sp-part-status');
+  const body = document.querySelector('#sp-part-table tbody');
+  if (select && status && body) {
+    const trs = Array.from(body.querySelectorAll<HTMLTableRowElement>('tr'));
+    const rows = trs.map((tr) => ({ fsc: tr.dataset.fsc ?? '' }));
+    select.addEventListener('change', () => {
+      const v = select.value;
+      trs.forEach((tr) => { tr.hidden = v !== 'all' && tr.dataset.fsc !== v; });
+      status.textContent = partFilterStatus(rows, v).text;
+    });
+  }
+</script>

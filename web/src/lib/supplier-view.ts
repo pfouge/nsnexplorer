@@ -174,3 +174,25 @@ export function aboutMode(web: SupplierWeb | null): AboutMode {
 /** True when the About section has anything besides the summary (chips, founded). */
 export const aboutHasFacts = (web: SupplierWeb | null): boolean =>
   !!web && web.status === 'ok' && (web.products.length > 0 || web.capabilities.length > 0 || web.certifications.length > 0 || web.founded !== null);
+
+/** Chip text for a supply class in the listed-parts breakdown: "5340 Hardware, Commercial · 42" (name omitted when unknown). */
+export function partClassLabel(c: { fsc: string; name: string | null; count: number }): string {
+  return `${c.fsc}${c.name ? ` ${c.name}` : ''} · ${c.count.toLocaleString('en-US')}`;
+}
+
+/** "+N more classes" text when the breakdown shows fewer classes than the supplier has; null when everything is shown. */
+export function moreClassesText(classTotal: number, shown: number): string | null {
+  const rest = classTotal - shown;
+  return rest > 0 ? `+${rest.toLocaleString('en-US')} more ${rest === 1 ? 'class' : 'classes'}` : null;
+}
+
+/** Distinct classes among loaded part rows, in code order; the filter select is only offered when there are 2 or more. */
+export function loadedClasses(rows: readonly { fsc: string }[]): string[] {
+  return [...new Set(rows.map((r) => r.fsc))].sort();
+}
+
+/** "Showing X of Y loaded" for the class filter; fsc '' or 'all' means no filter. */
+export function partFilterStatus(rows: readonly { fsc: string }[], fsc: string): { shown: number; text: string } {
+  const shown = fsc === '' || fsc === 'all' ? rows.length : rows.filter((r) => r.fsc === fsc).length;
+  return { shown, text: `Showing ${shown.toLocaleString('en-US')} of ${rows.length.toLocaleString('en-US')} loaded` };
+}

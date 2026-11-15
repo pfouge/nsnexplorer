@@ -334,7 +334,7 @@ const datasetSchema = {
     <a href="#competition">Competition</a>
     {(diagram || characteristics.length > 0 || partNumbers.length > 0) && <a href="#specs">Specs</a>}
     <a href="#prices">Prices <span class="tab-count">{points.length.toLocaleString('en-US')}</span></a>
-    <a href="#purchases">Purchases <span class="tab-count">{sortedPoints.length.toLocaleString('en-US')}</span></a>
+    <a href="#purchases">Purchases</a>
     {(allSols.length > 0 || hasDemandCharts) && <a href="#demand">Demand{allSols.length > 0 && <> <span class="tab-count">{allSols.length.toLocaleString('en-US')}</span></>}</a>}
     <a href="#about">About</a>
   </nav>

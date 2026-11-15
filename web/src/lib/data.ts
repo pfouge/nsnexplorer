@@ -18,6 +18,8 @@ import { compareByClosing, mapServiceNotice, type ServiceNotice, type ServiceNot
 import { nomen } from './seo-copy';
 import { techDocsKind } from './open-signals';
 import { CAGE_RE, SOL_NUMBER_RE } from './entity';
+import type { FiscalYearRow } from './agency-profile';
+import { AGENCY_CLASSES_SQL, AGENCY_FY_SQL, AGENCY_RECENT_SQL, AGENCY_RECIPIENTS_SQL, AGENCY_TOTALS_SQL } from './agency-profile-sql';
 import { foldCalendarRows } from './viz-open';
 import type { DailyStatRow, FreshnessSource, GroupDemandRow, TapeItem, TileInput } from './viz-site';
 import type { RepeatRow, StateCount, WeekCount, WinnerRow } from './viz-class';
@@ -74,6 +76,26 @@ export interface SiteViz {
   byClass: Map<string, ClassViz>;
 }
 
+/** What one agency buys, from USAspending rows in pub.contract_actions (DIBBS rows and rows without an agency excluded). */
+export interface AgencyProfile {
+  agencyId: number;
+  actions: number;
+  /** Sum of obligation, including negative de-obligations. */
+  obligated: number;
+  recipients: number;
+  classes: number;
+  firstDate: string | null;
+  lastDate: string | null;
+  /** Ascending by fiscal year; only years with at least one action. */
+  byFiscalYear: FiscalYearRow[];
+  topRecipients: { name: string; uei: string | null; cage: string | null; actions: number; obligated: number }[];
+  topClasses: { psc: string; name: string | null; actions: number; obligated: number }[];
+  recent: {
+    actionDate: string | null; recipientName: string | null; cage: string | null; psc: string | null; obligation: number | null;
+    description: string | null; piid: string | null; sourceUrl: string;
+  }[];
+}
+
 export interface SiteData {
   viz: SiteViz;
   deepFscs: FscConfig[];
@@ -86,6 +108,8 @@ export interface SiteData {
   contractActionsByFsc: Map<string, ContractActionRecord[]>;
   agencies: AgencyRecord[];
   purchasesByAgency: Map<number, (PricePointRecord & { nsn: string; itemName: string | null })[]>;
+  /** Contract-action profile per agency id (USAspending rows only). Agencies without such rows are absent. */
+  agencyProfiles: Map<number, AgencyProfile>;
   /**
    * ALL solicitations (every status), keyed by NSN, newest first
    * (COALESCE(return_by, issued_on) DESC). Spans ALL FSCs, not just deep
@@ -600,6 +624,20 @@ async function fetchSiteData(): Promise<SiteData> {
     ).rows[0];
     const awardCoverageFrom = coverageRow?.coverage_from ?? null;
 
+    const agencyProfiles = await loadAgencyProfiles(pool);
+    // Agencies are known from price points OR from contract actions: on production
+    // price_points.agency_id is empty, so the contract actions are the only source.
+    for (const [id, p] of agencyProfiles) {
+      if (!agencyMap.has(id)) {
+        agencyMap.set(id, {
+          agencyId: id,
+          name: p.name ?? `Agency ${id}`,
+          abbreviation: p.abbreviation,
+          slug: slugify(p.name ?? `agency-${id}`),
+        });
+      }
+    }
+
     const viz = await loadVizData(pool);
 
     return {
@@ -614,6 +652,7 @@ async function fetchSiteData(): Promise<SiteData> {
       contractActionsByFsc,
       agencies: [...agencyMap.values()].sort((a, b) => a.name.localeCompare(b.name)),
       purchasesByAgency,
+      agencyProfiles: new Map([...agencyProfiles].map(([id, { name: _n, abbreviation: _a, ...rest }]) => [id, rest])),
       solicitationsByNsn,
       openSolicitations,
       openByFsc,
@@ -642,6 +681,69 @@ async function fetchSiteData(): Promise<SiteData> {
   }
 }
 
+
+// ---------------------------------------------------------------------------
+// Agency profiles: USAspending contract actions per buying agency. Five grouped
+// queries for ALL agencies (no per-agency round trips, no correlated subqueries
+// over the ~540k-row table). DIBBS rows carry no agency and are excluded.
+
+async function loadAgencyProfiles(
+  pool: pgTypes.Pool
+): Promise<Map<number, AgencyProfile & { name: string | null; abbreviation: string | null }>> {
+  const [totals, fys, recips, classes, recent] = await Promise.all([
+    pool.query(AGENCY_TOTALS_SQL),
+    pool.query(AGENCY_FY_SQL),
+    pool.query(AGENCY_RECIPIENTS_SQL),
+    pool.query(AGENCY_CLASSES_SQL),
+    pool.query(AGENCY_RECENT_SQL),
+  ]);
+  const out = new Map<number, AgencyProfile & { name: string | null; abbreviation: string | null }>();
+  for (const r of totals.rows) {
+    out.set(Number(r.agency_id), {
+      agencyId: Number(r.agency_id),
+      name: r.name,
+      abbreviation: r.abbreviation,
+      actions: Number(r.actions),
+      obligated: Number(r.obligated),
+      recipients: Number(r.recipients),
+      classes: Number(r.classes),
+      firstDate: r.first_date,
+      lastDate: r.last_date,
+      byFiscalYear: [],
+      topRecipients: [],
+      topClasses: [],
+      recent: [],
+    });
+  }
+  for (const r of fys.rows) {
+    const p = out.get(Number(r.agency_id));
+    const fy = Number(r.fy);
+    p?.byFiscalYear.push({ fy, actions: Number(r.actions), obligated: Number(r.obligated) });
+  }
+  for (const r of recips.rows) {
+    out.get(Number(r.agency_id))?.topRecipients.push({
+      name: r.name, uei: r.uei, cage: r.cage, actions: Number(r.actions), obligated: Number(r.obligated),
+    });
+  }
+  for (const r of classes.rows) {
+    out.get(Number(r.agency_id))?.topClasses.push({
+      psc: r.psc, name: r.name, actions: Number(r.actions), obligated: Number(r.obligated),
+    });
+  }
+  for (const r of recent.rows) {
+    out.get(Number(r.agency_id))?.recent.push({
+      actionDate: r.action_date,
+      recipientName: r.recipient_name,
+      cage: r.cage,
+      psc: r.psc,
+      obligation: r.obligation !== null ? Number(r.obligation) : null,
+      description: r.description,
+      piid: r.piid,
+      sourceUrl: assertSourceUrl(r.source_url, `contract_actions agency=${r.agency_id} piid=${r.piid}`),
+    });
+  }
+  return out;
+}
 
 // ---------------------------------------------------------------------------
 // Chart aggregates. Every feature is one grouped query; the pages only look
