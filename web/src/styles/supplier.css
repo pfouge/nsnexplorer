@@ -37,6 +37,8 @@
 .board-empty { color: var(--ink-soft); }
 .state-more { margin-top: 0.75rem; }
 .state-more > summary { cursor: pointer; font-weight: 600; font-size: 0.9375rem; padding: 6px 0; }
+.sp-part-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0.5rem 0 0.75rem; }
+.sp-part-filter .gloss { margin: 0; }
 .board-foot { font-size: 0.8125rem; color: var(--ink-soft); margin-top: 0.5rem; }
 .board-method h2 { margin-top: 0; }
 .board-method li { margin-bottom: 0.35rem; }

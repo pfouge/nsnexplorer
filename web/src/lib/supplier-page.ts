@@ -175,6 +175,19 @@ export interface SupplierPart {
   nsn: string;
   itemName: string | null;
   partNumber: string;
+  /** Supply class: first four digits of the NSN. */
+  fsc: string;
+  /** True when /fsc/<fsc>/ exists (pub.fsc.render_depth = 'deep'). */
+  fscLink: boolean;
+}
+export interface SupplierPartClass {
+  fsc: string;
+  /** Real class name; null for ingest placeholders ("FSC 5340") and blanks. */
+  name: string | null;
+  /** Distinct NSNs with a part number listed for this CAGE in the class. */
+  count: number;
+  /** True when /fsc/<fsc>/ exists. */
+  link: boolean;
 }
 export interface SupplierOpenBid {
   solNumber: string;
@@ -222,7 +235,14 @@ export interface SupplierPageData {
   /** Agencies named on this supplier's awards (up to 15), most awards first. */
   agencyRows: SupplierAgency[];
   usaspending: { count: number; total: number; rows: SupplierContractAction[] };
-  parts: { count: number; rows: SupplierPart[] };
+  parts: {
+    count: number;
+    rows: SupplierPart[];
+    /** Top classes (SUPPLIER_PART_CLASSES) over ALL listed part numbers, by distinct NSNs. */
+    byClass: SupplierPartClass[];
+    /** Distinct classes over ALL listed part numbers. */
+    classTotal: number;
+  };
   openBids: { total: number; rows: SupplierOpenBid[] };
 }
 
@@ -230,6 +250,7 @@ export const SUPPLIER_TOP_NSNS = 10;
 export const SUPPLIER_AGENCY_ROWS = 15;
 export const SUPPLIER_USA_ROWS = 25;
 export const SUPPLIER_PART_ROWS = 50;
+export const SUPPLIER_PART_CLASSES = 12;
 export const SUPPLIER_OPEN_ROWS = 25;
 export const SUPPLIER_MONTHS = 24;
 
@@ -364,12 +385,24 @@ SELECT st.*,
   (SELECT jsonb_build_object(
             'count', (SELECT count(*) FROM pub.part_numbers pn WHERE pn.cage = $1),
             'rows', COALESCE((SELECT jsonb_agg(to_jsonb(r) ORDER BY r.nsn, r.part_number)
-                               FROM (SELECT pn.nsn, n.item_name, pn.part_number
+                               FROM (SELECT pn.nsn, n.item_name, pn.part_number, left(pn.nsn, 4) AS fsc,
+                                            COALESCE(f.render_depth = 'deep', false) AS fsc_link
                                      FROM pub.part_numbers pn
                                      JOIN pub.nsns n ON n.nsn = pn.nsn
+                                     LEFT JOIN pub.fsc f ON f.fsc = left(pn.nsn, 4)
                                      WHERE pn.cage = $1
                                      ORDER BY pn.nsn, pn.part_number
-                                     LIMIT ${SUPPLIER_PART_ROWS}) r), '[]'::jsonb))) AS parts,
+                                     LIMIT ${SUPPLIER_PART_ROWS}) r), '[]'::jsonb),
+            'by_class', COALESCE((SELECT jsonb_agg(to_jsonb(c) ORDER BY c.count DESC, c.fsc)
+                                   FROM (SELECT g.fsc, f.name, g.count, COALESCE(f.render_depth = 'deep', false) AS link
+                                         FROM (SELECT left(pn.nsn, 4) AS fsc, count(DISTINCT pn.nsn)::int AS count
+                                               FROM pub.part_numbers pn
+                                               WHERE pn.cage = $1
+                                               GROUP BY 1
+                                               ORDER BY count(DISTINCT pn.nsn) DESC, 1
+                                               LIMIT ${SUPPLIER_PART_CLASSES}) g
+                                         LEFT JOIN pub.fsc f ON f.fsc = g.fsc) c), '[]'::jsonb),
+            'class_total', (SELECT count(DISTINCT left(pn.nsn, 4))::int FROM pub.part_numbers pn WHERE pn.cage = $1))) AS parts,
   (SELECT jsonb_build_object(
             'total', COALESCE(max(b.total), 0),
             'rows', COALESCE(jsonb_agg(to_jsonb(b) - 'total' ORDER BY b.return_by NULLS LAST, b.sol_number), '[]'::jsonb))
@@ -626,7 +659,18 @@ export async function loadSupplierPage(sql: Sql, cage: string): Promise<Supplier
     },
     parts: {
       count: num(parts.count),
-      rows: (parts.rows as JsonRow[]).map((r) => ({ nsn: r.nsn, itemName: clean(r.item_name), partNumber: String(r.part_number) })),
+      rows: (parts.rows as JsonRow[]).map((r) => ({
+        nsn: r.nsn,
+        itemName: clean(r.item_name),
+        partNumber: String(r.part_number),
+        fsc: String(r.fsc),
+        fscLink: r.fsc_link === true,
+      })),
+      byClass: (parts.by_class as JsonRow[]).map((r) => {
+        const name = clean(r.name);
+        return { fsc: String(r.fsc), name: name === null || name === `FSC ${r.fsc}` ? null : name, count: num(r.count), link: r.link === true };
+      }),
+      classTotal: num(parts.class_total),
     },
     openBids: {
       total: num(bids.total),
