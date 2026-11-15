@@ -64,7 +64,8 @@ jobs:
         run: node ingest/usaspending/load.mjs --file /tmp/usaspending-${{ matrix.psc }}.jsonl --psc ${{ matrix.psc }}
       # History, one month at a time (ops.source_dates, lane usaspending_<psc>): 2 months per run
       # older than the 120-day window, each checked against USAspending's own count. Re-verifies
-      # the FY2022-26 backfill first (inserting anything missing), then extends back toward FY2008.
+      # the FY2022-26 backfill first (inserting anything missing), then extends back to the class's history
+      # floor (ingest/usaspending/history-floor.mjs: 2021-10-01, or FY2008 for 5330 and 5331) and stops there.
       - name: verify and extend history (2 months)
         run: set -o pipefail; node ingest/usaspending/usaspending-months.mjs --psc ${{ matrix.psc }} --months 2 2>&1 | tee /tmp/usaspending-months.log
       - name: summary
