@@ -81,6 +81,18 @@ test('supplierLede states counts and the latest month', () => {
   assert.equal(supplierLede({ ...base, awards: 1200 }).includes('1,200 indexed'), true);
 });
 
+test('supplierLede for a supplier with only long-term contracts says so and claims no awards', () => {
+  const only = { ...base, awards: 0, classes: 0, ceilings: 1, latest: '2026-09-02' };
+  assert.equal(
+    supplierLede(only),
+    'ACME FASTENERS INC (CAGE 1ABC2) appears as the awardee on 1 long-term government parts contract, most recently in Sep 2026, with no orders in the indexed records yet.'
+  );
+  assert.match(supplierLede({ ...only, ceilings: 3 }), /3 long-term government parts contracts/);
+  assert.ok(supplierDescription(only).length <= 155);
+  // Purchases win: ceilings do not change the normal sentence.
+  assert.equal(supplierLede({ ...base, ceilings: 2 }), supplierLede(base));
+});
+
 test('supplierDescription is at most 155 characters and keeps the facts', () => {
   const d = supplierDescription(base);
   assert.ok(d.length <= MAX_SUPPLIER_DESCRIPTION, d);

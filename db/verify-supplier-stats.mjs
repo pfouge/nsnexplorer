@@ -12,6 +12,10 @@
 // days ago), the rising threshold ($10,000 and 3 awards exactly), awards with no
 // dollar value, a supplier whose awards are all older than 24 months.
 //
+// Covers migration 0017 too: the 90-day columns and ranks, the rank 30 days ago (365 days ending 30 days
+// ago), and suppliers whose only price points are long-term contract ceilings (a row with long_term_contracts
+// > 0, zero purchases, no dates and no ranks).
+//
 // Usage: node db/verify-supplier-stats.mjs [--seed]      (DATABASE_URL, else local dev DB)
 
 import { getPool, closePool } from '../shared/db.mjs';
@@ -40,9 +44,19 @@ SELECT s.cage,
   (SELECT count(*)::int FROM (SELECT DISTINCT n.fsc FROM pub.price_points p JOIN pub.nsns n ON n.nsn = p.nsn WHERE p.cage = s.cage AND ${NOT_CEIL}) x) AS fscs,
   (SELECT count(*)::int FROM (SELECT DISTINCT p.agency_id FROM pub.price_points p WHERE p.cage = s.cage AND ${NOT_CEIL} AND p.agency_id IS NOT NULL) x) AS agencies,
   (SELECT min(p.awarded_on)::text FROM pub.price_points p WHERE p.cage = s.cage AND ${NOT_CEIL}) AS first_award,
-  (SELECT max(p.awarded_on)::text FROM pub.price_points p WHERE p.cage = s.cage AND ${NOT_CEIL}) AS last_award
+  (SELECT max(p.awarded_on)::text FROM pub.price_points p WHERE p.cage = s.cage AND ${NOT_CEIL}) AS last_award,
+  (SELECT count(*)::int FROM pub.price_points p WHERE p.cage = s.cage AND ${NOT_CEIL} AND CURRENT_DATE - p.awarded_on < 90) AS awards_90d,
+  (SELECT trim_scale(COALESCE(sum(CASE WHEN p.total_value IS NOT NULL THEN p.total_value
+                                       WHEN p.quantity IS NOT NULL THEN p.unit_price * p.quantity END), 0))
+     FROM pub.price_points p WHERE p.cage = s.cage AND ${NOT_CEIL} AND CURRENT_DATE - p.awarded_on < 90)::text AS dollars_90d,
+  -- the 365 days ending 30 days ago: 30 <= age < 395 (awarded_on > today-395 and <= today-30)
+  (SELECT trim_scale(COALESCE(sum(CASE WHEN p.total_value IS NOT NULL THEN p.total_value
+                                       WHEN p.quantity IS NOT NULL THEN p.unit_price * p.quantity END), 0))
+     FROM pub.price_points p WHERE p.cage = s.cage AND ${NOT_CEIL}
+      AND CURRENT_DATE - p.awarded_on >= 30 AND CURRENT_DATE - p.awarded_on < 395)::text AS dollars_12m_prev,
+  (SELECT count(*)::int FROM pub.price_points p WHERE p.cage = s.cage AND NOT (${NOT_CEIL})) AS long_term_contracts
 FROM pub.suppliers s
-WHERE EXISTS (SELECT 1 FROM pub.price_points p WHERE p.cage = s.cage AND ${NOT_CEIL})
+WHERE EXISTS (SELECT 1 FROM pub.price_points p JOIN pub.nsns nn ON nn.nsn = p.nsn WHERE p.cage = s.cage)
 ORDER BY s.cage COLLATE "C"`;
 
 const ACTUAL_SQL = `
@@ -50,7 +64,8 @@ SELECT cage, awards_all, trim_scale(dollars_all)::text AS dollars_all, awards_12
        awards_prior_12m, trim_scale(dollars_prior_12m)::text AS dollars_prior_12m, nsns, fscs, agencies,
        first_award::text AS first_award, last_award::text AS last_award,
        rank_dollars_12m, rank_dollars_all, rank_wins_12m, rank_wins_all, rank_nsns, rank_fscs, rank_rising,
-       trim_scale(rising_delta)::text AS rising_delta
+       trim_scale(rising_delta)::text AS rising_delta,
+       awards_90d, trim_scale(dollars_90d)::text AS dollars_90d, rank_dollars_90d, rank_wins_90d, rank_dollars_12m_prev, long_term_contracts
 FROM pub.supplier_stats ORDER BY cage COLLATE "C"`;
 
 /** 1..k by metric desc, ties by cage asc (code-point order); null where `eligible` is false. */
@@ -73,6 +88,9 @@ export function expectedRanks(naive) {
     nsns: r.nsns,
     fscs: r.fscs,
     delta: Number(r.dollars_12m) - Number(r.dollars_prior_12m),
+    dollars_90d: Number(r.dollars_90d),
+    awards_90d: r.awards_90d,
+    dollars_12m_prev: Number(r.dollars_12m_prev),
   }));
   const pos = (m) => (r) => r[m] > 0;
   return {
@@ -83,6 +101,9 @@ export function expectedRanks(naive) {
     rank_nsns: rankBy(rows, 'nsns', pos('nsns')),
     rank_fscs: rankBy(rows, 'fscs', pos('fscs')),
     rank_rising: rankBy(rows, 'delta', (r) => r.dollars_12m >= 10000 && r.awards_12m >= 3),
+    rank_dollars_90d: rankBy(rows, 'dollars_90d', pos('dollars_90d')),
+    rank_wins_90d: rankBy(rows, 'awards_90d', pos('awards_90d')),
+    rank_dollars_12m_prev: rankBy(rows, 'dollars_12m_prev', pos('dollars_12m_prev')),
     delta: new Map(rows.map((r) => [r.cage, r.delta])),
   };
 }
@@ -121,8 +142,18 @@ async function seed(client) {
     T0011: [A(-3, 2, 1, 250), A(1, 2, 1, 250), A(2, 2, 1, 250)],
     // contract ceilings: the $9e9 base award is ignored, the order and the standalone P award count
     T0012: [A(5, 0, 0, 1000), A(6, 1, 0, 9e9, 10, null, 'ceiling'), A(7, 2, 1, 40, 10, null, 'order'), A(8, 2, 1, 60, 10, null, 'standalone')],
-    // only ceilings: no stats row at all
+    // only ceilings: a stats row with long_term_contracts = 2, no purchases, no dates, no ranks
     T0013: [A(5, 0, 0, 5e9, 10, null, 'ceiling'), A(9, 1, 0, 7e9, 10, null, 'ceiling')],
+    // 90-day boundary: 89 days ago is in, 90 is out. Also feeds the 12-month and prior windows
+    T0014: [A(89, 3, 1, 700), A(90, 3, 1, 70000), A(1, 4, 1, 10)],
+    // rank-30-days-ago boundary: 30 days old is in the window, 29 is not; 394 is in, 395 is out
+    T0015: [A(29, 5, 0, 800000), A(30, 5, 0, 600000), A(394, 6, 0, 500000), A(395, 6, 0, 9000000)],
+    // rises: nothing 30 days ago window except a small old award, big recent ones
+    T0016: [A(2, 7, 0, 1500000), A(200, 7, 0, 20)],
+    // falls: big award 40 days ago only (in the old window and the current one), nothing recent
+    T0017: [A(40, 8, 1, 2500000)],
+    // a ceiling beside purchases: long_term_contracts = 1, purchases counted normally
+    T0018: [A(50, 9, 1, 4000), A(60, 9, 1, 8e9, 10, null, 'ceiling')],
   };
   let ref = 0;
   for (const [cage, awards] of Object.entries(suppliers)) {
@@ -156,8 +187,10 @@ export async function verify(client, { withSeed = false } = {}) {
       note('(all)', 'row count', `${naive.length} (function returned ${refreshed})`, actual.length);
     }
     const byCage = new Map(actual.map((r) => [r.cage, r]));
-    const plain = ['awards_all', 'dollars_all', 'awards_12m', 'dollars_12m', 'awards_prior_12m', 'dollars_prior_12m', 'nsns', 'fscs', 'agencies', 'first_award', 'last_award'];
-    const rankCols = ['rank_dollars_12m', 'rank_dollars_all', 'rank_wins_12m', 'rank_wins_all', 'rank_nsns', 'rank_fscs', 'rank_rising'];
+    const plain = ['awards_all', 'dollars_all', 'awards_12m', 'dollars_12m', 'awards_prior_12m', 'dollars_prior_12m', 'nsns', 'fscs', 'agencies', 'first_award', 'last_award',
+      'awards_90d', 'dollars_90d', 'long_term_contracts'];
+    const rankCols = ['rank_dollars_12m', 'rank_dollars_all', 'rank_wins_12m', 'rank_wins_all', 'rank_nsns', 'rank_fscs', 'rank_rising',
+      'rank_dollars_90d', 'rank_wins_90d', 'rank_dollars_12m_prev'];
     for (const n of naive) {
       const a = byCage.get(n.cage);
       if (!a) { note(n.cage, 'row', 'present', 'missing'); continue; }

@@ -1,11 +1,13 @@
 ---
 // One ranked list on /supplier/: rank, supplier (links to its page), place, the list's metric and
 // a secondary figure. Server-rendered table inside the site's .table-wrap; on phones the place
-// moves under the name so four columns fit without sideways scrolling.
+// moves under the name so four columns fit without sideways scrolling. The 12-month dollars list also
+// shows each supplier's rank trend against about 30 days ago: an arrow and a number in its own column
+// on wide screens, under the rank number on phones (never colour alone; the words are for screen readers).
 import { supplierPath, supplierPlace } from '../lib/entity';
 import { formatUsd } from '../lib/shared';
 import type { BoardSupplier, ListKey } from '../lib/supplier-board';
-import { LISTS } from '../lib/supplier-board';
+import { LISTS, rankTrend } from '../lib/supplier-board';
 
 interface Props {
   rows: BoardSupplier[];
@@ -21,8 +23,10 @@ const rankKey = LISTS.find((l) => l.key === kind)!.rank;
 
 interface Col { head: string; cell: (s: BoardSupplier) => string; cls?: string }
 const COLS: Record<ListKey, Col[]> = {
+  'dollars-90d': [{ head: 'Award dollars', cell: (s) => usd(s.dollars90d) }, { head: 'Awards', cell: (s) => int(s.awards90d) }],
   'dollars-12m': [{ head: 'Award dollars', cell: (s) => usd(s.dollars12m) }, { head: 'Awards', cell: (s) => int(s.awards12m) }],
   'dollars-all': [{ head: 'Award dollars', cell: (s) => usd(s.dollarsAll) }, { head: 'Awards', cell: (s) => int(s.awardsAll) }],
+  'wins-90d': [{ head: 'Awards', cell: (s) => int(s.awards90d) }, { head: 'Award dollars', cell: (s) => usd(s.dollars90d) }],
   'wins-12m': [{ head: 'Awards', cell: (s) => int(s.awards12m) }, { head: 'Award dollars', cell: (s) => usd(s.dollars12m) }],
   'wins-all': [{ head: 'Awards', cell: (s) => int(s.awardsAll) }, { head: 'Award dollars', cell: (s) => usd(s.dollarsAll) }],
   'breadth-nsns': [{ head: 'NSNs', cell: (s) => int(s.nsns) }, { head: 'Supply classes', cell: (s) => int(s.fscs) }],
@@ -34,6 +38,8 @@ const COLS: Record<ListKey, Col[]> = {
   ],
 };
 const cols = COLS[kind];
+// Rank trend only where the rank shown is the 12-month dollar rank it describes.
+const showTrend = kind === 'dollars-12m';
 ---
 <div class="table-wrap">
   <table>
@@ -41,6 +47,7 @@ const cols = COLS[kind];
     <thead>
       <tr>
         <th class="rank">#</th>
+        {showTrend && <th class="trend hide-sm">Rank vs 30 days ago</th>}
         <th>Supplier</th>
         <th class="loc">Location</th>
         {cols.map((c, i) => <th class={kind === 'rising' && i > 0 ? 'num hide-sm' : 'num'}>{c.head}</th>)}
@@ -51,9 +58,18 @@ const cols = COLS[kind];
         const href = supplierPath(s.cage);
         const label = s.name ?? `CAGE ${s.cage}`;
         const place = supplierPlace(s.city, s.state);
+        const trend = showTrend ? rankTrend(s.rankDollars12m, s.rankDollars12mPrev) : null;
         return (
           <tr>
-            <td class="rank">{s[rankKey] as number}</td>
+            <td class="rank">
+              {s[rankKey] as number}
+              {trend && <span class={`trend-chip show-sm ${trend.kind}`} title={trend.text}><span aria-hidden="true">{trend.glyph}</span><span class="sr-only">{trend.text}</span></span>}
+            </td>
+            {showTrend && (
+              <td class="trend hide-sm">
+                {trend && <span class={`trend-chip ${trend.kind}`} title={trend.text}><span aria-hidden="true">{trend.glyph}</span><span class="sr-only">{trend.text}</span></span>}
+              </td>
+            )}
             <td class="who">
               {href ? <a href={href}>{label}</a> : label}
               {place && <span class="sub">{place}</span>}

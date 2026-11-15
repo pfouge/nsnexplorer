@@ -1,7 +1,7 @@
 // Build-time loader for the /supplier/ leaderboard (prerendered). Reads the
 // precomputed pub.supplier_stats ranks through the build's pg pool (max 4
 // connections, same as data.ts); it is NEVER imported by an on-demand route or
-// anything the Worker bundles. Three short queries, run one after another on
+// anything the Worker bundles. Four short queries, run one after another on
 // the shared pool, then the pool is closed.
 
 import { openPool } from './data';
@@ -42,12 +42,18 @@ async function fetchSupplierBoard(): Promise<BoardData> {
               COALESCE(NULLIF(btrim(su.state), ''), sam.phys_state) AS state,
               st.awards_all, st.dollars_all, st.awards_12m, st.dollars_12m, st.awards_prior_12m, st.dollars_prior_12m,
               st.nsns, st.fscs, st.rising_delta,
-              st.rank_dollars_12m, st.rank_dollars_all, st.rank_wins_12m, st.rank_wins_all, st.rank_nsns, st.rank_fscs, st.rank_rising
+              st.rank_dollars_12m, st.rank_dollars_all, st.rank_wins_12m, st.rank_wins_all, st.rank_nsns, st.rank_fscs, st.rank_rising,
+              st.awards_90d, st.dollars_90d, st.rank_dollars_90d, st.rank_wins_90d, st.rank_dollars_12m_prev, st.long_term_contracts
        FROM pub.supplier_stats st
        JOIN pub.suppliers su ON su.cage = st.cage
        LEFT JOIN pub.supplier_sam sam ON sam.cage = st.cage
        WHERE st.rank_dollars_12m <= $1 OR st.rank_dollars_all <= $1 OR st.rank_wins_12m <= $1 OR st.rank_wins_all <= $1
           OR st.rank_nsns <= $1 OR st.rank_fscs <= $1 OR st.rank_rising <= $1
+          OR st.rank_dollars_90d <= $1 OR st.rank_wins_90d <= $1
+          -- Long-term contracts only (no orders yet): no rank anywhere; the first $1 by contracts, then CAGE, are listed
+          -- below the dollar lists (same order as longTermOnlyList in supplier-board.ts).
+          OR st.cage IN (SELECT x.cage FROM pub.supplier_stats x WHERE x.awards_all = 0 AND x.long_term_contracts > 0
+                         ORDER BY x.long_term_contracts DESC, x.cage COLLATE "C" LIMIT $1)
        ORDER BY st.cage`,
       [BOARD_SIZE]
     );
@@ -58,18 +64,28 @@ async function fetchSupplierBoard(): Promise<BoardData> {
               count(*) FILTER (WHERE ${SMALL_SQL})::int AS small,
               count(sam.cage)::int AS with_sam,
               count(DISTINCT su.state) FILTER (WHERE su.state ~ '^[A-Z]{2}$')::int AS states,
-              max(st.refreshed_at) AS refreshed
+              max(st.refreshed_at) AS refreshed,
+              (SELECT count(*)::int FROM pub.supplier_stats x WHERE x.awards_all = 0 AND x.long_term_contracts > 0) AS long_term_only
        FROM pub.supplier_stats st
        JOIN pub.suppliers su ON su.cage = st.cage
-       LEFT JOIN pub.supplier_sam sam ON sam.cage = st.cage`
+       LEFT JOIN pub.supplier_sam sam ON sam.cage = st.cage
+       WHERE st.awards_all > 0`
     );
     const states = await pool.query(
       `SELECT su.state, count(*)::int AS suppliers, COALESCE(sum(st.dollars_12m), 0) AS dollars_12m
        FROM pub.supplier_stats st
        JOIN pub.suppliers su ON su.cage = st.cage
-       WHERE su.state ~ '^[A-Z]{2}$'
+       WHERE su.state ~ '^[A-Z]{2}$' AND st.awards_all > 0
        GROUP BY su.state
        ORDER BY dollars_12m DESC, suppliers DESC, su.state`
+    );
+    // Same rule and threshold as SiteData.awardCoverageFrom in data.ts: the first day with at least 200 DIBBS award rows.
+    const coverage = await pool.query(
+      `SELECT min(day)::text AS coverage_from FROM (
+         SELECT action_date AS day FROM pub.contract_actions
+         WHERE award_uid LIKE 'DIBBS%' AND action_date IS NOT NULL
+         GROUP BY action_date HAVING count(*) >= 200
+       ) d`
     );
     const h = head.rows[0];
     const suppliers: BoardSupplier[] = listed.rows.map((r) => ({
@@ -93,6 +109,12 @@ async function fetchSupplierBoard(): Promise<BoardData> {
       rankNsns: nOrNull(r.rank_nsns),
       rankFscs: nOrNull(r.rank_fscs),
       rankRising: nOrNull(r.rank_rising),
+      awards90d: n(r.awards_90d),
+      dollars90d: n(r.dollars_90d),
+      rankDollars90d: nOrNull(r.rank_dollars_90d),
+      rankWins90d: nOrNull(r.rank_wins_90d),
+      rankDollars12mPrev: nOrNull(r.rank_dollars_12m_prev),
+      longTermContracts: n(r.long_term_contracts),
     }));
     return {
       headline: {
@@ -103,6 +125,8 @@ async function fetchSupplierBoard(): Promise<BoardData> {
         withSam: n(h.with_sam),
         states: n(h.states),
         asOf: isoDate(h.refreshed),
+        coverageFrom: clean(coverage.rows[0]?.coverage_from),
+        longTermOnly: n(h.long_term_only),
       },
       suppliers,
       states: states.rows.map((r): StateRow => ({ state: String(r.state), suppliers: n(r.suppliers), dollars12m: n(r.dollars_12m) })),

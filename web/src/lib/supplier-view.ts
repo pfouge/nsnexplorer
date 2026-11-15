@@ -98,8 +98,10 @@ export interface RankBadge {
 export const BOARD_SIZE = 100;
 
 const RANK_DEFS: { key: keyof SupplierStats; what: string; href: string }[] = [
+  { key: 'rankDollars90d', what: 'by award dollars, last 90 days', href: '/supplier/#dollars-90d' },
   { key: 'rankDollars12m', what: 'by award dollars, last 12 months', href: '/supplier/#dollars-12m' },
   { key: 'rankDollarsAll', what: 'by award dollars, all time', href: '/supplier/#dollars-all' },
+  { key: 'rankWins90d', what: 'by awards won, last 90 days', href: '/supplier/#wins-90d' },
   { key: 'rankWins12m', what: 'by awards won, last 12 months', href: '/supplier/#wins-12m' },
   { key: 'rankWinsAll', what: 'by awards won, all time', href: '/supplier/#wins-all' },
   { key: 'rankNsns', what: 'by distinct NSNs supplied', href: '/supplier/#breadth-nsns' },
@@ -122,8 +124,10 @@ export function rankBadges(stats: SupplierStats | null, max = BOARD_SIZE): RankB
 export function allRanks(stats: SupplierStats | null): { label: string; rank: number }[] {
   if (!stats) return [];
   const labels: Record<string, string> = {
+    rankDollars90d: 'Award dollars, last 90 days',
     rankDollars12m: 'Award dollars, last 12 months',
     rankDollarsAll: 'Award dollars, all time',
+    rankWins90d: 'Awards won, last 90 days',
     rankWins12m: 'Awards won, last 12 months',
     rankWinsAll: 'Awards won, all time',
     rankNsns: 'Distinct NSNs',
@@ -195,4 +199,44 @@ export function loadedClasses(rows: readonly { fsc: string }[]): string[] {
 export function partFilterStatus(rows: readonly { fsc: string }[], fsc: string): { shown: number; text: string } {
   const shown = fsc === '' || fsc === 'all' ? rows.length : rows.filter((r) => r.fsc === fsc).length;
   return { shown, text: `Showing ${shown.toLocaleString('en-US')} of ${rows.length.toLocaleString('en-US')} loaded` };
+}
+
+// ---------------------------------------------------------------------------
+// Rank trend, long-term contracts and the listed-parts pager
+
+/** One plain sentence on how the 12-month dollar rank moved against about 30 days ago; null when there is no rank. */
+export function rankTrendSentence(stats: SupplierStats | null): string | null {
+  if (!stats || typeof stats.rankDollars12m !== 'number') return null;
+  const now = stats.rankDollars12m;
+  const before = stats.rankDollars12mPrev;
+  if (typeof before !== 'number') return 'New in the 12-month dollar ranking: this supplier had no award dollars in the 12 months ending 30 days ago.';
+  const places = Math.abs(before - now);
+  const noun = places === 1 ? 'place' : 'places';
+  if (before > now) return `Up ${places} ${noun} in the 12-month dollar ranking since about 30 days ago.`;
+  if (before < now) return `Down ${places} ${noun} in the 12-month dollar ranking since about 30 days ago.`;
+  return 'No change in the 12-month dollar ranking since about 30 days ago.';
+}
+
+/** Row range of one page of listed parts: "from" and "to" are 1-based and inclusive; both 0 when nothing matches. */
+export function partsRange(matching: number, page: number, pageSize: number, shown: number): { from: number; to: number; pages: number } {
+  if (matching <= 0 || shown <= 0) return { from: 0, to: 0, pages: Math.max(1, Math.ceil(matching / pageSize)) };
+  const from = (page - 1) * pageSize + 1;
+  return { from, to: from + shown - 1, pages: Math.ceil(matching / pageSize) };
+}
+
+/** "Showing 1 to 50 of 6,422 listed parts" or "... of 3,100 listed parts in class 5340". */
+export function partsStatusText(r: { from: number; to: number }, matching: number, fsc: string | null): string {
+  const n = (v: number) => v.toLocaleString('en-US');
+  const tail = `${matching === 1 ? 'listed part' : 'listed parts'}${fsc ? ` in class ${fsc}` : ''}`;
+  if (matching <= 0) return `No ${fsc ? `listed parts in class ${fsc}` : 'listed parts'}`;
+  if (r.from <= 0) return `This page is past the end of the ${n(matching)} ${tail}`;
+  return `Showing ${n(r.from)} to ${n(r.to)} of ${n(matching)} ${tail}`;
+}
+
+/** URL of a page of the supplier's listed parts. Page 1 and "all classes" leave the query off; the fragment opens the parts list. */
+export function partsHref(cage: string, fsc: string | null, page: number): string {
+  const q: string[] = [];
+  if (fsc) q.push(`class=${fsc}`);
+  if (page > 1) q.push(`pp=${page}`);
+  return `/supplier/${cage}/${q.length ? `?${q.join('&')}` : ''}#sp-parts`;
 }
