@@ -78,7 +78,7 @@ function row(it: Item): HTMLElement {
     ),
     h('td', { class: 'num' }, range),
     h('td', { class: 'num' }, n(it.pricePoints)),
-    h('td', {}, bids)
+    h('td', { style: 'white-space:normal; min-width:9rem; line-height:1.4;' }, bids)
   );
 }
 
