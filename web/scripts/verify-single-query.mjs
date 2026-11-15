@@ -77,6 +77,7 @@ await build({
       export { isSolNumber, parseSupplierQuery } from './entity.ts';
       export { humanizeLabel, moeKind } from './flis-codes.ts';
       export { nomen } from './seo-copy.ts';
+      export { pickTwin, solKey, SAM_DUPES_CTE } from './sol-twin.ts';
       export { isContractCeiling, isCeilingPricePoint, CONTRACT_CEILING_SQL, CEILING_PRICE_POINT_SQL } from './contract-ceiling.ts';`,
     resolveDir: libDir,
     loader: 'ts',
@@ -358,7 +359,7 @@ async function oldLoadSupplierPage(sql, cage) {
 
 // Fields added to the new solicitation loader after the old one was frozen (price history, matched awards).
 // Old-vs-new compares only the pre-existing fields; the new ones are not checked here.
-const NEW_SOL_FIELDS = ['purchaseRequest', 'techDocs', 'partPrices', 'partPriceCount', 'matchedAwards']; // checked by checkCeilings below
+const NEW_SOL_FIELDS = ['purchaseRequest', 'techDocs', 'partPrices', 'partPriceCount', 'matchedAwards', 'twin']; // checked by checkCeilings and checkTwins below
 function withoutNewSolFields(page) {
   if (!page) return page;
   const out = { ...page };
@@ -869,6 +870,57 @@ async function checkCeilings(db) {
     [['SPE7M126A0004', '', true], ['SPE7M126D0001', null, true], ['SPE7M126D0001', 'SPE7M126F0001', false], ['SPE7M126D0001', 'SPE7M126F0002', false], ['SPE7M126D0008', '   ', true], ['SPE7M126G0003', null, true], ['SPE7M126P0002', null, false], ['SPE7M126V0005', null, false]]);
 }
 
+// ------------------------------------------------ same requirement on DIBBS and SAM.gov: the rows seeded by the seed file
+/**
+ * With --seed: the SEED TWIN groups A..G (verify-single-query-seed.sql) cover a clean pair, a pair with only the SAM.gov
+ * notice open, an ambiguous key, a near miss, two DIBBS spellings, a non-DLA number and a pair with an expired notice.
+ * Checks the one-statement page loader's `twin` against the expectation, and the SQL (sam_dupes) against the JavaScript
+ * rule (pickTwin) on EVERY row of the table, so the two copies of the rule cannot drift.
+ */
+async function checkTwins(db) {
+  const check = (label, actual, expected) => {
+    results.checks++;
+    try {
+      assert.deepStrictEqual(actual, expected);
+    } catch (e) {
+      fail('sol twins', label, String(e.message).split('\n').slice(0, 14).join('\n'));
+    }
+  };
+  const twinOf = async (n) => (await N.loadSolicitationPage(db, n))?.twin?.solNumber ?? null;
+  check('A pair, from the DIBBS side', await twinOf('SPE9Z1-26-T-0001'), 'SPE9Z126T0001');
+  check('A pair, from the SAM.gov side', await twinOf('SPE9Z126T0001'), 'SPE9Z1-26-T-0001');
+  check('B pair (DIBBS closed, SAM open) still shown on the page', [await twinOf('SPE9Z1-26-T-0002'), await twinOf('SPE9Z126T0002')], ['SPE9Z126T0002', 'SPE9Z1-26-T-0002']);
+  check('C ambiguous key pairs nothing', [await twinOf('SPE9Z1-26-T-0003'), await twinOf('SPE9Z126T0003'), await twinOf('spe9z126t0003')], [null, null, null]);
+  check('D one digit apart pairs nothing', [await twinOf('SPE9Z1-26-T-0004'), await twinOf('SPE9Z126T0005')], [null, null]);
+  check('E two DIBBS spellings pair nothing', [await twinOf('SPE9Z1-26-T-0006'), await twinOf('SPE9Z126T0006')], [null, null]);
+  check('F non-DLA number pairs nothing', [await twinOf('SEED-TWIN-F'), await twinOf('SEEDTWINF')], [null, null]);
+  check('G pair with an expired notice still shown on the page', [await twinOf('SPE9Z1-26-T-0007'), await twinOf('SPE9Z126T0007')], ['SPE9Z126T0007', 'SPE9Z1-26-T-0007']);
+  const twinUrl = (await N.loadSolicitationPage(db, 'SPE9Z1-26-T-0001')).twin?.sourceUrl;
+  check('twin carries the official record link', twinUrl, 'https://sam.gov/opp/seedSPE9Z126T0001/view');
+
+  // SQL rule against the JS rule on every row.
+  const all = await db.unsafe(`select sol_number, source, source_url from pub.solicitations`);
+  const byKey = new Map();
+  for (const r of all) {
+    const k = N.solKey(r.sol_number);
+    if (!byKey.has(k)) byKey.set(k, []);
+    byKey.get(k).push({ solNumber: r.sol_number, source: r.source, sourceUrl: r.source_url });
+  }
+  const jsPairs = [];
+  for (const rows of byKey.values()) {
+    const sam = rows.find((r) => r.source === 'sam_gov');
+    if (!sam) continue;
+    const t = N.pickTwin({ solNumber: sam.solNumber, source: sam.source }, rows);
+    if (t) jsPairs.push(`${sam.solNumber}|${t.solNumber}`);
+  }
+  const sqlPairs = (await db.unsafe(`WITH ${N.SAM_DUPES_CTE} SELECT sam_number, dibbs_number FROM sam_dupes`)).map((r) => `${r.sam_number}|${r.dibbs_number}`);
+  check('SQL sam_dupes == JS pickTwin on every row', sqlPairs.sort(), jsPairs.sort());
+  check('seeded pairs are exactly A, B and G', sqlPairs.filter((p) => p.includes('SPE9Z1')).sort(), ['SPE9Z126T0001|SPE9Z1-26-T-0001', 'SPE9Z126T0002|SPE9Z1-26-T-0002', 'SPE9Z126T0007|SPE9Z1-26-T-0007']);
+  const drops = (await db.unsafe(`WITH ${N.SAM_DUPES_CTE} SELECT sam_number FROM sam_dupes WHERE drop_sam ORDER BY 1`)).map((r) => r.sam_number).filter((n) => n.includes('SPE9Z1'));
+  check('SAM.gov notices left out of the lists: A and G, not B (only the notice is open)', drops, ['SPE9Z126T0001', 'SPE9Z126T0007']);
+  console.log(`   twin rule checked on ${all.length} solicitations rows (${sqlPairs.length} pairs)`);
+}
+
 // ------------------------------------------------------- counting TCP proxy
 const counts = { parse: 0, query: 0, sync: 0, bind: 0, connections: 0, statements: [] };
 const resetCounts = () => {
@@ -1027,6 +1079,10 @@ async function main() {
     // Supplier profile tables (migration 0011) and their seed rows.
     if (psql(dbUrl, ['-At', '-c', `select to_regclass('pub.supplier_sam') is not null`]).trim() !== 't') {
       psql(dbUrl, ['-1', '-f', path.join(here, '../../db/migrations/0011_supplier_profiles.sql')]);
+    }
+    // Migration 0016 (twin key index): the clone's template may predate it.
+    if (psql(dbUrl, ['-At', '-c', `select to_regclass('pub.solicitations_sol_key_idx') is not null`]).trim() !== 't') {
+      psql(dbUrl, ['-1', '-f', path.join(here, '../../db/migrations/0016_solicitation_twin_key.sql')]);
     }
     // Migration 0015 (contract ceilings) redefines pub.refresh_supplier_stats(); the supplier seed refreshes the stats at its end.
     psql(dbUrl, ['-1', '-f', path.join(here, '../../db/migrations/0015_contract_ceilings.sql')]);
@@ -1221,6 +1277,7 @@ async function main() {
     }
 
     if (withSeed) await checkCeilings(direct);
+    if (withSeed) await checkTwins(direct);
 
     // ---- supplier search (/api/suppliers.json): same rows, one statement even on the CAGE-then-name fallback
     const searches = [];

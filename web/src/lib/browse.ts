@@ -59,6 +59,8 @@ export interface ProductCard {
   techDocs: TechDocsKind | null;
   /** An open solicitation was issued within 30 days after an earlier one expired or was cancelled (see isRepost). */
   repost: boolean;
+  /** An open DIBBS solicitation of this NSN is also posted on SAM.gov (sol-twin.ts); the SAM.gov copy is not listed or counted. */
+  alsoOnSam: boolean;
   /** Unit price of the most recent award on record (pricePointsByNsn), or null. */
   lastUnitPrice: number | null;
   /** Quantity (open, else past-due) x lastUnitPrice, in dollars; null when either is missing. */
@@ -392,6 +394,7 @@ export function buildProductCards(data: SiteData, fsc: FscConfig): ProductCard[]
       lastStatus,
       pastDueCount: 0,
       repost: false,
+      alsoOnSam: false,
       pastDueSince: null,
       pastDueQuantity: null,
       techDocs: null,
@@ -521,6 +524,7 @@ export function buildSolicitationCards(data: SiteData, fsc?: string): ProductCar
       lastStatus,
       ...computeOpenSignals(data, nsnCode, sols, openQuantity),
       repost: isRepost(sols, data.viz.today).repost,
+      alsoOnSam: sols.some((s) => s.status === 'open' && s.alsoOn?.source === 'sam_gov'),
       hasCatalogPage,
       href,
     };

@@ -18,6 +18,7 @@
 import { writeFileSync } from 'node:fs';
 import { getPool, closePool } from '../shared/db.mjs';
 import { NOT_CONTRACT_CEILING_SQL } from '../shared/contract-ceiling.mjs';
+import { SOLS_ONCE_SQL } from '../shared/sol-twin.mjs';
 
 // Hours a source may go without landing anything before it counts as stale.
 // DIBBS posts awards on business days only, so the award lanes get a long
@@ -211,7 +212,8 @@ export function evaluateSource(source, row, now = new Date()) {
 /**
  * Upserts today's headline counts into pub.daily_stats (migration 0008) so
  * the site can draw trend lines. Same definitions the site's headline tiles
- * use ("posted" = DIBBS solicitations issued in the last 7 days): "open" means status open and not past its return-by date; product
+ * use ("posted" = DIBBS solicitations issued in the last 7 days): "open" means status open and not past its return-by date, a SAM.gov notice
+ * that is the twin of a DIBBS row counted once (shared/sol-twin.mjs); product
  * solicitations only (4-digit class or uncoded), service notices counted
  * separately. A failure here is logged and never fails the freshness run.
  */
@@ -221,12 +223,12 @@ export async function recordDailyStats(pool) {
       `INSERT INTO pub.daily_stats
          (day, open_solicitations, posted, closing_7d, award_dollars_7d, open_service_notices)
        SELECT CURRENT_DATE,
-         (SELECT count(*) FROM pub.solicitations s
+         (SELECT count(*) FROM ${SOLS_ONCE_SQL} s
             WHERE s.status = 'open' AND (s.return_by IS NULL OR s.return_by >= CURRENT_DATE)
               AND (s.fsc IS NULL OR s.fsc ~ '^[0-9]{4}$')),
          (SELECT count(*) FROM pub.solicitations s
             WHERE s.source = 'dibbs_rfq' AND s.issued_on >= CURRENT_DATE - 7),
-         (SELECT count(*) FROM pub.solicitations s
+         (SELECT count(*) FROM ${SOLS_ONCE_SQL} s
             WHERE s.status = 'open' AND s.return_by >= CURRENT_DATE AND s.return_by < CURRENT_DATE + 7
               AND (s.fsc IS NULL OR s.fsc ~ '^[0-9]{4}$')),
          -- A contract ceiling is a contract's maximum value, not money spent (shared/contract-ceiling.mjs).

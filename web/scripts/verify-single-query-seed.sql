@@ -212,5 +212,37 @@ FROM (SELECT nsn FROM pub.nsns WHERE fsc = '5340' ORDER BY nsn OFFSET 5 LIMIT 1)
        ('SPE7M126P0002',               5000::numeric,        25, 'ZC002')    -- standalone
      ) AS v(ref, total, age, cage);
 
+-- Same requirement on DIBBS and SAM.gov (web/src/lib/sol-twin.ts). DIBBS spells the number with dashes, SAM.gov without.
+INSERT INTO pub.solicitations (sol_number, nsn, fsc, nomenclature, quantity, issued_on, return_by, status, source_url, source, raw)
+SELECT v.sol, CASE WHEN v.src = 'dibbs_rfq' THEN n.nsn END, '5340', 'SEED TWIN ' || v.grp, 10, CURRENT_DATE - 5, v.ret, v.st,
+       CASE WHEN v.src = 'dibbs_rfq' THEN 'https://www.dibbs.bsm.dla.mil/RFQ/RFQNsn.aspx?value=seed' || v.grp || '&category=nsn'
+            ELSE 'https://sam.gov/opp/seed' || v.sol || '/view' END,
+       v.src, '{}'::jsonb
+FROM (SELECT nsn FROM pub.nsns WHERE fsc = '5340' ORDER BY nsn OFFSET 7 LIMIT 1) n,
+     (VALUES
+       -- grp A: a clean pair, both open
+       ('SPE9Z1-26-T-0001', 'dibbs_rfq', 'open',      CURRENT_DATE + 9,  'A'),
+       ('SPE9Z126T0001',    'sam_gov',   'open',      CURRENT_DATE + 9,  'A'),
+       -- grp B: a pair where the DIBBS row is closed and the SAM.gov notice still open
+       ('SPE9Z1-26-T-0002', 'dibbs_rfq', 'expired',   CURRENT_DATE - 3,  'B'),
+       ('SPE9Z126T0002',    'sam_gov',   'open',      CURRENT_DATE + 20, 'B'),
+       -- grp C: three rows on one key (two SAM.gov spellings): never paired
+       ('SPE9Z1-26-T-0003', 'dibbs_rfq', 'open',      CURRENT_DATE + 9,  'C'),
+       ('SPE9Z126T0003',    'sam_gov',   'open',      CURRENT_DATE + 9,  'C'),
+       ('spe9z126t0003',    'sam_gov',   'open',      CURRENT_DATE + 9,  'C'),
+       -- grp D: one digit apart, same dates: not a pair
+       ('SPE9Z1-26-T-0004', 'dibbs_rfq', 'open',      CURRENT_DATE + 9,  'D'),
+       ('SPE9Z126T0005',    'sam_gov',   'open',      CURRENT_DATE + 9,  'D'),
+       -- grp E: same key on two DIBBS spellings: not a pair
+       ('SPE9Z1-26-T-0006', 'dibbs_rfq', 'open',      CURRENT_DATE + 9,  'E'),
+       ('SPE9Z126T0006',    'dibbs_rfq', 'open',      CURRENT_DATE + 9,  'E'),
+       -- grp F: not shaped like a DLA number: not a pair
+       ('SEED-TWIN-F',      'dibbs_rfq', 'open',      CURRENT_DATE + 9,  'F'),
+       ('SEEDTWINF',        'sam_gov',   'open',      CURRENT_DATE + 9,  'F'),
+       -- grp G: a pair whose SAM.gov notice is already expired: counted once
+       ('SPE9Z1-26-T-0007', 'dibbs_rfq', 'open',      CURRENT_DATE + 9,  'G'),
+       ('SPE9Z126T0007',    'sam_gov',   'expired',   CURRENT_DATE - 1,  'G')
+     ) AS v(sol, src, st, ret, grp);
+
 COMMIT;
 ANALYZE;

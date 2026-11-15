@@ -17,6 +17,7 @@ import ClosingCalendar from '../components/viz/ClosingCalendar.astro';
 import { buildDemandTiles, buildTiles } from '../lib/viz-site';
 import { buildCalendar } from '../lib/viz-open';
 import { solicitationPath } from '../lib/entity';
+import { ALSO_ON_SAM_LABEL } from '../lib/sol-twin';
 
 const data = await loadSiteData();
 const departments = buildOpenDepartments(data);
@@ -193,6 +194,7 @@ const buildDate = now.toLocaleDateString('en-US', { year: 'numeric', month: 'lon
                   <tr data-fsc={s.fsc ?? undefined}>
                     <td class="mono">
                       {solicitationPath(s.solNumber) ? <a href={solicitationPath(s.solNumber)!}>{s.solNumber}</a> : '—'}
+                      {s.alsoOn?.source === 'sam_gov' && <span class="badge" title="The same requirement is also posted on SAM.gov. The two posts are listed and counted once.">{ALSO_ON_SAM_LABEL}</span>}
                     </td>
                     <td class="mono">
                       {s.nsn ? (
