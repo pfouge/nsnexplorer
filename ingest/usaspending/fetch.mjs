@@ -17,8 +17,12 @@ import { writeFile } from 'node:fs/promises';
 
 const API_URL = 'https://api.usaspending.gov/api/v2/search/spending_by_award/';
 const PAGE_LIMIT = 100;
-const MAX_RETRIES = 3;
-const RETRY_BASE_MS = 1000;
+// The API closes the connection when pages are requested back to back for long
+// (seen 2026-11-15 once the loader stopped being the slow step), so retry longer
+// (2, 4, 8, 16, 32 s) and pause briefly between pages.
+const MAX_RETRIES = 6;
+const RETRY_BASE_MS = 2000;
+const PAGE_PAUSE_MS = 400;
 
 const FIELDS = [
   'Award ID',
@@ -109,7 +113,19 @@ async function postPage(body) {
       throw new Error(`usaspending: HTTP ${res.status}: ${text.slice(0, 500)}`);
     }
 
-    return res.json();
+    try {
+      const data = await res.json();
+      await sleep(PAGE_PAUSE_MS);
+      return data;
+    } catch (err) {
+      // The body can be cut off mid-response; treat it like a failed request.
+      lastErr = err;
+      if (attempt < MAX_RETRIES) {
+        await sleep(RETRY_BASE_MS * 2 ** (attempt - 1));
+        continue;
+      }
+      throw err;
+    }
   }
   throw lastErr;
 }
