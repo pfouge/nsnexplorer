@@ -1,0 +1,72 @@
+---
+// SamAttachments.astro: the "Attachments on SAM.gov" section of a solicitation page.
+// Links only: the files stay on SAM.gov (we never download, cache or host one). Which links may be shown is decided
+// in lib/sam-attachments.ts; this file only draws them. Own file, own styles, so it merges cleanly beside other
+// sections of the page.
+import { attachmentLabel, filesText, type SamAttachmentsView } from '../lib/sam-attachments';
+
+interface Props {
+  view: SamAttachmentsView | null;
+}
+const { view } = Astro.props;
+const withheld = view ? view.total - view.items.length : 0;
+---
+
+{view && (
+  <section id="sam-attachments" class="card samatt">
+    <h2 class="section-title">Attachments on SAM.gov</h2>
+    <p class="gloss">
+      {view.from === 'twin'
+        ? <>This requirement is also posted on SAM.gov as notice <span class="mono">{view.noticeNumber}</span>, which lists {filesText(view.total)}. </>
+        : <>This notice lists {filesText(view.total)} on SAM.gov. </>}
+      The files are hosted by SAM.gov, not by us, and may include drawings and specifications.
+    </p>
+    {view.items.length > 0 && (
+      <ol class="samatt-list">
+        {view.items.map((a) => (
+          <li>
+            <a href={a.url!} target="_blank" rel="nofollow noopener">{attachmentLabel(a)}</a>
+            {a.type && <span class="badge">{a.type}</span>}
+          </li>
+        ))}
+      </ol>
+    )}
+    {view.items.length > 0 && view.items.every((a) => a.name === null) && (
+      <p class="gloss">File names are not available here, so the files are numbered.</p>
+    )}
+    {withheld > 0 && (
+      <p class="gloss">
+        {view.items.length === 0
+          ? 'Open the notice on SAM.gov to see and download the files.'
+          : `${withheld.toLocaleString('en-US')} more ${withheld === 1 ? 'file is' : 'files are'} not listed here. Open the notice on SAM.gov to see ${withheld === 1 ? 'it' : 'them'}.`}
+      </p>
+    )}
+    <p class="samatt-notice">
+      <a href={view.noticeUrl} target="_blank" rel="nofollow noopener">Open the notice on SAM.gov →</a>
+    </p>
+  </section>
+)}
+
+<style>
+  .samatt {
+    margin-top: 2rem;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+  .samatt .section-title {
+    margin-top: 0;
+  }
+  .samatt-list {
+    margin: 0.75rem 0 0.5rem;
+    padding-left: 1.5rem;
+  }
+  .samatt-list li {
+    margin: 0.3rem 0;
+  }
+  .samatt-list .badge {
+    margin-left: 0.5rem;
+  }
+  .samatt-notice {
+    margin: 0.75rem 0 0;
+  }
+</style>

@@ -266,6 +266,33 @@ FROM (VALUES
   ('SEED-DRAW-ODD',    '5340009990001', 'Tech Docs maybe'),
   ('SEED-DRAW-ORPHAN', NULL,            'Tech Docs')
 ) AS v(sol, nsn, td);
+-- SAM.gov attachments (web/src/lib/sam-attachments.ts). The raw column is shaped like a stored SAM.gov Get Opportunities
+-- record (ingest/sam/map-sam.test.mjs); `resourceLinks` is the array of download URLs the API returns (or null).
+-- SEED-SAMATT-KEY carries a link with a real-looking key value that must never reach a page.
+INSERT INTO pub.solicitations (sol_number, nsn, fsc, nomenclature, quantity, issued_on, return_by, status, source_url, source, raw)
+SELECT v.sol, CASE WHEN v.src = 'dibbs_rfq' THEN n.nsn END, '5340', 'SEED SAMATT ' || v.grp, 10, CURRENT_DATE - 5, CURRENT_DATE + 12, 'open',
+       CASE WHEN v.src = 'dibbs_rfq' THEN 'https://www.dibbs.bsm.dla.mil/RFQ/RFQNsn.aspx?value=seed' || v.grp || '&category=nsn'
+            ELSE 'https://sam.gov/opp/seed' || v.grp || '/view' END,
+       v.src,
+       CASE WHEN v.src = 'sam_gov' THEN jsonb_build_object('noticeId', 'seed' || v.grp, 'title', 'SEED SAMATT ' || v.grp, 'solicitationNumber', v.sol,
+              'type', 'Combined Synopsis/Solicitation', 'active', 'Yes', 'classificationCode', '5340', 'uiLink', 'https://sam.gov/opp/seed' || v.grp || '/view',
+              'resourceLinks', v.links::jsonb)
+            ELSE v.links::jsonb END
+FROM (SELECT nsn FROM pub.nsns WHERE fsc = '5340' ORDER BY nsn OFFSET 9 LIMIT 1) n,
+     (VALUES
+       ('SEED-SAMATT-0',    'sam_gov',   'SA0', 'null'),
+       ('SEED-SAMATT-1',    'sam_gov',   'SA1', '["https://sam.gov/api/prod/opps/v3/opportunities/resources/files/0a1b2c3d4e5f60718293a4b5c6d7e8f9/download"]'),
+       ('SEED-SAMATT-MANY', 'sam_gov',   'SAN', '["https://sam.gov/api/prod/opps/v3/opportunities/resources/files/11111111111111111111111111111111/download?api_key=null&token=","https://sam.gov/api/prod/opps/v3/opportunities/resources/files/22222222222222222222222222222222/download?api_key=null&token=","https://sam.gov/api/prod/opps/v3/opportunities/resources/files/33333333333333333333333333333333/download?api_key=null&token=","https://sam.gov/api/prod/opps/v3/opportunities/resources/files/22222222222222222222222222222222/download?api_key=null&token=","https://sam.gov/api/prod/opps/v3/opportunities/resources/files/44444444444444444444444444444444/download","https://sam.gov/api/prod/opps/v3/opportunities/resources/files/55555555555555555555555555555555/download"]'),
+       ('SEED-SAMATT-KEY',  'sam_gov',   'SAK', '["https://sam.gov/api/prod/opps/v3/opportunities/resources/files/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/download?api_key=null&token=","https://sam.gov/api/prod/opps/v3/opportunities/resources/files/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/download?api_key=LEAKEDKEY1234567890","https://sam.gov/api/prod/opps/v3/opportunities/resources/files/cccccccccccccccccccccccccccccccc/download"]'),
+       ('SEED-SAMATT-ONLYKEY', 'sam_gov', 'SAO', '["https://sam.gov/api/prod/opps/v3/opportunities/resources/files/dddddddddddddddddddddddddddddddd/download?api_key=LEAKEDKEY1234567890"]'),
+       -- a DIBBS row whose raw happens to carry the same key: never read
+       ('SEED-SAMATT-DIBBS', 'dibbs_rfq', 'SAD', '{"resourceLinks":["https://sam.gov/api/prod/opps/v3/opportunities/resources/files/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee/download"]}'),
+       -- a twin pair (same requirement on DIBBS and SAM.gov) whose SAM.gov notice lists three files, and one whose notice lists none
+       ('SPE9Y1-26-T-0001', 'dibbs_rfq', 'SAP', '{}'),
+       ('SPE9Y126T0001',    'sam_gov',   'SAP', '["https://sam.gov/api/prod/opps/v3/opportunities/resources/files/f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1/download?api_key=null&token=","https://sam.gov/api/prod/opps/v3/opportunities/resources/files/f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2/download?api_key=null&token=","https://sam.gov/api/prod/opps/v3/opportunities/resources/files/f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3/download?api_key=null&token="]'),
+       ('SPE9Y1-26-T-0002', 'dibbs_rfq', 'SAQ', '{}'),
+       ('SPE9Y126T0002',    'sam_gov',   'SAQ', 'null')
+     ) AS v(sol, src, grp, links);
 
 COMMIT;
 ANALYZE;

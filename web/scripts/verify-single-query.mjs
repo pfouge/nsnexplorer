@@ -376,7 +376,7 @@ async function oldLoadSupplierPage(sql, cage) {
 
 // Fields added to the new solicitation loader after the old one was frozen (price history, matched awards).
 // Old-vs-new compares only the pre-existing fields; the new ones are not checked here.
-const NEW_SOL_FIELDS = ['purchaseRequest', 'techDocs', 'partPrices', 'partPriceCount', 'matchedAwards', 'twin', 'characteristics', 'partNumbers']; // checked by checkCeilings, checkTwins and checkDrawingPointers below
+const NEW_SOL_FIELDS = ['purchaseRequest', 'techDocs', 'partPrices', 'partPriceCount', 'matchedAwards', 'twin', 'characteristics', 'partNumbers', 'samAttachments']; // checked by checkCeilings, checkTwins, checkDrawingPointers and checkSamAttachments below
 function withoutNewSolFields(page) {
   if (!page) return page;
   const out = { ...page };
@@ -1045,6 +1045,51 @@ async function checkTwins(db) {
   console.log(`   twin rule checked on ${all.length} solicitations rows (${sqlPairs.length} pairs)`);
 }
 
+
+// ------------------------------------------------ SAM.gov attachments: the rows seeded by the seed file (SEED-SAMATT-*, SPE9Y1*)
+/**
+ * With --seed: zero, one, many (with a duplicate), a withheld key link, an all-withheld notice, a DIBBS row whose raw
+ * looks like a notice, and two twin pairs. Expectations are written out by hand; the loader's `samAttachments` must
+ * match, and no page data may contain the seeded key.
+ */
+async function checkSamAttachments(db) {
+  const check = (label, actual, expected) => {
+    results.checks++;
+    try {
+      assert.deepStrictEqual(actual, expected);
+    } catch (e) {
+      fail('sol attachments', label, String(e.message).split('\n').slice(0, 14).join('\n'));
+    }
+  };
+  const base = 'https://sam.gov/api/prod/opps/v3/opportunities/resources/files/';
+  const view = async (n) => {
+    const p = await N.loadSolicitationPage(db, n);
+    check(`${n}: page data never holds the seeded key`, /LEAKEDKEY/.test(JSON.stringify(p)), false);
+    const v = p?.samAttachments ?? null;
+    return v && { from: v.from, notice: v.noticeNumber, total: v.total, urls: v.items.map((a) => a.url.slice(base.length)), positions: v.items.map((a) => a.position) };
+  };
+  check('zero links (null)', await view('SEED-SAMATT-0'), null);
+  check('one link', await view('SEED-SAMATT-1'), { from: 'own', notice: 'SEED-SAMATT-1', total: 1, urls: ['0a1b2c3d4e5f60718293a4b5c6d7e8f9/download'], positions: [1] });
+  check('many links: duplicate counted once, empty api_key and token dropped', await view('SEED-SAMATT-MANY'), {
+    from: 'own', notice: 'SEED-SAMATT-MANY', total: 5, positions: [1, 2, 3, 4, 5],
+    urls: ['1', '2', '3', '4', '5'].map((c) => `${c.repeat(32)}/download`),
+  });
+  check('a link with a key is withheld and counted', await view('SEED-SAMATT-KEY'), {
+    from: 'own', notice: 'SEED-SAMATT-KEY', total: 3, positions: [1, 3], urls: ['a'.repeat(32) + '/download', 'c'.repeat(32) + '/download'],
+  });
+  check('every link withheld: count only', await view('SEED-SAMATT-ONLYKEY'), { from: 'own', notice: 'SEED-SAMATT-ONLYKEY', total: 1, urls: [], positions: [] });
+  check('a DIBBS row never reads its own raw', await view('SEED-SAMATT-DIBBS'), null);
+  const f = (c) => `${c.repeat(32)}/download`;
+  const pairUrls = ['f1', 'f2', 'f3'].map((c) => `${c}`.repeat(16) + '/download');
+  check('twin pair, SAM.gov side', await view('SPE9Y126T0001'), { from: 'own', notice: 'SPE9Y126T0001', total: 3, urls: pairUrls, positions: [1, 2, 3] });
+  check('twin pair, DIBBS side shows the twin\'s files', await view('SPE9Y1-26-T-0001'), { from: 'twin', notice: 'SPE9Y126T0001', total: 3, urls: pairUrls, positions: [1, 2, 3] });
+  check('twin pair without files: nothing on either side', [await view('SPE9Y126T0002'), await view('SPE9Y1-26-T-0002')], [null, null]);
+  const t = await N.loadSolicitationPage(db, 'SPE9Y1-26-T-0001');
+  check('twin notice link is the official page', t.samAttachments.noticeUrl, 'https://sam.gov/opp/seedSAP/view');
+  void f;
+  console.log('   SAM.gov attachments checked on 10 seeded notices');
+}
+
 // ------------------------------------------------------- counting TCP proxy
 const counts = { parse: 0, query: 0, sync: 0, bind: 0, connections: 0, statements: [] };
 const resetCounts = () => {
@@ -1504,6 +1549,8 @@ async function main() {
       { label: 'no NSN / no FSC', rows: await col(`select sol_number from pub.solicitations where nsn is null or fsc is null order by md5(sol_number) limit 8`) },
       { label: 'placeholder / blank / excluded / unknown FSC', rows: await col(`select s.sol_number from pub.solicitations s left join pub.fsc f on f.fsc = s.fsc where f.fsc is null or f.render_depth = 'excluded' or f.name like 'FSC %' or btrim(f.name) = '' order by md5(s.sol_number) limit 12`) },
       { label: 'sam_gov source', rows: await col(`select sol_number from pub.solicitations where source='sam_gov' order by md5(sol_number) limit 6`) },
+      { label: 'SAM.gov notices with attachment links (seed rows when seeded)', rows: await col(`select sol_number from pub.solicitations where source='sam_gov' and jsonb_typeof(raw -> 'resourceLinks') = 'array' order by md5(sol_number) limit 12`) },
+      { label: 'SAM.gov twin pair with attachments', rows: await col(`select sol_number from pub.solicitations where sol_number like 'SPE9Y%' order by 1`) },
       { label: 'tied dates on one NSN', rows: await col(`select sol_number from pub.solicitations where sol_number like 'SEED-TIE-%' order by 1`) },
     ];
     const solSet = new Set();
@@ -1531,6 +1578,7 @@ async function main() {
     if (withSeed) await checkCeilings(direct);
     if (withSeed) await checkTwins(direct);
     if (withSeed) await checkDrawingPointers(direct);
+    if (withSeed) await checkSamAttachments(direct);
     await checkNameSearch(col);
     if (withSeed) await checkNameSearchSeed(direct);
 

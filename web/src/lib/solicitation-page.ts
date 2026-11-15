@@ -10,6 +10,7 @@ import type postgres from 'postgres';
 import { assertSourceUrl, type SolicitationRecord } from './shared';
 import { isSolNumber } from './entity';
 import { pickTwin, solKeySql, type TwinRow } from './sol-twin';
+import { pickSamAttachments, type SamAttachmentsView } from './sam-attachments';
 import { CEILING_PRICE_POINT_SQL, CONTRACT_CEILING_SQL, NOT_CEILING_PRICE_POINT_SQL } from './contract-ceiling';
 
 type Sql = ReturnType<typeof postgres>;
@@ -83,6 +84,8 @@ export interface SolicitationPageData {
   partNumbers: { partNumber: string; cage: string | null }[];
   /** The same requirement on the other source (rule in sol-twin.ts), with the official record's link; null when there is none or it is not certain. */
   twin: TwinRow | null;
+  /** Files the SAM.gov notice lists (this page's own notice, or the twin's on a DIBBS page); null when none. See sam-attachments.ts. */
+  samAttachments: SamAttachmentsView | null;
 }
 
 const isoDate = (v: unknown): string | null =>
@@ -96,7 +99,9 @@ const SOLICITATION_PAGE_SQL = `
 WITH same_key AS (
   -- Every row whose number is the same once separators are dropped (this row included): at most five are read, one
   -- index probe (migration 0016). pickTwin() decides from them whether there is exactly one twin on the other source.
-  SELECT t.sol_number, t.source, t.source_url
+  SELECT t.sol_number, t.source, t.source_url,
+         -- SAM.gov attachment links (sam-attachments.ts): only the one key of the stored notice, never the whole record
+         CASE WHEN t.source = 'sam_gov' THEN t.raw -> 'resourceLinks' END AS resource_links
   FROM pub.solicitations t
   WHERE ${solKeySql('t')} = regexp_replace(upper($1::text), '[^A-Z0-9]', '', 'g')
   ORDER BY t.sol_number
@@ -107,6 +112,7 @@ SELECT s.sol_number, s.nsn, s.fsc, s.nomenclature, s.quantity, s.unit_of_issue,
        -- Open means open today: a past-dated 'open' row is reported as 'expired'.
        CASE WHEN s.status = 'open' AND s.return_by < CURRENT_DATE THEN 'expired' ELSE s.status END AS status,
        s.setaside, s.buyer_office, s.source, s.source_url,
+       CASE WHEN s.source = 'sam_gov' THEN s.raw -> 'resourceLinks' END AS resource_links, -- SAM.gov attachments (sam-attachments.ts)
        n.item_name, n.characteristics AS characteristics, f.name AS fsc_name, f.render_depth AS fsc_depth,
        -- Part numbers for the "Drawings and technical data" block (standard sheets such as MS35338-44): primary-key-free
        -- index lookup on part_numbers (nsn), capped at 25.
@@ -171,6 +177,11 @@ export async function loadSolicitationPage(sql: Sql, solNumber: string): Promise
     sourceUrl: k.source_url,
   }));
   const twin = pickTwin({ solNumber: r.sol_number, source: r.source }, sameKeyRows);
+  const twinLinks = twin ? (r.same_key_rows as { sol_number: string; resource_links?: unknown }[]).find((k) => k.sol_number === twin.solNumber)?.resource_links : null;
+  const samAttachments = pickSamAttachments(
+    { source: r.source, solNumber: r.sol_number, sourceUrl: r.source_url, resourceLinks: r.resource_links },
+    twin ? { source: twin.source, solNumber: twin.solNumber, sourceUrl: twin.sourceUrl, resourceLinks: twinLinks } : null
+  );
 
   const fscName = typeof r.fsc_name === 'string' && r.fsc_name.trim() !== '' && r.fsc_name !== `FSC ${r.fsc}` ? r.fsc_name.trim() : null;
   const sol: SolicitationRecord = {
@@ -230,5 +241,6 @@ export async function loadSolicitationPage(sql: Sql, solNumber: string): Promise
       sourceUrl: assertSourceUrl(m.source_url, `contract_actions award ${m.award_number}`),
     })),
     twin: twin ? { ...twin, sourceUrl: assertSourceUrl(twin.sourceUrl, `solicitations.sol_number=${twin.solNumber} (twin)`) } : null,
+    samAttachments,
   };
 }

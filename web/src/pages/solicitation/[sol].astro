@@ -12,6 +12,7 @@ import CiteThis from '../../components/CiteThis.astro';
 import Follow from '../../components/Follow.astro';
 import BidCalculator from '../../components/BidCalculator.astro';
 import DrawingsBlock from '../../components/DrawingsBlock.astro';
+import SamAttachments from '../../components/SamAttachments.astro';
 import { SITE_URL } from '../../consts';
 import { toDashedNsn, formatDate, formatUsd, formatUsdPrecise, parseCharacteristics } from '../../lib/shared';
 import { databaseUrlFrom } from '../../lib/runtime-env';
@@ -49,7 +50,7 @@ if (!page) return notFound();
 // Shorter edge cache than NSN pages: the countdown and status change daily.
 Astro.response.headers.set('Cache-Control', 'public, max-age=0, s-maxage=600, stale-while-revalidate=3600');
 
-const { sol, awards, fscName, hasOpenPage, purchaseRequest, techDocs, partPrices, partPriceCount, matchedAwards, twin } = page;
+const { sol, awards, fscName, hasOpenPage, purchaseRequest, techDocs, partPrices, partPriceCount, matchedAwards, twin, samAttachments } = page;
 const isOpen = sol.status === 'open';
 const dashed = sol.nsn ? toDashedNsn(sol.nsn) : null;
 const itemLabel = sol.nomenclature ?? sol.itemName ?? sol.solNumber;
@@ -209,8 +210,9 @@ const primaryLabel = isOpen
   </p>
 
   {drawings && <DrawingsBlock block={drawings} docs={standardDocs} diagram={drawingDiagram} />}
-  {/* INSERTION POINT (SAM.gov rows): notice attachments and resource links for source === 'sam_gov' are handled by another
-      change. drawingsBlock() returns null for sam_gov on purpose; nothing here reads raw notice attachments. */}
+  {/* BEGIN attachments on SAM.gov (components/SamAttachments.astro) */}
+  <SamAttachments view={samAttachments} />
+  {/* END attachments on SAM.gov */}
 
   {matchedAwards.length > 0 && (
     <section id="award-on-record">
