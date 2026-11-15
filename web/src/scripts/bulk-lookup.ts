@@ -68,7 +68,7 @@ function row(it: Item): HTMLElement {
     {},
     h('td', {}, h('a', { href: it.url, class: 'code' }, it.nsn)),
     h('td', { class: 'wrap' }, it.itemName ?? '—'),
-    h('td', { class: 'wrap' }, h('a', { href: `/fsc/${it.fsc}/` }, `${it.fsc}${it.className ? ` ${it.className}` : ''}`)),
+    h('td', {}, h('a', { href: `/fsc/${it.fsc}/`, title: it.className ?? '' }, it.fsc)),
     h('td', {}, badge(it)),
     h(
       'td',
@@ -89,7 +89,7 @@ function listBlock(title: string, items: string[], note: string): HTMLElement {
 function render() {
   const kids: Node[] = [];
   if (results.length) {
-    const head = ['NSN', 'Item', 'Class', 'Competition', 'Last price', 'Last-5 range', 'Prices on record', 'Open bids'];
+    const head = ['NSN', 'Item', 'Class', 'Competition', 'Last price', 'Last-5 range', 'Prices', 'Open bids'];
     kids.push(
       h(
         'div',
