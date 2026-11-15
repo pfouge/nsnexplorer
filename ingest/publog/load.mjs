@@ -1105,6 +1105,16 @@ async function main() {
     await optional(name, () => run(path.join(args.dir, file)));
   }
 
+  // Management data (migration 0020): V_FLIS_MANAGEMENT.CSV and the per-service V_MGMT_*.CSV files from
+  // MANAGEMENT.zip. Optional like the FLIS extras above: missing files or a failure is a warning only.
+  const mgmt = await import('./load-management.mjs');
+  const mgmtFiles = mgmt.findManagementFiles(filesOnDisk);
+  if (mgmtFiles.length === 0) {
+    console.log(`::warning::load.mjs: no V_FLIS_MANAGEMENT.CSV / V_MGMT_*.CSV in ${args.dir} (MANAGEMENT.zip missing?), skipping management data`);
+  } else {
+    await optional('management files', () => mgmt.loadManagement(args.dir, mgmtFiles, trackedByNiin));
+  }
+
   const cageFile = findFile(filesOnDisk, 'P_CAGE.CSV');
   if (cageFile) {
     const result = await loadCageFile(path.join(args.dir, cageFile), referencedCages);

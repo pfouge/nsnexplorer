@@ -96,15 +96,15 @@ export function resolveColumns(layout, firstFields, keyKey) {
   return { cols, via, hasHeader };
 }
 
-const at = (fields, idx) => (idx >= 0 && idx < fields.length ? fields[idx] : '');
+export const at = (fields, idx) => (idx >= 0 && idx < fields.length ? fields[idx] : '');
 
-function describeColumns(label, res, headerLine) {
+export function describeColumns(label, res, headerLine) {
   const parts = Object.entries(res.cols).map(([k, i]) => `${k}=${i}(${res.via[k]})`).join(' ');
   return `load.mjs: ${label} ${res.hasHeader ? 'header row found' : 'NO header row; positional columns'}; resolved columns (0-based): ${parts}` +
     (res.hasHeader ? '' : ` [first line: ${headerLine.slice(0, 200)}]`);
 }
 
-function distribution(values) {
+export function distribution(values) {
   const d = {};
   for (const v of values) d[v ?? '-'] = (d[v ?? '-'] || 0) + 1;
   const e = Object.entries(d).sort(([a], [b]) => a.localeCompare(b));
@@ -270,7 +270,7 @@ export function buildUpsert({ table, cols, key, touch }) {
   return sql;
 }
 
-function makeWriter(spec) {
+export function makeWriter(spec) {
   const sql = buildUpsert(spec);
   const names = spec.cols.map(([n]) => n);
   const pending = new Map();
@@ -368,19 +368,24 @@ async function* records(filePath, { multiline = false } = {}) {
  * data row. `prefilter(line)` may return false to skip a line without splitting it (tracked-NIIN
  * check on the huge files); it must return null/true when unsure.
  */
-async function scan(filePath, label, layout, keyKey, onRow, { log, prefilter, multiline } = {}) {
+export async function scan(filePath, label, layout, keyKey, onRow, { log, prefilter, multiline } = {}) {
   let res = null;
   let scanned = 0;
   let bad = 0;
+  // meta = {cols, headers}: handed to onRow (3rd argument) and prefilter (2nd argument) so a loader can
+  // record source column names or decide whether the first-field NIIN shortcut is safe for this file.
+  const meta = { cols: null, headers: null };
   for await (const { line } of records(filePath, { multiline })) {
     if (!res) {
       const first = splitCsvLine(line);
       res = resolveColumns(layout, first, keyKey);
+      meta.cols = res.cols;
+      meta.headers = res.hasHeader ? first : null;
       log(describeColumns(label, res, line));
       if (res.hasHeader) continue;
       scanned += 1;
       try {
-        await onRow(first, res.cols);
+        await onRow(first, res.cols, meta);
       } catch (e) {
         if (e && e.isDb) throw e;
         bad += 1;
@@ -388,9 +393,9 @@ async function scan(filePath, label, layout, keyKey, onRow, { log, prefilter, mu
       continue;
     }
     scanned += 1;
-    if (prefilter && prefilter(line) === false) continue;
+    if (prefilter && prefilter(line, meta) === false) continue;
     try {
-      await onRow(splitCsvLine(line), res.cols);
+      await onRow(splitCsvLine(line), res.cols, meta);
     } catch (e) {
       if (e && e.isDb) throw e;
       bad += 1; // malformed row: count and move on
@@ -402,13 +407,13 @@ async function scan(filePath, label, layout, keyKey, onRow, { log, prefilter, mu
 
 // A DB failure must abort the loader (it is reported as a warning by main); only mapping
 // problems are per-row.
-function dbGuard(writer) {
+export function dbGuard(writer) {
   return async (row) => {
     try { await writer.add(row); } catch (e) { e.isDb = true; throw e; }
   };
 }
 
-async function fileDateOf(filePath, override) {
+export async function fileDateOf(filePath, override) {
   if (override) return override;
   try { return (await stat(filePath)).mtime.toISOString().slice(0, 10); } catch { return null; }
 }

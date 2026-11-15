@@ -29,6 +29,7 @@ on:
       - 'ingest/publog/fetch.mjs'
       - 'ingest/publog/load.mjs'
       - 'ingest/publog/load-flis.mjs'
+      - 'ingest/publog/load-management.mjs'
 
 env:
   DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
@@ -56,8 +57,10 @@ jobs:
       # year-month so only the first nightly run of the month downloads them;
       # the rest reuse the cache and just re-scan to enrich new NSNs.
       # The key carries a version (v2 = MOE_RULE.zip added to the download
-      # set): bump it whenever fetch.mjs's default file list changes so a
-      # month cached without the new zip re-downloads instead of skipping it.
+      # set; v3 = MANAGEMENT.zip added, an optional download): bump it whenever
+      # fetch.mjs's file list changes so a month cached without the new zip
+      # re-downloads instead of skipping it. If the optional MANAGEMENT.zip
+      # download warns (see the step log), fix the name and bump the key again.
       - name: cache key (year-month)
         id: ym
         run: echo "ym=$(date -u +%Y-%m)" >> "$GITHUB_OUTPUT"
@@ -66,7 +69,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /tmp/publog
-          key: publog-flis-v2-${{ steps.ym.outputs.ym }}
+          key: publog-flis-v3-${{ steps.ym.outputs.ym }}
       - name: fetch + unzip PUB LOG bulk exports
         if: steps.publog-cache.outputs.cache-hit != 'true'
         run: |
@@ -97,8 +100,18 @@ jobs:
             else
               echo 'V_MOE_RULE.CSV not found in /tmp/publog (MOE_RULE.zip missing or empty?)'
             fi
+            echo '== management files (first 2 lines, 1000 chars each) =='
+            found=0
+            for mf in $(find /tmp/publog -maxdepth 1 \( -iname 'V_FLIS_MANAGEMENT*.CSV' -o -iname 'V_MGMT_*.CSV' \) | sort); do
+              found=1
+              echo "--- $mf"
+              head -2 "$mf" | cut -c1-1000 || true
+            done
+            if [ "$found" = 0 ]; then echo 'no V_FLIS_MANAGEMENT / V_MGMT_* CSV in /tmp/publog (MANAGEMENT.zip missing?)'; fi
             echo '== load output (tail) =='
             tail -40 /tmp/load-output.txt
+            echo '== management load output =='
+            grep -E 'MANAGEMENT|V_MGMT_|management' /tmp/load-output.txt | cut -c1-1500 | head -120 || true
           } > ingest/publog/last-run-diagnostics.txt
       - name: run report
         if: always()
