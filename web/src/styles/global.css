@@ -716,3 +716,17 @@ button.copy, .copy-btn { font: inherit; font-size: 0.8125rem; font-weight: 600; 
 }
 .acct-toast.on { opacity: 1; transform: translate(-50%, 0); }
 @media (prefers-reduced-motion: reduce) { .acct-toast { transition: none; } }
+
+/* Standard drawing lines (part page, solicitation page): src/components/StandardDrawings.astro */
+.std-list { list-style: none; margin: 0.75rem 0 0; padding: 0; display: grid; gap: 0.75rem; }
+.std-item { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 0.9rem 1rem; min-width: 0; overflow-wrap: anywhere; }
+.std-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.std-id { font-weight: 600; }
+.std-item p { margin: 0.35rem 0 0; }
+.std-what { color: var(--ink-soft); font-size: 0.9375rem; }
+.std-sentence { font-size: 0.9375rem; }
+.std-action { font-size: 0.9375rem; }
+.drawings-block ol { margin: 0.75rem 0 0; padding-left: 1.4rem; }
+.drawings-block li { margin: 0.5rem 0; overflow-wrap: anywhere; }
+.drawings-block .drawings-notes { margin: 0.75rem 0 0; padding-left: 1.2rem; }
+.drawings-block .drawings-notes li { margin: 0.35rem 0; }

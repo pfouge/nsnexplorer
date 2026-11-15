@@ -17,6 +17,7 @@ import {
 import { compareByClosing, mapServiceNotice, type ServiceNotice, type ServiceNoticeRow } from './services';
 import { nomen } from './seo-copy';
 import { techDocsKind } from './open-signals';
+import { STANDARD_CAGES } from './standard-refs';
 import { SAM_DUPES_CTE, SOLS_ONCE_SQL } from './sol-twin';
 import { CAGE_RE, SOL_NUMBER_RE } from './entity';
 import type { FiscalYearRow } from './agency-profile';
@@ -148,6 +149,12 @@ export interface SiteData {
    * only" set — the name is kept for API stability.
    */
   openNsnByNsn: Map<string, NsnRecord>;
+  /**
+   * Part numbers that may BE a standard sheet or specification (MS, AN, NAS, MIL-*, federal specs, or any number under a
+   * government standards CAGE) for every NSN in nsnByNsn or openNsnByNsn. A pre-filtered subset of pub.part_numbers
+   * used only to flag cards with a "Standard drawing" badge (lib/standard-refs.ts decides); not the part-number list.
+   */
+  standardPartNumbersByNsn: Map<string, { partNumber: string; cage: string | null }[]>;
   /**
    * Open SAM.gov SERVICE notices (letter-coded PSC, or no code), closing
    * soonest first. Separate from the parts lane above, which drops letter
@@ -528,6 +535,25 @@ async function fetchSiteData(): Promise<SiteData> {
       }
     }
 
+    // Candidate standard-sheet part numbers for the "Standard drawing" card badge (one extra query, build time).
+    const standardPartNumbersByNsn = new Map<string, { partNumber: string; cage: string | null }[]>();
+    const stdNsnCodes = [...new Set([...nsnCodes, ...allSolNsnCodes])];
+    if (stdNsnCodes.length > 0) {
+      const stdRes = await pool.query(
+        `SELECT pn.nsn, pn.part_number, pn.cage
+         FROM pub.part_numbers pn
+         WHERE pn.nsn = ANY($1)
+           AND (pn.cage = ANY($2) OR pn.part_number ~* '^(MS|AN|NAS|NASM|NAM|AS|MIL-|DOD-|FF-|GG-|HH-|KK-|LL-|MM-|NN-|PPP-|QQ-|RR-|SS-|TT-|UU-|VV-|WW-|ZZ-|A-A-)')
+         ORDER BY pn.nsn, pn.part_number`,
+        [stdNsnCodes, [...STANDARD_CAGES]]
+      );
+      for (const r of stdRes.rows) {
+        const list = standardPartNumbersByNsn.get(r.nsn) ?? [];
+        list.push({ partNumber: r.part_number, cage: r.cage });
+        standardPartNumbersByNsn.set(r.nsn, list);
+      }
+    }
+
     // Build-time coverage check: how many open NSNs get a thumbnail drawing
     // from the FSC archetypes in diagram.ts, and which FSCs are still bare.
     // Log-only (guarded so a bad characteristics blob can never fail the
@@ -653,6 +679,7 @@ async function fetchSiteData(): Promise<SiteData> {
       solicitationsByFsc,
       openNsnCodes,
       openNsnByNsn,
+      standardPartNumbersByNsn,
       serviceNotices,
       serviceNoticesByCategory,
       serviceNoticesByFsg,

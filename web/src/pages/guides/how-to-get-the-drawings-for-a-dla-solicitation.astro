@@ -1,0 +1,241 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import GuideFooter from '../../components/GuideFooter.astro';
+import { SITE_URL } from '../../consts';
+import { DATA_CUSTODIAN_EMAIL, DIBBS_HOME_URL, EXPORT_CONTROL_NOTES, SRC, TDMT_URL } from '../../lib/drawings-copy';
+import { ASSIST_QUICK_SEARCH_URL } from '../../lib/standard-refs';
+
+const title = 'How to Get the Drawings for a DLA Solicitation';
+const description =
+  'Where the drawings and technical data for a DLA solicitation are kept, the steps to get access, what export-controlled data needs, and how to find the standard behind a part.';
+const canonicalUrl = `${SITE_URL}/guides/how-to-get-the-drawings-for-a-dla-solicitation/`;
+
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  { name: 'Guides', url: '/guides/' },
+  { name: 'How to get the drawings for a DLA solicitation', url: canonicalUrl },
+];
+
+const faq = [
+  {
+    question: 'Is TDMT the same thing as cFolders?',
+    answer:
+      'TDMT replaced cFolders. DLA\'s TDMT page says DLA moved its procurement technical data from cFolders to TDMT in phase one, which it dates June 22, 2026. DLA\'s supplier portal lists TDMT as the "Technical Data Management Tool (formerly known as c-folders)".',
+  },
+  {
+    question: 'Does a cFolders or DIBBS login still work?',
+    answer:
+      'DLA says outside users who need technical data register in AMPS and sign in with Okta, and that the same email address must be used in AMPS, DIBBS and Okta. Treat an old cFolders login as not enough and check DLA\'s TDMT page.',
+  },
+  {
+    question: 'What does "Tech Docs" on a DIBBS listing mean?',
+    answer:
+      'DLA\'s DIBBS legend says there are technical documents available for the item. This site shows three values from DIBBS: None, Tech Docs, and Tech Docs *Spec/Stnd Only. We read the last one as a requirement defined by specifications and standards, and we say so on the page. Check the solicitation text to confirm.',
+  },
+  {
+    question: 'Do I need a DD Form 2345 to see a drawing?',
+    answer:
+      'DLA ties Joint Certification Program certification (DD Form 2345) and Enhanced Validation to export-controlled technical data. The DLA pages we reviewed do not say what you can see without them, so open the solicitation in TDMT and see what DLA shows you.',
+  },
+  {
+    question: 'How much does access cost and how long does it take?',
+    answer:
+      'We did not find a fee or a processing time on the DLA pages listed below, so we cannot give either. The JCP portal page does set a 90-day limit for answering a JCP analyst\'s requests once an application is in processing. Start well before the solicitation closes.',
+  },
+  {
+    question: 'Where do I get a standard such as MS35338 or MIL-DTL-25988?',
+    answer:
+      'Government documents such as MS and AN sheets, MIL specifications, federal specifications and commercial item descriptions are listed in ASSIST Quick Search, which needs no registration. Industry standards from SAE, AIA, ASTM, ASME and ISO are sold by their publishers.',
+  },
+];
+
+const sources = [
+  SRC.tdmtPage,
+  SRC.ebsResources,
+  SRC.enhancedValidation,
+  SRC.jcpPortal,
+  SRC.jcpProgram,
+  SRC.quickSearchBasic,
+  SRC.dspLocating,
+  SRC.dibbsPocketGuide,
+  SRC.aiaNas,
+].map((s) => ({ label: s.pageDate ? `${s.label} (page dated ${s.pageDate})` : s.label, url: s.url }));
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  ogType="article"
+  pageType="Article"
+  canonicalUrl={canonicalUrl}
+  breadcrumbs={breadcrumbs}
+  faq={faq}
+>
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a> › <a href="/guides/">Guides</a> › Drawings for a DLA solicitation
+  </nav>
+
+  <h1>How to get the drawings for a DLA solicitation</h1>
+  <p class="lede answer">
+    DLA keeps the drawings and technical data for its solicitations in its own system, called TDMT, and decides who may open
+    them. NSN Explorer does not host or copy any drawing. It tells you what DLA has flagged and where the official copy is.
+  </p>
+
+  <section>
+    <h2 class="section-title">What the Tech Docs flag tells you</h2>
+    <p>
+      DIBBS shows a Tech Docs value on each request for quotation. DLA's DIBBS legend says it means technical documents are
+      available for the item. On a solicitation page here you will see one of three values:
+    </p>
+    <ul>
+      <li><strong>Tech Docs.</strong> DLA has technical data for this solicitation. The steps below get you to it.</li>
+      <li>
+        <strong>Tech Docs *Spec/Stnd Only.</strong> We read this as: the requirement is defined by specifications and
+        standards rather than a drawing package. The wording is DLA's label, and the reading is ours, so confirm it in the
+        solicitation. The next section shows how to find the standard.
+      </li>
+      <li>
+        <strong>None.</strong> DLA lists no technical data. Read the solicitation text for how the item is described, such
+        as a part number or named sources. If you think a drawing should exist, ask the buyer named on the solicitation.
+      </li>
+    </ul>
+  </section>
+
+  <section>
+    <h2 class="section-title">Steps to get technical data from DLA</h2>
+    <p class="gloss">
+      This is DLA's current process as its pages describe it. It changed in 2026 when TDMT replaced cFolders, so check
+      <a href={SRC.tdmtPage.url} target="_blank" rel="nofollow noopener">DLA's TDMT page</a> before you start.
+    </p>
+    <ol>
+      <li>
+        <strong>Have a DIBBS account.</strong> Registration is described in our <a href="/guides/how-to-bid-on-dibbs/">DIBBS guide</a>.
+        DLA says the email address you use must be the same in AMPS, DIBBS and Okta.
+      </li>
+      <li>
+        <strong>Register in AMPS.</strong> AMPS is DLA's Account Management and Provisioning System. DLA says commercial
+        vendors who need technical data must register there. DLA's
+        <a href={SRC.ampsRegistration.url} target="_blank" rel="nofollow noopener">AMPS registration instructions</a>
+        are linked from its supplier resources page.
+      </li>
+      <li>
+        <strong>Set up Okta.</strong> DLA says outside users need the Okta FastPass app to verify their identity before they
+        can open TDMT. Do this before you need the data, not on the closing day.
+      </li>
+      <li>
+        <strong>Sign in to TDMT.</strong> DLA's supplier notice says TDMT is at
+        <a href={TDMT_URL} target="_blank" rel="nofollow noopener">tdmt.dla.mil</a> and also reachable from the
+        <a href={DIBBS_HOME_URL} target="_blank" rel="nofollow noopener">DIBBS home page</a>. Look up the solicitation or
+        purchase request you are quoting.
+      </li>
+      <li>
+        <strong>Ask for what is missing.</strong> If a package is incomplete, unreadable, or needs more access such as a
+        license agreement, DLA's TDMT page says to report it to the TDMT Tech Data Help Desk, and the right desk depends on
+        which supply chain issued the solicitation.
+      </li>
+    </ol>
+    <p class="gloss">
+      Training guides for vendors are attached to DLA's notices on its
+      <a href={SRC.ebsResources.url} target="_blank" rel="nofollow noopener">EBS Supplier Resources page</a>.
+    </p>
+  </section>
+
+  <section>
+    <h2 class="section-title">When the data is export-controlled</h2>
+    <p>
+      Some technical data is export-controlled. DLA's Enhanced Validation page lists what it requires before it releases
+      that data to a supplier:
+    </p>
+    <ol>
+      <li>
+        Certification in the U.S./Canada Joint Certification Program, shown on DD Form 2345. DLA's JCP pages say
+        applications are made in the JCP portal, that paper and emailed forms are no longer accepted, and that a SAM
+        registration and a CAGE code come first.
+        <a href={SRC.jcpPortal.url} target="_blank" rel="nofollow noopener">JCP portal page</a>,
+        <a href={SRC.jcpProgram.url} target="_blank" rel="nofollow noopener">JCP program page</a>.
+      </li>
+      <li>An approved DIBBS account with technical data access enabled.</li>
+      <li>A documented business need for the data, such as quoting on a solicitation or filling a contract.</li>
+      <li>
+        DLA Enhanced Validation: DLA's export-control training and a signed certificate statement, reviewed by DLA.
+        <a href={SRC.enhancedValidation.url} target="_blank" rel="nofollow noopener">DLA Enhanced Validation</a>.
+      </li>
+    </ol>
+    <p>
+      DLA's page says approval to open its export-controlled technical data is decided by DLA, not by the JCP Office, and
+      that JCP certification alone does not grant it. DLA's supplier notices also say export-controlled data needs a current
+      NIST SP 800-171 assessment posted in SPRS. Questions go to the data custodian at
+      <a href={`mailto:${DATA_CUSTODIAN_EMAIL}`}>{DATA_CUSTODIAN_EMAIL}</a>, the address on the Enhanced Validation page.
+    </p>
+  </section>
+
+  <section>
+    <h2 class="section-title">Handling export-controlled data</h2>
+    <ul>
+      {EXPORT_CONTROL_NOTES.map((n) => <li>{n}</li>)}
+      <li>
+        Do not share your sign-in. DLA's supplier notices say masking your connection with a VPN or proxy breaks the DIBBS
+        and cFolders terms and can end your access.
+      </li>
+    </ul>
+    <p class="gloss">This is a plain-language summary of what DLA's pages say, not legal advice. Ask DLA or your counsel about a specific case.</p>
+  </section>
+
+  <section>
+    <h2 class="section-title">Cost and waiting time</h2>
+    <p>
+      We did not find a fee or a processing time on the DLA pages used for this guide, so we do not state one. The only time
+      limit we found is on the JCP portal page: once an application is being processed, DLA gives you 90 days to answer an
+      analyst's request or the application is cancelled. Start early.
+    </p>
+  </section>
+
+  <section>
+    <h2 class="section-title">Find the standard behind a part</h2>
+    <p>
+      Many parts are defined by a government standard or specification, and that document holds the real dimensioned
+      drawing: an MS or AN sheet, a MIL specification, a federal specification or a commercial item description. Part pages
+      here show a "Standard drawing" line with the document number when the catalog data names one.
+    </p>
+    <ul>
+      <li>
+        <strong>Government documents</strong> are searched by document id in
+        <a href={ASSIST_QUICK_SEARCH_URL} target="_blank" rel="nofollow noopener">ASSIST Quick Search</a>. DLA says Quick
+        Search is public, and the Defense Standardization Program says it needs no registration. Enter the id in the
+        Document ID box. Partial ids work.
+      </li>
+      <li>
+        <strong>Dash numbers.</strong> A part number such as MS35338-44 is sheet MS35338, dash number 44. The table on the
+        sheet gives the dimensions for that dash number.
+      </li>
+      <li>
+        <strong>DoD-adopted industry documents.</strong> For these, ASSIST lists the adoption notice. The Defense
+        Standardization Program says only the adoption notice may be downloaded, so the full text is bought from the publisher.
+      </li>
+      <li>
+        <strong>Industry standards</strong> (NAS and NASM from AIA, AS, AMS and SAE J from SAE, ASTM, ASME, ISO) are sold by
+        their publishers. We name the publisher and do not link a copy.
+      </li>
+    </ul>
+  </section>
+
+  <section>
+    <h2 class="section-title">On NSN Explorer</h2>
+    <p>
+      Each <a href="/open/">open solicitation</a> page has a "Drawings and technical data" block with these steps and the
+      part's standard documents. Each part page links to it when an open solicitation of the part has Tech Docs. The
+      official record and every official step stay on DLA's sites.
+    </p>
+  </section>
+
+  <GuideFooter
+    faq={faq}
+    sources={sources}
+    reviewed="November 2026"
+    next={[
+      { href: '/guides/how-to-bid-on-dibbs/', label: 'How to bid on DIBBS' },
+      { href: '/guides/cage-code/', label: 'What is a CAGE code?' },
+      { href: '/guides/glossary/', label: 'Glossary of government parts purchasing terms' },
+    ]}
+  />
+</BaseLayout>

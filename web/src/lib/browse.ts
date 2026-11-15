@@ -15,7 +15,16 @@ import {
   type SolicitationRecord,
 } from './data';
 import { buildThumbnail } from './diagram';
+import { collectStandardDocs } from './standard-refs';
 import { estimatedValue, isPastDueUnawarded, isRepost, lastUnitPrice, type TechDocsKind } from './open-signals';
+
+/** True when the part's characteristics or standard-sheet part numbers cite at least one standard document (lib/standard-refs.ts). */
+export function hasStandardDrawing(
+  characteristics: CharacteristicEntry[],
+  partNumbers: { partNumber: string; cage: string | null }[] | undefined
+): boolean {
+  return collectStandardDocs({ characteristics, partNumbers: partNumbers ?? [] }).length > 0;
+}
 
 export interface ProductCard {
   nsn: string; // 13-digit undashed
@@ -31,6 +40,8 @@ export interface ProductCard {
   material: string | null;
   materialFamily: MaterialFamily | null;
   hasDrawing: boolean;
+  /** A government standard or specification defines this part (MS/AN/NAS sheet, MIL spec, ...): see lib/standard-refs.ts. */
+  standardDrawing: boolean;
   latestPrice: number | null;
   /** Open-demand read from pub.solicitations (status = 'open'), for ANY FSC. */
   openNow: boolean;
@@ -382,6 +393,7 @@ export function buildProductCards(data: SiteData, fsc: FscConfig): ProductCard[]
       material,
       materialFamily: materialFamily(material),
       hasDrawing: thumbnail !== null,
+      standardDrawing: hasStandardDrawing(characteristics, data.standardPartNumbersByNsn.get(nsn.nsn)),
       latestPrice: null,
       openNow,
       openCount,
@@ -529,6 +541,7 @@ export function buildSolicitationCards(data: SiteData, fsc?: string): ProductCar
       material,
       materialFamily: materialFamily(material),
       hasDrawing: thumbnail !== null,
+      standardDrawing: hasStandardDrawing(characteristics, data.standardPartNumbersByNsn.get(nsnCode)),
       latestPrice: null,
       openNow,
       openCount,

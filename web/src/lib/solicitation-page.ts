@@ -77,6 +77,10 @@ export interface SolicitationPageData {
   partPriceCount: number;
   /** DIBBS award records for the same NSN carrying this solicitation's purchase request. */
   matchedAwards: MatchedAward[];
+  /** pub.nsns.characteristics of the solicitation's NSN (raw jsonb; parse with parseCharacteristics), null when the NSN is not in the catalog. */
+  characteristics: unknown;
+  /** Up to 25 part numbers on file for the NSN (pub.part_numbers), for standard-document detection and nothing else. */
+  partNumbers: { partNumber: string; cage: string | null }[];
   /** The same requirement on the other source (rule in sol-twin.ts), with the official record's link; null when there is none or it is not certain. */
   twin: TwinRow | null;
 }
@@ -103,7 +107,15 @@ SELECT s.sol_number, s.nsn, s.fsc, s.nomenclature, s.quantity, s.unit_of_issue,
        -- Open means open today: a past-dated 'open' row is reported as 'expired'.
        CASE WHEN s.status = 'open' AND s.return_by < CURRENT_DATE THEN 'expired' ELSE s.status END AS status,
        s.setaside, s.buyer_office, s.source, s.source_url,
-       n.item_name, f.name AS fsc_name, f.render_depth AS fsc_depth,
+       n.item_name, n.characteristics AS characteristics, f.name AS fsc_name, f.render_depth AS fsc_depth,
+       -- Part numbers for the "Drawings and technical data" block (standard sheets such as MS35338-44): primary-key-free
+       -- index lookup on part_numbers (nsn), capped at 25.
+       (SELECT COALESCE(jsonb_agg(to_jsonb(q) ORDER BY q.part_number, q.cage), '[]'::jsonb)
+          FROM (SELECT pn.part_number, pn.cage
+                FROM pub.part_numbers pn
+                WHERE pn.nsn = s.nsn
+                ORDER BY pn.part_number, pn.cage
+                LIMIT 25) q) AS part_number_rows,
        (SELECT COALESCE(jsonb_agg(to_jsonb(a) ORDER BY a.awarded_on DESC, a.id DESC), '[]'::jsonb)
           FROM (SELECT pp.id, pp.awarded_on, pp.cage, su.name AS supplier_name, pp.unit_price, pp.quantity,
                        ${CEILING_PRICE_POINT_SQL} AS is_ceiling, pp.total_value AS ceiling_amount
@@ -194,6 +206,8 @@ export async function loadSolicitationPage(sql: Sql, solNumber: string): Promise
     })),
     purchaseRequest: typeof r.purchase_request === 'string' ? r.purchase_request : null,
     techDocs: mapTechDocs(r.tech_docs),
+    characteristics: r.characteristics ?? null,
+    partNumbers: ((r.part_number_rows ?? []) as { part_number: string; cage: string | null }[]).map((p) => ({ partNumber: p.part_number, cage: p.cage ?? null })),
     partPrices: partRows.map((p) => ({
       awardedOn: isoDate(p.awarded_on)!,
       unitPrice: Number(p.unit_price),

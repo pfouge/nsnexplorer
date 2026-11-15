@@ -87,6 +87,8 @@ await build({
       export { humanizeLabel, moeKind } from './flis-codes.ts';
       export { nomen } from './seo-copy.ts';
       export { pickTwin, solKey, SAM_DUPES_CTE } from './sol-twin.ts';
+      export { collectStandardDocs } from './standard-refs.ts';
+      export { parseCharacteristics } from './shared.ts';
       export { isContractCeiling, isCeilingPricePoint, CONTRACT_CEILING_SQL, CEILING_PRICE_POINT_SQL } from './contract-ceiling.ts';`,
     resolveDir: libDir,
     loader: 'ts',
@@ -368,7 +370,7 @@ async function oldLoadSupplierPage(sql, cage) {
 
 // Fields added to the new solicitation loader after the old one was frozen (price history, matched awards).
 // Old-vs-new compares only the pre-existing fields; the new ones are not checked here.
-const NEW_SOL_FIELDS = ['purchaseRequest', 'techDocs', 'partPrices', 'partPriceCount', 'matchedAwards', 'twin']; // checked by checkCeilings and checkTwins below
+const NEW_SOL_FIELDS = ['purchaseRequest', 'techDocs', 'partPrices', 'partPriceCount', 'matchedAwards', 'twin', 'characteristics', 'partNumbers']; // checked by checkCeilings, checkTwins and checkDrawingPointers below
 function withoutNewSolFields(page) {
   if (!page) return page;
   const out = { ...page };
@@ -886,6 +888,42 @@ async function checkCeilings(db) {
  * Checks the one-statement page loader's `twin` against the expectation, and the SQL (sam_dupes) against the JavaScript
  * rule (pickTwin) on EVERY row of the table, so the two copies of the rule cannot drift.
  */
+// Drawing pointers (web/src/lib/standard-refs.ts, the "Drawings and technical data" block): the solicitation loader returns
+// the NSN's characteristics and part numbers in the same single statement, and the NSN page's solicitations carry the
+// DIBBS tech-docs flag. Expectations are hand-written in verify-single-query-seed.sql (NSN 5340009990001, SEED-DRAW-*).
+async function checkDrawingPointers(db) {
+  const check = (label, actual, expected) => {
+    results.checks++;
+    try {
+      assert.deepStrictEqual(actual, expected);
+    } catch (e) {
+      fail('drawing pointers', label, String(e.message).split('\n').slice(0, 14).join('\n'));
+    }
+  };
+  const kinds = {};
+  for (const [sol, want] of [['SEED-DRAW-TD', 'tech_docs'], ['SEED-DRAW-SP', 'spec_only'], ['SEED-DRAW-NO', 'none'], ['SEED-DRAW-ODD', null], ['SEED-DRAW-ORPHAN', 'tech_docs']]) {
+    const p = await N.loadSolicitationPage(db, sol);
+    kinds[sol] = p?.techDocs ?? null;
+    check(`${sol} techDocs`, kinds[sol], want);
+  }
+  const td = await N.loadSolicitationPage(db, 'SEED-DRAW-TD');
+  check('part numbers come back with the solicitation (sorted, capped at 25)', td.partNumbers.map((p) => [p.partNumber, p.cage]),
+    [['AMS7276', '12345'], ['AN960-10', '88044'], ['KIT-MS35338-44', '12345'], ['MS35338-44', '96906'], ['NAS1352-4-6', '80205']]);
+  check('characteristics come back raw (two seeded replies)', N.parseCharacteristics(td.characteristics).length, 2);
+  const docs = N.collectStandardDocs({ characteristics: N.parseCharacteristics(td.characteristics), partNumbers: td.partNumbers });
+  check('documents found for the seeded part', docs.map((d) => [d.id, d.access]),
+    [['AMS7276', 'sold'], ['AN960', 'assist'], ['MS35338', 'assist'], ['NAS1352', 'sold'], ['MIL-DTL-25988', 'assist']]);
+  const orphan = await N.loadSolicitationPage(db, 'SEED-DRAW-ORPHAN');
+  check('a solicitation with no NSN: no characteristics, no part numbers', [orphan.characteristics, orphan.partNumbers], [null, []]);
+  const nsnPage = await N.loadNsnPage(db, '5340009990001');
+  check('NSN page solicitations carry the tech-docs flag', Object.fromEntries(nsnPage.solicitations.map((s) => [s.solNumber, s.techDocs])),
+    { 'SEED-DRAW-TD': 'tech_docs', 'SEED-DRAW-SP': 'spec_only', 'SEED-DRAW-NO': 'none', 'SEED-DRAW-ODD': null });
+  check('NSN page still returns the same part numbers', nsnPage.partNumbers.map((p) => p.partNumber).sort(), ['AMS7276', 'AN960-10', 'KIT-MS35338-44', 'MS35338-44', 'NAS1352-4-6']);
+  const naive = await db.unsafe(`select sol_number, raw->>'techDocs' as t from pub.solicitations where sol_number like 'SEED-DRAW-%' order by 1`);
+  check('seeded raw techDocs text', naive.map((r) => [r.sol_number, r.t]),
+    [['SEED-DRAW-NO', 'None'], ['SEED-DRAW-ODD', 'Tech Docs maybe'], ['SEED-DRAW-ORPHAN', 'Tech Docs'], ['SEED-DRAW-SP', 'Tech Docs *Spec/Stnd Only'], ['SEED-DRAW-TD', 'Tech Docs']]);
+}
+
 async function checkTwins(db) {
   const check = (label, actual, expected) => {
     results.checks++;
@@ -1294,7 +1332,8 @@ async function main() {
             full = v;
             if (v === null) return null;
             const { flis: _flis, ...rest } = v;
-            return rest;
+            // techDocs on the NSN page's solicitations is new (checked in checkDrawingPointers); the frozen loader returns null.
+            return { ...rest, solicitations: rest.solicitations.map((x) => ({ ...x, techDocs: null })) };
           })
       );
       if (full) await checkNsnFlis(direct, nsn, full, sawFlis);
@@ -1408,6 +1447,7 @@ async function main() {
 
     if (withSeed) await checkCeilings(direct);
     if (withSeed) await checkTwins(direct);
+    if (withSeed) await checkDrawingPointers(direct);
     await checkNameSearch(col);
     if (withSeed) await checkNameSearchSeed(direct);
 

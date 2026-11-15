@@ -305,6 +305,10 @@ const breadcrumbSchema = {
           </div>
 
           <div class="filter-group">
+            <label title="A government standard or specification defines this part; its document holds the drawing"><input type="checkbox" id="f-standard" /> Standard drawing</label>
+          </div>
+
+          <div class="filter-group">
             <label title="Solicited again within 30 days of an earlier solicitation"><input type="checkbox" id="f-repost" /> Reposts</label>
           </div>
 
@@ -378,6 +382,7 @@ const breadcrumbSchema = {
                 data-qty={c.openQuantity ?? 0}
                 data-competition={c.competition}
                 data-hasdrawing={c.hasDrawing ? '1' : '0'}
+              data-standard={c.standardDrawing ? '1' : '0'}
                 data-material={c.material ?? ''}
                 data-itemname={(c.itemName ?? '').toLowerCase()}
                 data-openct={c.openCount}
@@ -402,10 +407,11 @@ const breadcrumbSchema = {
                   <div class="product-signals">
                     <span class={`badge ${badge.cls}`} data-col="closes" title={badge.text}>{badge.text}</span>
                     <span class="signal mono" data-col="qty">{(c.openQuantity ?? c.pastDueQuantity) !== null ? (c.openQuantity ?? c.pastDueQuantity)!.toLocaleString('en-US') : '—'}<span class="card-only"> units</span></span>
-                    {(c.pastDueCount > 0 || c.repost || c.alsoOnSam) && (
+                    {(c.pastDueCount > 0 || c.repost || c.alsoOnSam || c.standardDrawing) && (
                       <span class="flags" data-col="flags">
                         {c.pastDueCount > 0 && <span class="badge amber">Past due</span>}
                         {c.repost && <span class="badge" title="Solicited again within 30 days of an earlier solicitation">Repost</span>}
+                        {c.standardDrawing && <span class="badge" title="A government standard or specification defines this part. Its document holds the drawing.">Standard drawing</span>}
                         {c.alsoOnSam && <span class="badge" title="The same requirement is also posted on SAM.gov. The two posts are listed and counted once.">{ALSO_ON_SAM_LABEL}</span>}
                       </span>
                     )}
@@ -465,6 +471,7 @@ const breadcrumbSchema = {
     const minQtySelect = document.getElementById('f-minqty');
     const techDocsSelect = document.getElementById('f-techdocs');
     const hasDrawingCheckbox = document.getElementById('f-hasdrawing');
+    const standardCheckbox = document.getElementById('f-standard');
     const sortSelect = document.getElementById('f-sort');
     const repostCheckbox = document.getElementById('f-repost');
     const totalsEl = document.getElementById('open-totals');
@@ -475,7 +482,7 @@ const breadcrumbSchema = {
       closesSelect instanceof HTMLSelectElement &&
       minQtySelect instanceof HTMLSelectElement &&
       techDocsSelect instanceof HTMLSelectElement &&
-      hasDrawingCheckbox instanceof HTMLInputElement &&
+      hasDrawingCheckbox instanceof HTMLInputElement && standardCheckbox instanceof HTMLInputElement &&
       repostCheckbox instanceof HTMLInputElement &&
       sortSelect instanceof HTMLSelectElement
     ) {
@@ -500,6 +507,7 @@ const breadcrumbSchema = {
         const minQty = minQtySelect.value === 'any' ? null : Number(minQtySelect.value);
         const techDocs = techDocsSelect.value; // 'any' | 'listed' | 'none'
         const needsDrawing = hasDrawingCheckbox.checked;
+        const needsStandard = standardCheckbox.checked;
         const needsRepost = repostCheckbox.checked;
         const today = todayIso();
         const todayMs = new Date(`${today}T00:00:00Z`).getTime();
@@ -538,6 +546,7 @@ const breadcrumbSchema = {
             if (techDocs === 'listed' ? !listed : kind !== 'none') visible = false;
           }
           if (visible && needsDrawing && el.dataset.hasdrawing !== '1') visible = false;
+          if (visible && needsStandard && el.dataset.standard !== '1') visible = false;
           if (visible && needsRepost && el.dataset.repost !== '1') visible = false;
           el.style.display = visible ? '' : 'none';
           if (visible) {
@@ -571,6 +580,7 @@ const breadcrumbSchema = {
           if (el instanceof HTMLInputElement) el.checked = el.value === 'all';
         });
         hasDrawingCheckbox.checked = false;
+        standardCheckbox.checked = false;
         repostCheckbox.checked = false;
       };
 
@@ -630,6 +640,7 @@ const breadcrumbSchema = {
       minQtySelect.addEventListener('change', schedule);
       techDocsSelect.addEventListener('change', schedule);
       hasDrawingCheckbox.addEventListener('change', schedule);
+      standardCheckbox.addEventListener('change', schedule);
       repostCheckbox.addEventListener('change', schedule);
       sortSelect.addEventListener('change', schedule);
 

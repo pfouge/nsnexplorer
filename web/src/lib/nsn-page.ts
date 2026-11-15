@@ -27,6 +27,7 @@ import {
 } from './shared';
 import { type NsnFlis, mapFlis } from './nsn-flis';
 import { CEILING_PRICE_POINT_SQL, CONTRACT_CEILING_SQL } from './contract-ceiling';
+import { mapTechDocs } from './solicitation-page';
 
 /** A contract action plus the awardee's CAGE when the source carried one (DIBBS award grid rows do). */
 export interface NsnContractAction extends ContractActionRecord {
@@ -124,6 +125,7 @@ SELECT base.*,
               s.issued_on, s.return_by,
               CASE WHEN s.status = 'open' AND s.return_by < CURRENT_DATE THEN 'expired' ELSE s.status END AS status,
               s.setaside, s.buyer_office, s.source, s.source_url,
+              s.raw ->> 'techDocs' AS tech_docs,
               n.item_name
        FROM pub.solicitations s
        LEFT JOIN pub.nsns n ON n.nsn = s.nsn
@@ -287,7 +289,7 @@ export async function loadNsnPage(sql: Sql, nsnCode: string): Promise<NsnPageDat
     status: r.status,
     setaside: r.setaside,
     buyerOffice: r.buyer_office,
-    techDocs: null,
+    techDocs: mapTechDocs(r.tech_docs),
     awardFound: false,
     source: r.source,
     sourceUrl: assertSourceUrl(r.source_url, `solicitations.sol_number=${r.sol_number}`),
