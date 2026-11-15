@@ -42,10 +42,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
+      # 25 classes; three at a time keeps the database pool and the API calm.
+      max-parallel: 3
       matrix:
         # Every class that was backfilled (see backfill.yml) must also be
         # here, or it stops updating the day the backfill finishes.
-        psc: [5331, 5330]
+        # Top 25 supply classes by open solicitations (chosen 2026-11-15).
+        psc: [5331, 5330, 5340, 4820, 4730, 5935, 5305, 4720, 3040, 5310, 1560, 5930, 6515, 1680, 5998, 4810, 5360, 5306, 2540, 4320, 6150, 2530, 4710, 5945, 5999]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
