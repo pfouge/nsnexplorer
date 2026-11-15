@@ -23,6 +23,8 @@ import { AGENCY_CLASSES_SQL, AGENCY_FY_SQL, AGENCY_RECENT_SQL, AGENCY_RECIPIENTS
 import { foldCalendarRows } from './viz-open';
 import type { DailyStatRow, FreshnessSource, GroupDemandRow, TapeItem, TileInput } from './viz-site';
 import type { RepeatRow, StateCount, WeekCount, WinnerRow } from './viz-class';
+import type { ClassActionSummary } from './class-actions';
+import { loadContractActions } from './class-actions-db';
 
 export * from './shared';
 export type { ServiceNotice } from './services';
@@ -105,7 +107,15 @@ export interface SiteData {
   partNumbersByNsn: Map<string, PartNumberRecord[]>;
   pricePointsByNsn: Map<string, PricePointRecord[]>;
   contractActionsByNsn: Map<string, ContractActionRecord[]>;
-  contractActionsByFsc: Map<string, ContractActionRecord[]>;
+  /**
+   * Class-level contract actions (psc is a catalog class, raw.nsn is not a catalog NSN),
+   * summarised in SQL per class: count, obligation sum, the newest 25 rows, USAspending
+   * counts per fiscal year and the slim rows the class pulse reads. Classes without such
+   * rows are absent. See lib/class-actions.ts.
+   */
+  contractActionSummaryByFsc: Map<string, ClassActionSummary>;
+  /** ids of the NSN-attached contract actions (the CSV queries exclude them to get the class-level rows). */
+  contractActionNsnIds: number[];
   agencies: AgencyRecord[];
   purchasesByAgency: Map<number, (PricePointRecord & { nsn: string; itemName: string | null })[]>;
   /** Contract-action profile per agency id (USAspending rows only). Agencies without such rows are absent. */
@@ -362,50 +372,6 @@ async function fetchSiteData(): Promise<SiteData> {
       }
     }
 
-    const contractActionsByNsn = new Map<string, ContractActionRecord[]>();
-    const contractActionsByFsc = new Map<string, ContractActionRecord[]>();
-    let totalActions = 0;
-    let totalObligated = 0;
-    if (nsnCodes.length > 0 || fscCodes.length > 0) {
-      const caRes = await pool.query(
-        `SELECT ca.id, ca.award_uid, ca.piid, ca.psc, ca.naics, ca.description, ca.action_date,
-                ca.obligation, ca.agency_id, ag.name AS agency_name, ca.recipient_name,
-                ca.recipient_uei, ca.source_url, ca.raw, ca.ingested_at
-         FROM pub.contract_actions ca
-         LEFT JOIN pub.agencies ag ON ag.agency_id = ca.agency_id
-         WHERE (ca.raw ->> 'nsn') = ANY($1) OR ca.psc = ANY($2)`,
-        [nsnCodes.length > 0 ? nsnCodes : [''], fscCodes.length > 0 ? fscCodes : ['']]
-      );
-      for (const r of caRes.rows) {
-        const rec: ContractActionRecord = {
-          id: Number(r.id),
-          awardUid: r.award_uid,
-          piid: r.piid,
-          psc: r.psc,
-          naics: r.naics,
-          description: r.description,
-          actionDate: r.action_date ? new Date(r.action_date).toISOString().slice(0, 10) : null,
-          obligation: r.obligation !== null ? Number(r.obligation) : null,
-          agencyId: r.agency_id !== null ? Number(r.agency_id) : null,
-          agencyName: r.agency_name,
-          recipientName: r.recipient_name,
-          recipientUei: r.recipient_uei,
-          sourceUrl: assertSourceUrl(r.source_url, `contract_actions.id=${r.id}`),
-          ingestedAt: new Date(r.ingested_at).toISOString(),
-        };
-        totalActions += 1;
-        totalObligated += rec.obligation ?? 0;
-        const rawNsn: string | undefined = r.raw?.nsn;
-        if (rawNsn && nsnByNsn.has(rawNsn)) {
-          if (!contractActionsByNsn.has(rawNsn)) contractActionsByNsn.set(rawNsn, []);
-          contractActionsByNsn.get(rawNsn)!.push(rec);
-        } else if (rec.psc && nsnsByFsc.has(rec.psc)) {
-          if (!contractActionsByFsc.has(rec.psc)) contractActionsByFsc.set(rec.psc, []);
-          contractActionsByFsc.get(rec.psc)!.push(rec);
-        }
-      }
-    }
-
     // Demand history board: ALL solicitations (every status) across the
     // ENTIRE catalog. NOT gated by render_depth='deep' — demand can land on
     // any FSC, including ones the historic priced catalog doesn't render.
@@ -640,6 +606,16 @@ async function fetchSiteData(): Promise<SiteData> {
 
     const viz = await loadVizData(pool);
 
+    // Contract actions: NSN-attached rows whole, class-level rows summarised in SQL
+    // (after loadVizData because the pulse look-back is anchored on viz.today).
+    const {
+      contractActionsByNsn,
+      nsnActionIds: contractActionNsnIds,
+      summaryByFsc: contractActionSummaryByFsc,
+      totalActions,
+      totalObligated,
+    } = await loadContractActions(pool, { nsnCodes, fscCodes, today: viz.today });
+
     return {
       viz,
       deepFscs,
@@ -649,7 +625,8 @@ async function fetchSiteData(): Promise<SiteData> {
       partNumbersByNsn,
       pricePointsByNsn,
       contractActionsByNsn,
-      contractActionsByFsc,
+      contractActionSummaryByFsc,
+      contractActionNsnIds,
       agencies: [...agencyMap.values()].sort((a, b) => a.name.localeCompare(b.name)),
       purchasesByAgency,
       agencyProfiles: new Map([...agencyProfiles].map(([id, { name: _n, abbreviation: _a, ...rest }]) => [id, rest])),

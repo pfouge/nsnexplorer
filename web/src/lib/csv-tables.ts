@@ -7,7 +7,8 @@
 // so the contract-action file filters those out.
 
 import { buildDepartments, fscDisplayName } from './browse';
-import type { ContractActionRecord, SiteData } from './data';
+import type { SiteData } from './data';
+import { hasUsaspendingActions, usaspendingFiscalYears } from './class-actions';
 
 export const classesHeaders = [
   'fsc', 'name', 'group', 'group_name', 'nsns_tracked', 'open_solicitations',
@@ -90,39 +91,19 @@ export function agenciesRows(data: SiteData) {
     .map(({ a, count, dollars, actions, obligated }) => [a.name, a.abbreviation, count, dollars, actions, obligated, asOf]);
 }
 
-function isUsaspending(a: ContractActionRecord): boolean {
-  if (a.awardUid.startsWith('DIBBS-')) return false;
-  try {
-    const host = new URL(a.sourceUrl).hostname;
-    return host === 'usaspending.gov' || host.endsWith('.usaspending.gov');
-  } catch {
-    return false;
+/**
+ * Classes that have a USAspending CSV download, with their fiscal years (newest first).
+ * A class is listed when it has any USAspending class-level row, dated or not, so a class
+ * whose rows are all undated still gets its (empty) 12-month file but no per-year files.
+ * Computed in SQL (lib/class-actions-db.ts); the rows themselves are queried per file.
+ */
+export function usaspendingCsvClasses(data: SiteData): Map<string, number[]> {
+  const out = new Map<string, number[]>();
+  for (const [fsc, summary] of data.contractActionSummaryByFsc) {
+    if (/^\d{4}$/.test(fsc) && hasUsaspendingActions(summary)) out.set(fsc, usaspendingFiscalYears(summary));
   }
-}
-
-const usaspendingCache = new WeakMap<SiteData, Map<string, ContractActionRecord[]>>();
-
-/** USAspending contract actions per class (newest first); classes with none are absent. */
-export function usaspendingActionsByFsc(data: SiteData): Map<string, ContractActionRecord[]> {
-  const cached = usaspendingCache.get(data);
-  if (cached) return cached;
-  const out = new Map<string, ContractActionRecord[]>();
-  for (const [fsc, actions] of data.contractActionsByFsc) {
-    if (!/^\d{4}$/.test(fsc)) continue;
-    const kept = actions
-      .filter(isUsaspending)
-      .sort((a, b) => (b.actionDate ?? '').localeCompare(a.actionDate ?? '') || a.id - b.id);
-    if (kept.length > 0) out.set(fsc, kept);
-  }
-  usaspendingCache.set(data, out);
   return out;
 }
 
-export function contractActionRows(actions: ContractActionRecord[]) {
-  return actions.map((a) => [
-    a.actionDate, a.piid, a.psc, a.naics, a.description, a.obligation, a.agencyName, a.recipientName, a.sourceUrl,
-  ]);
-}
-
 export const contractActionsPath = (fsc: string) => `/data/contract-actions-${fsc}.csv`;
-export { actionsByFiscalYear, contractActionsFyPath, csvFiscalYear, CSV_MAX_ROWS, latestYearActions } from './csv-split';
+export { contractActionsFyPath, csvFiscalYear, CSV_MAX_ROWS } from './csv-split';
