@@ -28,6 +28,7 @@ on:
       - '.github/workflows/publog-monthly.yml'
       - 'ingest/publog/fetch.mjs'
       - 'ingest/publog/load.mjs'
+      - 'ingest/publog/load-flis.mjs'
 
 env:
   DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
