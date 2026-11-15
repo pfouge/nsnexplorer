@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  aboutMode, addressLines, allRanks, changeSentence, longDate, mailHref, rankBadges, registrationBadge, samEntityUrl, sameAddress, siteDomain, telHref,
+  aboutMode, addressLines, allRanks, changeSentence, loadedClasses, longDate, mailHref, moreClassesText, partClassLabel, partFilterStatus, rankBadges, registrationBadge, samEntityUrl, sameAddress, siteDomain, telHref,
 } from './supplier-view.ts';
 import type { SupplierAddress, SupplierSam, SupplierStats, SupplierWeb } from './supplier-page.ts';
 
@@ -89,4 +89,18 @@ test('about mode: summary for ok, quoted meta for ok_no_ai, nothing otherwise (r
   assert.equal(aboutMode(web({ status: 'robots_blocked', summary: 'S' })), 'none');
   assert.equal(aboutMode(null), 'none');
   assert.equal(longDate('2026-09-21T10:00:00+00:00'), 'September 21, 2026');
+});
+
+test('part class chip label, more-classes text, loaded classes and filter status', () => {
+  assert.equal(partClassLabel({ fsc: '5340', name: 'Hardware, Commercial', count: 42 }), '5340 Hardware, Commercial · 42');
+  assert.equal(partClassLabel({ fsc: '5340', name: null, count: 1234 }), '5340 · 1,234');
+  assert.equal(moreClassesText(12, 12), null);
+  assert.equal(moreClassesText(13, 12), '+1 more class');
+  assert.equal(moreClassesText(1500, 12), '+1,488 more classes');
+  const rows = [{ fsc: '5340' }, { fsc: '5310' }, { fsc: '5340' }];
+  assert.deepEqual(loadedClasses(rows), ['5310', '5340']);
+  assert.deepEqual(loadedClasses([{ fsc: '5340' }, { fsc: '5340' }]), ['5340']);
+  assert.deepEqual(partFilterStatus(rows, 'all'), { shown: 3, text: 'Showing 3 of 3 loaded' });
+  assert.deepEqual(partFilterStatus(rows, '5340'), { shown: 2, text: 'Showing 2 of 3 loaded' });
+  assert.deepEqual(partFilterStatus(rows, '9999'), { shown: 0, text: 'Showing 0 of 3 loaded' });
 });
