@@ -28,9 +28,9 @@ const breadcrumbs = [
     <p class="lede">Paste up to 500 NSNs or NIINs, one per line or separated by commas, and get the last price, competition coding and open bids for each in one table.</p>
   </section>
 
-  <form class="bulk-form" id="bulk-form" autocomplete="off" novalidate>
+  <form class="bulk-form" id="bulk-form" autocomplete="off" novalidate onsubmit="return false">
     <label for="bulk-input">NSNs or NIINs</label>
-    <textarea id="bulk-input" name="ids" rows="8" spellcheck="false" placeholder={'5340-01-396-7260\n5340002303256, 013967260'}></textarea>
+    <textarea id="bulk-input" rows="8" spellcheck="false" placeholder={'5340-01-396-7260\n5340002303256, 013967260'}></textarea>
     <div class="bulk-actions">
       <button class="btn" type="submit" id="bulk-run">Look up</button>
       <button class="btn btn-ghost" type="button" id="bulk-csv" hidden>Download CSV</button>
