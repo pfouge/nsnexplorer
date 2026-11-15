@@ -33,13 +33,20 @@ export const DEMIL_CODES: Readonly<Record<string, string>> = {
 export const CRITICALITY_SOURCE_LABEL = 'DoD 4100.39-M, Volume 10, Table 181 (criticality code)';
 
 /**
- * Criticality codes (FLIS CRIT_CD, DoD 4100.39-M Volume 10 Table 181 per the FLIS cataloging documentation).
- * INTENTIONALLY EMPTY: the table text could not be retrieved from an official source when this was written
- * (the DLA FLIS Technical Procedures Volume 10 copies - dla.mil CDTS_VOLUME_10.docx, the webharvest.gov and
- * UNT web-archive captures of dlis.dla.mil/PDFs/Procedures/vol10.pdf - were blocked or rate-limited), and the
- * only readable copies were commercial. Fill this in from Volume 10 Table 181 rather than from memory.
+ * Criticality codes (FLIS CRIT_CD, DoD 4100.39-M Volume 10 Table 181).
+ * E and F are confirmed by 41 CFR 102-33.375 (F = standard flight safety critical aircraft part,
+ * E = nuclear-hardened one). C, N, X and Y follow the Table 181 wording as reproduced in the
+ * MIL-STD-2073-1 code lookup. H, M, S and V (about 0.7% of items) are left out until Table 181
+ * itself can be read from an official copy; the page shows those codes without a meaning.
  */
-export const CRITICALITY_CODES: Readonly<Record<string, string>> = {};
+export const CRITICALITY_CODES: Readonly<Record<string, string>> = {
+  C: 'Has critical features such as tolerance, fit or application; nuclear hardness not determined',
+  E: 'Flight safety critical aircraft part, nuclear hardened',
+  F: 'Flight safety critical aircraft part',
+  N: 'No critical features; nuclear hardness not determined',
+  X: 'No nuclear-hardened feature and no other critical feature',
+  Y: 'Not nuclear hardened, but has other critical features such as tolerance, fit or application',
+};
 
 export const ESD_EMI_SOURCE_URL =
   'https://www.dla.mil/Logistics-Operations/Packaging/Packaging-FAQs/u106452q/456C656374726F73746174696320446973636861726765202845534429/';

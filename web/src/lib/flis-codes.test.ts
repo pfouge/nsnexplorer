@@ -24,8 +24,9 @@ test('unknown or empty codes are unlabeled, never guessed', () => {
   assert.equal(demilMeaning(null), null);
   assert.equal(demilMeaning(''), null);
   assert.equal(esdEmiMeaning('Z'), null);
-  assert.equal(criticalityMeaning('X'), null);
-  assert.deepEqual(CRITICALITY_CODES, {});
+  assert.match(criticalityMeaning('X') ?? '', /no other critical feature/);
+  assert.equal(criticalityMeaning('V'), null);
+  assert.deepEqual(Object.keys(CRITICALITY_CODES), ['C', 'E', 'F', 'N', 'X', 'Y']);
 });
 
 test('ESD/EMI table is Table 189 A-D', () => {

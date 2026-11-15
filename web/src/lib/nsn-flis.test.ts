@@ -43,7 +43,7 @@ test('catalogCells: code + meaning, omit empty, flag unknown meanings', () => {
   assert.equal(by.demil.value, 'A');
   assert.match(by.demil.meaning!, /no demilitarization needed/);
   assert.equal(by.criticality.value, 'X');
-  assert.equal(by.criticality.meaning, null, 'criticality definitions are not on file');
+  assert.match(by.criticality.meaning ?? '', /no other critical feature/);
   assert.equal(by.esd.meaning, 'No known ESD or EMI sensitivity');
   assert.equal(by.hazmat.meaning, 'No Information in HMIRS');
   assert.equal(by.scheduleB.value, '8710000090');

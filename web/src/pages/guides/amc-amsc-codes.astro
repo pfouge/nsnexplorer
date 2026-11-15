@@ -3,6 +3,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import GuideFooter from '../../components/GuideFooter.astro';
 import { SITE_URL } from '../../consts';
 import {
+  CRITICALITY_CODES,
   CRITICALITY_SOURCE_LABEL,
   DEMIL_CODES,
   DEMIL_SECONDARY_URL,
@@ -248,10 +249,20 @@ const sources = [
     </div>
     <h3 id="criticality-codes" class="section-title">Criticality codes</h3>
     <p class="gloss">
-      The criticality code is defined in {CRITICALITY_SOURCE_LABEL}. NSN Explorer shows the code
-      from the catalog as published and does not interpret it until its definitions have been
-      checked against that table.
+      Says whether an item has critical features, is a flight safety critical aircraft part, or
+      is nuclear hardened. Defined in {CRITICALITY_SOURCE_LABEL}. Codes H, M, S and V are rare
+      and are shown on part pages without a meaning.
     </p>
+    <div class="table-wrap guide-table">
+      <table>
+        <thead><tr><th>Code</th><th>Meaning in plain English</th></tr></thead>
+        <tbody>
+          {Object.entries(CRITICALITY_CODES).map(([c, m]) => (
+            <tr><td>{c}</td><td class="wrap">{m}</td></tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   </section>
 
   <section>
