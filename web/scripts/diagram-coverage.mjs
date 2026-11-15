@@ -56,6 +56,9 @@ const PROBE = new Set((opt('--probe', '') || '').split(',').map((x) => x.trim().
 const SAMPLES = Number(opt('--samples', 15));
 const cmpLibArg = opt('--compare-lib', null);
 const LOST_SAMPLES = Number(opt('--lost-samples', 6));
+//   --sig-class 5306,5305   for parts WITHOUT a drawing in these classes: the top full item names, and the top
+//                           "signatures" (which measurable requirements the part carries) so a builder can be fitted
+const SIG_CLASS = new Set((opt('--sig-class', '') || '').split(',').map((x) => x.trim()).filter(Boolean));
 const CLASS_ROOTS = new Set((opt('--class-roots', '') || '').split(',').map((x) => x.trim()).filter(Boolean));
 
 // ---- load the drawing code ------------------------------------------------------------------
@@ -151,7 +154,9 @@ const probeCount = new Map();
 const transitions = new Map(); // "before -> after" -> n
 const lostSamples = new Map(); // "before | root" -> [...]
 const lostCount = new Map();
-const classRoots = new Map(); // fsc -> Map(root -> {total, draw})
+const classRoots = new Map();
+const sigNames = new Map(); // fsc -> Map(full name -> {noDraw, total})
+const sigSigs = new Map(); // fsc -> Map(signature -> {n, nsn, name}) // fsc -> Map(root -> {total, draw})
 const REQ_CAP = 400; // distinct requirement keys kept per root
 
 const client = new pg.Client({
@@ -228,6 +233,24 @@ outer: for (;;) {
       if (svg) c.draw += 1;
       m.set(root, c);
       classRoots.set(row.fsc, m);
+    }
+    if (SIG_CLASS.has(row.fsc)) {
+      const nm = (row.item_name ?? '').toUpperCase();
+      const mm = sigNames.get(row.fsc) ?? new Map();
+      const c = mm.get(nm) ?? { noDraw: 0, total: 0 };
+      c.total += 1;
+      if (!svg) c.noDraw += 1;
+      mm.set(nm, c);
+      sigNames.set(row.fsc, mm);
+      if (!svg && hasChars) {
+        const meas = [...new Set(entries.filter((e) => /(INCHES|MILLIMETERS|MILS|CENTIMETERS)/i.test(e.reply ?? '') && e.requirement).map((e) => e.requirement))].sort();
+        const sg = sigSigs.get(row.fsc) ?? new Map();
+        const key = meas.join(' + ').slice(0, 230) || '(no measurable requirement)';
+        const g = sg.get(key) ?? { n: 0, nsn: row.nsn, name: row.item_name };
+        g.n += 1;
+        sg.set(key, g);
+        if (sg.size < 4000 || sg.has(key)) sigSigs.set(row.fsc, sg);
+      }
     }
     if (PROBE.has(root)) {
       inc(probeCount, root);
@@ -409,6 +432,13 @@ for (const [fsc, m] of classRoots) {
   P();
   P(`## Roots inside class ${fsc}: no-drawing / all parts`);
   for (const [root, c] of [...m.entries()].sort((a, b) => b[1].total - a[1].total).slice(0, 30)) P(`${String(c.total - c.draw).padStart(8)}  ${String(c.total).padStart(8)}  ${root}`);
+}
+for (const fsc of SIG_CLASS) {
+  P();
+  P(`## Class ${fsc}: top item names without a drawing (no-drawing / all)`);
+  for (const [nm, c] of [...(sigNames.get(fsc) ?? new Map()).entries()].filter(([, c]) => c.noDraw > 0).sort((a, b) => b[1].noDraw - a[1].noDraw).slice(0, 30)) P(`${String(c.noDraw).padStart(7)} ${String(c.total).padStart(7)}  ${nm}`);
+  P(`## Class ${fsc}: top measurable-requirement signatures among parts without a drawing`);
+  for (const [k, g] of [...(sigSigs.get(fsc) ?? new Map()).entries()].sort((a, b) => b[1].n - a[1].n).slice(0, 25)) P(`${String(g.n).padStart(7)}  ${k}   e.g. ${g.nsn} ${g.name ?? ''}`);
 }
 for (const root of PROBE) {
   const agg = probeReq.get(root);
