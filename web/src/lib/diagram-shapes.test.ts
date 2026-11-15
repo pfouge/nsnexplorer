@@ -24,6 +24,13 @@ const FX: Record<string, Fx> = {
   spring: { fsc: '5360', name: 'SPRING,HELICAL,COMPRESSION', chars: { 'SPRING FREE LENGTH': 'INCHES NOMINAL 1.500', 'SPRING FREE OUTSIDE DIAMETER': 'INCHES NOMINAL 0.500', 'STOCK DIAMETER': 'INCHES NOMINAL 0.062', 'COIL QUANTITY': '8' } },
   pin: { fsc: '5315', name: 'PIN,STRAIGHT,HEADLESS', chars: { 'DIAMETER': 'INCHES NOMINAL 0.250', 'PIN OVERALL LENGTH': 'INCHES NOMINAL 1.000' } },
   pinhead: { fsc: '5315', name: 'PIN,STRAIGHT,HEADED', chars: { 'DIAMETER': 'INCHES NOMINAL 0.250', 'UNDER HEAD LENGTH': 'INCHES MINIMUM 0.990 AND INCHES MAXIMUM 1.010', 'PIN HEAD DIAMETER': 'INCHES NOMINAL 0.400', 'HEIGHT': 'INCHES NOMINAL 0.100' } },
+  shoulder: { fsc: '5305', name: 'SCREW,SHOULDER', chars: { 'FASTENER LENGTH': 'INCHES MINIMUM 1.850 AND INCHES MAXIMUM 1.870', 'THREAD LENGTH': 'INCHES MINIMUM 0.845 AND INCHES MAXIMUM 0.875', 'HEAD DIAMETER': 'INCHES MINIMUM 0.977 AND INCHES MAXIMUM 1.000', 'HEAD HEIGHT': 'INCHES MINIMUM 0.490 AND INCHES MAXIMUM 0.500', 'SHOULDER DIAMETER': 'FIRST SHOULDER INCHES MINIMUM 0.746 AND INCHES MAXIMUM 0.748', 'SHOULDER LENGTH': 'FIRST SHOULDER INCHES MINIMUM 0.995 AND INCHES MAXIMUM 1.005', 'NOMINAL THREAD DIAMETER': 'INCHES 0.625' } },
+  extnut: { fsc: '5310', name: 'NUT,SELF-LOCKING,EXTENDED WASHER', chars: { 'NOMINAL THREAD SIZE': 'INCHES 0.190', 'OVERALL HEIGHT': 'INCHES MINIMUM 0.442 AND INCHES MAXIMUM 0.482', 'WASHER OUTSIDE DIAMETER': 'INCHES MINIMUM 0.680 AND INCHES MAXIMUM 0.710', 'WASHER THICKNESS': 'INCHES NOMINAL 0.040', 'WIDTH ACROSS FLATS': 'INCHES MINIMUM 0.375 AND INCHES MAXIMUM 0.382' } },
+  qrpin: { fsc: '5315', name: 'PIN,QUICK RELEASE', chars: { 'SHANK DIAMETER': 'INCHES MINIMUM 0.3720 AND INCHES MAXIMUM 0.3735', 'GRIP LENGTH': 'INCHES MINIMUM 1.900 AND INCHES MAXIMUM 1.920', 'HEAD DIAMETER': 'INCHES MINIMUM 0.510 AND INCHES MAXIMUM 0.630' } },
+  cotter: { fsc: '5315', name: 'PIN,COTTER', chars: { 'DIAMETER': 'INCHES NOMINAL 0.062', 'UNDERLOOP LENGTH': 'INCHES NOMINAL 1.000' } },
+  elbow: { fsc: '4730', name: 'ELBOW,TUBE', chars: { 'LEG LENGTH': 'FIRST END INCHES NOMINAL 1.562', 'NOMINAL THREAD SIZE': 'FIRST END INCHES 1.313', 'NOMINAL OUTSIDE DIAMETER TUBE ACCOMMODATED': 'SECOND END INCHES 1.000', 'FLOW ANGLE': 'DEGREES 45.0' } },
+  straight: { fsc: '4730', name: 'ADAPTER,STRAIGHT,TUBE TO BOSS', chars: { 'NOMINAL OVERALL LENGTH': 'INCHES 3.156', 'NOMINAL THREAD SIZE': 'SECOND END INCHES 1.000', 'NOMINAL OUTSIDE DIAMETER TUBE ACCOMMODATED': 'FIRST END INCHES 0.625' } },
+  hoseclamp: { fsc: '4730', name: 'CLAMP,HOSE', chars: { 'INSIDE DIAMETER': 'INCHES MINIMUM 3.500 AND INCHES MAXIMUM 3.880', 'OVERALL WIDTH': 'INCHES NOMINAL 0.500' } },
 };
 
 /** Checks every coordinate against the viewBox, NaN, and text vs the title block / other text. */
@@ -159,10 +166,14 @@ test('washer extremes stay on the sheet', () => {
   }
 });
 
-test('spring: coil count and refusals', () => {
+test('spring: coil count, variants and refusals', () => {
   const sp = buildDiagram(E(FX.spring.chars), '5360', O('SPRING,HELICAL,COMPRESSION'))!;
   assert.ok(sp.includes('1.500') && sp.includes('0.500'));
-  for (const nm of ['SPRING,HELICAL,TORSION', 'SPRING,HELICAL,EXTENSION', 'SPRING,FLAT']) assert.equal(buildDiagram(E(FX.spring.chars), '5360', O(nm)), null, nm);
+  const ext = buildDiagram(E(FX.spring.chars), '5360', O('SPRING,HELICAL,EXTENSION'))!;
+  assert.ok(ext.includes('HOOKS NOT DRAWN'));
+  const tor = buildDiagram(E({ 'INSIDE DIAMETER': 'INCHES NOMINAL 0.250', 'SPRING FREE LENGTH': 'INCHES NOMINAL 0.800', 'SPRING FREE OUTSIDE DIAMETER': 'INCHES NOMINAL 0.400' }), '5360', O('SPRING,HELICAL,TORSION'))!;
+  assert.ok(tor.includes('LEGS NOT DRAWN')); check(tor);
+  for (const nm of ['SPRING,FLAT', 'SPRING,LEAF', 'SPRING,SPIRAL,TORSION']) assert.equal(buildDiagram(E(FX.spring.chars), '5360', O(nm)), null, nm);
   const inconsistent = { ...FX.spring.chars, 'INSIDE DIAMETER': 'INCHES NOMINAL 0.100' };
   assert.equal(buildDiagram(E(inconsistent), '5360', O('SPRING,HELICAL,COMPRESSION')), null);
 });
@@ -176,4 +187,55 @@ test('pins: headless, headed, and names that are not straight pins', () => {
   assert.equal(buildDiagram(E(FX.pin.chars), '5315', O('PIN,COTTER')), null);
   const lg = buildDiagram(E({ ...FX.pin.chars, 'DIAMETER': 'LOCATION NOT OTHERWISE SPECIFIED INCHES NOMINAL 0.250' }), '5315', O('PIN,STRAIGHT,HEADLESS'));
   assert.ok(lg);
+});
+
+test('round 3: shoulder screw needs shoulder and thread, and the lengths must agree', () => {
+  const f = FX.shoulder;
+  const bad = { ...f.chars, 'THREAD LENGTH': 'INCHES NOMINAL 0.300' };
+  const svg = buildDiagram(E(bad), '5305', O('SCREW,SHOULDER'))!;
+  assert.ok(svg && !svg.includes('UNDER HEAD LG'), 'a fastener length that does not equal shoulder plus thread is left off');
+  const two = E(f.chars).concat(E({ 'SHOULDER DIAMETER': 'SECOND SHOULDER INCHES NOMINAL 0.5' }));
+  assert.equal(buildDiagram(two, '5305', O('SCREW,SHOULDER')), null, 'two shoulders are not drawn');
+  const noHead = { ...f.chars };
+  delete noHead['HEAD DIAMETER'];
+  delete noHead['HEAD HEIGHT'];
+  const g = buildDiagram(E(noHead), '5305', O('SCREW,SHOULDER'))!;
+  assert.ok(g.includes('SHOWN GENERIC')); check(g);
+  const wider = { ...f.chars, 'NOMINAL THREAD DIAMETER': 'INCHES 0.900' };
+  assert.equal(buildDiagram(E(wider), '5305', O('SCREW,SHOULDER')), null);
+});
+
+test('round 3: extended washer nut', () => {
+  const f = FX.extnut;
+  const svg = buildDiagram(E(f.chars), '5310', O(f.name))!;
+  assert.ok(svg.includes('0.680–0.710') && svg.includes('0.375–0.382 A/F'));
+  const noAf = { ...f.chars };
+  delete noAf['WIDTH ACROSS FLATS'];
+  const g = buildDiagram(E(noAf), '5310', O(f.name))!;
+  assert.ok(g.includes('WIDTH ACROSS FLATS') && !g.includes('A/F')); check(g);
+  assert.equal(buildDiagram(E({ ...f.chars, 'WASHER OUTSIDE DIAMETER': 'INCHES NOMINAL 0.2' }), '5310', O(f.name)), null);
+});
+
+test('round 3: pins, fittings and clamps are labelled schematics and say so', () => {
+  for (const k of ['qrpin', 'cotter', 'elbow', 'straight', 'hoseclamp'] as const) {
+    const svg = buildDiagram(E(FX[k].chars), FX[k].fsc, O(FX[k].name))!;
+    assert.ok(svg.includes('SCHEMATIC, NOT TO SCALE'), k);
+    check(svg);
+  }
+  const e = buildDiagram(E(FX.elbow.chars), '4730', O('ELBOW,TUBE'))!;
+  assert.ok(e.includes('1.562 LEG LG') && e.includes('THREAD ⌀1.313') && e.includes('TUBE OD ⌀1.000'));
+  const noAngle = { ...FX.elbow.chars };
+  delete noAngle['FLOW ANGLE'];
+  assert.ok(buildDiagram(E(noAngle), '4730', O('ELBOW,TUBE'))!.includes('SHOWN AS 90 DEGREES'));
+  assert.equal(buildDiagram(E({ 'FLOW ANGLE': 'DEGREES 90.0' }), '4730', O('ELBOW,TUBE')), null);
+  assert.equal(buildDiagram(E({ 'NOMINAL OVERALL LENGTH': 'INCHES 3.0' }), '4730', O('ADAPTER,STRAIGHT,TUBE TO BOSS')), null, 'no end size stated');
+  assert.equal(buildDiagram(E({ 'LEG LENGTH': 'INCHES NOMINAL 1', 'NOMINAL THREAD SIZE': 'INCHES 1' }), '4730', O('ELBOW,TUBE')), null, 'a leg length that names no end is not drawn');
+  assert.equal(buildDiagram(E({ DIAMETER: 'INCHES NOMINAL 0.062' }), '5315', O('PIN,COTTER')), null, 'no underloop length');
+});
+
+test('round 3: packing retainer and the packing section check', () => {
+  const r = buildDiagram(E(FX.packing.chars), '5330', O('RETAINER,PACKING'));
+  assert.ok(r); check(r!);
+  const both = { ...FX.packing.chars, 'CROSS-SECTIONAL THICKNESS': 'INCHES NOMINAL 0.2' };
+  assert.equal(buildDiagram(E(both), '5330', O('PACKING,PREFORMED')), null);
 });
