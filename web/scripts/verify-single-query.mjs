@@ -25,11 +25,11 @@
 // the old loader returned; `flis` is checked against independent naive queries (checkNsnFlis). With --seed the
 // clone gets migration 0014 (when missing) and web/scripts/flis-seed.sql.
 //
-// The item-name search loader (migration 0016, web/src/lib/item-search-sql.ts, GET /api/names.json and /search/) is
+// The item-name search loader (migration 0018, web/src/lib/item-search-sql.ts, GET /api/names.json and /search/) is
 // new, so there is no old loader to compare with. The OLD side of that comparison is a deliberately naive JavaScript
 // re-implementation (naiveNameSearch below: read every name, filter, rank and dedupe in JS, signals from separate
 // plain queries); the NEW side must return identical rows, in identical order, in exactly one round-trip. With --seed
-// the clone gets migration 0016 and web/scripts/item-search-seed.sql, whose rows have hand-checked expectations
+// the clone gets migration 0018 and web/scripts/item-search-seed.sql, whose rows have hand-checked expectations
 // (checkNameSearchSeed).
 //
 // What it checks, per sampled input, for each loader:
@@ -1223,8 +1223,8 @@ async function main() {
       psql(dbUrl, ['-1', '-f', path.join(here, '../../db/migrations/0014_flis_identification.sql')]);
     }
     psql(dbUrl, ['-1', '-f', path.join(here, 'flis-seed.sql')]);
-    // Item-name search (migration 0016: trigram indexes) and its seed rows.
-    psql(dbUrl, ['-1', '-f', path.join(here, '../../db/migrations/0016_item_name_search.sql')]);
+    // Item-name search (migration 0018: trigram indexes) and its seed rows.
+    psql(dbUrl, ['-1', '-f', path.join(here, '../../db/migrations/0018_name_search_trgm.sql')]);
     psql(dbUrl, ['-1', '-f', path.join(here, 'item-search-seed.sql')]);
     if (opt('--tz')) psql(adminUrl, ['-c', `ALTER DATABASE ${cloneName} SET timezone = '${opt('--tz').replace(/'/g, '')}'`]);
     console.log(`seeded clone ${cloneName}`);

@@ -6,7 +6,7 @@
 // One statement, one round-trip. It matches the words of the query against
 //   (a) pub.nsns.item_name, and
 //   (b) pub.inc_colloquial_names.colloquial_name, joined to the NSN through pub.nsn_identification.inc
-// using the trigram indexes from migration 0016 (every word becomes item_name ILIKE '%word%').
+// using the trigram indexes from migration 0018 (every word becomes item_name ILIKE '%word%').
 //
 // Ranking (best first):
 //   tier 0  the name equals the query, or equals it with the words reversed ("lock washer" = "WASHER,LOCK")

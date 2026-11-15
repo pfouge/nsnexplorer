@@ -1,4 +1,4 @@
--- Synthetic rows for the item-name search (migration 0016, web/src/lib/item-search-sql.ts) for LOCAL checks only:
+-- Synthetic rows for the item-name search (migration 0018, web/src/lib/item-search-sql.ts) for LOCAL checks only:
 -- web/scripts/verify-single-query.mjs --seed. Applied ONLY to the throw-away clone, after flis-seed.sql.
 -- Never run against a real database. Deterministic: no random(). All NSNs are 731091xxxxxxx, INCs are 'QS***'.
 --

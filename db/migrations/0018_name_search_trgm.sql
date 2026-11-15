@@ -1,4 +1,4 @@
--- 0016: search by item name and by everyday ("also called") name (2026-11-15).
+-- 0018: search by item name and by everyday ("also called") name (2026-11-15).
 --
 -- /api/names.json and /search/ match the words of a query against pub.nsns.item_name and against
 -- pub.inc_colloquial_names.colloquial_name (reached through pub.nsn_identification.inc) with
