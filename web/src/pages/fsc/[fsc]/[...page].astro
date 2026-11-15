@@ -18,6 +18,7 @@ import { memo, release } from '../../../lib/paged-cache';
 import { fscDescription, fscTitle } from '../../../lib/seo-copy';
 import { contractActionsPath, usaspendingActionsByFsc } from '../../../lib/csv-tables';
 import { fscEmbedPath } from '../../../lib/embed';
+import { familyCounts } from '../../../lib/material-family';
 
 // /fsc/<code>/ is page 1; /fsc/<code>/page/<n>/ holds the next PAGE_SIZE cards.
 export async function getStaticPaths() {
@@ -43,9 +44,7 @@ const cards: ProductCard[] = pageItems(allCards, page);
 const total = allCards.length;
 const range = pageRange(total, page);
 const baseUrl = `/fsc/${fsc.fsc}/`;
-const materials = [...new Set(allCards.map((c) => c.material).filter((m): m is string => m !== null))].sort(
-  (a, b) => a.localeCompare(b)
-);
+const materialFamilies = familyCounts(allCards.map((c) => c.material));
 
 // Category-level actions: real purchase records in this FSC whose public
 // description didn't identify a specific part.
@@ -217,14 +216,15 @@ const breadcrumbSchema = {
             <label><input type="checkbox" id="f-hasdrawing" /> Has drawing</label>
           </div>
 
-          {materials.length > 0 && (
+          {materialFamilies.length >= 2 && (
             <div class="filter-group">
-              <span class="filter-label" id="f-material-label">Material</span>
-              <div class="filter-materials" role="group" aria-labelledby="f-material-label">
-                {materials.map((m) => (
-                  <label><input type="checkbox" class="f-material" value={m} /> {m}</label>
+              <label class="filter-label" for="f-material">Material</label>
+              <select id="f-material">
+                <option value="any">Any</option>
+                {materialFamilies.map((f) => (
+                  <option value={f.family}>{f.label} ({f.count.toLocaleString('en-US')})</option>
                 ))}
-              </div>
+              </select>
             </div>
           )}
 
@@ -258,6 +258,7 @@ const breadcrumbSchema = {
               data-lastpurchased={c.lastPurchased ?? ''}
               data-hasdrawing={c.hasDrawing ? '1' : '0'}
               data-material={c.material ?? ''}
+              data-matfam={c.materialFamily ?? ''}
               data-demand={c.totalDemand}
               data-itemname={(c.itemName ?? '').toLowerCase()}
             >
@@ -309,16 +310,15 @@ const breadcrumbSchema = {
       const cfg = readPagedConfig(grid);
       const fmt = (n: number) => n.toLocaleString('en-US');
       const loader = createPagedLoader({ grid, cards, countEl, pager: document.getElementById('pager') });
-      const materialCheckboxes = Array.from(document.querySelectorAll('.f-material'));
+      // Absent when the class has fewer than two material families.
+      const materialSelect = document.getElementById('f-material');
 
       const apply = () => {
         const checkedCompetition = document.querySelector('input[name="f-competition"]:checked');
         const competition = checkedCompetition instanceof HTMLInputElement ? checkedCompetition.value : 'all';
         const maxAgeDays = lastPurchasedSelect.value === 'any' ? null : Number(lastPurchasedSelect.value);
         const needsDrawing = hasDrawingCheckbox.checked;
-        const wantedMaterials = materialCheckboxes
-          .filter((c) => c instanceof HTMLInputElement && c.checked)
-          .map((c) => (c as HTMLInputElement).value);
+        const wantedFamily = materialSelect instanceof HTMLSelectElement && materialSelect.value !== 'any' ? materialSelect.value : null;
         const now = Date.now();
 
         let visibleCount = 0;
@@ -336,9 +336,7 @@ const breadcrumbSchema = {
             }
           }
           if (visible && needsDrawing && el.dataset.hasdrawing !== '1') visible = false;
-          if (visible && wantedMaterials.length > 0 && !wantedMaterials.includes(el.dataset.material ?? '')) {
-            visible = false;
-          }
+          if (visible && wantedFamily !== null && el.dataset.matfam !== wantedFamily) visible = false;
           el.style.display = visible ? '' : 'none';
           if (visible) visibleCount++;
         }
@@ -360,9 +358,7 @@ const breadcrumbSchema = {
         });
         lastPurchasedSelect.value = 'any';
         hasDrawingCheckbox.checked = false;
-        materialCheckboxes.forEach((el) => {
-          if (el instanceof HTMLInputElement) el.checked = false;
-        });
+        if (materialSelect instanceof HTMLSelectElement) materialSelect.value = 'any';
       };
       document.getElementById('clear-filters')?.addEventListener('click', () => {
         clearFilters();
@@ -408,7 +404,7 @@ const breadcrumbSchema = {
       document.querySelectorAll('input[name="f-competition"]').forEach((el) => el.addEventListener('change', schedule));
       lastPurchasedSelect.addEventListener('change', schedule);
       hasDrawingCheckbox.addEventListener('change', schedule);
-      materialCheckboxes.forEach((el) => el.addEventListener('change', schedule));
+      materialSelect?.addEventListener('change', schedule);
       sortSelect.addEventListener('change', schedule);
 
       apply();

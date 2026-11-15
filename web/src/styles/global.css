@@ -538,10 +538,6 @@ footer.site .disclaimer { color: var(--inv-softer); max-width: 78ch; }
 .filter-group label:has(> input:focus-visible) { outline: 2px solid var(--green); outline-offset: 2px; }
 .filter-group input[type='checkbox'], .filter-group input[type='radio'] { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .filter-group[role='radiogroup'] .filter-label { margin-right: 2px; }
-/* The material chips scroll inside their own strip. A class can have hundreds of materials; left visible
-   they ran off the page and gave it a horizontal scrollbar. */
-.filter-group:has(> .filter-materials) { flex: 1 1 100%; min-width: 0; max-width: 100%; }
-.filter-materials { display: flex; gap: 6px; max-height: none; flex: 1 1 auto; min-width: 0; overflow-x: auto; scrollbar-width: thin; padding-bottom: 2px; }
 .filter-count { font-size: 0.8125rem; color: var(--ink-soft); margin: 0 0 0 auto; padding-left: 8px; white-space: nowrap; font-variant-numeric: tabular-nums; flex: none; }
 
 .product-grid { display: block; border-top: 0; }
