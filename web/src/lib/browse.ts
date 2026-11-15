@@ -2,6 +2,7 @@
 // (catalog -> department -> category -> product). Pure functions over the
 // already-loaded SiteData; no I/O here.
 
+import { materialFamily, type MaterialFamily } from './material-family';
 import {
   competitionOf,
   parseCharacteristics,
@@ -27,6 +28,7 @@ export interface ProductCard {
   totalDemand: number;
   competition: 'open' | 'restricted' | 'unknown';
   material: string | null;
+  materialFamily: MaterialFamily | null;
   hasDrawing: boolean;
   latestPrice: number | null;
   /** Open-demand read from pub.solicitations (status = 'open'), for ANY FSC. */
@@ -372,6 +374,7 @@ export function buildProductCards(data: SiteData, fsc: FscConfig): ProductCard[]
       totalDemand,
       competition,
       material,
+      materialFamily: materialFamily(material),
       hasDrawing: thumbnail !== null,
       latestPrice: null,
       openNow,
@@ -499,6 +502,7 @@ export function buildSolicitationCards(data: SiteData, fsc?: string): ProductCar
       totalDemand,
       competition,
       material,
+      materialFamily: materialFamily(material),
       hasDrawing: thumbnail !== null,
       latestPrice: null,
       openNow,
