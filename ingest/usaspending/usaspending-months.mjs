@@ -17,7 +17,7 @@
 // CLI: node ingest/usaspending/usaspending-months.mjs --psc 5331 [--months 2] [--floor 2007-10-01]
 
 import { fetchAllPages } from './fetch.mjs';
-import { loadRecord } from './load.mjs';
+import { loadRecords } from './load.mjs';
 import { readLane, recordPeriod, backfillCandidates, prevMonth, addDaysIso, isoOf } from '../ledger.mjs';
 import { getPool, closePool } from '../../shared/db.mjs';
 
@@ -66,7 +66,8 @@ export async function runUsaspendingMonths({
   now = Date.now(),
   count = countAwards,
   fetchAll = fetchAllPages,
-  load = loadRecord,
+  load, // optional per-record loader (tests); default is the batched loadRecords
+  loadMany,
   log = console.log,
 }) {
   const lane = `usaspending_${psc}`;
@@ -86,9 +87,13 @@ export async function runUsaspendingMonths({
     const expected = await count({ psc, startDate, endDate });
     const records = expected > 0 ? await fetchAll({ psc, startDate, endDate }) : [];
     let inserted = 0;
-    for (const rec of records) {
-      const r = await load(rec, psc);
-      if (r?.inserted) inserted += 1;
+    if (load && !loadMany) {
+      for (const rec of records) {
+        const r = await load(rec, psc);
+        if (r?.inserted) inserted += 1;
+      }
+    } else {
+      inserted = (await (loadMany || loadRecords)(records, psc)).inserted;
     }
     const matches = records.length === expected;
     const row = await recordPeriod(pool, lane, { day: m, expected, records: records.length, pages: Math.ceil(records.length / 100), loaded: records.length, extra: inserted, matches });
