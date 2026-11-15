@@ -9,6 +9,7 @@ import { priceSummary } from './sol-history';
 import { niinDashed, nomen, nsnSummary } from './seo-copy';
 import { NO_DEFINITION, alsoCalled, catalogCells, foreignSummary, moeView } from './nsn-flis';
 import { CEILING_LABEL, ceilingAmountText } from './contract-ceiling';
+import { PRICE_EXPLAINER, SHELF_LIFE_SOURCE_LABEL, SHELF_LIFE_SOURCE_URL, mgmtView } from './nsn-mgmt';
 
 const MAX_PRICE_ROWS = 50;
 const MAX_AWARD_ROWS = 25;
@@ -67,6 +68,25 @@ export function nsnMarkdown(page: NsnPageData, siteUrl: string): string {
       );
     }
     if (foreign) out.push(`${foreign}: ${[...moe.foreignNames, ...moe.otherNames].join(', ')}.`, '');
+  }
+
+  // Government supply record (PUB LOG management data). The last award is the newest positive non-ceiling price.
+  const newestPriced = [...pricePoints].sort((a, b) => b.awardedOn.localeCompare(a.awardedOn)).find((p) => Number.isFinite(p.unitPrice) && p.unitPrice > 0);
+  const mg = mgmtView(page.flis.management, newestPriced ? { price: newestPriced.unitPrice, awardedOn: newestPriced.awardedOn } : null);
+  if (mg.has) {
+    out.push('## Government supply record', '');
+    if (mg.price) out.push(PRICE_EXPLAINER, '');
+    if (mg.priceLine) out.push(`- Government standard price: ${mg.priceLine}${mg.effectiveLine ? ` (effective ${mg.effectiveLine})` : ''}`);
+    if (mg.shelfLifeLine) out.push(`- Shelf life: ${mg.shelfLifeLine}`);
+    else if (mg.shelfMixed) out.push('- Shelf life: differs by service (see the table)');
+    if (mg.sosLine) out.push(`- Source of supply: ${mg.sosLine}`);
+    else if (mg.sosMixed) out.push('- Source of supply: differs by service (see the table)');
+    if (mg.compare) out.push(`- ${mg.compare}`);
+    out.push('');
+    if (mg.table.length > 0) {
+      out.push(table(['Service or agency', 'Unit price', 'Unit of issue', 'Shelf life', 'Source of supply', 'Acquisition advice', 'Effective'], mg.table.map((r) => [r.scope, r.price, r.ui, r.shelfLife, r.sos, r.aac, r.effective])), '');
+    }
+    if (mg.shelfLifeLine || mg.shelfMixed) out.push(`Shelf life codes: ${link(SHELF_LIFE_SOURCE_LABEL, SHELF_LIFE_SOURCE_URL)}.`, '');
   }
 
   const characteristics = parseCharacteristics(nsn.characteristics);

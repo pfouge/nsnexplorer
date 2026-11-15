@@ -25,6 +25,11 @@
 // the old loader returned; `flis` is checked against independent naive queries (checkNsnFlis). With --seed the
 // clone gets migration 0014 (when missing) and web/scripts/flis-seed.sql.
 //
+// The NSN loader also returns the PUB LOG management rows added by migration 0020 (`flis.management`: standard unit
+// price, unit of issue, shelf life code, source of supply, AAC per source file and MOE code, labels from pub.flis_codes).
+// They are checked against naive queries too (checkNsnMgmt). With --seed the clone gets migration 0020 (when missing)
+// and web/scripts/mgmt-seed.sql.
+//
 // The item-name search loader (migration 0018, web/src/lib/item-search-sql.ts, GET /api/names.json and /search/) is
 // new, so there is no old loader to compare with. The OLD side of that comparison is a deliberately naive JavaScript
 // re-implementation (naiveNameSearch below: read every name, filter, rank and dedupe in JS, signals from separate
@@ -85,6 +90,7 @@ await build({
       export { NSN_WITH_AMSC_SELECT, mapNsnRow, assertSourceUrl, slugify } from './shared.ts';
       export { isSolNumber, parseSupplierQuery } from './entity.ts';
       export { humanizeLabel, moeKind } from './flis-codes.ts';
+      export { mgmtView } from './nsn-mgmt.ts';
       export { nomen } from './seo-copy.ts';
       export { pickTwin, solKey, SAM_DUPES_CTE } from './sol-twin.ts';
       export { collectStandardDocs } from './standard-refs.ts';
@@ -597,6 +603,77 @@ async function checkNsnFlis(db, nsn, page, seen) {
     if (wantMoe.some((r) => r.kind === 'other')) seen.moeOther++;
   }
   if (!ni && rel.length === 0 && can.length === 0 && moe.length === 0) seen.none++;
+}
+
+// ------------------------------------------------ NSN management rows: independent checks
+/**
+ * Checks page.flis.management (loadNsnPage) against naive queries: one query per fact, labels one code at a time.
+ * The page-level price line is recomputed here with a separate, simple rule.
+ */
+async function checkNsnMgmt(db, nsn, page, seen) {
+  const id = nsn;
+  const mg = page.flis.management;
+  const eq = (label, actual, expected) => {
+    results.checks++;
+    try {
+      assert.deepStrictEqual(actual, expected);
+    } catch (e) {
+      fail('loadNsnPage management', id, `${label}: ${String(e.message).split('\n').slice(0, 14).join('\n')}`);
+    }
+  };
+  const q = (text, params = [nsn]) => db.unsafe(text, params);
+  const lit = async (code) => (await q(`select literal from pub.flis_codes where code = $1`, [code]))[0]?.literal ?? null;
+  const lab = async (field, value) => (value === null || value === undefined ? null : N.humanizeLabel(await lit(`${field}:${value}`)));
+  const t = (v) => (typeof v === 'string' && v.trim() !== '' ? v.trim() : null);
+  const isoD = (v) => (v === null || v === undefined ? null : new Date(v).toISOString().slice(0, 10));
+
+  const rows = await q(`select * from pub.nsn_management where nsn = $1`);
+  rows.sort((a, b) => (a.source === 'FLIS' ? 0 : 1) - (b.source === 'FLIS' ? 0 : 1) || (a.source < b.source ? -1 : a.source > b.source ? 1 : 0) || (a.moe_cd < b.moe_cd ? -1 : a.moe_cd > b.moe_cd ? 1 : 0));
+  const want = [];
+  for (const r of rows) {
+    const moe = t(r.moe_cd);
+    const sos = t(r.sos);
+    want.push({
+      source: r.source,
+      moeCode: moe,
+      kind: moe === null ? 'us' : N.moeKind(moe),
+      effectiveDate: isoD(r.effective_date),
+      aac: t(r.aac),
+      aacLabel: await lab('AAC', t(r.aac)),
+      sos,
+      sosLabel: (await lab('SOS', sos)) ?? (await lab('LST_KWN_SOS', sos)),
+      ui: t(r.ui),
+      uiLabel: await lab('UI', t(r.ui)),
+      unitPrice: r.unit_price === null ? null : Number(r.unit_price),
+      qup: t(r.qup),
+      ciic: t(r.ciic),
+      ciicLabel: await lab('CIIC', t(r.ciic)),
+      slc: t(r.slc),
+      slcLabel: await lab('SLC', t(r.slc)),
+      repairability: t(r.repairability),
+    });
+  }
+  // `scope` is presentation (checked by the unit tests); compare every other field of every row, in order.
+  eq('management rows', mg.rows.map(({ scope: _scope, ...rest }) => rest), want);
+
+  // Page-level price line: catalog row (FLIS, no MOE code) with a price wins; else every US row's price.
+  const us = want.filter((r) => r.kind === 'us' && r.unitPrice !== null && r.unitPrice > 0);
+  const cat = us.filter((r) => r.source === 'FLIS' && r.moeCode === null);
+  const pool = cat.length > 0 ? cat : us;
+  const prices = [...new Set(pool.map((r) => r.unitPrice))].sort((a, b) => a - b);
+  const view = N.mgmtView(mg);
+  eq('price known', view.price !== null, prices.length > 0);
+  if (prices.length > 0) {
+    eq('price low/high', [view.price.low, view.price.high, view.price.varies], [prices[0], prices[prices.length - 1], prices.length > 1]);
+    eq('price amount', view.price.amount, prices.length === 1 ? prices[0] : null);
+  }
+  eq('non-US rows hidden', view.hiddenNonUs, want.filter((r) => r.kind !== 'us').length);
+
+  if (want.length > 0) seen.mgmt++;
+  if (want.length >= 2) seen.mgmtMulti++;
+  if (want.some((r) => r.unitPrice === null || r.unitPrice === 0)) seen.mgmtNoPrice++;
+  if (want.some((r) => r.kind !== 'us')) seen.mgmtNonUs++;
+  if (want.length === 0) seen.mgmtNone++;
 }
 
 // ------------------------------------------- supplier profile: independent checks
@@ -1261,6 +1338,11 @@ async function main() {
       psql(dbUrl, ['-1', '-f', path.join(here, '../../db/migrations/0014_flis_identification.sql')]);
     }
     psql(dbUrl, ['-1', '-f', path.join(here, 'flis-seed.sql')]);
+    // PUB LOG management data (migration 0020) and its seed rows.
+    if (psql(dbUrl, ['-At', '-c', `select to_regclass('pub.nsn_management') is not null`]).trim() !== 't') {
+      psql(dbUrl, ['-1', '-f', path.join(here, '../../db/migrations/0020_nsn_management.sql')]);
+    }
+    psql(dbUrl, ['-1', '-f', path.join(here, 'mgmt-seed.sql')]);
     // Item-name search (migration 0018: trigram indexes) and its seed rows.
     psql(dbUrl, ['-1', '-f', path.join(here, '../../db/migrations/0018_name_search_trgm.sql')]);
     psql(dbUrl, ['-1', '-f', path.join(here, 'item-search-seed.sql')]);
@@ -1320,7 +1402,7 @@ async function main() {
     for (const s of strata) console.log(`   stratum "${s.label}": ${s.rows.length}`);
 
     // Old-vs-new compares the keys the old loader returned (same order); `flis` is checked against naive queries.
-    const sawFlis = { ident: 0, identUnlabeled: 0, colloquial: 0, colloquialCapped: 0, related: 0, relatedWithPage: 0, relatedNoPage: 0, relatedCapped: 0, cancel: 0, cancelCapped: 0, cancelTies: 0, cancelForeignSide: 0, moe: 0, moeUs: 0, moeForeign: 0, moeOther: 0, none: 0 };
+    const sawFlis = { ident: 0, identUnlabeled: 0, colloquial: 0, colloquialCapped: 0, related: 0, relatedWithPage: 0, relatedNoPage: 0, relatedCapped: 0, cancel: 0, cancelCapped: 0, cancelTies: 0, cancelForeignSide: 0, moe: 0, moeUs: 0, moeForeign: 0, moeOther: 0, none: 0, mgmt: 0, mgmtMulti: 0, mgmtNoPrice: 0, mgmtNonUs: 0, mgmtNone: 0 };
     for (const nsn of nsnSample) {
       let full = null;
       await compare(
@@ -1337,6 +1419,7 @@ async function main() {
           })
       );
       if (full) await checkNsnFlis(direct, nsn, full, sawFlis);
+      if (full) await checkNsnMgmt(direct, nsn, full, sawFlis);
     }
     console.log('   FLIS cases seen:', JSON.stringify(sawFlis));
     for (const [k, v] of Object.entries(sawFlis)) if (v === 0) fail('loadNsnPage flis', k, 'no sampled NSN exercised this case');

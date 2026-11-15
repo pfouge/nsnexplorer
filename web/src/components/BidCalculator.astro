@@ -11,8 +11,10 @@ interface Props {
   latestAwardedOn: string | null;
   latestSourceUrl: string | null;
   context: 'solicitation' | 'nsn';
+  /** Government standard (catalog) unit price, a reference line only; null when there is not a single price. */
+  standard?: { amount: number; text: string } | null;
 }
-const { quantity, unitOfIssue = null, summary, latestAwardedOn, latestSourceUrl, context } = Astro.props;
+const { quantity, unitOfIssue = null, summary, latestAwardedOn, latestSourceUrl, context, standard = null } = Astro.props;
 const idp = `bc-${context}`;
 const qtyValue = quantity !== null && quantity > 0 ? String(quantity) : '';
 const hasLast = summary !== null && latestAwardedOn !== null && latestSourceUrl !== null;
@@ -92,6 +94,12 @@ const hasLast = summary !== null && latestAwardedOn !== null && latestSourceUrl 
       <p data-bc-out="range" hidden></p>
       <p data-bc-out="carried" hidden></p>
     </div>
+  )}
+
+  {standard && (
+    <p class="gloss calc-standard">
+      Government standard price: {standard.text}. This is the catalog price a military unit is charged, not an award price; treat it as a ceiling check for your quote.
+    </p>
   )}
 
   <p class="gloss">Arithmetic on public award prices. It does not predict who will win.</p>

@@ -196,7 +196,22 @@ SELECT base.*,
                   (SELECT fc.literal FROM pub.flis_codes fc WHERE fc.code = 'PICA:' || m.pica) AS pica_label,
                   (SELECT fc.literal FROM pub.flis_codes fc WHERE fc.code = 'SICA:' || m.sica) AS sica_label
            FROM pub.moe_rules m
-           WHERE m.nsn = base.nsn) mx) AS flis_moe
+           WHERE m.nsn = base.nsn) mx) AS flis_moe,
+  -- PUB LOG management data (migration 0020): at most a handful of rows per NSN (one per file and MOE code).
+  -- Labels: pub.flis_codes by primary key. The field name in the key is the file's column name; the first
+  -- production load shows which of the spellings tried here the dictionary actually uses.
+  (SELECT COALESCE(jsonb_agg(to_jsonb(gx) ORDER BY (gx.source <> 'FLIS'), gx.source, gx.moe_cd NULLS FIRST), '[]'::jsonb)
+     FROM (SELECT mg.source, NULLIF(mg.moe_cd, '') AS moe_cd, mg.effective_date, mg.aac, mg.sos, mg.ui, mg.unit_price,
+                  mg.qup, mg.ciic, mg.slc, mg.repairability,
+                  (SELECT fc.literal FROM pub.flis_codes fc WHERE fc.code = 'MOE_CD:' || mg.moe_cd) AS moe_label,
+                  (SELECT fc.literal FROM pub.flis_codes fc WHERE fc.code = 'AAC:' || mg.aac) AS aac_label,
+                  COALESCE((SELECT fc.literal FROM pub.flis_codes fc WHERE fc.code = 'SOS:' || mg.sos),
+                           (SELECT fc.literal FROM pub.flis_codes fc WHERE fc.code = 'LST_KWN_SOS:' || mg.sos)) AS sos_label,
+                  (SELECT fc.literal FROM pub.flis_codes fc WHERE fc.code = 'UI:' || mg.ui) AS ui_label,
+                  (SELECT fc.literal FROM pub.flis_codes fc WHERE fc.code = 'CIIC:' || mg.ciic) AS ciic_label,
+                  (SELECT fc.literal FROM pub.flis_codes fc WHERE fc.code = 'SLC:' || mg.slc) AS slc_label
+           FROM pub.nsn_management mg
+           WHERE mg.nsn = base.nsn) gx) AS flis_mgmt
 FROM (${NSN_WITH_AMSC_SELECT} WHERE n.nsn = $1) base`;
 
 /**
