@@ -14,7 +14,7 @@ import {
   type SiteData,
   type SolicitationRecord,
 } from './data';
-import { buildThumbnail } from './diagram';
+import { buildThumbnail, canDraw } from './diagram';
 import { collectStandardDocs } from './standard-refs';
 import { estimatedValue, isPastDueUnawarded, isRepost, lastUnitPrice, type TechDocsKind } from './open-signals';
 
@@ -392,7 +392,7 @@ export function buildProductCards(data: SiteData, fsc: FscConfig): ProductCard[]
       competition,
       material,
       materialFamily: materialFamily(material),
-      hasDrawing: thumbnail !== null,
+      hasDrawing: canDraw(characteristics, fsc.fsc, { nsnDashed: dashed, itemName: nsn.itemName }),
       standardDrawing: hasStandardDrawing(characteristics, data.standardPartNumbersByNsn.get(nsn.nsn)),
       latestPrice: null,
       openNow,
@@ -540,7 +540,7 @@ export function buildSolicitationCards(data: SiteData, fsc?: string): ProductCar
       competition,
       material,
       materialFamily: materialFamily(material),
-      hasDrawing: thumbnail !== null,
+      hasDrawing: cardFsc ? canDraw(characteristics, cardFsc, { nsnDashed: '', itemName }) : false,
       standardDrawing: hasStandardDrawing(characteristics, data.standardPartNumbersByNsn.get(nsnCode)),
       latestPrice: null,
       openNow,
