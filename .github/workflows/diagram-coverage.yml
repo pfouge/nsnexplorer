@@ -1,0 +1,34 @@
+name: diagram-coverage
+
+# Read-only report (SELECT only, READ ONLY transaction). Runs only for branches named coverage/**.
+on:
+  push:
+    branches: ['coverage/**']
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Snapshot origin/main drawing code
+        run: |
+          mkdir -p /tmp/before
+          git archive origin/main web/src | tar -x -C /tmp/before
+          ln -s "$PWD/node_modules" /tmp/before/node_modules
+      - name: Coverage before and after
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+          DB_POOL_MAX: '1'
+        run: |
+          node web/scripts/diagram-coverage.mjs --roots 5 --classes 5 --compare-lib /tmp/before/web/src/lib/diagram.ts --lost-samples 10 | cut -c1-400
