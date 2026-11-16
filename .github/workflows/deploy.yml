@@ -89,6 +89,8 @@ jobs:
         run: bash .github/scripts/retry-pool-full.sh /tmp/step-build.log npm run build --workspace=web
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+          # Part of the edge cache key for request-time pages (web/src/middleware.ts).
+          PUBLIC_BUILD_ID: ${{ github.run_id }}
 
       # Fails the deploy if pages no longer load the shell script (search, menu, tabs),
       # which a build can drop without any error (2026-10-11).
