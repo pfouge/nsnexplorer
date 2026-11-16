@@ -17,9 +17,11 @@ interface Props {
   headingId?: string;
 }
 const { docs, headingId } = Astro.props;
+const hasAssistLink = docs.some((d) => assistUrl(d) !== null);
 ---
 
 {docs.length > 0 && (
+  <>
   <ul class="std-list" aria-labelledby={headingId}>
     {docs.map((d) => {
       const href = assistUrl(d);
@@ -51,4 +53,8 @@ const { docs, headingId } = Astro.props;
       );
     })}
   </ul>
+  {hasAssistLink && (
+    <p class="gloss">ASSIST is run by the Defense Logistics Agency and may not load from outside the United States.</p>
+  )}
+  </>
 )}
