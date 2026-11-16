@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 // ingest/publog/fetch.mjs
 // Downloads the PUB LOG bulk data ZIPs (IDENTIFICATION.zip, REFERENCE.zip,
-// CAGE.zip, CHARACTERISTICS.zip, MOE_RULE.zip, plus the optional MANAGEMENT.zip) and unzips them for load.mjs to read. Run
+// CAGE.zip, CHARACTERISTICS.zip, MOE_RULE.zip, plus the optional MANAGEMENT.zip and FREIGHT_PACKAGING.zip) and unzips them for load.mjs to read. Run
 // monthly from GitHub Actions (US runners).
 //
 // CLI:
 //   node fetch.mjs --out dir/
-//   node fetch.mjs --out dir/ --files IDENTIFICATION.zip,CAGE.zip   (--files alone skips the optional MANAGEMENT.zip)
+//   node fetch.mjs --out dir/ --files IDENTIFICATION.zip,CAGE.zip   (--files alone skips the optional zips)
 //   node fetch.mjs --out dir/ --files IDENTIFICATION.zip --optional MANAGEMENT.zip   (optional: a failed download is a warning)
 
 import { execFile } from 'node:child_process';
@@ -29,9 +29,10 @@ export const DEFAULT_FILES = [
 
 // Downloaded after the defaults; a failed download is a ::warning:: and the run goes on (the loader for
 // these files is optional too). MANAGEMENT.zip holds V_FLIS_MANAGEMENT.CSV and the V_MGMT_<SERVICE>.CSV files
-// (migration 0020). The name is tried as written, then in the capitalisation the DLA reading room uses.
-export const OPTIONAL_FILES = ['MANAGEMENT.zip'];
-const ALT_NAMES = { 'MANAGEMENT.zip': ['Management.zip'] };
+// (migration 0020). FREIGHT_PACKAGING.zip holds V_FLIS_PACKAGING_1/2/3.CSV and V_FREIGHT.CSV (migration 0023).
+// The name is tried as written, then in the capitalisation the DLA reading room uses.
+export const OPTIONAL_FILES = ['MANAGEMENT.zip', 'FREIGHT_PACKAGING.zip'];
+const ALT_NAMES = { 'MANAGEMENT.zip': ['Management.zip'], 'FREIGHT_PACKAGING.zip': ['Freight_Packaging.zip'] };
 
 function parseArgs(argv) {
   const args = { out: undefined, files: DEFAULT_FILES, optional: undefined };
