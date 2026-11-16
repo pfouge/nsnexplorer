@@ -1115,6 +1115,16 @@ async function main() {
     await optional('management files', () => mgmt.loadManagement(args.dir, mgmtFiles, trackedByNiin));
   }
 
+  // Freight and packaging data (migration 0023): V_FLIS_PACKAGING_1/2/3.CSV, V_FREIGHT.CSV and (when published)
+  // V_DSS_WEIGHT_AND_CUBE.CSV from FREIGHT_PACKAGING.zip. Optional like the management files above.
+  const fp = await import('./load-freight-packaging.mjs');
+  const fpFiles = fp.findFreightPackagingFiles(filesOnDisk);
+  if (fpFiles.length === 0) {
+    console.log(`::warning::load.mjs: no V_FLIS_PACKAGING_*.CSV / V_FREIGHT.CSV in ${args.dir} (FREIGHT_PACKAGING.zip missing?), skipping freight and packaging data`);
+  } else {
+    await optional('freight and packaging files', () => fp.loadFreightPackaging(args.dir, fpFiles, trackedByNiin));
+  }
+
   const cageFile = findFile(filesOnDisk, 'P_CAGE.CSV');
   if (cageFile) {
     const result = await loadCageFile(path.join(args.dir, cageFile), referencedCages);
