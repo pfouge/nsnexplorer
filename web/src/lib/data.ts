@@ -21,7 +21,7 @@ import { STANDARD_CAGES } from './standard-refs';
 import { SAM_DUPES_CTE, SOLS_ONCE_SQL } from './sol-twin';
 import { CAGE_RE, SOL_NUMBER_RE } from './entity';
 import type { FiscalYearRow } from './agency-profile';
-import { AGENCY_CLASSES_SQL, AGENCY_FY_SQL, AGENCY_RECENT_SQL, AGENCY_RECIPIENTS_SQL, AGENCY_TOTALS_SQL } from './agency-profile-sql';
+import { AGENCY_PROFILE_SQL, type AgencyProfileRowKind } from './agency-profile-sql';
 import { foldCalendarRows } from './viz-open';
 import type { DailyStatRow, FreshnessSource, GroupDemandRow, TapeItem, TileInput } from './viz-site';
 import type { RepeatRow, StateCount, WeekCount, WinnerRow } from './viz-class';
@@ -422,15 +422,21 @@ async function fetchSiteData(): Promise<SiteData> {
       // from CTEs on distinct keys (a correlated EXISTS timed out in production).
       // sam_dupes (sol-twin.ts): a SAM.gov notice that is the twin of a DIBBS row. The DIBBS row stands for the pair:
       // the notice is left out below when drop_sam, and the DIBBS row carries a link to it (alsoOn).
-      `WITH award_pr AS (
-         SELECT DISTINCT btrim(ca.raw ->> 'purchaseRequest') AS pr
+      // The DIBBS award rows are read once (dibbs_awards, served by the partial index of
+      // migration 0022) and feed both award_pr and award_nsn.
+      `WITH dibbs_awards AS MATERIALIZED (
+         SELECT ca.raw ->> 'purchaseRequest' AS pr_raw, ca.raw ->> 'nsn' AS nsn, ca.action_date
          FROM pub.contract_actions ca
-         WHERE ca.award_uid LIKE 'DIBBS%' AND btrim(COALESCE(ca.raw ->> 'purchaseRequest', '')) <> ''
+         WHERE ca.award_uid LIKE 'DIBBS%'
+       ), award_pr AS (
+         SELECT DISTINCT btrim(d.pr_raw) AS pr
+         FROM dibbs_awards d
+         WHERE btrim(COALESCE(d.pr_raw, '')) <> ''
        ), award_nsn AS (
-         SELECT ca.raw ->> 'nsn' AS nsn, max(ca.action_date) AS last_award
-         FROM pub.contract_actions ca
-         WHERE ca.award_uid LIKE 'DIBBS%' AND ca.raw ->> 'nsn' IS NOT NULL
-         GROUP BY ca.raw ->> 'nsn'
+         SELECT d.nsn, max(d.action_date) AS last_award
+         FROM dibbs_awards d
+         WHERE d.nsn IS NOT NULL
+         GROUP BY d.nsn
        ), ${SAM_DUPES_CTE}
        SELECT s.sol_number, s.nsn, s.fsc, f.name AS fsc_name, f.render_depth AS fsc_depth, s.nomenclature,
               s.quantity, s.unit_of_issue, s.issued_on, s.return_by,
@@ -712,64 +718,60 @@ async function fetchSiteData(): Promise<SiteData> {
 
 
 // ---------------------------------------------------------------------------
-// Agency profiles: USAspending contract actions per buying agency. Five grouped
-// queries for ALL agencies (no per-agency round trips, no correlated subqueries
-// over the ~540k-row table). DIBBS rows carry no agency and are excluded.
+// Agency profiles: USAspending contract actions per buying agency. ONE statement for ALL
+// agencies (AGENCY_PROFILE_SQL: one read of pub.contract_actions feeds all five summaries; no
+// per-agency round trips, no correlated subqueries). DIBBS rows carry no agency and are excluded.
 
 async function loadAgencyProfiles(
   pool: pgTypes.Pool
 ): Promise<Map<number, AgencyProfile & { name: string | null; abbreviation: string | null }>> {
-  const [totals, fys, recips, classes, recent] = await Promise.all([
-    pool.query(AGENCY_TOTALS_SQL),
-    pool.query(AGENCY_FY_SQL),
-    pool.query(AGENCY_RECIPIENTS_SQL),
-    pool.query(AGENCY_CLASSES_SQL),
-    pool.query(AGENCY_RECENT_SQL),
-  ]);
+  const res = await pool.query(AGENCY_PROFILE_SQL);
   const out = new Map<number, AgencyProfile & { name: string | null; abbreviation: string | null }>();
-  for (const r of totals.rows) {
-    out.set(Number(r.agency_id), {
-      agencyId: Number(r.agency_id),
-      name: r.name,
-      abbreviation: r.abbreviation,
-      actions: Number(r.actions),
-      obligated: Number(r.obligated),
-      recipients: Number(r.recipients),
-      classes: Number(r.classes),
-      firstDate: r.first_date,
-      lastDate: r.last_date,
-      byFiscalYear: [],
-      topRecipients: [],
-      topClasses: [],
-      recent: [],
-    });
-  }
-  for (const r of fys.rows) {
+  // Rows arrive grouped by kind (totals first), then by agency, then in each summary's own order.
+  for (const r of res.rows) {
+    const kind = r.kind as AgencyProfileRowKind;
+    if (kind === 'totals') {
+      out.set(Number(r.agency_id), {
+        agencyId: Number(r.agency_id),
+        name: r.name,
+        abbreviation: r.abbreviation,
+        actions: Number(r.actions),
+        obligated: Number(r.obligated),
+        recipients: Number(r.recipients),
+        classes: Number(r.classes),
+        firstDate: r.first_date,
+        lastDate: r.last_date,
+        byFiscalYear: [],
+        topRecipients: [],
+        topClasses: [],
+        recent: [],
+      });
+      continue;
+    }
     const p = out.get(Number(r.agency_id));
-    const fy = Number(r.fy);
-    p?.byFiscalYear.push({ fy, actions: Number(r.actions), obligated: Number(r.obligated) });
-  }
-  for (const r of recips.rows) {
-    out.get(Number(r.agency_id))?.topRecipients.push({
-      name: r.name, uei: r.uei, cage: r.cage, actions: Number(r.actions), obligated: Number(r.obligated),
-    });
-  }
-  for (const r of classes.rows) {
-    out.get(Number(r.agency_id))?.topClasses.push({
-      psc: r.psc, name: r.name, actions: Number(r.actions), obligated: Number(r.obligated),
-    });
-  }
-  for (const r of recent.rows) {
-    out.get(Number(r.agency_id))?.recent.push({
-      actionDate: r.action_date,
-      recipientName: r.recipient_name,
-      cage: r.cage,
-      psc: r.psc,
-      obligation: r.obligation !== null ? Number(r.obligation) : null,
-      description: r.description,
-      piid: r.piid,
-      sourceUrl: assertSourceUrl(r.source_url, `contract_actions agency=${r.agency_id} piid=${r.piid}`),
-    });
+    if (kind === 'fy') {
+      const fy = Number(r.fy);
+      p?.byFiscalYear.push({ fy, actions: Number(r.actions), obligated: Number(r.obligated) });
+    } else if (kind === 'recipients') {
+      p?.topRecipients.push({
+        name: r.name, uei: r.uei, cage: r.cage, actions: Number(r.actions), obligated: Number(r.obligated),
+      });
+    } else if (kind === 'classes') {
+      p?.topClasses.push({
+        psc: r.psc, name: r.name, actions: Number(r.actions), obligated: Number(r.obligated),
+      });
+    } else if (kind === 'recent') {
+      p?.recent.push({
+        actionDate: r.action_date,
+        recipientName: r.recipient_name,
+        cage: r.cage,
+        psc: r.psc,
+        obligation: r.obligation !== null ? Number(r.obligation) : null,
+        description: r.description,
+        piid: r.piid,
+        sourceUrl: assertSourceUrl(r.source_url, `contract_actions agency=${r.agency_id} piid=${r.piid}`),
+      });
+    }
   }
   return out;
 }
@@ -840,6 +842,8 @@ async function loadVizData(pool: pgTypes.Pool): Promise<SiteViz> {
   }));
 
   // Same SQL as db/freshness.mjs SOURCES; the limits are those sources' limits.
+  // The contract_actions maxima read partial indexes of migration 0022 instead of the whole table: the
+  // DIBBS one repeats award_uid LIKE 'DIBBS%' (implied by 'DIBBS-%') so the planner can match that index.
   const fresh = async (sql: string): Promise<string | null> => {
     const r = await pool.query<{ t: Date | null }>(sql);
     return r.rows[0]?.t ? new Date(r.rows[0].t).toISOString() : null;
@@ -847,7 +851,7 @@ async function loadVizData(pool: pgTypes.Pool): Promise<SiteViz> {
   const freshDefs: { key: string; label: string; limitHours: number; cadence: string; customerFacing?: boolean; sql: string }[] = [
     { key: 'dibbs_rfq', label: 'DIBBS solicitations', limitHours: 48, cadence: 'updates daily', sql: `SELECT max(last_seen_at) AS t FROM pub.solicitations WHERE source = 'dibbs_rfq'` },
     { key: 'sam_gov', label: 'SAM.gov notices', limitHours: 48, cadence: 'updates daily', sql: `SELECT max(last_seen_at) AS t FROM pub.solicitations WHERE source = 'sam_gov'` },
-    { key: 'dibbs_awards', label: 'DIBBS awards and prices', limitHours: 120, cadence: 'updates on business days', sql: `SELECT max(ingested_at) AS t FROM pub.contract_actions WHERE award_uid LIKE 'DIBBS-%'` },
+    { key: 'dibbs_awards', label: 'DIBBS awards and prices', limitHours: 120, cadence: 'updates on business days', sql: `SELECT max(ingested_at) AS t FROM pub.contract_actions WHERE award_uid LIKE 'DIBBS%' AND award_uid LIKE 'DIBBS-%'` },
     { key: 'publog', label: 'PUB LOG specs', limitHours: 48, cadence: 'updates nightly', sql: `SELECT max(updated_at) FILTER (WHERE characteristics IS NOT NULL) AS t FROM pub.nsns` },
     { key: 'usaspending', label: 'USAspending', limitHours: 336, cadence: 'publishes in bursts', sql: `SELECT max(ingested_at) AS t FROM pub.contract_actions WHERE award_uid NOT LIKE 'DIBBS-%'` },
     // Supplier profile lanes: listed so /data/freshness.json carries them, but never drawn by the
@@ -943,17 +947,25 @@ async function loadVizData(pool: pgTypes.Pool): Promise<SiteViz> {
   );
   for (const r of weeklyRes.rows) cls(r.fsc).weekly.push({ week: r.week, n: Number(r.n) });
 
-  // Who wins: award dollars by supplier per class, last 12 months. The label
-  // is the recipient name, else the CAGE from the record, else "Unidentified".
-  const winnersRes = await pool.query(
-    `WITH raw AS (
-       SELECT ca.psc AS fsc,
-              NULLIF(upper(btrim(ca.raw ->> 'cage')), '') AS cage,
-              NULLIF(btrim(ca.recipient_name), '') AS nm,
-              ca.obligation
+  // Who wins (award dollars by supplier per class, last 12 months) and where the winning
+  // suppliers are (distinct CAGEs with awards in the class over 24 months, by the state on
+  // their CAGE record): ONE read of pub.contract_actions. `base` holds the non-ceiling rows of
+  // the last 24 months; the 12-month winners rows are a subset of it. Rows come back with
+  // kind 'w' (winners, ordered by class and rank) then 's' (states, ordered by class and state).
+  // Winners: the label is the recipient name, else the CAGE from the record, else "Unidentified".
+  const marketRes = await pool.query(
+    `WITH base AS MATERIALIZED (
+       SELECT ca.psc AS fsc, ca.raw ->> 'cage' AS cage_raw, ca.recipient_name, ca.obligation, ca.action_date
        FROM pub.contract_actions ca
-       WHERE ca.psc ~ '^[0-9]{4}$' AND ca.action_date >= CURRENT_DATE - INTERVAL '12 months' AND ca.obligation IS NOT NULL
+       WHERE ca.psc ~ '^[0-9]{4}$' AND ca.action_date >= CURRENT_DATE - INTERVAL '24 months'
          AND ${NOT_CONTRACT_CEILING_SQL}
+     ), raw AS (
+       SELECT b.fsc,
+              NULLIF(upper(btrim(b.cage_raw)), '') AS cage,
+              NULLIF(btrim(b.recipient_name), '') AS nm,
+              b.obligation
+       FROM base b
+       WHERE b.action_date >= CURRENT_DATE - INTERVAL '12 months' AND b.obligation IS NOT NULL
      ), g AS (
        -- One group per supplier: by CAGE when the record has one (so rows
        -- loaded before the supplier's name was known still merge), else by name.
@@ -968,31 +980,28 @@ async function loadVizData(pool: pgTypes.Pool): Promise<SiteViz> {
        SELECT fsc, label, amt, row_number() OVER (PARTITION BY fsc ORDER BY amt DESC, label) AS rn,
               sum(amt) OVER (PARTITION BY fsc) AS total, count(*) OVER (PARTITION BY fsc) AS n
        FROM x
+     ), c AS (
+       SELECT b.fsc, upper(btrim(b.cage_raw)) AS cage, sum(b.obligation) AS amt
+       FROM base b
+       WHERE NULLIF(btrim(b.cage_raw), '') IS NOT NULL
+       GROUP BY 1, 2
      )
-     SELECT fsc, label, amt::float8 AS amt, rn::int, total::float8 AS total, n::int AS n FROM r WHERE rn <= 6 ORDER BY fsc, rn`
+     SELECT 'w' AS kind, fsc, label, amt::float8 AS amt, rn::int, total::float8 AS total, n::int AS n FROM r WHERE rn <= 6
+     UNION ALL
+     SELECT 's', c.fsc, upper(btrim(s.state)), coalesce(sum(c.amt), 0)::float8, NULL, NULL, count(*)::int
+     FROM c LEFT JOIN pub.suppliers s ON s.cage = c.cage
+     GROUP BY 2, 3
+     ORDER BY 1 DESC, 2, 5, 3`
   );
-  for (const r of winnersRes.rows) {
+  for (const r of marketRes.rows) {
+    if (r.kind !== 'w') continue;
     const c = cls(r.fsc);
     if (!c.winners) c.winners = { top: [], suppliers: Number(r.n), total: Number(r.total) };
     c.winners.top.push({ label: r.label, amount: Number(r.amt) });
   }
-
-  // Where the winning suppliers are: distinct CAGEs with awards in the class
-  // over 24 months, by the state on their CAGE record.
-  const statesRes = await pool.query(
-    `WITH c AS (
-       SELECT ca.psc AS fsc, upper(btrim(ca.raw ->> 'cage')) AS cage, sum(ca.obligation) AS amt
-       FROM pub.contract_actions ca
-       WHERE ca.psc ~ '^[0-9]{4}$' AND ca.action_date >= CURRENT_DATE - INTERVAL '24 months'
-         AND NULLIF(btrim(ca.raw ->> 'cage'), '') IS NOT NULL
-         AND ${NOT_CONTRACT_CEILING_SQL}
-       GROUP BY 1, 2
-     )
-     SELECT c.fsc, upper(btrim(s.state)) AS st, count(*)::int AS n, coalesce(sum(c.amt), 0)::float8 AS amt
-     FROM c LEFT JOIN pub.suppliers s ON s.cage = c.cage
-     GROUP BY 1, 2`
-  );
-  for (const r of statesRes.rows) cls(r.fsc).states.push({ state: r.st ?? null, suppliers: Number(r.n), amount: Math.max(0, Number(r.amt)) });
+  for (const r of marketRes.rows) {
+    if (r.kind === 's') cls(r.fsc).states.push({ state: r.label ?? null, suppliers: Number(r.n), amount: Math.max(0, Number(r.amt)) });
+  }
 
   return {
     today: tiles.today,
