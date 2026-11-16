@@ -62,6 +62,14 @@ const lostNameSamples = new Map();
 //                           "signatures" (which measurable requirements the part carries) so a builder can be fitted
 const SIG_ROOT = new Set((opt('--sig-root', '') || '').split(',').map((x) => x.trim()).filter(Boolean));
 const SIG_CLASS = new Set((opt('--sig-class', '') || '').split(',').map((x) => x.trim()).filter(Boolean));
+//   --fam "PLUG=^PLUG,|^PLUG$;CAP=^CAP\\b"   round-4 family sampling: per family (regex on the full upper-case item name):
+//   totals, parts without a drawing, top full item names, requirement-name frequencies and N spread samples
+//   (item name + every characteristic with its raw reply) of parts WITHOUT a drawing; --fam-drawn adds drawn samples
+//   --fam-samples 40  --fam-fsc 4730,5310 restricts the families to those classes
+const FAMS = (opt('--fam', '') || '').split(';').map((x) => x.trim()).filter(Boolean).map((x) => { const i = x.indexOf('='); const nm0 = x.slice(0, i); const at = nm0.indexOf('@'); return { name: nm0, fsc: at >= 0 ? new Set(nm0.slice(at + 1).split('/')) : null, re: new RegExp(x.slice(i + 1), 'i'), total: 0, draw: 0, chars: 0, names: new Map(), req: new Map(), samples: [], k: 0, drawnSamples: [], dk: 0, fscs: new Map() }; });
+const FAM_SAMPLES = Number(opt('--fam-samples', 40));
+const FAM_FSC = new Set((opt('--fam-fsc', '') || '').split(',').map((x) => x.trim()).filter(Boolean));
+const FAM_DRAWN = args.includes('--fam-drawn');
 const CLASS_ROOTS = new Set((opt('--class-roots', '') || '').split(',').map((x) => x.trim()).filter(Boolean));
 
 // ---- load the drawing code ------------------------------------------------------------------
@@ -236,6 +244,27 @@ outer: for (;;) {
         }
       } else if (oldSvg && svg && oldSvg !== svg && oldWho !== newWho) {
         inc(transitions, `(changed builder) ${oldWho} -> ${newWho}`);
+      }
+    }
+    if (FAMS.length && (FAM_FSC.size === 0 || FAM_FSC.has(row.fsc))) {
+      const nmU = (row.item_name ?? '').toUpperCase();
+      for (const F of FAMS) {
+        if (F.fsc && !F.fsc.has(row.fsc)) continue;
+        if (!F.re.test(nmU)) continue;
+        F.total += 1;
+        inc(F.fscs, row.fsc);
+        if (hasChars) F.chars += 1;
+        if (svg) {
+          F.draw += 1;
+          if (FAM_DRAWN) { F.dk += 1; if (F.drawnSamples.length < 8 && F.dk % 11 === 1) F.drawnSamples.push(fmtSample(row, entries)); }
+          continue;
+        }
+        if (!hasChars) continue;
+        inc(F.names, nmU);
+        const seenR = new Set();
+        for (const e of entries) { if (e.requirement && !seenR.has(e.requirement)) { seenR.add(e.requirement); inc(F.req, e.requirement); } }
+        F.k += 1;
+        if (F.samples.length < FAM_SAMPLES && F.k % 3 === 1) F.samples.push(fmtSample(row, entries));
       }
     }
     if (CLASS_ROOTS.has(row.fsc)) {
@@ -459,6 +488,17 @@ for (const fsc of [...SIG_CLASS, ...[...SIG_ROOT].map((r) => `ROOT ${r}`)]) {
   for (const [nm, c] of [...(sigNames.get(fsc) ?? new Map()).entries()].filter(([, c]) => c.noDraw > 0).sort((a, b) => b[1].noDraw - a[1].noDraw).slice(0, 14)) P(`${String(c.noDraw).padStart(7)} ${String(c.total).padStart(7)}  ${nm}`);
   P(`## Class ${fsc}: top measurable-requirement signatures among parts without a drawing`);
   for (const [k, g] of [...(sigSigs.get(fsc) ?? new Map()).entries()].sort((a, b) => b[1].n - a[1].n).slice(0, 14)) P(`${String(g.n).padStart(7)}  ${k}   e.g. ${g.nsn} ${g.name ?? ''}`);
+}
+for (const F of FAMS) {
+  P();
+  P(`## FAMILY ${F.name}: ${F.total} parts, ${F.chars} with characteristics, ${F.draw} drawn today, ${F.chars - F.draw} undrawn with characteristics (classes: ${[...F.fscs.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k, v]) => k + ':' + v).join(' ')})`);
+  P('  top item names of undrawn parts with characteristics:');
+  for (const [k, v] of [...F.names.entries()].sort((a, b) => b[1] - a[1]).slice(0, 20)) P(`   ${String(v).padStart(6)}  ${k}`);
+  P('  requirement names among undrawn parts with characteristics (parts):');
+  for (const [k, v] of [...F.req.entries()].sort((a, b) => b[1] - a[1]).slice(0, 30)) P(`   ${String(v).padStart(6)}  ${k}`);
+  P(`  -- ${F.samples.length} samples without a drawing --`);
+  for (const smp of F.samples) P(smp);
+  if (F.drawnSamples.length) { P(`  -- ${F.drawnSamples.length} samples WITH a drawing --`); for (const smp of F.drawnSamples) P(smp); }
 }
 for (const root of PROBE) {
   const agg = probeReq.get(root);

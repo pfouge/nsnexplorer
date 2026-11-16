@@ -1,0 +1,29 @@
+name: diagram-coverage
+
+# Read-only report (SELECT only, READ ONLY transaction). Runs only for branches named coverage/**.
+on:
+  push:
+    branches: ['coverage/**']
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Coverage and family samples
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+          DB_POOL_MAX: '1'
+        run: |
+          node web/scripts/diagram-coverage.mjs --roots 40 --classes 25 --sig-class 4730,5305,5310,5315,5360,3120,5365 --fam-samples 40 --fam "PLUG@4730=^PLUG;CAP@4730=^CAP;TEE@4730=^TEE;CROSS@4730=^CROSS;COUPLING@4730=^COUPLING;UNION@4730=^UNION;NIPPLE@4730=^NIPPLE;REDUCER@4730=^REDUCER|^BUSHING|^BELL;OTHER4730@4730=^(?!PLUG|CAP|TEE|CROSS|COUPLING|UNION|NIPPLE|REDUCER|ELBOW|ADAPTER|CLAMP|BUSHING|BELL);NUT@5310=^NUT|NUT,;WASHER@5310=WASHER;PIN@5315=.;BUSHING@3120/5365=BUSHING|BEARING, SLEEVE|SLEEVE;SPACER@5365/3120/5340=SPACER|STANDOFF|STAND-OFF;SPRING@5360=.;SCREW@5305=." | cut -c1-420
