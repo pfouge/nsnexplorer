@@ -49,6 +49,8 @@ const total = allCards.length;
 const range = pageRange(total, page);
 const baseUrl = `/fsc/${fsc.fsc}/`;
 const materialFamilies = familyCounts(allCards.map((c) => c.material));
+// The "Has drawing" filter is offered only when at least one part in the class has a generated drawing.
+const anyDrawing = allCards.some((c) => c.hasDrawing);
 
 // Category-level actions: real purchase records in this FSC whose public
 // description didn't identify a specific part.
@@ -266,9 +268,11 @@ const breadcrumbSchema = {
             </select>
           </div>
 
-          <div class="filter-group">
-            <label><input type="checkbox" id="f-hasdrawing" /> Has drawing</label>
-          </div>
+          {anyDrawing && (
+            <div class="filter-group">
+              <label title="Parts with a generated schematic drawing on their page"><input type="checkbox" id="f-hasdrawing" /> Has drawing</label>
+            </div>
+          )}
 
           <div class="filter-group">
             <label title="A government standard or specification defines this part; its document holds the drawing"><input type="checkbox" id="f-standard" /> Standard drawing</label>
@@ -366,19 +370,19 @@ const breadcrumbSchema = {
     const sortSelect = document.getElementById('f-sort');
 
     if (grid && lastPurchasedSelect instanceof HTMLSelectElement &&
-        hasDrawingCheckbox instanceof HTMLInputElement && standardCheckbox instanceof HTMLInputElement && sortSelect instanceof HTMLSelectElement) {
+        standardCheckbox instanceof HTMLInputElement && sortSelect instanceof HTMLSelectElement) {
       const cards = Array.from(grid.querySelectorAll<HTMLElement>(':scope > .product-card'));
       const cfg = readPagedConfig(grid);
       const fmt = (n: number) => n.toLocaleString('en-US');
       const loader = createPagedLoader({ grid, cards, countEl, pager: document.getElementById('pager') });
-      // Absent when the class has fewer than two material families.
+      // The drawing filter is absent when no part in the class has a drawing; the material filter when the class has fewer than two material families.
       const materialSelect = document.getElementById('f-material');
 
       const apply = () => {
         const checkedCompetition = document.querySelector('input[name="f-competition"]:checked');
         const competition = checkedCompetition instanceof HTMLInputElement ? checkedCompetition.value : 'all';
         const maxAgeDays = lastPurchasedSelect.value === 'any' ? null : Number(lastPurchasedSelect.value);
-        const needsDrawing = hasDrawingCheckbox.checked;
+        const needsDrawing = hasDrawingCheckbox instanceof HTMLInputElement && hasDrawingCheckbox.checked;
         const needsStandard = standardCheckbox.checked;
         const wantedFamily = materialSelect instanceof HTMLSelectElement && materialSelect.value !== 'any' ? materialSelect.value : null;
         const now = Date.now();
@@ -420,7 +424,7 @@ const breadcrumbSchema = {
           if (el instanceof HTMLInputElement) el.checked = el.value === 'all';
         });
         lastPurchasedSelect.value = 'any';
-        hasDrawingCheckbox.checked = false;
+        if (hasDrawingCheckbox instanceof HTMLInputElement) hasDrawingCheckbox.checked = false;
         standardCheckbox.checked = false;
         if (materialSelect instanceof HTMLSelectElement) materialSelect.value = 'any';
       };
@@ -467,7 +471,7 @@ const breadcrumbSchema = {
       };
       document.querySelectorAll('input[name="f-competition"]').forEach((el) => el.addEventListener('change', schedule));
       lastPurchasedSelect.addEventListener('change', schedule);
-      hasDrawingCheckbox.addEventListener('change', schedule);
+      hasDrawingCheckbox?.addEventListener('change', schedule);
       standardCheckbox.addEventListener('change', schedule);
       materialSelect?.addEventListener('change', schedule);
       sortSelect.addEventListener('change', schedule);

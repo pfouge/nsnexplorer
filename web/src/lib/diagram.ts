@@ -14,6 +14,7 @@
 import type { CharacteristicEntry } from './data';
 import { parseMeasure } from './diagram-kit.ts';
 import { resolveShape } from './diagram-shapes.ts';
+import { resolveR4 } from './diagram-r4.ts';
 
 interface Dim {
   min: number;
@@ -1258,6 +1259,19 @@ function pickDiagram(
   fsc: string,
   opts: { nsnDashed: string; itemName: string | null },
 ): Picked | null {
+  const base = pickBase(entries, fsc, opts);
+  if (base) return base;
+  // Round 4 families (diagram-r4.ts) only ever fill a gap: a part an older builder draws keeps that drawing.
+  const r4 = resolveR4(entries, fsc, opts.itemName);
+  const svg = r4?.draw(opts) ?? null;
+  return r4 && svg ? { builder: r4.kind, svg } : null;
+}
+
+function pickBase(
+  entries: CharacteristicEntry[],
+  fsc: string,
+  opts: { nsnDashed: string; itemName: string | null },
+): Picked | null {
   const name = (opts.itemName ?? '').toUpperCase();
   const as = (builder: string, svg: string | null | undefined): Picked | null => (svg ? { builder, svg } : null);
 
@@ -1294,6 +1308,19 @@ export function buildDiagram(
   return pickDiagram(entries, fsc, opts)?.svg ?? null;
 }
 
+/**
+ * True when the part page will show a generated drawing. It is the same decision buildDiagram makes (pickDiagram), so
+ * a list filter on "has a drawing" can never disagree with the part page. (A list thumbnail is a separate, simpler
+ * silhouette; a few parts have one without a drawing.)
+ */
+export function canDraw(
+  entries: CharacteristicEntry[],
+  fsc: string,
+  opts: { nsnDashed: string; itemName: string | null },
+): boolean {
+  return pickDiagram(entries, fsc, opts) !== null;
+}
+
 /** Name of the builder that draws this part, or null when there is no drawing. */
 export function diagramBuilder(
   entries: CharacteristicEntry[],
@@ -1304,6 +1331,14 @@ export function diagramBuilder(
 }
 
 export function buildThumbnail(entries: CharacteristicEntry[], fsc: string, itemName?: string | null): string | null {
+  // A part r4 can draw and no older builder draws gets the r4 thumbnail, so the thumbnail and the drawing agree
+  // (some of those parts had a generic tube silhouette without a drawing behind it).
+  const r4 = resolveR4(entries, fsc, itemName ?? null);
+  if (r4 && !pickBase(entries, fsc, { nsnDashed: '', itemName: itemName ?? null })) return r4.thumb() ?? buildThumbnailBase(entries, fsc, itemName);
+  return buildThumbnailBase(entries, fsc, itemName);
+}
+
+function buildThumbnailBase(entries: CharacteristicEntry[], fsc: string, itemName?: string | null): string | null {
   const cx = 60;
   const cy = 60;
   const name = (itemName ?? '').toUpperCase();
@@ -1448,3 +1483,17 @@ export {
   buildStraightPinDiagram,
   buildStudDiagram,
 } from './diagram-shapes.ts';
+export {
+  buildR4TeeDiagram,
+  buildR4CrossDiagram,
+  buildR4NippleDiagram,
+  buildR4UnionDiagram,
+  buildR4ReducerDiagram,
+  buildR4PlugDiagram,
+  buildR4SetscrewDiagram,
+  buildR4RoundNutDiagram,
+  buildR4BlindNutDiagram,
+  buildR4SelfAlignDiagram,
+  buildR4SpacerPlateDiagram,
+  buildR4WoodruffDiagram,
+} from './diagram-r4.ts';
