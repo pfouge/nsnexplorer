@@ -30,6 +30,11 @@
 // They are checked against naive queries too (checkNsnMgmt). With --seed the clone gets migration 0020 (when missing)
 // and web/scripts/mgmt-seed.sql.
 //
+// The NSN loader also returns the PUB LOG packaging rows and the freight row added by migration 0023 (`flis.shipping`:
+// P row first, then S; one freight row; every decoded code carries its pub.flis_codes row, literal AND description). They
+// are checked against naive queries (checkNsnShipping: one query per fact, one dictionary lookup per code, the P-over-S
+// choice recomputed). With --seed the clone gets migration 0023 (when missing) and web/scripts/shipping-seed.sql.
+//
 // The item-name search loader (migration 0018, web/src/lib/item-search-sql.ts, GET /api/names.json and /search/) is
 // new, so there is no old loader to compare with. The OLD side of that comparison is a deliberately naive JavaScript
 // re-implementation (naiveNameSearch below: read every name, filter, rank and dedupe in JS, signals from separate
@@ -91,6 +96,7 @@ await build({
       export { isSolNumber, parseSupplierQuery } from './entity.ts';
       export { humanizeLabel, moeKind } from './flis-codes.ts';
       export { mgmtView } from './nsn-mgmt.ts';
+      export { shippingView, decodeMeaning, ltlMeaning, formatNumber } from './nsn-shipping.ts';
       export { nomen } from './seo-copy.ts';
       export { pickTwin, solKey, SAM_DUPES_CTE } from './sol-twin.ts';
       export { collectStandardDocs } from './standard-refs.ts';
@@ -674,6 +680,113 @@ async function checkNsnMgmt(db, nsn, page, seen) {
   if (want.some((r) => r.unitPrice === null || r.unitPrice === 0)) seen.mgmtNoPrice++;
   if (want.some((r) => r.kind !== 'us')) seen.mgmtNonUs++;
   if (want.length === 0) seen.mgmtNone++;
+}
+
+// ------------------------------------------------ NSN shipping and packaging rows: independent checks
+/**
+ * Checks page.flis.shipping (loadNsnPage) against naive queries: the packaging and freight tables read with plain
+ * `select *`, every code looked up in pub.flis_codes one at a time (literal and description), the meaning recomputed
+ * from those two texts with the shared pure rule, and the P-over-S choice recomputed.
+ */
+async function checkNsnShipping(db, nsn, page, seen) {
+  const id = nsn;
+  const sh = page.flis.shipping;
+  const eq = (label, actual, expected) => {
+    results.checks++;
+    try {
+      assert.deepStrictEqual(actual, expected);
+    } catch (e) {
+      fail('loadNsnPage shipping', id, `${label}: ${String(e.message).split('\n').slice(0, 14).join('\n')}`);
+    }
+  };
+  const q = (text, params = [nsn]) => db.unsafe(text, params);
+  const t = (v) => (typeof v === 'string' && v.replace(/\s+/g, ' ').trim() !== '' ? v.replace(/\s+/g, ' ').trim() : null);
+  const n = (v) => (v === null || v === undefined || Number(v) <= 0 ? null : Number(v));
+  // The dictionary row for '<FIELD>:<value>', fetched on its own.
+  const dict = async (field, value) => {
+    if (value === null || value === undefined) return null;
+    const r = (await q(`select literal, description from pub.flis_codes where code = $1`, [`${field}:${value}`]))[0];
+    return r ? { literal: r.literal, description: r.description } : null;
+  };
+  // Expected decoded code. The dictionary description is cut at 900 characters by the loader; mirror that.
+  const dec = async (field, value, keyPart = value) => {
+    const code = t(value);
+    if (code === null) return null;
+    const row = await dict(field, keyPart === value ? code : keyPart);
+    const literal = row ? t(row.literal) : null;
+    const description = row ? t(row.description === null ? null : row.description.slice(0, 900)) : null;
+    const meaning = !row ? null : field === 'LTL' ? N.ltlMeaning(literal, description) : N.decodeMeaning(literal, description);
+    return { field, code, decodedPart: field === 'PKG_CAT' ? code.slice(0, 2) : null, literal, description, meaning };
+  };
+
+  const prow = await q(`select * from pub.nsn_packaging where nsn = $1`);
+  const rank = (r) => (r.pica_sica === 'P' ? 0 : 1);
+  prow.sort((a, b) => rank(a) - rank(b) || (a.pica_sica < b.pica_sica ? -1 : a.pica_sica > b.pica_sica ? 1 : 0));
+  const wantPack = [];
+  for (const r of prow) {
+    const cat = t(r.pkg_cat);
+    wantPack.push({
+      picaSica: String(r.pica_sica).trim().toUpperCase(),
+      pkgCat: cat === null ? null : await dec('PKG_CAT', cat, cat.slice(0, 2)),
+      unpkgItemWeight: n(r.unpkg_item_weight),
+      unpkgItemWidth: n(r.unpkg_item_width),
+      unpkgItemLength: n(r.unpkg_item_length),
+      unpkgItemHeight: n(r.unpkg_item_height),
+      mop: await dec('MOP', t(r.mop)),
+      spcMkg: await dec('SPC_MKG', t(r.spc_mkg)),
+      ucl: await dec('UCL', t(r.ucl)),
+      lvlA: await dec('LVL_A', t(r.lvl_a)),
+      lvlB: await dec('LVL_B', t(r.lvl_b)),
+      lvlC: await dec('LVL_C', t(r.lvl_c)),
+      unitPackWeight: n(r.unit_pack_weight),
+      upSzMaxB: n(r.up_sz_maxb),
+      upSzMaxL: n(r.up_sz_maxl),
+      upSzMaxH: n(r.up_sz_maxh),
+      unitPackCube: n(r.unit_pack_cube),
+      supplementalInstructions: t(r.supplemental_instructions),
+      spiNo: t(r.spi_no),
+      spiRev: t(r.spi_rev),
+    });
+  }
+  eq('packaging rows', sh.packaging, wantPack);
+
+  const frow = (await q(`select * from pub.nsn_freight where nsn = $1`))[0] ?? null;
+  const wantFreight = frow === null ? null : {
+    nmfc: t(frow.nmfc),
+    nmfcSub: t(frow.nmfc_sub),
+    nmfDesc: t(frow.nmf_desc),
+    hmc: await dec('HMC', t(frow.hmc)),
+    ltl: await dec('LTL', t(frow.ltl)),
+    tcc: await dec('TCC', t(frow.tcc)),
+    shc: await dec('SHC', t(frow.shc)),
+  };
+  eq('freight row', sh.freight, wantFreight);
+
+  // The view: the P row, else the S row; hidden when no row has anything to show.
+  const view = N.shippingView(sh);
+  const pick = prow.find((r) => r.pica_sica === 'P') ?? prow.find((r) => r.pica_sica === 'S') ?? null;
+  eq('packaging row used', view.packagingFrom, pick ? pick.pica_sica : null);
+  if (pick && n(pick.unit_pack_weight) !== null) {
+    eq('unit pack weight line', view.rows.find((r) => r.key === 'unitPackWeight')?.lines, [`${N.formatNumber(n(pick.unit_pack_weight))} lb`]);
+  }
+  if (frow) {
+    const hmcLine = view.rows.find((r) => r.key === 'hmc')?.lines;
+    eq('hazardous material line present for every freight row', hmcLine !== undefined && hmcLine.length === 1, true);
+    if (t(frow.hmc) === null) eq('blank hazardous material code', hmcLine, ['None on file']);
+  }
+  if (!pick && !frow) eq('block hidden with neither row', view.has, false);
+
+  if (prow.length > 0) seen.ship++;
+  if (frow) seen.shipFreight++;
+  if (prow.length > 0 && !frow) seen.shipPackOnly++;
+  if (prow.length === 0 && frow) seen.shipFreightOnly++;
+  if (prow.some((r) => r.pica_sica === 'P') && prow.some((r) => r.pica_sica === 'S')) seen.shipBoth++;
+  if (prow.length > 0 && prow.every((r) => r.pica_sica === 'S')) seen.shipSOnly++;
+  if (prow.length === 0 && !frow) seen.shipNone++;
+  if (prow.some((r) => (r.supplemental_instructions ?? '').length > 200 && !/\s/.test(r.supplemental_instructions))) seen.shipLongText++;
+  if (wantPack.some((r) => [r.pkgCat, r.mop, r.spcMkg, r.ucl, r.lvlA, r.lvlB, r.lvlC].some((d) => d && d.meaning === null)) || (wantFreight && [wantFreight.ltl, wantFreight.tcc, wantFreight.shc].some((d) => d && d.meaning === null))) seen.shipNoDictRow++;
+  if (wantPack.some((r) => [r.pkgCat, r.mop, r.spcMkg, r.ucl, r.lvlA, r.lvlB, r.lvlC].some((d) => d && d.literal !== null && d.meaning !== null && /^(NUMERIC|POSITIONS?\b)/i.test(d.literal)))) seen.shipPlaceholder++;
+  if (wantFreight && wantFreight.hmc === null) seen.shipNoHmc++;
 }
 
 // ------------------------------------------- supplier profile: independent checks
@@ -1388,6 +1501,11 @@ async function main() {
       psql(dbUrl, ['-1', '-f', path.join(here, '../../db/migrations/0020_nsn_management.sql')]);
     }
     psql(dbUrl, ['-1', '-f', path.join(here, 'mgmt-seed.sql')]);
+    // PUB LOG freight and packaging data (migration 0023) and its seed rows.
+    if (psql(dbUrl, ['-At', '-c', `select to_regclass('pub.nsn_packaging') is not null and to_regclass('pub.nsn_freight') is not null`]).trim() !== 't') {
+      psql(dbUrl, ['-1', '-f', path.join(here, '../../db/migrations/0023_nsn_freight_packaging.sql')]);
+    }
+    psql(dbUrl, ['-1', '-f', path.join(here, 'shipping-seed.sql')]);
     // Item-name search (migration 0018: trigram indexes) and its seed rows.
     psql(dbUrl, ['-1', '-f', path.join(here, '../../db/migrations/0018_name_search_trgm.sql')]);
     psql(dbUrl, ['-1', '-f', path.join(here, 'item-search-seed.sql')]);
@@ -1411,6 +1529,7 @@ async function main() {
       label,
       rows: await col(`select n.nsn from pub.nsns n where ${where} order by md5(n.nsn) limit ${limit}`),
     });
+    const shippingTables = (await direct.unsafe(`select to_regclass('pub.nsn_packaging') is not null and to_regclass('pub.nsn_freight') is not null as ok`))[0].ok;
     const strata = [
       await pick('with price points', 'exists (select 1 from pub.price_points p where p.nsn = n.nsn)', 90),
       await pick('3+ price points', '(select count(*) from pub.price_points p where p.nsn = n.nsn) >= 3', 25),
@@ -1423,6 +1542,13 @@ async function main() {
       await pick('seed-only FSCs (7310-7340)', "n.fsc in ('7310','7320','7330','7340')", 40),
       await pick('excluded FSC', "n.fsc in (select fsc from pub.fsc where render_depth = 'excluded')", 10),
       await pick('null characteristics / hazmat / item', 'n.characteristics is null or n.hazmat is null or n.item_name is null', 15),
+      await pick('with management rows (migration 0020)', 'exists (select 1 from pub.nsn_management x where x.nsn = n.nsn)', 20),
+      ...(shippingTables
+        ? [
+            await pick('with packaging rows (migration 0023)', 'exists (select 1 from pub.nsn_packaging x where x.nsn = n.nsn)', 20),
+            await pick('with freight row (migration 0023)', 'exists (select 1 from pub.nsn_freight x where x.nsn = n.nsn)', 20),
+          ]
+        : []),
       await pick('with FLIS identification', 'exists (select 1 from pub.nsn_identification x where x.nsn = n.nsn)', 40),
       await pick('with MOE rules', 'exists (select 1 from pub.moe_rules x where x.nsn = n.nsn)', 40),
       await pick('with many MOE rules', '(select count(*) from pub.moe_rules x where x.nsn = n.nsn) >= 15', 10),
@@ -1448,6 +1574,8 @@ async function main() {
 
     // Old-vs-new compares the keys the old loader returned (same order); `flis` is checked against naive queries.
     const sawFlis = { ident: 0, identUnlabeled: 0, colloquial: 0, colloquialCapped: 0, related: 0, relatedWithPage: 0, relatedNoPage: 0, relatedCapped: 0, cancel: 0, cancelCapped: 0, cancelTies: 0, cancelForeignSide: 0, moe: 0, moeUs: 0, moeForeign: 0, moeOther: 0, none: 0, mgmt: 0, mgmtMulti: 0, mgmtNoPrice: 0, mgmtNonUs: 0, mgmtNone: 0 };
+    // Case counters for the shipping checks (migration 0023); with --seed every case must have been seen.
+    const sawShip = { ship: 0, shipFreight: 0, shipPackOnly: 0, shipFreightOnly: 0, shipBoth: 0, shipSOnly: 0, shipNone: 0, shipLongText: 0, shipNoDictRow: 0, shipPlaceholder: 0, shipNoHmc: 0 };
     for (const nsn of nsnSample) {
       let full = null;
       await compare(
@@ -1465,8 +1593,13 @@ async function main() {
       );
       if (full) await checkNsnFlis(direct, nsn, full, sawFlis);
       if (full) await checkNsnMgmt(direct, nsn, full, sawFlis);
+      if (full && shippingTables) await checkNsnShipping(direct, nsn, full, sawShip);
     }
     console.log('   FLIS cases seen:', JSON.stringify(sawFlis));
+    if (shippingTables) {
+      console.log('   checkNsnShipping ran on', nsnSample.length, 'NSNs; shipping cases seen:', JSON.stringify(sawShip));
+      if (withSeed) for (const [k, v] of Object.entries(sawShip)) if (v === 0) fail('loadNsnPage shipping', k, 'no sampled NSN exercised this case');
+    } else console.log('   checkNsnShipping skipped (migration 0023 tables not present)');
     for (const [k, v] of Object.entries(sawFlis)) if (v === 0) fail('loadNsnPage flis', k, 'no sampled NSN exercised this case');
     for (const nsn of missingChecked) {
       const r = await compare('loadNsnPage (missing)', nsn, (s) => oldLoadNsnPage(s, nsn), (s) => N.loadNsnPage(s, nsn));

@@ -82,7 +82,7 @@ const SMALL_WORDS = new Set(['of', 'the', 'and', 'for', 'to', 'in', 'on', 'a', '
 const KEEP_UPPER = new Set([
   'DOD', 'DLA', 'US', 'U.S.', 'USA', 'UK', 'NSN', 'NIIN', 'FSC', 'AMC', 'AMSC', 'AAC', 'PICA', 'SICA', 'IMC', 'IMCA', 'ISC', 'INC', 'HMIC', 'HMIRS', 'HCC',
   'PMIC', 'ENAC', 'MSDS', 'FLIS', 'NATO', 'NAMSA', 'DRN', 'TIR', 'DLIS', 'USML', 'CCL', 'CAGE', 'IMM', 'IUID', 'GSA', 'NSA', 'DTRA', 'USSOCOM', 'USCG',
-  'AFSOC', 'MARSOC', 'NAVSPECWARCOM', 'MOE', 'DEMIL', 'ESD', 'EMI', 'LOA', 'II', 'III', 'IV', 'HQ', 'AFB', 'MISMO', 'ICP', 'FED', 'STD', 'MIL', 'EAR',
+  'AFSOC', 'MARSOC', 'NAVSPECWARCOM', 'MOE', 'DEMIL', 'ESD', 'EMI', 'LOA', 'II', 'III', 'IV', 'HQ', 'AFB', 'MISMO', 'ICP', 'FED', 'STD', 'MIL', 'EAR', 'ASTM',
 ]);
 
 const keepsUpper = (t: string): boolean => {
@@ -90,9 +90,13 @@ const keepsUpper = (t: string): boolean => {
   if (core === '') return false;
   if (KEEP_UPPER.has(core)) return true;
   if (/^([A-Z]\.)+[A-Z]$/.test(core)) return true; // U.S.
+  if (/^[A-Z]\.[IVX]+$/.test(core)) return true; // C.II (a table reference)
   if (/\d/.test(core) && /[A-Z]/.test(core)) return true; // 4120.24-M, MIL-STD-130M, 3A
   return false;
 };
+
+// Words after which a single capital letter is a name (LEVEL A), not the article "a".
+const LETTER_AFTER = new Set(['LEVEL', 'CLASS', 'TYPE', 'GRADE', 'GROUP']);
 
 const isAllUpper = (s: string): boolean => /[A-Z]/.test(s) && s === s.toUpperCase();
 
@@ -102,16 +106,19 @@ export function humanizeLabel(raw: string | null | undefined): string | null {
   if (s === '') return null;
   if (!isAllUpper(s)) return s;
   let first = true;
+  let prev = '';
   return s
     .split(/(\s+|[/,()-]+)/)
     .map((part) => {
       if (part === '' || /^(\s+|[/,()-]+)$/.test(part)) return part;
-      const word = keepsUpper(part)
+      const lone = /^[A-Z]$/.test(part) && LETTER_AFTER.has(prev); // "LEVEL A", "CLASS B": a letter name, not the article "a"
+      const word = keepsUpper(part) || lone
         ? part
         : SMALL_WORDS.has(part.toLowerCase()) && !first
           ? part.toLowerCase()
           : part.charAt(0) + part.slice(1).toLowerCase();
       first = false;
+      prev = part;
       return word;
     })
     .join('')

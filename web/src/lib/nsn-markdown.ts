@@ -10,6 +10,7 @@ import { niinDashed, nomen, nsnSummary } from './seo-copy';
 import { NO_DEFINITION, alsoCalled, catalogCells, foreignSummary, moeView } from './nsn-flis';
 import { CEILING_LABEL, ceilingAmountText } from './contract-ceiling';
 import { PRICE_EXPLAINER, SHELF_LIFE_SOURCE_LABEL, SHELF_LIFE_SOURCE_URL, mgmtView } from './nsn-mgmt';
+import { SHIPPING_GLOSS, SHIPPING_SOURCE, SHIPPING_TITLE, SHIPPING_UNITS_NOTE, shippingView } from './nsn-shipping';
 
 const MAX_PRICE_ROWS = 50;
 const MAX_AWARD_ROWS = 25;
@@ -87,6 +88,16 @@ export function nsnMarkdown(page: NsnPageData, siteUrl: string): string {
       out.push(table(['Service or agency', 'Unit price', 'Unit of issue', 'Shelf life', 'Source of supply', 'Acquisition advice', 'Effective'], mg.table.map((r) => [r.scope, r.price, r.ui, r.shelfLife, r.sos, r.aac, r.effective])), '');
     }
     if (mg.shelfLifeLine || mg.shelfMixed) out.push(`Shelf life codes: ${link(SHELF_LIFE_SOURCE_LABEL, SHELF_LIFE_SOURCE_URL)}.`, '');
+  }
+
+  // Shipping and packaging (PUB LOG freight and packaging files).
+  const ship = shippingView(page.flis.shipping);
+  if (ship.has) {
+    out.push(`## ${SHIPPING_TITLE}`, '', SHIPPING_GLOSS, '');
+    out.push(...ship.rows.map((r) => `- ${r.label}: ${r.lines.join('; ')}${r.note ? ` ${r.note}` : ''}`));
+    out.push('');
+    if (ship.hasMeasures) out.push(SHIPPING_UNITS_NOTE, '');
+    out.push(SHIPPING_SOURCE, '');
   }
 
   const characteristics = parseCharacteristics(nsn.characteristics);

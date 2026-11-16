@@ -211,7 +211,32 @@ SELECT base.*,
                   (SELECT fc.literal FROM pub.flis_codes fc WHERE fc.code = 'CIIC:' || mg.ciic) AS ciic_label,
                   (SELECT fc.literal FROM pub.flis_codes fc WHERE fc.code = 'SLC:' || mg.slc) AS slc_label
            FROM pub.nsn_management mg
-           WHERE mg.nsn = base.nsn) gx) AS flis_mgmt
+           WHERE mg.nsn = base.nsn) gx) AS flis_mgmt,
+  -- PUB LOG packaging (migration 0023): a P row, an S row and at most a blank-PICA row per NSN, P first. Every decoded
+  -- code carries its dictionary row (literal AND description) by primary key '<FIELD>:<value>'; PKG_CAT is keyed by
+  -- its first two characters only (the dictionary cannot tell positions 3 and 4 apart).
+  (SELECT COALESCE(jsonb_agg(to_jsonb(pk) ORDER BY (pk.pica_sica <> 'P'), pk.pica_sica), '[]'::jsonb)
+     FROM (SELECT p.pica_sica, p.pkg_cat, p.unpkg_item_weight, p.unpkg_item_width, p.unpkg_item_length, p.unpkg_item_height,
+                  p.mop, p.spc_mkg, p.ucl, p.lvl_a, p.lvl_b, p.lvl_c, p.unit_pack_weight, p.up_sz_maxb, p.up_sz_maxl, p.up_sz_maxh,
+                  p.unit_pack_cube, p.supplemental_instructions, p.spi_no, p.spi_rev,
+                  (SELECT jsonb_build_object('literal', fc.literal, 'description', left(fc.description, 900)) FROM pub.flis_codes fc WHERE fc.code = 'PKG_CAT:' || left(p.pkg_cat, 2)) AS pkg_cat_def,
+                  (SELECT jsonb_build_object('literal', fc.literal, 'description', left(fc.description, 900)) FROM pub.flis_codes fc WHERE fc.code = 'MOP:' || p.mop) AS mop_def,
+                  (SELECT jsonb_build_object('literal', fc.literal, 'description', left(fc.description, 900)) FROM pub.flis_codes fc WHERE fc.code = 'SPC_MKG:' || p.spc_mkg) AS spc_mkg_def,
+                  (SELECT jsonb_build_object('literal', fc.literal, 'description', left(fc.description, 900)) FROM pub.flis_codes fc WHERE fc.code = 'UCL:' || p.ucl) AS ucl_def,
+                  (SELECT jsonb_build_object('literal', fc.literal, 'description', left(fc.description, 900)) FROM pub.flis_codes fc WHERE fc.code = 'LVL_A:' || p.lvl_a) AS lvl_a_def,
+                  (SELECT jsonb_build_object('literal', fc.literal, 'description', left(fc.description, 900)) FROM pub.flis_codes fc WHERE fc.code = 'LVL_B:' || p.lvl_b) AS lvl_b_def,
+                  (SELECT jsonb_build_object('literal', fc.literal, 'description', left(fc.description, 900)) FROM pub.flis_codes fc WHERE fc.code = 'LVL_C:' || p.lvl_c) AS lvl_c_def
+           FROM pub.nsn_packaging p
+           WHERE p.nsn = base.nsn) pk) AS flis_packaging,
+  -- PUB LOG freight (migration 0023): one row per NSN or null.
+  (SELECT to_jsonb(fx)
+     FROM (SELECT f.nmfc, f.nmfc_sub, f.nmf_desc, f.hmc, f.ltl, f.tcc, f.shc,
+                  (SELECT jsonb_build_object('literal', fc.literal, 'description', left(fc.description, 900)) FROM pub.flis_codes fc WHERE fc.code = 'HMC:' || f.hmc) AS hmc_def,
+                  (SELECT jsonb_build_object('literal', fc.literal, 'description', left(fc.description, 900)) FROM pub.flis_codes fc WHERE fc.code = 'LTL:' || f.ltl) AS ltl_def,
+                  (SELECT jsonb_build_object('literal', fc.literal, 'description', left(fc.description, 900)) FROM pub.flis_codes fc WHERE fc.code = 'TCC:' || f.tcc) AS tcc_def,
+                  (SELECT jsonb_build_object('literal', fc.literal, 'description', left(fc.description, 900)) FROM pub.flis_codes fc WHERE fc.code = 'SHC:' || f.shc) AS shc_def
+           FROM pub.nsn_freight f
+           WHERE f.nsn = base.nsn) fx) AS flis_freight
 FROM (${NSN_WITH_AMSC_SELECT} WHERE n.nsn = $1) base`;
 
 /**
