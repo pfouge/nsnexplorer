@@ -40,7 +40,15 @@ export async function openPool(): Promise<pgTypes.Pool> {
   const { default: pg } = await import('pg');
   // At most 4 connections: the session pooler's 15 are shared with the ingest
   // lanes and Hyperdrive (see shared/db.mjs).
-  return new pg.Pool({ connectionString: DATABASE_URL, ssl: sslFor(DATABASE_URL), max: Number(process.env.DB_POOL_MAX) || 4 });
+  const pool = new pg.Pool({ connectionString: DATABASE_URL, ssl: sslFor(DATABASE_URL), max: Number(process.env.DB_POOL_MAX) || 4 });
+  // The build's summaries over pub.contract_actions took 80 to 117 s each on
+  // 2026-11-15 and passed the role's 120 s statement_timeout once the table
+  // grew (three failed builds). The session pooler keeps a SET for the life of
+  // the connection, so give the build 15 minutes per statement.
+  pool.on('connect', (client) => {
+    client.query("SET statement_timeout = '900s'").catch(() => {});
+  });
+  return pool;
 }
 
 const DATABASE_URL =
