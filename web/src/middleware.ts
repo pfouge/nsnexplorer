@@ -51,6 +51,9 @@ const unavailablePage = (): Response =>
 
 type Runtime = { ctx?: { waitUntil?: (p: Promise<unknown>) => void } };
 
+// Set by the deploy workflow (the run id); 'dev' locally.
+const BUILD_ID: string = import.meta.env.PUBLIC_BUILD_ID || 'dev';
+
 export const onRequest = defineMiddleware(async (ctx, next) => {
   const url = new URL(ctx.request.url);
   const accountRoute = isAccountPath(url.pathname);
@@ -62,7 +65,10 @@ export const onRequest = defineMiddleware(async (ctx, next) => {
     });
   }
   const edge = dbRoute ? (globalThis as { caches?: { default?: Cache } }).caches?.default : undefined;
-  const cacheKey = new Request(url.origin + url.pathname + url.search);
+  // The build id is part of the key: a zone purge at deploy did not clear these entries (a part page cached
+  // 12 minutes before the 2026-11-16 deploy still served the old render 34 minutes later), so each deploy
+  // starts with an empty cache and old entries simply expire.
+  const cacheKey = new Request(url.origin + url.pathname + url.search + (url.search ? '&' : '?') + '__build=' + BUILD_ID);
 
   if (edge) {
     const hit = await edge.match(cacheKey).catch(() => undefined);
