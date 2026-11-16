@@ -730,3 +730,22 @@ button.copy, .copy-btn { font: inherit; font-size: 0.8125rem; font-weight: 600; 
 .drawings-block li { margin: 0.5rem 0; overflow-wrap: anywhere; }
 .drawings-block .drawings-notes { margin: 0.75rem 0 0; padding-left: 1.2rem; }
 .drawings-block .drawings-notes li { margin: 0.35rem 0; }
+
+/* ---- Reduced motion: the remaining transitions stand still. ---- */
+@media (prefers-reduced-motion: reduce) {
+  .section-title a.more::after, a.section-link::after, .switch, .switch::after { transition: none; }
+}
+
+/* ---- Forced colors (Windows High Contrast): focus and selected state must not rely on
+   box-shadow, border or background colour, which that mode replaces. Default rendering is unchanged. ---- */
+@media (forced-colors: active) {
+  .search-box:focus-within, .signup-form input[type='email']:focus, .search-head input:focus, .price-dot:focus { outline: 2px solid Highlight; outline-offset: 2px; }
+  .search-head input:focus { outline-offset: -2px; }
+  .chip[aria-current], .chip[aria-pressed='true'], .chip.on,
+  nav.site a[aria-current='page'], .follow-btn[aria-pressed='true'], .save-search[aria-pressed='true'] {
+    forced-color-adjust: none; background: Highlight; color: HighlightText;
+  }
+  .tabs a[aria-current] { forced-color-adjust: none; border-bottom-color: Highlight; }
+  .switch { border: 1px solid ButtonText; }
+  .switch::after { background: ButtonText; }
+}
