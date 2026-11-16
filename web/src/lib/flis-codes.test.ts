@@ -47,6 +47,14 @@ test('humanizeLabel title-cases dictionary literals and keeps acronyms', () => {
   assert.equal(humanizeLabel(null), null);
 });
 
+test('humanizeLabel keeps table references, ASTM and a letter after LEVEL or CLASS', () => {
+  assert.equal(humanizeLabel('TABLE C.II'), 'Table C.II');
+  assert.equal(humanizeLabel('REQUIREMENTS OF ASTM-D4169'), 'Requirements of ASTM-D4169');
+  assert.equal(humanizeLabel('LEVEL A PACKING PROTECTION'), 'Level A Packing Protection');
+  assert.equal(humanizeLabel('CLASS B ITEM'), 'Class B Item');
+  assert.equal(humanizeLabel('PACKED IN A BOX'), 'Packed in a Box');
+});
+
 test('cleanDefinition strips boilerplate, sentence-cases and trims', () => {
   const isc =
     'ITEM STANDARDIZATION CODE (ISC):  THE CODED REPRESENTATION OF THE ITEM STANDARDIZATION DECISION ON INDIVIDUAL ITEMS. DECISIONS ARE BASED ON THE RULES AND PROCEDURES ESTABLISHED IN THE DEPARTMENT OF DEFENSE STANDARDIZATION MANUAL 4120.24-M.  SEE VOLUME 10, TABLES 91 AND 92 AND QUICK INFO ON-LINE.4120.24-M.  SEE VOLUME 10, TABLES 91 AND 92 AND QUICK INFO ON-LINE.';

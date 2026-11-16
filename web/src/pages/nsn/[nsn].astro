@@ -49,6 +49,7 @@ import { competitionRead } from '../../lib/competition-read';
 import { CEILING_LABEL, ceilingAmountText } from '../../lib/contract-ceiling';
 import { NO_DEFINITION, alsoCalled, catalogCells, foreignSummary, moeView } from '../../lib/nsn-flis';
 import { PRICE_EXPLAINER, SHELF_LIFE_SOURCE_LABEL, SHELF_LIFE_SOURCE_URL, calculatorReference, mgmtView } from '../../lib/nsn-mgmt';
+import { SHIPPING_GLOSS, SHIPPING_SOURCE, SHIPPING_TITLE, SHIPPING_UNITS_NOTE, shippingView } from '../../lib/nsn-shipping';
 
 // Rendered ON REQUEST by the Cloudflare Pages Function, not at build time.
 // Cloudflare Pages caps a deployment at 20,000 files and the catalog is far
@@ -253,6 +254,8 @@ const openUnits = [...new Set(openSols.map((s) => s.unitOfIssue).filter((u): u i
 // The newest positive award price (the price headline) is what the standard price is compared with.
 const mgmt = mgmtView(flis.management, headlinePoint ? { price: headlinePoint.unitPrice, awardedOn: headlinePoint.awardedOn } : null);
 const standardRef = calculatorReference(flis.management);
+// Shipping and packaging (PUB LOG freight and packaging files): unit pack weight and size, packing levels, freight class.
+const shipping = shippingView(flis.shipping);
 const openValueAtLastPrice = valueAtLastPrice(openQtyTotal, lastPrice);
 const solValueAtLastPrice = (qty: number | null): number | null => valueAtLastPrice(qty, lastPrice);
 
@@ -624,6 +627,25 @@ const datasetSchema = {
             Shelf life codes: <a href={SHELF_LIFE_SOURCE_URL} rel="noopener">{SHELF_LIFE_SOURCE_LABEL}</a>.
           </p>
         ) : null}
+      </>
+    )}
+    {shipping.has && (
+      <>
+        <h3 class="section-title" id="shipping" style="margin-top:1.5rem;">{SHIPPING_TITLE}</h3>
+        <p class="gloss">{SHIPPING_GLOSS}</p>
+        <div class="datastrip" style="margin-top:0.9rem;">
+          {shipping.rows.map((r) => (
+            <div class="cell" style={r.wide ? 'grid-column:1 / -1;' : undefined}>
+              <div class="k">{r.label}</div>
+              <div class="v" style="font-size:1rem; overflow-wrap:anywhere;">
+                {r.lines.map((line) => <div>{line}</div>)}
+                {r.note && <span class="gloss" style="display:block; font-size:0.8125rem; font-weight:400; line-height:1.35;">{r.note}</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+        {shipping.hasMeasures && <p class="gloss" style="margin-top:0.75rem;">{SHIPPING_UNITS_NOTE}</p>}
+        <p class="gloss" style="margin-top:0.75rem;">{SHIPPING_SOURCE}</p>
       </>
     )}
   </section>
