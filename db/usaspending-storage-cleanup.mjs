@@ -79,7 +79,8 @@ export async function runCleanup({ client, args, log = console.log, now = () => 
   const fn = await client.query(`SELECT to_regprocedure('pub.usaspending_storage_cleanup_batch(bigint,bigint,date,text[],boolean,boolean)') AS f`);
   if (!fn.rows[0].f) throw new Error('migration 0021 is not applied (pub.usaspending_storage_cleanup_batch is missing): run node db/migrate.mjs first');
 
-  await client.query(`SET statement_timeout = '120s'`);
+  // The pre-flight counts scan the whole table: on 2026-11-16 they passed 120 s on a disk-bound database.
+  await client.query(`SET statement_timeout = '900s'`);
   await client.query(`SET lock_timeout = '10s'`);
 
   // Pre-flight numbers (read only).
@@ -96,6 +97,7 @@ export async function runCleanup({ client, args, log = console.log, now = () => 
     return { ...out, dryRun: true, toDelete: Number(rowsDelete.rows[0].n), toSlim: Number(rowsSlim.rows[0].n) };
   }
 
+  await client.query(`SET statement_timeout = '120s'`);
   const lo = Math.max(Number(range.rows[0].lo), args.fromId);
   const hi = Number(range.rows[0].hi);
   let lastLog = now();
