@@ -1,0 +1,32 @@
+name: vacuum-full (one-off)
+on:
+  push:
+    branches: ['ops/vacuum-full']
+jobs:
+  vacuum:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci
+      - name: VACUUM FULL pub.contract_actions
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          cat > /tmp/vf.mjs <<'JS'
+          import pg from 'pg';
+          const c = new pg.Client({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+          await c.connect();
+          const size = async () => (await c.query("select pg_size_pretty(pg_total_relation_size('pub.contract_actions')) t, pg_size_pretty(pg_relation_size('pub.contract_actions')) h, pg_size_pretty(pg_database_size(current_database())) d, (select count(*) from pub.contract_actions) n")).rows[0];
+          await c.query("SET statement_timeout = 0");
+          await c.query("SET lock_timeout = '30s'");
+          console.log('vacuum: before', JSON.stringify(await size()));
+          const t = Date.now();
+          await c.query('VACUUM (FULL, ANALYZE) pub.contract_actions');
+          console.log('vacuum: done in', Math.round((Date.now() - t) / 1000), 's');
+          console.log('vacuum: after', JSON.stringify(await size()));
+          await c.end();
+          JS
+          cp /tmp/vf.mjs ./vf.mjs && node vf.mjs
