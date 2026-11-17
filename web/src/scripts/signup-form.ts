@@ -10,7 +10,8 @@ type Turnstile = {
 };
 
 const API_URL = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-const TOKEN_WAIT_MS = 20000;
+const TOKEN_WAIT_MS = 30000;         // an invisible check normally answers within a second or two
+const INTERACTIVE_WAIT_MS = 120000;  // the visitor has been asked to tick the box
 
 let api: Promise<Turnstile> | null = null;
 function loadTurnstile(): Promise<Turnstile> {
@@ -39,6 +40,8 @@ function setUp(form: HTMLFormElement): void {
   let widget: string | null = null;
   let token = '';
   let waiting: ((t: string) => void)[] = [];
+  let interactive = false;
+  let busy = false;
   const settle = (t: string) => { token = t; for (const w of waiting.splice(0)) w(t); };
 
   const say = (text: string, kind: 'info' | 'error' = 'info') => {
@@ -58,21 +61,29 @@ function setUp(form: HTMLFormElement): void {
       size: 'flexible',
       callback: (t: string) => settle(t),
       'expired-callback': () => { token = ''; },
-      'error-callback': () => { settle(''); return true; },
+      // Cloudflare decided this visitor has to tick the box: give them time, and say so if they
+      // are already waiting on Send.
+      'before-interactive-callback': () => { interactive = true; if (busy) say('Tick the box above to finish.'); },
+      // An error is not final: Turnstile retries on its own, so keep waiting until the time limit.
+      'error-callback': () => true,
     });
   }
 
+  // The token, now or when it arrives; '' when the time limit passes (longer once the visitor has
+  // been asked to tick the box).
   const tokenOrWait = (): Promise<string> =>
     token ? Promise.resolve(token) : new Promise((resolve) => {
-      const timer = setTimeout(() => resolve(''), TOKEN_WAIT_MS);
-      waiting.push((t) => { clearTimeout(timer); resolve(t); });
+      const started = Date.now();
+      const timer = setInterval(() => {
+        if (Date.now() - started > (interactive ? INTERACTIVE_WAIT_MS : TOKEN_WAIT_MS)) { clearInterval(timer); resolve(''); }
+      }, 500);
+      waiting.push((t) => { clearInterval(timer); resolve(t); });
     });
 
   const warmUp = () => { void ensureWidget().catch(() => {}); };
   email.addEventListener('focus', warmUp, { once: true });
   email.addEventListener('input', warmUp, { once: true });
 
-  let busy = false;
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (busy || form.dataset.done !== undefined) return;
@@ -83,7 +94,12 @@ function setUp(form: HTMLFormElement): void {
     try {
       let check = '';
       if (siteKey) {
-        try { await ensureWidget(); check = await tokenOrWait(); } catch { check = ''; }
+        try {
+          await ensureWidget();
+          if (interactive && !token) say('Tick the box above to finish.');
+          check = await tokenOrWait();
+          if (check) say('Sending…');
+        } catch { check = ''; }
         if (!check) {
           say('We could not run the check that tells people from automated programs. Reload the page and try again.', 'error');
           return;
