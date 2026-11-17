@@ -1,52 +1,102 @@
 {
-  "at": "2026-10-10T18:48:02.351Z",
+  "at": "2026-11-17T21:02:36.630Z",
   "errors": {},
   "database": {
     "tables": [
       {
         "table": "contract_actions",
-        "bytes": "143990784",
-        "approx_rows": "167066"
-      },
-      {
-        "table": "nsns",
-        "bytes": "110018560",
-        "approx_rows": "88677"
+        "bytes": "1493000192",
+        "approx_rows": "2828769"
       },
       {
         "table": "part_numbers",
-        "bytes": "101507072",
-        "approx_rows": "315960"
+        "bytes": "231702528",
+        "approx_rows": "628510"
+      },
+      {
+        "table": "nsns",
+        "bytes": "218791936",
+        "approx_rows": "183411"
       },
       {
         "table": "solicitations",
-        "bytes": "100704256",
-        "approx_rows": "93006"
+        "bytes": "198189056",
+        "approx_rows": "167350"
       },
       {
-        "table": "amsc_observations",
-        "bytes": "32571392",
-        "approx_rows": "86460"
+        "table": "nsn_management",
+        "bytes": "158236672",
+        "approx_rows": "500884"
+      },
+      {
+        "table": "moe_rules",
+        "bytes": "141705216",
+        "approx_rows": "908000"
       },
       {
         "table": "price_points",
-        "bytes": "29147136",
-        "approx_rows": "25480"
+        "bytes": "84787200",
+        "approx_rows": "51690"
+      },
+      {
+        "table": "amsc_observations",
+        "bytes": "61440000",
+        "approx_rows": "172474"
+      },
+      {
+        "table": "nsn_identification",
+        "bytes": "27951104",
+        "approx_rows": "174647"
+      },
+      {
+        "table": "nsn_standardization",
+        "bytes": "21798912",
+        "approx_rows": "184010"
+      },
+      {
+        "table": "supplier_sam",
+        "bytes": "10371072",
+        "approx_rows": "8919"
       },
       {
         "table": "suppliers",
-        "bytes": "6463488",
-        "approx_rows": "23484"
+        "bytes": "9306112",
+        "approx_rows": "32032"
+      },
+      {
+        "table": "supplier_web",
+        "bytes": "7397376",
+        "approx_rows": "4639"
+      },
+      {
+        "table": "nsn_cancellations",
+        "bytes": "7364608",
+        "approx_rows": "37737"
+      },
+      {
+        "table": "flis_codes",
+        "bytes": "6643712",
+        "approx_rows": "32036"
+      },
+      {
+        "table": "inc_colloquial_names",
+        "bytes": "5660672",
+        "approx_rows": "33938"
+      },
+      {
+        "table": "supplier_stats",
+        "bytes": "1400832",
+        "approx_rows": "2763"
       },
       {
         "table": "fsc",
-        "bytes": "188416",
-        "approx_rows": "940"
+        "bytes": "212992",
+        "approx_rows": "1205"
       },
       {
         "table": "agencies",
-        "bytes": "49152",
-        "approx_rows": "-1"
+        "bytes": "65536",
+        "approx_rows": "56"
       },
       {
         "table": "signups",
@@ -57,42 +107,159 @@
         "table": "daily_stats",
         "bytes": "32768",
         "approx_rows": "-1"
-      }
-    ],
-    "databaseBytes": "536579219",
-    "contractActionsBySource": [
-      {
-        "source": "usaspending",
-        "rows": 98437,
-        "avg_raw_bytes": 456,
-        "earliest": "2014-11-10",
-        "latest": "2027-03-22"
       },
       {
+        "table": "supplier_optouts",
+        "bytes": "16384",
+        "approx_rows": "-1"
+      }
+    ],
+    "databaseBytes": "2714422419",
+    "contractActionsBySource": [
+      {
         "source": "dibbs",
-        "rows": 73906,
+        "rows": 366807,
         "avg_raw_bytes": 315,
-        "earliest": "2021-04-02",
-        "latest": "2026-10-09"
+        "earliest": "2016-11-09",
+        "latest": "2026-11-16"
+      },
+      {
+        "source": "usaspending",
+        "rows": 2456273,
+        "avg_raw_bytes": 5,
+        "earliest": "1998-06-08",
+        "latest": "2027-09-30"
       }
     ],
     "usaspendingByClass": [
       {
+        "psc": "6515",
+        "rows": 568673
+      },
+      {
         "psc": "5330",
-        "rows": 51328
+        "rows": 350574
+      },
+      {
+        "psc": "5340",
+        "rows": 314262
       },
       {
         "psc": "5331",
-        "rows": 47109
+        "rows": 153108
+      },
+      {
+        "psc": "5305",
+        "rows": 123176
+      },
+      {
+        "psc": "5310",
+        "rows": 121865
+      },
+      {
+        "psc": "1560",
+        "rows": 92666
+      },
+      {
+        "psc": "4730",
+        "rows": 87309
+      },
+      {
+        "psc": "5306",
+        "rows": 75156
+      },
+      {
+        "psc": "4820",
+        "rows": 66229
+      },
+      {
+        "psc": "4720",
+        "rows": 57908
+      },
+      {
+        "psc": "5935",
+        "rows": 53477
+      },
+      {
+        "psc": "1680",
+        "rows": 50696
+      },
+      {
+        "psc": "6150",
+        "rows": 47988
+      },
+      {
+        "psc": "5930",
+        "rows": 45390
       }
     ],
     "dibbsAwardsByMonth": [
       {
-        "month": "2021-04",
+        "month": "2016-11",
         "rows": 1
       },
       {
+        "month": "2018-04",
+        "rows": 2
+      },
+      {
+        "month": "2018-05",
+        "rows": 1
+      },
+      {
+        "month": "2018-07",
+        "rows": 1
+      },
+      {
+        "month": "2018-09",
+        "rows": 2
+      },
+      {
+        "month": "2019-08",
+        "rows": 1
+      },
+      {
+        "month": "2020-01",
+        "rows": 1
+      },
+      {
+        "month": "2020-07",
+        "rows": 1
+      },
+      {
+        "month": "2020-09",
+        "rows": 1
+      },
+      {
+        "month": "2021-03",
+        "rows": 8
+      },
+      {
+        "month": "2021-04",
+        "rows": 2
+      },
+      {
+        "month": "2022-02",
+        "rows": 1
+      },
+      {
+        "month": "2022-05",
+        "rows": 3
+      },
+      {
+        "month": "2022-06",
+        "rows": 11
+      },
+      {
+        "month": "2022-10",
+        "rows": 2
+      },
+      {
         "month": "2022-11",
+        "rows": 1
+      },
+      {
+        "month": "2023-02",
         "rows": 1
       },
       {
@@ -100,7 +267,39 @@
         "rows": 1
       },
       {
+        "month": "2023-07",
+        "rows": 1
+      },
+      {
+        "month": "2023-08",
+        "rows": 1
+      },
+      {
+        "month": "2023-09",
+        "rows": 1
+      },
+      {
+        "month": "2023-10",
+        "rows": 1
+      },
+      {
+        "month": "2023-11",
+        "rows": 1
+      },
+      {
         "month": "2023-12",
+        "rows": 1
+      },
+      {
+        "month": "2024-01",
+        "rows": 3
+      },
+      {
+        "month": "2024-03",
+        "rows": 1
+      },
+      {
+        "month": "2024-04",
         "rows": 1
       },
       {
@@ -108,44 +307,100 @@
         "rows": 2
       },
       {
+        "month": "2024-07",
+        "rows": 3
+      },
+      {
+        "month": "2024-10",
+        "rows": 2
+      },
+      {
+        "month": "2024-12",
+        "rows": 1
+      },
+      {
+        "month": "2025-03",
+        "rows": 2
+      },
+      {
+        "month": "2025-04",
+        "rows": 2
+      },
+      {
+        "month": "2025-05",
+        "rows": 3
+      },
+      {
+        "month": "2025-06",
+        "rows": 1
+      },
+      {
+        "month": "2025-07",
+        "rows": 3
+      },
+      {
+        "month": "2025-08",
+        "rows": 6
+      },
+      {
+        "month": "2025-09",
+        "rows": 6
+      },
+      {
+        "month": "2025-10",
+        "rows": 3
+      },
+      {
+        "month": "2025-11",
+        "rows": 20
+      },
+      {
         "month": "2025-12",
+        "rows": 11
+      },
+      {
+        "month": "2026-01",
         "rows": 7
       },
       {
         "month": "2026-02",
-        "rows": 1
+        "rows": 38
       },
       {
         "month": "2026-03",
-        "rows": 4
+        "rows": 15
       },
       {
         "month": "2026-04",
-        "rows": 2
+        "rows": 24
       },
       {
         "month": "2026-05",
-        "rows": 3
+        "rows": 32
       },
       {
         "month": "2026-06",
-        "rows": 19
+        "rows": 1430
       },
       {
         "month": "2026-07",
-        "rows": 18
+        "rows": 62635
       },
       {
         "month": "2026-08",
-        "rows": 21
+        "rows": 85257
       },
       {
         "month": "2026-09",
-        "rows": 51279
+        "rows": 100085
       },
       {
         "month": "2026-10",
-        "rows": 22546
+        "rows": 73426
+      },
+      {
+        "month": "2026-11",
+        "rows": 43741
       }
     ],
     "solicitationsByIssuedMonth": [
@@ -162,483 +417,506 @@
       {
         "month": "2025-03",
         "source": "dibbs_rfq",
-        "rows": 1
+        "rows": 2
       },
       {
         "month": "2025-07",
         "source": "dibbs_rfq",
-        "rows": 1
+        "rows": 2
       },
       {
         "month": "2025-08",
         "source": "dibbs_rfq",
-        "rows": 11
+        "rows": 14
       },
       {
         "month": "2025-09",
         "source": "dibbs_rfq",
-        "rows": 11
+        "rows": 17
       },
       {
         "month": "2025-10",
         "source": "dibbs_rfq",
-        "rows": 18
+        "rows": 23
       },
       {
         "month": "2025-11",
         "source": "dibbs_rfq",
-        "rows": 31
+        "rows": 55
       },
       {
         "month": "2025-12",
         "source": "dibbs_rfq",
-        "rows": 29
+        "rows": 44
       },
       {
         "month": "2026-01",
         "source": "dibbs_rfq",
-        "rows": 36
+        "rows": 62
       },
       {
         "month": "2026-02",
         "source": "dibbs_rfq",
-        "rows": 54
+        "rows": 85
       },
       {
         "month": "2026-03",
         "source": "dibbs_rfq",
-        "rows": 97
+        "rows": 148
       },
       {
         "month": "2026-04",
         "source": "dibbs_rfq",
-        "rows": 177
+        "rows": 270
       },
       {
         "month": "2026-05",
         "source": "dibbs_rfq",
-        "rows": 227
+        "rows": 367
       },
       {
         "month": "2026-06",
         "source": "dibbs_rfq",
-        "rows": 344
+        "rows": 581
       },
       {
         "month": "2026-07",
         "source": "dibbs_rfq",
-        "rows": 1759
+        "rows": 10356
       },
       {
         "month": "2026-08",
         "source": "dibbs_rfq",
-        "rows": 32720
+        "rows": 32781
+      },
+      {
+        "month": "2026-08",
+        "source": "sam_gov",
+        "rows": 356
       },
       {
         "month": "2026-09",
         "source": "dibbs_rfq",
-        "rows": 40230
+        "rows": 40311
       },
       {
         "month": "2026-09",
         "source": "sam_gov",
-        "rows": 3413
+        "rows": 5436
       },
       {
         "month": "2026-10",
         "source": "dibbs_rfq",
-        "rows": 9763
+        "rows": 34659
       },
       {
         "month": "2026-10",
         "source": "sam_gov",
-        "rows": 4082
+        "rows": 12527
+      },
+      {
+        "month": "2026-11",
+        "source": "dibbs_rfq",
+        "rows": 19672
+      },
+      {
+        "month": "2026-11",
+        "source": "sam_gov",
+        "rows": 9580
       }
     ],
     "pricePointsByMonth": [
       {
+        "month": "2026-07",
+        "rows": 6
+      },
+      {
         "month": "2026-08",
-        "rows": 2776
+        "rows": 8700
       },
       {
         "month": "2026-09",
-        "rows": 16929
+        "rows": 18581
       },
       {
         "month": "2026-10",
-        "rows": 5775
+        "rows": 18966
+      },
+      {
+        "month": "2026-11",
+        "rows": 7989
       }
     ],
     "pricedPurchasesPerNsn": {
-      "with_1_plus": 22601,
-      "with_2_plus": 1905,
-      "with_3_plus": 433,
-      "with_5_plus": 98
+      "with_1_plus": 45255,
+      "with_2_plus": 5885,
+      "with_3_plus": 1398,
+      "with_5_plus": 326
     },
-    "nsns": 88677,
+    "nsns": 183411,
     "amscObservations": [
       {
         "source": "flis",
-        "rows": 86460,
-        "nsns": 86460
+        "rows": 178146,
+        "nsns": 178113
       }
     ],
     "amcDistribution": [
       {
         "amc": "3",
-        "rows": 45092
+        "rows": 91836
       },
       {
         "amc": "1",
-        "rows": 37378
-      },
-      {
-        "amc": "4",
-        "rows": 1323
+        "rows": 78453
       },
       {
         "amc": "2",
-        "rows": 1173
+        "rows": 2610
+      },
+      {
+        "amc": "4",
+        "rows": 2559
       },
       {
         "amc": "5",
-        "rows": 767
+        "rows": 1426
       },
       {
         "amc": "0",
-        "rows": 727
+        "rows": 1262
       }
     ],
     "amscDistribution": [
       {
         "amsc": "G",
-        "rows": 23226
+        "rows": 49805
       },
       {
         "amsc": "D",
-        "rows": 18427
+        "rows": 36873
       },
       {
         "amsc": "C",
-        "rows": 11181
+        "rows": 24922
       },
       {
         "amsc": "Z",
-        "rows": 7892
+        "rows": 13921
       },
       {
         "amsc": "R",
-        "rows": 5822
+        "rows": 11926
       },
       {
         "amsc": "L",
-        "rows": 5260
+        "rows": 10702
       },
       {
         "amsc": "T",
-        "rows": 3819
+        "rows": 7274
       },
       {
         "amsc": "Q",
-        "rows": 3418
+        "rows": 6891
       },
       {
         "amsc": "P",
-        "rows": 2535
+        "rows": 5865
       },
       {
         "amsc": "B",
-        "rows": 2330
+        "rows": 5059
       },
       {
         "amsc": "H",
-        "rows": 1652
+        "rows": 3259
       },
       {
         "amsc": "0",
-        "rows": 727
+        "rows": 1262
       },
       {
         "amsc": "M",
-        "rows": 41
+        "rows": 129
       },
       {
         "amsc": "A",
-        "rows": 35
+        "rows": 67
       },
       {
         "amsc": "U",
-        "rows": 28
+        "rows": 54
       },
       {
         "amsc": "N",
-        "rows": 26
+        "rows": 50
       },
       {
         "amsc": "V",
+        "rows": 38
+      },
+      {
+        "amsc": "K",
         "rows": 21
       },
       {
         "amsc": "S",
-        "rows": 9
-      },
-      {
-        "amsc": "K",
-        "rows": 8
+        "rows": 20
       },
       {
         "amsc": "Y",
-        "rows": 3
+        "rows": 8
       }
     ]
   },
   "usaspending": {
     "windowDays": 120,
-    "start": "2026-06-12",
-    "end": "2026-10-10",
+    "start": "2026-07-20",
+    "end": "2026-11-17",
     "classes": [
-      {
-        "fsc": "5340",
-        "name": "Hardware, Commercial",
-        "open": 524,
-        "contractsInWindow": 46332
-      },
       {
         "fsc": "4820",
         "name": "Valves, Nonpowered",
-        "open": 512,
-        "contractsInWindow": 1534
+        "open": 491,
+        "contractsInWindow": 422
+      },
+      {
+        "fsc": "5340",
+        "name": "Hardware, Commercial",
+        "open": 467,
+        "contractsInWindow": 46650
       },
       {
         "fsc": "5330",
         "name": "Packing and Gasket Materials",
-        "open": 402,
-        "contractsInWindow": 2058
-      },
-      {
-        "fsc": "5935",
-        "name": "Connectors, Electrical",
-        "open": 376,
-        "contractsInWindow": 1058
-      },
-      {
-        "fsc": "4730",
-        "name": "Hose, Pipe, Tube, Lubrication, and Railing Fittings",
-        "open": 371,
-        "contractsInWindow": 1351
-      },
-      {
-        "fsc": "4720",
-        "name": "Hose and Flexible Tubing",
-        "open": 309,
-        "contractsInWindow": 978
+        "open": 433,
+        "contractsInWindow": 498
       },
       {
         "fsc": "5305",
         "name": "Screws",
-        "open": 239,
-        "contractsInWindow": 1586
+        "open": 384,
+        "contractsInWindow": 550
       },
       {
-        "fsc": "5310",
-        "name": "Nuts and Washers",
-        "open": 222,
-        "contractsInWindow": 1750
-      },
-      {
-        "fsc": "4330",
-        "name": "Centrifugals, Separators, and Pressure and Vacuum Filters",
-        "open": 210,
-        "contractsInWindow": 428
-      },
-      {
-        "fsc": "3040",
-        "name": "Miscellaneous Power Transmission Equipment",
-        "open": 208,
-        "contractsInWindow": 761
-      },
-      {
-        "fsc": "5930",
-        "name": "Switches",
-        "open": 179,
-        "contractsInWindow": 913
-      },
-      {
-        "fsc": "4320",
-        "name": "Power and Hand Pumps",
-        "open": 169,
-        "contractsInWindow": 534
-      },
-      {
-        "fsc": "5306",
-        "name": "Bolts",
-        "open": 158,
-        "contractsInWindow": 913
-      },
-      {
-        "fsc": "5995",
-        "name": "Cable, Cord, and Wire Assemblies: Communication Equipment",
-        "open": 152,
-        "contractsInWindow": 559
-      },
-      {
-        "fsc": "6150",
-        "name": "Miscellaneous Electric Power and Distribution Equipment",
-        "open": 152,
-        "contractsInWindow": 1269
-      },
-      {
-        "fsc": "2540",
-        "name": "Vehicular Furniture and Accessories",
-        "open": 135,
-        "contractsInWindow": 903
-      },
-      {
-        "fsc": "1560",
-        "name": "Airframe Structural Components",
-        "open": 135,
-        "contractsInWindow": 1858
-      },
-      {
-        "fsc": "5998",
-        "name": "Electrical and Electronic Assemblies, Boards, Cards, and Associated Hardware",
-        "open": 134,
-        "contractsInWindow": 600
-      },
-      {
-        "fsc": "5999",
-        "name": "Miscellaneous Electrical and Electronic Components",
-        "open": 133,
-        "contractsInWindow": 561
+        "fsc": "5935",
+        "name": "Connectors, Electrical",
+        "open": 357,
+        "contractsInWindow": 242
       },
       {
         "fsc": "6515",
         "name": "Medical and Surgical Instruments, Equipment, and Supplies",
-        "open": 131,
-        "contractsInWindow": 43105
+        "open": 308,
+        "contractsInWindow": 15191
+      },
+      {
+        "fsc": "1560",
+        "name": "Airframe Structural Components",
+        "open": 305,
+        "contractsInWindow": 2262
+      },
+      {
+        "fsc": "5310",
+        "name": "Nuts and Washers",
+        "open": 305,
+        "contractsInWindow": 763
+      },
+      {
+        "fsc": "4730",
+        "name": "Hose, Pipe, Tube, Lubrication, and Railing Fittings",
+        "open": 302,
+        "contractsInWindow": 413
       },
       {
         "fsc": "1680",
         "name": "Miscellaneous Aircraft Accessories and Components",
-        "open": 127,
-        "contractsInWindow": 1188
+        "open": 226,
+        "contractsInWindow": 976
       },
       {
-        "fsc": "4710",
-        "name": "Pipe, Tube and Rigid Tubing",
-        "open": 126,
-        "contractsInWindow": 531
-      },
-      {
-        "fsc": "5945",
-        "name": "Relays and Solenoids",
-        "open": 123,
-        "contractsInWindow": 347
-      },
-      {
-        "fsc": "2530",
-        "name": "Vehicular Brake, Steering, Axle, Wheel, and Track Components",
-        "open": 119,
-        "contractsInWindow": 425
-      },
-      {
-        "fsc": "4810",
-        "name": "Valves, Powered",
-        "open": 115,
-        "contractsInWindow": 395
-      },
-      {
-        "fsc": "6625",
-        "name": "Electrical and Electronic Properties Measuring and Testing Instruments",
-        "open": 114,
-        "contractsInWindow": 402
-      },
-      {
-        "fsc": "4130",
-        "name": "Refrigeration and Air Conditioning Components",
-        "open": 113,
+        "fsc": "3040",
+        "name": "Miscellaneous Power Transmission Equipment",
+        "open": 204,
         "contractsInWindow": 303
       },
       {
-        "fsc": "6110",
-        "name": "Electrical Control Equipment",
-        "open": 111,
-        "contractsInWindow": 289
-      },
-      {
-        "fsc": "5315",
-        "name": "Nails, Machine Keys, and Pins",
-        "open": 107,
-        "contractsInWindow": 764
-      },
-      {
-        "fsc": "2590",
-        "name": "Miscellaneous Vehicular Components",
-        "open": 105,
-        "contractsInWindow": 463
-      },
-      {
-        "fsc": "5331",
-        "name": "O-Rings",
-        "open": 105,
-        "contractsInWindow": 889
-      },
-      {
-        "fsc": "4310",
-        "name": "Compressors and Vacuum Pumps",
-        "open": 104,
-        "contractsInWindow": 273
-      },
-      {
-        "fsc": "5365",
-        "name": "Bushings, Rings, Shims, and Spacers",
-        "open": 100,
-        "contractsInWindow": 698
+        "fsc": "5306",
+        "name": "Bolts",
+        "open": 203,
+        "contractsInWindow": 424
       },
       {
         "fsc": "5985",
         "name": "Antennas, Waveguides, and Related Equipment",
-        "open": 94,
-        "contractsInWindow": 431
+        "open": 167,
+        "contractsInWindow": 188
       },
       {
-        "fsc": "3120",
-        "name": "Bearings, Plain, Unmounted",
-        "open": 93,
-        "contractsInWindow": 637
+        "fsc": "6150",
+        "name": "Miscellaneous Electric Power and Distribution Equipment",
+        "open": 164,
+        "contractsInWindow": 1071
       },
       {
-        "fsc": "6140",
-        "name": "Batteries, Rechargeable",
-        "open": 93,
-        "contractsInWindow": 985
-      },
-      {
-        "fsc": "4140",
-        "name": "Fans, Air Circulators, and Blower Equipment",
-        "open": 93,
-        "contractsInWindow": 343
-      },
-      {
-        "fsc": "2510",
-        "name": "Vehicular Cab, Body, and Frame Structural Components",
-        "open": 92,
-        "contractsInWindow": 305
-      },
-      {
-        "fsc": "5360",
-        "name": "Coil, Flat, Leaf, and Wire Springs",
-        "open": 89,
-        "contractsInWindow": 285
+        "fsc": "5998",
+        "name": "Electrical and Electronic Assemblies, Boards, Cards, and Associated Hardware",
+        "open": 154,
+        "contractsInWindow": 234
       },
       {
         "fsc": "5320",
         "name": "Rivets",
-        "open": 83,
-        "contractsInWindow": 399
+        "open": 152,
+        "contractsInWindow": 195
+      },
+      {
+        "fsc": "5945",
+        "name": "Relays and Solenoids",
+        "open": 144,
+        "contractsInWindow": 106
+      },
+      {
+        "fsc": "5999",
+        "name": "Miscellaneous Electrical and Electronic Components",
+        "open": 143,
+        "contractsInWindow": 327
+      },
+      {
+        "fsc": "5315",
+        "name": "Nails, Machine Keys, and Pins",
+        "open": 139,
+        "contractsInWindow": 372
+      },
+      {
+        "fsc": "4810",
+        "name": "Valves, Powered",
+        "open": 139,
+        "contractsInWindow": 152
+      },
+      {
+        "fsc": "4720",
+        "name": "Hose and Flexible Tubing",
+        "open": 135,
+        "contractsInWindow": 268
+      },
+      {
+        "fsc": "5365",
+        "name": "Bushings, Rings, Shims, and Spacers",
+        "open": 131,
+        "contractsInWindow": 322
+      },
+      {
+        "fsc": "3120",
+        "name": "Bearings, Plain, Unmounted",
+        "open": 121,
+        "contractsInWindow": 409
+      },
+      {
+        "fsc": "5995",
+        "name": "Cable, Cord, and Wire Assemblies: Communication Equipment",
+        "open": 114,
+        "contractsInWindow": 426
+      },
+      {
+        "fsc": "5930",
+        "name": "Switches",
+        "open": 113,
+        "contractsInWindow": 221
+      },
+      {
+        "fsc": "6505",
+        "name": "Drugs and Biologicals",
+        "open": 102,
+        "contractsInWindow": 13463
+      },
+      {
+        "fsc": "4710",
+        "name": "Pipe, Tube and Rigid Tubing",
+        "open": 96,
+        "contractsInWindow": 209
+      },
+      {
+        "fsc": "5325",
+        "name": "Fastening Devices",
+        "open": 93,
+        "contractsInWindow": 167
+      },
+      {
+        "fsc": "5331",
+        "name": "O-Rings",
+        "open": 93,
+        "contractsInWindow": 195
+      },
+      {
+        "fsc": "1650",
+        "name": "Aircraft Hydraulic, Vacuum, and De-icing System Components",
+        "open": 85,
+        "contractsInWindow": 362
+      },
+      {
+        "fsc": "2540",
+        "name": "Vehicular Furniture and Accessories",
+        "open": 85,
+        "contractsInWindow": 483
+      },
+      {
+        "fsc": "6130",
+        "name": "Converters, Electrical, Nonrotating",
+        "open": 84,
+        "contractsInWindow": 183
+      },
+      {
+        "fsc": "5360",
+        "name": "Coil, Flat, Leaf, and Wire Springs",
+        "open": 84,
+        "contractsInWindow": 79
+      },
+      {
+        "fsc": "4320",
+        "name": "Power and Hand Pumps",
+        "open": 82,
+        "contractsInWindow": 205
+      },
+      {
+        "fsc": "2530",
+        "name": "Vehicular Brake, Steering, Axle, Wheel, and Track Components",
+        "open": 79,
+        "contractsInWindow": 96
+      },
+      {
+        "fsc": "5905",
+        "name": "Resistors",
+        "open": 78,
+        "contractsInWindow": 41
+      },
+      {
+        "fsc": "3110",
+        "name": "Bearings, Antifriction, Unmounted",
+        "open": 77,
+        "contractsInWindow": 429
+      },
+      {
+        "fsc": "6640",
+        "name": "Laboratory Equipment and Supplies",
+        "open": 75,
+        "contractsInWindow": 8747
+      },
+      {
+        "fsc": "1005",
+        "name": "Guns, through 30mm",
+        "open": 74,
+        "contractsInWindow": 252
+      },
+      {
+        "fsc": "4140",
+        "name": "Fans, Air Circulators, and Blower Equipment",
+        "open": 73,
+        "contractsInWindow": 77
       }
     ],
-    "totalContractsInWindow": 119403
+    "totalContractsInWindow": 97973
   },
   "dibbs": {
     "note": "first page of each grid only; pagesVisible is a lower bound (the pager shows a window)",
@@ -646,171 +924,171 @@
       {
         "type": "awd",
         "daysBack": 10,
-        "date": "2026-09-30",
+        "date": "2026-11-04",
         "fetched": true,
-        "pagesVisible": 1,
-        "bytes": 39286
+        "pagesVisible": 11,
+        "bytes": 430214
       },
       {
         "type": "awd",
         "daysBack": 30,
-        "date": "2026-09-09",
+        "date": "2026-10-14",
         "fetched": true,
         "pagesVisible": 11,
-        "bytes": 475429
+        "bytes": 475725
       },
       {
         "type": "awd",
         "daysBack": 60,
-        "date": "2026-08-05",
+        "date": "2026-09-16",
         "fetched": true,
         "pagesVisible": 11,
-        "bytes": 430654
+        "bytes": 451955
       },
       {
         "type": "awd",
         "daysBack": 90,
-        "date": "2026-07-08",
+        "date": "2026-08-19",
         "fetched": true,
         "pagesVisible": 11,
-        "bytes": 465836
+        "bytes": 416745
       },
       {
         "type": "awd",
         "daysBack": 120,
-        "date": "2026-06-10",
+        "date": "2026-07-15",
         "fetched": true,
         "pagesVisible": 11,
-        "bytes": 457340
+        "bytes": 467674
       },
       {
         "type": "awd",
         "daysBack": 180,
-        "date": "2026-04-08",
+        "date": "2026-05-20",
         "fetched": true,
-        "pagesVisible": 7,
-        "bytes": 463694
+        "pagesVisible": 9,
+        "bytes": 416322
       },
       {
         "type": "awd",
         "daysBack": 270,
-        "date": "2026-01-07",
+        "date": "2026-02-18",
         "fetched": true,
         "pagesVisible": 3,
-        "bytes": 391148
+        "bytes": 396075
       },
       {
         "type": "awd",
         "daysBack": 365,
-        "date": "2025-10-08",
+        "date": "2025-11-12",
         "fetched": true,
-        "pagesVisible": 7,
-        "bytes": 396495
+        "pagesVisible": 3,
+        "bytes": 393029
       },
       {
         "type": "awd",
         "daysBack": 545,
-        "date": "2025-04-09",
+        "date": "2025-05-21",
         "fetched": true,
         "pagesVisible": 1,
-        "bytes": 280515
+        "bytes": 323122
       },
       {
         "type": "awd",
         "daysBack": 730,
-        "date": "2024-10-09",
+        "date": "2024-11-13",
         "fetched": true,
-        "pagesVisible": 1,
-        "bytes": 330612
+        "pagesVisible": 4,
+        "bytes": 388547
       },
       {
         "type": "rfq",
         "daysBack": 10,
-        "date": "2026-09-30",
+        "date": "2026-11-04",
         "fetched": true,
-        "pagesVisible": 1,
-        "bytes": 41610
+        "pagesVisible": 11,
+        "bytes": 365672
       },
       {
         "type": "rfq",
         "daysBack": 30,
-        "date": "2026-09-09",
+        "date": "2026-10-14",
         "fetched": true,
         "pagesVisible": 11,
-        "bytes": 363347
+        "bytes": 363348
       },
       {
         "type": "rfq",
         "daysBack": 60,
-        "date": "2026-08-05",
+        "date": "2026-09-16",
         "fetched": true,
         "pagesVisible": 11,
-        "bytes": 332549
+        "bytes": 326207
       },
       {
         "type": "rfq",
         "daysBack": 90,
-        "date": "2026-07-08",
+        "date": "2026-08-19",
         "fetched": true,
         "pagesVisible": 11,
-        "bytes": 328793
+        "bytes": 329957
       },
       {
         "type": "rfq",
         "daysBack": 120,
-        "date": "2026-06-10",
+        "date": "2026-07-15",
         "fetched": true,
         "pagesVisible": 11,
-        "bytes": 343544
+        "bytes": 336212
       },
       {
         "type": "rfq",
         "daysBack": 180,
-        "date": "2026-04-08",
+        "date": "2026-05-20",
         "fetched": true,
-        "pagesVisible": 10,
-        "bytes": 352579
+        "pagesVisible": 11,
+        "bytes": 347016
       },
       {
         "type": "rfq",
         "daysBack": 270,
-        "date": "2026-01-07",
+        "date": "2026-02-18",
         "fetched": true,
-        "pagesVisible": 4,
-        "bytes": 382733
+        "pagesVisible": 5,
+        "bytes": 376472
       },
       {
         "type": "rfq",
         "daysBack": 365,
-        "date": "2025-10-08",
+        "date": "2025-11-12",
         "fetched": true,
-        "pagesVisible": 2,
-        "bytes": 369151
+        "pagesVisible": 3,
+        "bytes": 375837
       },
       {
         "type": "rfq",
         "daysBack": 545,
-        "date": "2025-04-09",
+        "date": "2025-05-21",
         "fetched": true,
         "pagesVisible": 1,
-        "bytes": 285266
+        "bytes": 292571
       },
       {
         "type": "rfq",
         "daysBack": 730,
-        "date": "2024-10-09",
+        "date": "2024-11-13",
         "fetched": true,
         "pagesVisible": 1,
-        "bytes": 113786
+        "bytes": 108839
       }
     ],
     "awdLogTail": [
       "fetch.mjs: 10/10 dates fetched",
-      "DIBBS consent banner encountered at https://www.dibbs.bsm.dla.mil/dodwarning.aspx?goto=/awards/awdrecs.aspx?category=post&typesrch=dt&value=09-30-2026; attempting accept..."
+      "DIBBS consent banner encountered at https://www.dibbs.bsm.dla.mil/dodwarning.aspx?goto=/awards/awdrecs.aspx?category=post&typesrch=dt&value=11-04-2026; attempting accept..."
     ],
     "rfqLogTail": [
       "fetch.mjs: 10/10 dates fetched",
-      "DIBBS consent banner encountered at https://www.dibbs.bsm.dla.mil/dodwarning.aspx?goto=/rfq/rfqrecs.aspx?category=post&typesrch=dt&value=09-30-2026; attempting accept..."
+      "DIBBS consent banner encountered at https://www.dibbs.bsm.dla.mil/dodwarning.aspx?goto=/rfq/rfqrecs.aspx?category=post&typesrch=dt&value=11-04-2026; attempting accept..."
     ]
   }
 }
