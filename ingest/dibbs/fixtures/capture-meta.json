@@ -1,18 +1,18 @@
 {
-  "capturedAt": "2026-09-06T15:30:44.075Z",
+  "capturedAt": "2026-11-17T21:02:15.593Z",
   "pages": [
     {
       "file": "rfq-grid-p1.html",
-      "url": "https://www.dibbs.bsm.dla.mil/Rfq/RfqRecs.aspx?category=post&TypeSrch=dt&Value=09-04-2026",
+      "url": "https://www.dibbs.bsm.dla.mil/Rfq/RfqRecs.aspx?category=post&TypeSrch=dt&Value=11-16-2026",
       "status": 200,
-      "bytes": 362931
+      "bytes": 433252
     }
   ],
   "probes": [
     {
-      "url": "https://www.dibbs.bsm.dla.mil/Rfq/RfqRecs.aspx?category=post&TypeSrch=dt&Value=09-04-2026",
+      "url": "https://www.dibbs.bsm.dla.mil/Rfq/RfqRecs.aspx?category=post&TypeSrch=dt&Value=11-16-2026",
       "status": 200,
-      "bytes": 362931,
+      "bytes": 433252,
       "grid": true
     }
   ],
