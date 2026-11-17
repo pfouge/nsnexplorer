@@ -3,11 +3,15 @@
 // the former functions/api/signup.js: the Cloudflare adapter owns the Function
 // bundle, so Pages' functions/ directory is no longer used.
 //
+// Refuses posts that do not come from this site's own pages, bodies over 4 KB and emails over
+// 254 characters before opening a database connection.
+//
 // pub.signups(email text, hook text CHECK IN ('shop_alerts','overpay_digest'),
 //              fsc_interest char(4)[], created_at timestamptz)
 import type { APIRoute } from 'astro';
 import { openSql } from '../../lib/nsn-page';
 import { databaseUrlFrom } from '../../lib/runtime-env';
+import { MAX_EMAIL_LENGTH, bodySizeOk, fromThisSite } from '../../lib/signup-guard';
 
 export const prerender = false;
 
@@ -38,6 +42,9 @@ async function readFields(request: Request): Promise<Record<string, unknown>> {
 
 export const POST: APIRoute = async (ctx) => {
   const { request } = ctx;
+  // Only this site's own form may post here, and only a form-sized body (lib/signup-guard.ts).
+  if (!fromThisSite(request.headers, request.url)) return jsonResponse({ ok: false, error: 'Forbidden.' }, 403);
+  if (!bodySizeOk(request.headers)) return jsonResponse({ ok: false, error: 'Request too large.' }, 413);
   let fields: Record<string, unknown>;
   try {
     fields = await readFields(request);
@@ -49,7 +56,7 @@ export const POST: APIRoute = async (ctx) => {
   const hook = String(fields.hook || '').trim();
   const fscInterest = parseFscInterest(fields.fsc_interest);
 
-  if (!EMAIL_RE.test(email)) return jsonResponse({ ok: false, error: 'Enter a valid email address.' }, 400);
+  if (email.length > MAX_EMAIL_LENGTH || !EMAIL_RE.test(email)) return jsonResponse({ ok: false, error: 'Enter a valid email address.' }, 400);
   if (!VALID_HOOKS.has(hook)) return jsonResponse({ ok: false, error: 'Unknown signup type.' }, 400);
 
   const databaseUrl = databaseUrlFrom(ctx);
@@ -71,7 +78,9 @@ export const POST: APIRoute = async (ctx) => {
 
   const accept = request.headers.get('accept') || '';
   if (accept.includes('text/html')) {
-    return Response.redirect(new URL('/?signup=ok', request.url).toString(), 303);
+    // Not Response.redirect(): its headers cannot be changed, and the middleware adds the security
+    // headers to every answer, so the plain form post ended in a 500 after saving the signup.
+    return new Response(null, { status: 303, headers: { Location: new URL('/?signup=ok', request.url).toString() } });
   }
   return jsonResponse({ ok: true }, 200);
 };
