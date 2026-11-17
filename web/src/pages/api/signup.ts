@@ -78,7 +78,9 @@ export const POST: APIRoute = async (ctx) => {
 
   const accept = request.headers.get('accept') || '';
   if (accept.includes('text/html')) {
-    return Response.redirect(new URL('/?signup=ok', request.url).toString(), 303);
+    // Not Response.redirect(): its headers cannot be changed, and the middleware adds the security
+    // headers to every answer, so the plain form post ended in a 500 after saving the signup.
+    return new Response(null, { status: 303, headers: { Location: new URL('/?signup=ok', request.url).toString() } });
   }
   return jsonResponse({ ok: true }, 200);
 };
