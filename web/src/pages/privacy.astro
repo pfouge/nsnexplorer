@@ -7,7 +7,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import { SITE_NAME, CONTACT_EMAIL } from '../consts';
 import { ACCOUNTS_ENABLED } from '../lib/account';
 
-const updated = 'November 15, 2026';
+const updated = 'November 17, 2026';
 ---
 
 <BaseLayout
@@ -38,7 +38,9 @@ const updated = 'November 15, 2026';
     <li>
       <strong>Email signups.</strong> If you sign up for updates, we store your email address and
       the time you signed up. We use it to send you what you signed up for, and you can
-      unsubscribe or ask us to delete it at any time.
+      unsubscribe or ask us to delete it at any time. The signup form uses Cloudflare Turnstile to
+      tell people from automated programs; when you use the form, Cloudflare receives your IP
+      address and technical details about your browser for that check.
     </li>
     <li>
       <strong>Account information.</strong> An account is optional. If you create one, we keep
