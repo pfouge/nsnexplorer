@@ -1,7 +1,7 @@
 == files ==
-total 12172212
+total 12172208
 drwxr-xr-x  2 runner runner       4096 Nov 15 18:35 .
-drwxrwxrwt 16 root   root         4096 Nov 17 18:48 ..
+drwxrwxrwt 16 root   root         4096 Nov 17 21:09 ..
 -rw-r--r--  1 runner runner  371182966 Oct 23 18:41 P_CAGE.CSV
 -rw-r--r--  1 runner runner  988252755 Oct 23 18:44 P_FLIS_NSN.CSV
 -rw-r--r--  1 runner runner    4796029 Oct 23 18:45 P_HELP.CSV
@@ -129,12 +129,12 @@ drwxrwxrwt 16 root   root         4096 Nov 17 18:48 ..
 "NIIN","COG","SMIC","IRRC","SMCC"
 "000000051","9B","","",""
 == load output (tail) ==
-load.mjs: V_FLIS_STANDARDIZATION.CSV: 199984 kept, 1511 written, 17416083 rows scanned
+load.mjs: V_FLIS_STANDARDIZATION.CSV: 200790 kept, 736 written, 17416083 rows scanned
 load.mjs: V_FLIS_CANCELLED_NIIN.CSV header row found; resolved columns (0-based): niin=0(header) cancelled_niin_fsc=1(header) cancelled_niin=2(header) niin_stat_cd=3(header) eff_date=4(header) demil=5(header)
-load.mjs: V_FLIS_CANCELLED_NIIN.CSV: 907606 rows scanned, 38583 involving a tracked NIIN, 0 malformed row(s) skipped, 292 written
-load.mjs: V_FLIS_CANCELLED_NIIN.CSV DEMIL distribution: -:25 A:35204 B:1921 C:157 D:354 E:3 F:25 G:21 Q:805 X:68
-load.mjs: V_FLIS_CANCELLED_NIIN.CSV NIIN_STAT_CD distribution: 0:4 3:7 5:23986 6:1 7:14585
-load.mjs: V_FLIS_CANCELLED_NIIN.CSV: 38583 kept, 292 written, 907606 rows scanned
+load.mjs: V_FLIS_CANCELLED_NIIN.CSV: 907606 rows scanned, 38777 involving a tracked NIIN, 0 malformed row(s) skipped, 202 written
+load.mjs: V_FLIS_CANCELLED_NIIN.CSV DEMIL distribution: -:25 A:35380 B:1931 C:159 D:356 E:3 F:25 G:21 Q:809 X:68
+load.mjs: V_FLIS_CANCELLED_NIIN.CSV NIIN_STAT_CD distribution: 0:4 3:8 5:24107 6:1 7:14657
+load.mjs: V_FLIS_CANCELLED_NIIN.CSV: 38777 kept, 202 written, 907606 rows scanned
 load.mjs: P_HELP.CSV header row found; resolved columns (0-based): code=0(header) literal=1(header) description=2(header) regs=3(header)
 load.mjs: P_HELP.CSV: 36505 rows scanned, 36505 kept (32036 distinct codes, 4469 repeated CODE value(s) collapsed to the last row), 0 malformed row(s) skipped, 2 written
 load.mjs: P_HELP.CSV: 36505 kept, 2 written, 36505 rows scanned
@@ -144,14 +144,14 @@ load.mjs: V_COLLOQUIAL_NAME.CSV: 33980 kept, 0 written, 33980 rows scanned
 load.mjs: V_FLIS_MANAGEMENT.CSV first line: "NIIN","EFFECTIVE_DATE","MOE","AAC","SOS","SOSM","UI","UI_CONV_FAC","UOM","UOM_QTY","UNIT_PRICE","QUP","CIIC","SLC","REP_REC_CODE","MGMT_CTL","NET_PRICE","USC","ROW_OBS_DT"
 load.mjs: V_FLIS_MANAGEMENT.CSV header names not mapped (kept in extra when non-blank): SOSM, UI_CONV_FAC, UOM, UOM_QTY, MGMT_CTL, NET_PRICE, USC, ROW_OBS_DT
 load.mjs: V_FLIS_MANAGEMENT.CSV (source FLIS) header row found; resolved columns (0-based): niin=0(header) moe_cd=2(header) effective_date=1(header) aac=3(header) sos=4(header) ui=6(header) unit_price=10(header) qup=11(header) ciic=12(header) slc=13(header) repairability=14(header)
-load.mjs: V_FLIS_MANAGEMENT.CSV: 17474284 rows scanned, 543436 on tracked NIINs, 0 malformed row(s) skipped, 36171 repeated (nsn, source, moe_cd) key(s) collapsed to the last row, 3265 written
-load.mjs: V_FLIS_MANAGEMENT.CSV UI distribution (tracked rows): -:23 7M:12 AM:10 AT:24 AY:3084 BD:35 BE:25 BF:448 BG:270 BT:5128 BX:7092 CA:905 CF:12 CL:178 CM:20 CN:2800 CO:813 CS:1353 CY:461 CZ:9 DR:1125 DZ:127 EA:448404 FT:7297 FV:115 FY:16 GL:2796 GP:3 GR:41 HD:4569 IN:53 JR:123 KG:5 KT:8663 LB:965 LG:332 LI:59 MC:39 MM:2 MR:28 ... (+27 more values)
-load.mjs: V_FLIS_MANAGEMENT.CSV SLC distribution (tracked rows): -:36 0:483436 1:43 2:667 3:636 4:3074 5:590 6:3483 7:2674 8:205 9:1260 A:115 B:12 C:129 D:1 E:16 F:859 G:526 H:3839 I:885 J:348 K:1861 L:96 M:9738 N:63 P:507 Q:7963 R:1015 S:9002 T:246 U:495 V:253 W:3439 X:645 Y:4369 Z:910
-load.mjs: V_FLIS_MANAGEMENT.CSV SOS distribution (tracked rows): A12:15 AKZ:536 B14:88 B16:179 B17:137 B64:62 F04:3 F06:21 F2U:3 F77:6 FGZ:52 FHZ:57 FLZ:146 FPD:15 G13:3 G36:63 G69:39 GSA:348 HM8:12 JCD:6 JDF:3 JVS:639 MPB:131 NRP:522 SMS:539138 ZNC:1065 ZQC:147
-load.mjs: V_FLIS_MANAGEMENT.CSV AAC distribution (tracked rows): -:3 A:15 B:47 C:1673 D:102893 E:6 F:36 G:55 H:46589 I:691 J:80589 K:6 L:44545 M:35 P:42 Q:651 R:123 S:2 T:2 V:1686 W:128 X:639 Y:842 Z:262138
-load.mjs: V_FLIS_MANAGEMENT.CSV CIIC distribution (tracked rows): -:36 1:3 3:9 4:68 6:1 7:14432 9:40 C:2 I:357 J:1615 M:164 N:672 O:2 Q:235 R:139 S:8 U:521003 V:1139 X:335 Y:442 Z:2734
-load.mjs: V_FLIS_MANAGEMENT.CSV repairability distribution (tracked rows): -:248506 A:3091 C:910 D:5209 E:32 F:11902 H:916 K:98 L:94 M:278 N:167082 NN:39 O:1661 P:2987 Q:3 R:311 S:2 T:225 U:357 W:28 Z:99454 ZN:251
-load.mjs: V_FLIS_MANAGEMENT.CSV MOE distribution (tracked rows): DA:79515 DF:87756 DJ:514 DM:39119 DN:137014 DP:3 DS:181574 GE:33 GP:17049 RA:3 TG:157 VA:699
+load.mjs: V_FLIS_MANAGEMENT.CSV: 17474284 rows scanned, 545398 on tracked NIINs, 0 malformed row(s) skipped, 36314 repeated (nsn, source, moe_cd) key(s) collapsed to the last row, 1828 written
+load.mjs: V_FLIS_MANAGEMENT.CSV UI distribution (tracked rows): -:23 7M:12 AM:10 AT:24 AY:3090 BD:35 BE:25 BF:448 BG:280 BT:5128 BX:7124 CA:905 CF:12 CL:184 CM:20 CN:2800 CO:816 CS:1363 CY:461 CZ:9 DR:1125 DZ:127 EA:449978 FT:7351 FV:115 FY:16 GL:2796 GP:3 GR:41 HD:4619 IN:53 JR:123 KG:5 KT:8687 LB:979 LG:338 LI:59 MC:39 MM:2 MR:28 ... (+27 more values)
+load.mjs: V_FLIS_MANAGEMENT.CSV SLC distribution (tracked rows): -:36 0:485244 1:43 2:669 3:636 4:3079 5:590 6:3483 7:2679 8:205 9:1266 A:115 B:12 C:129 D:1 E:16 F:859 G:526 H:3841 I:885 J:348 K:1861 L:96 M:9776 N:63 P:507 Q:7976 R:1015 S:9063 T:246 U:497 V:253 W:3445 X:645 Y:4383 Z:910
+load.mjs: V_FLIS_MANAGEMENT.CSV SOS distribution (tracked rows): A12:15 AKZ:536 B14:88 B16:179 B17:137 B64:62 F04:3 F06:21 F2U:3 F77:6 FGZ:52 FHZ:57 FLZ:146 FPD:15 G13:3 G36:63 G69:39 GSA:348 HM8:12 JCD:6 JDF:3 JVS:639 MPB:131 NRP:522 SMS:541100 ZNC:1065 ZQC:147
+load.mjs: V_FLIS_MANAGEMENT.CSV AAC distribution (tracked rows): -:3 A:15 B:47 C:1673 D:103144 E:6 F:36 G:55 H:46592 I:691 J:81062 K:6 L:44753 M:35 P:42 Q:651 R:123 S:2 T:2 V:1690 W:128 X:650 Y:842 Z:263150
+load.mjs: V_FLIS_MANAGEMENT.CSV CIIC distribution (tracked rows): -:36 1:3 3:9 4:68 6:1 7:14489 9:40 C:2 I:357 J:1619 M:164 N:672 O:2 Q:235 R:139 S:8 U:522897 V:1144 X:335 Y:444 Z:2734
+load.mjs: V_FLIS_MANAGEMENT.CSV repairability distribution (tracked rows): -:249452 A:3108 C:910 D:5229 E:32 F:11935 H:919 K:98 L:94 M:278 N:167724 NN:39 O:1667 P:2992 Q:3 R:311 S:2 T:225 U:360 W:28 Z:99741 ZN:251
+load.mjs: V_FLIS_MANAGEMENT.CSV MOE distribution (tracked rows): DA:79785 DF:88117 DJ:515 DM:39219 DN:137517 DP:3 DS:182238 GE:33 GP:17112 RA:3 TG:157 VA:699
 RangeError: Maximum call stack size exceeded
     at priceStats (file:///home/runner/work/nsnexplorer/nsnexplorer/ingest/publog/load-management.mjs:183:39)
     at logFileSummary (file:///home/runner/work/nsnexplorer/nsnexplorer/ingest/publog/load-management.mjs:244:14)
@@ -168,19 +168,19 @@ RangeError: Maximum call stack size exceeded
     at async optional (file:///home/runner/work/nsnexplorer/nsnexplorer/ingest/publog/load.mjs:1021:15)
     at async main (file:///home/runner/work/nsnexplorer/nsnexplorer/ingest/publog/load.mjs:1115:5)
 ::warning::load.mjs: management files load failed (Maximum call stack size exceeded); continuing
-load.mjs: P_CAGE.CSV: 30134 loaded, 4158374 rows scanned
+load.mjs: P_CAGE.CSV: 30183 loaded, 4158374 rows scanned
 == management load output ==
 load.mjs: V_FLIS_MANAGEMENT.CSV first line: "NIIN","EFFECTIVE_DATE","MOE","AAC","SOS","SOSM","UI","UI_CONV_FAC","UOM","UOM_QTY","UNIT_PRICE","QUP","CIIC","SLC","REP_REC_CODE","MGMT_CTL","NET_PRICE","USC","ROW_OBS_DT"
 load.mjs: V_FLIS_MANAGEMENT.CSV header names not mapped (kept in extra when non-blank): SOSM, UI_CONV_FAC, UOM, UOM_QTY, MGMT_CTL, NET_PRICE, USC, ROW_OBS_DT
 load.mjs: V_FLIS_MANAGEMENT.CSV (source FLIS) header row found; resolved columns (0-based): niin=0(header) moe_cd=2(header) effective_date=1(header) aac=3(header) sos=4(header) ui=6(header) unit_price=10(header) qup=11(header) ciic=12(header) slc=13(header) repairability=14(header)
-load.mjs: V_FLIS_MANAGEMENT.CSV: 17474284 rows scanned, 543436 on tracked NIINs, 0 malformed row(s) skipped, 36171 repeated (nsn, source, moe_cd) key(s) collapsed to the last row, 3265 written
-load.mjs: V_FLIS_MANAGEMENT.CSV UI distribution (tracked rows): -:23 7M:12 AM:10 AT:24 AY:3084 BD:35 BE:25 BF:448 BG:270 BT:5128 BX:7092 CA:905 CF:12 CL:178 CM:20 CN:2800 CO:813 CS:1353 CY:461 CZ:9 DR:1125 DZ:127 EA:448404 FT:7297 FV:115 FY:16 GL:2796 GP:3 GR:41 HD:4569 IN:53 JR:123 KG:5 KT:8663 LB:965 LG:332 LI:59 MC:39 MM:2 MR:28 ... (+27 more values)
-load.mjs: V_FLIS_MANAGEMENT.CSV SLC distribution (tracked rows): -:36 0:483436 1:43 2:667 3:636 4:3074 5:590 6:3483 7:2674 8:205 9:1260 A:115 B:12 C:129 D:1 E:16 F:859 G:526 H:3839 I:885 J:348 K:1861 L:96 M:9738 N:63 P:507 Q:7963 R:1015 S:9002 T:246 U:495 V:253 W:3439 X:645 Y:4369 Z:910
-load.mjs: V_FLIS_MANAGEMENT.CSV SOS distribution (tracked rows): A12:15 AKZ:536 B14:88 B16:179 B17:137 B64:62 F04:3 F06:21 F2U:3 F77:6 FGZ:52 FHZ:57 FLZ:146 FPD:15 G13:3 G36:63 G69:39 GSA:348 HM8:12 JCD:6 JDF:3 JVS:639 MPB:131 NRP:522 SMS:539138 ZNC:1065 ZQC:147
-load.mjs: V_FLIS_MANAGEMENT.CSV AAC distribution (tracked rows): -:3 A:15 B:47 C:1673 D:102893 E:6 F:36 G:55 H:46589 I:691 J:80589 K:6 L:44545 M:35 P:42 Q:651 R:123 S:2 T:2 V:1686 W:128 X:639 Y:842 Z:262138
-load.mjs: V_FLIS_MANAGEMENT.CSV CIIC distribution (tracked rows): -:36 1:3 3:9 4:68 6:1 7:14432 9:40 C:2 I:357 J:1615 M:164 N:672 O:2 Q:235 R:139 S:8 U:521003 V:1139 X:335 Y:442 Z:2734
-load.mjs: V_FLIS_MANAGEMENT.CSV repairability distribution (tracked rows): -:248506 A:3091 C:910 D:5209 E:32 F:11902 H:916 K:98 L:94 M:278 N:167082 NN:39 O:1661 P:2987 Q:3 R:311 S:2 T:225 U:357 W:28 Z:99454 ZN:251
-load.mjs: V_FLIS_MANAGEMENT.CSV MOE distribution (tracked rows): DA:79515 DF:87756 DJ:514 DM:39119 DN:137014 DP:3 DS:181574 GE:33 GP:17049 RA:3 TG:157 VA:699
+load.mjs: V_FLIS_MANAGEMENT.CSV: 17474284 rows scanned, 545398 on tracked NIINs, 0 malformed row(s) skipped, 36314 repeated (nsn, source, moe_cd) key(s) collapsed to the last row, 1828 written
+load.mjs: V_FLIS_MANAGEMENT.CSV UI distribution (tracked rows): -:23 7M:12 AM:10 AT:24 AY:3090 BD:35 BE:25 BF:448 BG:280 BT:5128 BX:7124 CA:905 CF:12 CL:184 CM:20 CN:2800 CO:816 CS:1363 CY:461 CZ:9 DR:1125 DZ:127 EA:449978 FT:7351 FV:115 FY:16 GL:2796 GP:3 GR:41 HD:4619 IN:53 JR:123 KG:5 KT:8687 LB:979 LG:338 LI:59 MC:39 MM:2 MR:28 ... (+27 more values)
+load.mjs: V_FLIS_MANAGEMENT.CSV SLC distribution (tracked rows): -:36 0:485244 1:43 2:669 3:636 4:3079 5:590 6:3483 7:2679 8:205 9:1266 A:115 B:12 C:129 D:1 E:16 F:859 G:526 H:3841 I:885 J:348 K:1861 L:96 M:9776 N:63 P:507 Q:7976 R:1015 S:9063 T:246 U:497 V:253 W:3445 X:645 Y:4383 Z:910
+load.mjs: V_FLIS_MANAGEMENT.CSV SOS distribution (tracked rows): A12:15 AKZ:536 B14:88 B16:179 B17:137 B64:62 F04:3 F06:21 F2U:3 F77:6 FGZ:52 FHZ:57 FLZ:146 FPD:15 G13:3 G36:63 G69:39 GSA:348 HM8:12 JCD:6 JDF:3 JVS:639 MPB:131 NRP:522 SMS:541100 ZNC:1065 ZQC:147
+load.mjs: V_FLIS_MANAGEMENT.CSV AAC distribution (tracked rows): -:3 A:15 B:47 C:1673 D:103144 E:6 F:36 G:55 H:46592 I:691 J:81062 K:6 L:44753 M:35 P:42 Q:651 R:123 S:2 T:2 V:1690 W:128 X:650 Y:842 Z:263150
+load.mjs: V_FLIS_MANAGEMENT.CSV CIIC distribution (tracked rows): -:36 1:3 3:9 4:68 6:1 7:14489 9:40 C:2 I:357 J:1619 M:164 N:672 O:2 Q:235 R:139 S:8 U:522897 V:1144 X:335 Y:444 Z:2734
+load.mjs: V_FLIS_MANAGEMENT.CSV repairability distribution (tracked rows): -:249452 A:3108 C:910 D:5229 E:32 F:11935 H:919 K:98 L:94 M:278 N:167724 NN:39 O:1667 P:2992 Q:3 R:311 S:2 T:225 U:360 W:28 Z:99741 ZN:251
+load.mjs: V_FLIS_MANAGEMENT.CSV MOE distribution (tracked rows): DA:79785 DF:88117 DJ:515 DM:39219 DN:137517 DP:3 DS:182238 GE:33 GP:17112 RA:3 TG:157 VA:699
     at priceStats (file:///home/runner/work/nsnexplorer/nsnexplorer/ingest/publog/load-management.mjs:183:39)
     at logFileSummary (file:///home/runner/work/nsnexplorer/nsnexplorer/ingest/publog/load-management.mjs:244:14)
     at Module.loadManagement (file:///home/runner/work/nsnexplorer/nsnexplorer/ingest/publog/load-management.mjs:278:7)
