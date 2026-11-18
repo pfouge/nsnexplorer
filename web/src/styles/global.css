@@ -490,6 +490,10 @@ label { display: block; font-size: 0.875rem; color: var(--ink-soft); margin-bott
   font-family: var(--font-sans); font-size: 1rem;
 }
 .signup-form input[type='email']:focus { outline: none; border-color: var(--ink); }
+.signup-form .signup-check { margin-top: 0.8rem; }
+.signup-form .signup-status { margin-top: 0.8rem; color: var(--ink); }
+.signup-form .signup-status[data-kind='error'] { color: var(--red); }
+.signup-form[data-done] .row, .signup-form[data-done] .signup-check { display: none; }
 
 /* ---- Misc ---- */
 .small-print, .disclaimer { color: var(--ink-soft); font-size: 0.8125rem; }

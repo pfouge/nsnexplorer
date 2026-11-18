@@ -3,15 +3,16 @@
 // the former functions/api/signup.js: the Cloudflare adapter owns the Function
 // bundle, so Pages' functions/ directory is no longer used.
 //
-// Refuses posts that do not come from this site's own pages, bodies over 4 KB and emails over
-// 254 characters before opening a database connection.
+// Refuses posts that do not come from this site's own pages, bodies over 4 KB, emails over
+// 254 characters and (where TURNSTILE_SECRET_KEY is set) posts without a good Turnstile token,
+// all before opening a database connection.
 //
 // pub.signups(email text, hook text CHECK IN ('shop_alerts','overpay_digest'),
 //              fsc_interest char(4)[], created_at timestamptz)
 import type { APIRoute } from 'astro';
 import { openSql } from '../../lib/nsn-page';
 import { databaseUrlFrom } from '../../lib/runtime-env';
-import { MAX_EMAIL_LENGTH, bodySizeOk, fromThisSite } from '../../lib/signup-guard';
+import { MAX_EMAIL_LENGTH, bodySizeOk, fromThisSite, turnstileOk } from '../../lib/signup-guard';
 
 export const prerender = false;
 
@@ -58,6 +59,15 @@ export const POST: APIRoute = async (ctx) => {
 
   if (email.length > MAX_EMAIL_LENGTH || !EMAIL_RE.test(email)) return jsonResponse({ ok: false, error: 'Enter a valid email address.' }, 400);
   if (!VALID_HOOKS.has(hook)) return jsonResponse({ ok: false, error: 'Unknown signup type.' }, 400);
+
+  // Bot check (lib/signup-guard.ts). Skipped where the secret is not set.
+  const secret = (ctx.locals as { runtime?: { env?: { TURNSTILE_SECRET_KEY?: string } } }).runtime?.env?.TURNSTILE_SECRET_KEY;
+  if (secret) {
+    const token = fields['cf-turnstile-response'] ?? fields.turnstile;
+    if (!(await turnstileOk(secret, token, request.headers.get('cf-connecting-ip')))) {
+      return jsonResponse({ ok: false, error: 'We could not confirm this came from a person. Please try again.' }, 403);
+    }
+  }
 
   const databaseUrl = databaseUrlFrom(ctx);
   if (!databaseUrl) return jsonResponse({ ok: false, error: 'Signup is not configured in this environment.' }, 503);
