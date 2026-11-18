@@ -92,8 +92,9 @@ jobs:
       # history ledger (ops.source_dates, lane dibbs_awd) with DIBBS's own record count as the
       # completeness check. New and unsettled dates first, then 2 older dates that are missing or
       # incomplete (heals early partial data, then extends history back). The budgets end the run
-      # cleanly before the job limit; whatever is left waits for the next run. Exit 1 (a date
-      # failed) starts the fresh-runner retry below.
+      # cleanly before the job limit; whatever is left waits for the next run. Exit 1 starts the
+      # fresh-runner retry below: a new or unsettled date failed, or nothing loaded at all. An old
+      # back-fill date DIBBS would not serve is a warning; the next run reads it.
       - name: fetch + load awards, one date at a time
         run: set -o pipefail; node ingest/dibbs/dibbs-dates.mjs --grid awd --days 7 --backfill-days 2 --budget-min 105 --hard-budget-min 130 --out /tmp/dibbs-awd 2>&1 | tee /tmp/dibbs-fetch.log
       # TEMPORARY: commit run diagnostics so results are readable over git
@@ -111,14 +112,7 @@ jobs:
             echo '== log tail =='
             tail -5 /tmp/dibbs-fetch.log 2>/dev/null || echo 'no log'
           } > ingest/dibbs/last-run.txt
-          git config user.name "dibbs-bot"
-          git config user.email "noreply@anthropic.com"
-          git add ingest/dibbs/last-run.txt
-          if git diff --cached --quiet; then echo "no change"; else
-            git commit -m "dibbs: run report [skip ci]"
-            git pull --rebase --autostash origin main
-            git push origin main
-          fi
+          bash .github/scripts/commit-report.sh ingest/dibbs/last-run.txt "dibbs: run report [skip ci]"
 
   dibbs-retry:
     needs: [dibbs]
@@ -139,8 +133,9 @@ jobs:
       # history ledger (ops.source_dates, lane dibbs_awd) with DIBBS's own record count as the
       # completeness check. New and unsettled dates first, then 2 older dates that are missing or
       # incomplete (heals early partial data, then extends history back). The budgets end the run
-      # cleanly before the job limit; whatever is left waits for the next run. Exit 1 (a date
-      # failed) starts the fresh-runner retry below.
+      # cleanly before the job limit; whatever is left waits for the next run. Exit 1 starts the
+      # fresh-runner retry below: a new or unsettled date failed, or nothing loaded at all. An old
+      # back-fill date DIBBS would not serve is a warning; the next run reads it.
       - name: fetch + load awards, one date at a time
         run: set -o pipefail; node ingest/dibbs/dibbs-dates.mjs --grid awd --days 7 --backfill-days 2 --budget-min 105 --hard-budget-min 130 --out /tmp/dibbs-awd 2>&1 | tee /tmp/dibbs-fetch.log
       # TEMPORARY: commit run diagnostics so results are readable over git
@@ -158,14 +153,7 @@ jobs:
             echo '== log tail =='
             tail -5 /tmp/dibbs-fetch.log 2>/dev/null || echo 'no log'
           } > ingest/dibbs/last-run.txt
-          git config user.name "dibbs-bot"
-          git config user.email "noreply@anthropic.com"
-          git add ingest/dibbs/last-run.txt
-          if git diff --cached --quiet; then echo "no change"; else
-            git commit -m "dibbs: run report [skip ci]"
-            git pull --rebase --autostash origin main
-            git push origin main
-          fi
+          bash .github/scripts/commit-report.sh ingest/dibbs/last-run.txt "dibbs: run report [skip ci]"
 
   dibbs-retry-2:
     needs: [dibbs-retry]
@@ -184,8 +172,9 @@ jobs:
       # history ledger (ops.source_dates, lane dibbs_awd) with DIBBS's own record count as the
       # completeness check. New and unsettled dates first, then 2 older dates that are missing or
       # incomplete (heals early partial data, then extends history back). The budgets end the run
-      # cleanly before the job limit; whatever is left waits for the next run. Exit 1 (a date
-      # failed) starts the fresh-runner retry below.
+      # cleanly before the job limit; whatever is left waits for the next run. Exit 1 starts the
+      # fresh-runner retry below: a new or unsettled date failed, or nothing loaded at all. An old
+      # back-fill date DIBBS would not serve is a warning; the next run reads it.
       - name: fetch + load awards, one date at a time
         run: set -o pipefail; node ingest/dibbs/dibbs-dates.mjs --grid awd --days 7 --backfill-days 2 --budget-min 105 --hard-budget-min 130 --out /tmp/dibbs-awd 2>&1 | tee /tmp/dibbs-fetch.log
       # TEMPORARY: commit run diagnostics so results are readable over git
@@ -203,14 +192,7 @@ jobs:
             echo '== log tail =='
             tail -5 /tmp/dibbs-fetch.log 2>/dev/null || echo 'no log'
           } > ingest/dibbs/last-run.txt
-          git config user.name "dibbs-bot"
-          git config user.email "noreply@anthropic.com"
-          git add ingest/dibbs/last-run.txt
-          if git diff --cached --quiet; then echo "no change"; else
-            git commit -m "dibbs: run report [skip ci]"
-            git pull --rebase --autostash origin main
-            git push origin main
-          fi
+          bash .github/scripts/commit-report.sh ingest/dibbs/last-run.txt "dibbs: run report [skip ci]"
 
   scoring:
     needs: [usaspending, dibbs]

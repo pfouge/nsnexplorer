@@ -8,10 +8,39 @@ import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { isoDay, dibbsDay, needsRead, withPoolRetry, runDibbsDates, SETTLE_DAYS } from './dibbs-dates.mjs';
+import { isoDay, dibbsDay, needsRead, withPoolRetry, runDibbsDates, runOutcome, SETTLE_DAYS } from './dibbs-dates.mjs';
 import { DeadlineError } from './fetch.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+
+test('runOutcome: a failed back-fill date is a warning, a failed current date fails the run', () => {
+  const base = { forward: ['11-17-2026', '11-16-2026'], loaded: [], failed: [] };
+  // everything fine
+  assert.deepEqual(runOutcome({ ...base, loaded: ['11-17-2026'] }), { exitCode: 0, failedForward: [], failedBackfill: [] });
+  // the 2026-11-18 awards case: both current dates and one old date loaded, one old date reset
+  assert.deepEqual(
+    runOutcome({ ...base, loaded: ['11-17-2026', '06-15-2026'], failed: ['06-16-2026'] }),
+    { exitCode: 0, failedForward: [], failedBackfill: ['06-16-2026'] }
+  );
+  // a date in the current window failed: retry on a fresh runner
+  assert.deepEqual(
+    runOutcome({ ...base, loaded: ['11-16-2026', '06-15-2026'], failed: ['11-17-2026'] }),
+    { exitCode: 1, failedForward: ['11-17-2026'], failedBackfill: [] }
+  );
+  assert.equal(runOutcome({ ...base, loaded: ['06-15-2026'], failed: ['11-17-2026', '06-16-2026'] }).exitCode, 1);
+});
+
+test('runOutcome: back-fill only (rfq grid) fails only when nothing loaded', () => {
+  // the 2026-11-18 solicitations case: one old date loaded, the other reset
+  assert.equal(runOutcome({ forward: [], loaded: ['10-13-2026'], failed: ['07-14-2026'] }).exitCode, 0);
+  // every date failed: looks like a blocked runner, so fail and let the retry run
+  assert.deepEqual(
+    runOutcome({ forward: [], loaded: [], failed: ['07-14-2026', '07-13-2026'] }),
+    { exitCode: 1, failedForward: [], failedBackfill: ['07-14-2026', '07-13-2026'] }
+  );
+  // nothing to do at all is not a failure
+  assert.equal(runOutcome({ forward: [], loaded: [], failed: [] }).exitCode, 0);
+});
 
 test('day formats, and which window dates need a read', () => {
   assert.equal(isoDay('10-09-2026'), '2026-10-09');
