@@ -117,6 +117,26 @@ export function defaultProcessors() {
 }
 
 /**
+ * What a finished run should exit with, and which failed dates are only worth a warning.
+ *
+ * DIBBS now and then resets the connection on one old posting date while serving the rest. Such a
+ * back-fill date has no ledger row, so the next run picks it again; failing the whole run for it
+ * only produced a failure email and a pointless fresh-runner retry. The run fails (exit 1, which
+ * starts the retry on a new runner and IP) when a date in the current window failed, since that
+ * is today's data, or when dates failed and none loaded, which is what a blocked runner looks like.
+ *
+ * @param {{loaded: string[], forward: string[], failed: string[]}} result from runDibbsDates
+ * @returns {{exitCode: 0|1, failedForward: string[], failedBackfill: string[]}}
+ */
+export function runOutcome(result) {
+  const forward = new Set(result.forward);
+  const failedForward = result.failed.filter((d) => forward.has(d));
+  const failedBackfill = result.failed.filter((d) => !forward.has(d));
+  const nothingLoaded = result.failed.length > 0 && result.loaded.length === 0;
+  return { exitCode: failedForward.length > 0 || nothingLoaded ? 1 : 0, failedForward, failedBackfill };
+}
+
+/**
  * @returns {Promise<{loaded: string[], forward: string[], backfill: string[], settled: number, failed: string[],
  *   left: string[], incomplete: string[], exhausted: boolean, skipReasons: object, extraSkipReasons: object}>}
  */
@@ -244,7 +264,12 @@ async function main() {
       floor: args.floor, out: args.out, startedAt,
       budgetMs: args.budgetMin * 60000, hardBudgetMs: args.hardBudgetMin * 60000,
     });
-    if (r.failed.length) process.exitCode = 1;
+    const outcome = runOutcome(r);
+    if (outcome.exitCode === 0 && outcome.failedBackfill.length) {
+      // GitHub Actions shows this line as a warning on the run; elsewhere it is just a log line.
+      console.log(`::warning::dibbs-dates[${args.grid}]: DIBBS did not serve back-fill date(s) ${outcome.failedBackfill.join(', ')}; the next run reads them`);
+    }
+    process.exitCode = outcome.exitCode;
   } finally {
     await closePool();
   }
