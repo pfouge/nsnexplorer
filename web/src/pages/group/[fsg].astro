@@ -123,8 +123,7 @@ const breadcrumbSchema = {
       <p class="gloss">
         The Federal Supply Classification sorts every item the government stocks into two-digit groups, and each
         group into four-digit supply classes. Group {department.fsg}, {department.name}, has
-        {' '}{fmtInt(department.fscs.length)} {department.fscs.length === 1 ? 'class' : 'classes'} with parts on this site
-        {namedClasses.length > 0 && ': '}
+        {' '}{fmtInt(department.fscs.length)} {department.fscs.length === 1 ? 'class' : 'classes'} with parts on this site{namedClasses.length > 0 && ': '}
         {namedClasses.map((f, i) => (
           <>{i > 0 && (i === namedClasses.length - 1 ? ' and ' : ', ')}<a href={`/fsc/${f.fsc}/`}>{f.name}</a> (FSC {f.fsc})</>
         ))}.
