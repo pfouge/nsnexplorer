@@ -17,30 +17,63 @@ const breadcrumbs = [
   <p class="eyebrow">About</p>
   <h1>About {SITE_NAME}</h1>
   <p class="lede">
-    NSN Explorer is an independent project built for suppliers who want to find and win federal
-    parts work — it indexes public U.S. government procurement records — DIBBS solicitations and
-    awards, and USAspending contract data — into one searchable site.
+    NSN Explorer is an independent, free index of what the U.S. government buys in parts: the
+    solicitations open for bid now, the prices paid before, and the companies that won. It is built
+    for suppliers who want to find and win federal parts work.
   </p>
 
   <hr class="rule" />
 
+  <h2>Why it exists</h2>
   <p class="gloss">
-    We built it because that data exists but is scattered across systems built for procurement
-    officers, not for the businesses that could fill the orders. NSN Explorer renders the same
-    public facts clearly: what's open now, per part, over time, with a link back to the source
-    record behind every figure — so a supplier can find work and quote it with confidence. The
-    same index also serves buyers sizing up a category, researchers and market-watchers tracking
-    federal demand, investors watching a sector, and journalists checking a number.
-  </p>
-  <p class="gloss">
-    We are not a government entity and we don't sell parts to the government ourselves on this
-    site, and we don't broker or submit bids on anyone's behalf. Every figure here links to the
-    public record it came from. Nothing on this site is estimated or modeled — if you find an
-    error, tell us and we'll fix it.
+    The data is public, but it is scattered across systems built for procurement officers, not for
+    the businesses that could fill the orders. NSN Explorer puts the same public facts in one
+    place: what is open now, per part, over time, with a link back to the source record behind
+    every figure, so a supplier can find work and quote it with confidence. The same index also
+    serves buyers sizing up a category, researchers tracking federal demand and journalists
+    checking a number.
   </p>
 
-  <hr class="rule" />
+  <h2>What is on the site</h2>
+  <ul class="gloss">
+    <li><a href="/open/">Open demand</a>: parts solicitations open for bid today, by supply class, with quantity, return-by date and the last price paid.</li>
+    <li><a href="/services/">Services</a>: open service contract notices from SAM.gov.</li>
+    <li><a href="/catalog/">Catalog</a> and <a href="/browse/">price history</a>: every part with buying activity, its purchase prices, part numbers, characteristics and, for many parts, a dimensioned drawing.</li>
+    <li><a href="/supplier/">Suppliers</a> and <a href="/agencies/">agencies</a>: who wins awards and who buys.</li>
+    <li><a href="/guides/">Guides</a>: plain-language explanations of NSNs, CAGE codes, supply classes, competition codes and how to bid on DIBBS.</li>
+    <li>Tools: <a href="/compare/">compare parts side by side</a>, <a href="/lookup/">look up a whole list of NSNs</a>, and a bid calculator on part and solicitation pages.</li>
+  </ul>
 
+  <h2>Where the data comes from</h2>
+  <p class="gloss">
+    Solicitations and awards come from DIBBS, the Defense Logistics Agency's bid board. Contract
+    notices come from SAM.gov and contract actions from USAspending. Part identification,
+    characteristics and management data come from DLA's public PUB LOG and FLIS files, and company
+    names and locations from the public CAGE file. Each source is checked every day and the site
+    is rebuilt from it daily. The <a href="/methodology/">methodology</a> page explains every
+    figure and shows how fresh each source is.
+  </p>
+  <p class="gloss">
+    Nothing on this site is estimated or modeled unless it is labelled as an estimate, and every
+    figure links to the public record it came from. If you find an error,
+    <a href="/contact/">tell us</a> and we will fix it.
+  </p>
+
+  <h2>What we are not</h2>
+  <p class="gloss">
+    We are not a government entity. We do not sell parts to the government through this site, and we
+    do not broker or submit bids on anyone's behalf. Bids are placed on the government's own
+    systems; our pages link to them.
+  </p>
+
+  <h2>Who runs it</h2>
+  <p class="gloss">
+    NSN Explorer is operated by NAO Parts LLC, a United States company. The site is free to use.
+    How to reach us is on the <a href="/contact/">contact page</a>; how we handle information is in
+    the <a href="/privacy/">privacy policy</a> and the <a href="/terms/">terms</a>.
+  </p>
+
+  <h2>Accounts and our crawler</h2>
   <p class="gloss">
     Optional accounts sign in through <a href="https://workos.com" rel="noopener nofollow" target="_blank">WorkOS</a>.
     Watchlists and saved searches are stored with our database provider; see the
@@ -58,8 +91,6 @@ const breadcrumbs = [
     <code>robots.txt</code> or <a href={`mailto:${CONTACT_EMAIL}`}>email us</a>. Suppliers can also ask us to hide their contact
     details or website summary; see <a href="/privacy/#suppliers">Supplier information</a> in the privacy policy.
   </p>
-
-  <p class="gloss">NSN Explorer is operated by NAO Parts LLC.</p>
 
   <p class="gloss">
     Contact: <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>

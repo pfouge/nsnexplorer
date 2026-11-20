@@ -72,6 +72,8 @@ const range = pageRange(allCards.length, page);
 const isOpenCard = (c: ProductCard) => c.openCount > 0;
 const totalOpen = allCards.filter(isOpenCard).length;
 const totals = { open: totalOpen, closed: allCards.length - totalOpen, all: allCards.length };
+// A class with nothing open and only one or two closed solicitations on record is a near-empty
+// page: reachable, but kept out of search indexes and the sitemap (noindex, follow).
 const before = allCards.slice(0, (page - 1) * PAGE_SIZE);
 const beforeOpen = before.filter(isOpenCard).length;
 const offsets = { open: beforeOpen, closed: before.length - beforeOpen, all: before.length };
@@ -194,6 +196,7 @@ const breadcrumbSchema = {
   extraSchema={[breadcrumbSchema]}
   headLinks={headLinks}
   itemList={itemList}
+  noindex={totals.open === 0 && totals.all < 3 ? 'follow' : undefined}
 >
   <nav class="breadcrumb" aria-label="Breadcrumb">
     <a href="/">Home</a> › <a href="/open/">Open demand</a> › {displayName}

@@ -7,6 +7,7 @@ import FreshnessStrip from '../components/viz/FreshnessStrip.astro';
 import { SITE_NAME } from '../consts';
 import { ACCOUNTS_ENABLED } from '../lib/account';
 import { adsEnabled } from '../lib/ads';
+import { ADSENSE_CLIENT } from '../lib/ads-config';
 import { CONSENT_COUNTRIES } from '../lib/consent';
 
 interface Props {
@@ -25,26 +26,20 @@ interface Props {
   /** Show the moving demand tape under the header (home and the open-demand hub only). */
   tape?: boolean;
   /**
-   * Advertising opt-in, false unless a page sets it. Only guides, the methodology page,
-   * class, group, catalog and browse listings and agency pages pass true, and only when
+   * Advertising opt-in, false unless a page sets it. Only the home page, guides, the methodology
+   * page, class, group, catalog and browse listings and agency pages pass true, and only when
    * they have content to show (an error or empty state passes false). noindex pages never
-   * get the ad tag even if they pass true. See ADSENSE_CLIENT below.
+   * get the ad tag even if they pass true. See lib/ads-config.ts.
    */
   ads?: boolean;
 }
 
 const { tape = false, ads = false, ...seoProps } = Astro.props;
 
-// Advertising (Google AdSense, Auto ads). ADSENSE_CLIENT is the publisher id of the AdSense
-// account this site joins ("ca-pub-" + 16 digits). It is empty until that account exists:
-// while empty, no ad tag and no verification meta render anywhere. When it is filled in,
-// public/ads.txt MUST be added in the same change, with the line
-//   google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0
-// (same digits as the id). Do not create ads.txt before then. The tag renders only in
-// production builds, only on pages that pass ads={true} (never noindex pages), see lib/ads.ts.
-// Before filling this in, add a Google-certified consent message for the EEA, UK and
-// Switzerland: the consent bar below covers analytics only.
-const ADSENSE_CLIENT = '';
+// Advertising (Google AdSense). The publisher id and the in-page unit flag live in
+// lib/ads-config.ts, the one switch file. The verification meta tag and the AdSense script
+// render only in production builds, only on pages that pass ads={true}, and never on noindex
+// pages (lib/ads.ts). public/ads.txt carries the same publisher id.
 const adsOn = adsEnabled({ client: ADSENSE_CLIENT, prod: import.meta.env.PROD, ads, noindex: seoProps.noindex });
 // Consent Mode v2 defaults: denied in the EEA, UK and Switzerland until the visitor allows analytics.
 const CONSENT_REGIONS = [...CONSENT_COUNTRIES];
@@ -112,13 +107,20 @@ const secondary = allLinks.filter((l) => !l.primary);
 
     <SEO {...seoProps} />
 
-    <!-- Google Consent Mode v2 defaults. Must stay above every Google tag. In the EEA, UK and
-         Switzerland (CONSENT_REGIONS) all four signals start denied; elsewhere Google's default
-         (granted) applies. The loader below reports "granted" for analytics_storage when a visitor
-         allows analytics, so the one page view it then sends is a normal one. -->
+    <!-- Google Consent Mode v2 defaults. Must stay above every Google tag. Two default commands:
+         the first, with no region, denies the three advertising signals everywhere (no ads are
+         shown yet and no advertising cookie is set); the second denies all four signals,
+         analytics included, in the EEA, UK and Switzerland (CONSENT_REGIONS). Elsewhere analytics
+         keeps Google's default. The loader below reports "granted" for analytics_storage when a
+         visitor allows analytics, so the one page view it then sends is a normal one. -->
     <script is:inline define:vars={{ CONSENT_REGIONS }}>
       window.dataLayer = window.dataLayer || [];
       window.gtag = function () { window.dataLayer.push(arguments); };
+      window.gtag('consent', 'default', {
+        ad_storage: 'denied',
+        ad_user_data: 'denied',
+        ad_personalization: 'denied',
+      });
       window.gtag('consent', 'default', {
         ad_storage: 'denied',
         ad_user_data: 'denied',

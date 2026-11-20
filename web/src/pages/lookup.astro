@@ -40,6 +40,37 @@ const breadcrumbs = [
   <p class="gloss" id="bulk-status" role="status" aria-live="polite"></p>
   <div id="bulk-out"></div>
   <noscript><p class="gloss">The bulk lookup needs JavaScript. You can still look up one item at a time with the search on the home page.</p></noscript>
+
+  <section>
+    <h2 class="section-title">What you get for each number</h2>
+    <ul class="gloss">
+      <li><strong>Item name and supply class.</strong> The government's name for the part and the four-digit class it is filed under.</li>
+      <li><strong>Last price.</strong> The unit price on the newest purchase record we hold, with its date and a link to the record.</li>
+      <li><strong>Competition coding.</strong> Whether the part is bought competitively or only from approved sources, read from the acquisition method codes.</li>
+      <li><strong>Open bids.</strong> How many solicitations are open for the part today.</li>
+    </ul>
+    <p class="gloss">
+      Valid numbers that are not in our catalog are listed separately, and so are entries that are not stock
+      numbers, so you can see at once which lines of your list have government buying activity on record. The whole table downloads as a CSV file.
+    </p>
+    <h2 class="section-title">Accepted formats</h2>
+    <p class="gloss">
+      Paste up to 500 entries, one per line or separated by commas, semicolons or tabs. A full NSN works with or without
+      dashes (5340-01-396-7260 or 5340013967260), and so does a NIIN, the last nine digits of an NSN (013967260).
+      Duplicates are looked up once. A column copied straight from a spreadsheet works as it is.
+    </p>
+    <h2 class="section-title">When it helps</h2>
+    <ul class="gloss">
+      <li><strong>Screening a parts list.</strong> Run the list of parts your shop can make and see which ones the government is asking for now.</li>
+      <li><strong>Pricing a multi-line quote.</strong> Pull the last price paid for every line before you set your own.</li>
+      <li><strong>Checking a customer's request.</strong> See which stock numbers on a request for quote are limited to approved sources.</li>
+    </ul>
+    <p class="gloss">
+      To study a few parts in depth, <a href="/compare/">compare them side by side</a>. The codes in the competition
+      column are explained in the <a href="/guides/amc-amsc-codes/">AMC and AMSC guide</a>, and the sources behind every
+      figure in the <a href="/methodology/">methodology</a>.
+    </p>
+  </section>
 </BaseLayout>
 
 <style>
