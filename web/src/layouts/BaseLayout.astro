@@ -7,7 +7,8 @@ import FreshnessStrip from '../components/viz/FreshnessStrip.astro';
 import { SITE_NAME } from '../consts';
 import { ACCOUNTS_ENABLED } from '../lib/account';
 import { adsEnabled } from '../lib/ads';
-import { ADSENSE_CLIENT } from '../lib/ads-config';
+import { ADSENSE_CLIENT, AD_UNITS_ON } from '../lib/ads-config';
+import AdUnit from '../components/AdUnit.astro';
 import { CONSENT_COUNTRIES } from '../lib/consent';
 
 interface Props {
@@ -108,18 +109,20 @@ const secondary = allLinks.filter((l) => !l.primary);
     <SEO {...seoProps} />
 
     <!-- Google Consent Mode v2 defaults. Must stay above every Google tag. Two default commands:
-         the first, with no region, denies the three advertising signals everywhere (no ads are
-         shown yet and no advertising cookie is set); the second denies all four signals,
-         analytics included, in the EEA, UK and Switzerland (CONSENT_REGIONS). Elsewhere analytics
-         keeps Google's default. The loader below reports "granted" for analytics_storage when a
-         visitor allows analytics, so the one page view it then sends is a normal one. -->
+         the first, with no region, sets the three advertising signals for visitors outside the
+         consent regions: granted, unless the browser sends Global Privacy Control, in which case
+         denied. The second denies all four signals, analytics included, in the EEA, UK and
+         Switzerland (CONSENT_REGIONS) until Google's consent message (AdSense, Privacy and
+         messaging) updates them with the visitor's choice. The loader below reports "granted"
+         for analytics_storage when a visitor allows analytics. -->
     <script is:inline define:vars={{ CONSENT_REGIONS }}>
       window.dataLayer = window.dataLayer || [];
       window.gtag = function () { window.dataLayer.push(arguments); };
+      var adConsent = navigator.globalPrivacyControl === true ? 'denied' : 'granted';
       window.gtag('consent', 'default', {
-        ad_storage: 'denied',
-        ad_user_data: 'denied',
-        ad_personalization: 'denied',
+        ad_storage: adConsent,
+        ad_user_data: adConsent,
+        ad_personalization: adConsent,
       });
       window.gtag('consent', 'default', {
         ad_storage: 'denied',
@@ -285,7 +288,9 @@ const secondary = allLinks.filter((l) => !l.primary);
 
     <main id="main-content" tabindex="-1">
       <div class="container">
+        <AdUnit position="top" on={adsOn} />
         <slot />
+        <AdUnit position="multiplex" on={adsOn} />
       </div>
     </main>
 
@@ -356,5 +361,24 @@ const secondary = allLinks.filter((l) => !l.primary);
       // script for this one and left the shell (search, menu, tabs) out of every page.
       import '../scripts/account.ts';
     </script>
+    {adsOn && AD_UNITS_ON && (
+      <script is:inline>
+        // One push per ad unit on the page. A unit whose ad never arrives (script blocked, or
+        // Google has nothing to show) is hidden so no empty labelled box is left behind.
+        (function () {
+          var units = document.querySelectorAll('.ad-unit');
+          for (var i = 0; i < units.length; i++) {
+            try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) {}
+          }
+          window.addEventListener('load', function () {
+            setTimeout(function () {
+              for (var j = 0; j < units.length; j++) {
+                if (!units[j].querySelector('ins[data-adsbygoogle-status]')) units[j].hidden = true;
+              }
+            }, 3000);
+          });
+        })();
+      </script>
+    )}
   </body>
 </html>

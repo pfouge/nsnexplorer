@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import AdUnit from '../../components/AdUnit.astro';
 import GuideFooter from '../../components/GuideFooter.astro';
 import { SITE_URL } from '../../consts';
 import {
@@ -143,6 +144,8 @@ const sources = [
       The two codes are written together. A part coded 2G has AMC 2 and AMSC G.
     </p>
   </section>
+
+  <AdUnit position="article" on={true} />
 
   <section>
     <h2 class="section-title">Acquisition method codes (AMC)</h2>

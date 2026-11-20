@@ -7,7 +7,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import { SITE_NAME, CONTACT_EMAIL } from '../consts';
 import { ACCOUNTS_ENABLED } from '../lib/account';
 
-const updated = 'November 19, 2026';
+const updated = 'November 20, 2026';
 ---
 
 <BaseLayout
@@ -25,8 +25,8 @@ const updated = 'November 19, 2026';
 
   <div class="note">
     <b>Plain-language summary.</b> You can browse {SITE_NAME} anonymously. We use analytics to
-    understand how the Services are used. No advertising is shown today; we have applied to Google's
-    advertising program, and some pages load Google's script so Google can review the site. If
+    understand how the Services are used, and some pages show advertising from Google to help keep
+    the Services free. If
     you give us your email, we use it for the updates you asked for. An account is optional: if you
     create one, we store what is needed to run it, your email and your watchlists. We do not sell your personal information. You can contact us any time to access or
     delete your data.
@@ -78,7 +78,7 @@ const updated = 'November 19, 2026';
     <li>Send you updates you signed up for.</li>
     <li>Provide account features you choose to use, such as watchlists and saved searches.</li>
     <li>Measure and analyze traffic and usage so we can make the Services more useful.</li>
-    <li>Let Google review the site for its advertising program (see <a href="#advertising">Advertising</a>).</li>
+    <li>Show and measure advertising that helps keep the Services free (see <a href="#advertising">Advertising</a>).</li>
     <li>Respond to your messages and requests.</li>
     <li>Protect the Services against fraud, abuse, and security threats, and comply with legal obligations.</li>
   </ul>
@@ -91,7 +91,7 @@ const updated = 'November 19, 2026';
   <ul>
     <li><strong>Essential.</strong> Needed for the Services to function, for example to keep you signed in if you create an account.</li>
     <li><strong>Analytics.</strong> To understand how the Services are used so we can improve them. See <a href="#analytics">Analytics</a>.</li>
-    <li><strong>Advertising.</strong> None today: no advertising cookie is set. See <a href="#advertising">Advertising</a>.</li>
+    <li><strong>Advertising.</strong> Set by Google and its partners to show and measure ads, where you have allowed it. See <a href="#advertising">Advertising</a>.</li>
   </ul>
   <p>
     You can control cookies through your browser settings. Blocking some cookies may affect how
@@ -163,37 +163,43 @@ const updated = 'November 19, 2026';
 
   <h2 id="advertising">Advertising</h2>
   <p>
-    <strong>No advertising is shown on the Services today.</strong> We have applied to Google
-    AdSense, Google's advertising program, so that advertising can later help keep the Services
-    free. Google is reviewing the site.
+    Some pages of the Services show advertising served by Google AdSense, Google's advertising
+    program. The ads help keep the Services free. Every ad block is marked "Advertisements".
   </p>
-  <p>For that review, this is what happens now:</p>
   <ul>
     <li>
-      <strong>Google's AdSense script loads on some pages:</strong> the home page, guides, the
-      methodology page, and category and agency pages. It does not load on legal pages, the contact
-      page, search results, watchlists, or the pages for a single part, supplier or solicitation.
-    </li>
-    <li><strong>No ads are displayed</strong> on any page.</li>
-    <li>
-      <strong>No advertising cookies are set.</strong> Before the script loads, the page tells it
-      that consent for advertising storage, advertising user data and ad personalization is
-      denied. This is the setting for every visitor, in every country.
+      <strong>Where ads appear:</strong> the home page, guides, the methodology page, and
+      category and agency pages. Ads do not appear on legal pages, the contact page, search
+      results, watchlists, or the pages for a single part, supplier or solicitation.
     </li>
     <li>
-      <strong>Google receives the request for the script.</strong> As with any file loaded from
-      another company, your browser sends Google your IP address and technical details about your
-      browser when it fetches the script. How Google uses data from sites that use its services is
-      described at <a href="https://policies.google.com/technologies/partner-sites" rel="nofollow noopener" target="_blank">policies.google.com/technologies/partner-sites</a>.
+      <strong>Cookies.</strong> Third-party vendors, including Google, use cookies to serve ads
+      based on your earlier visits to this and other websites. Google's advertising cookies let
+      Google and its partners serve ads to you based on your visits to the Services and other
+      sites on the internet, and measure how ads perform.
+    </li>
+    <li>
+      <strong>What Google receives.</strong> When a page with ads loads, your browser contacts
+      Google and sends your IP address, technical details about your browser, and the address of
+      the page. How Google uses data from sites that use its services is described at
+      <a href="https://policies.google.com/technologies/partner-sites" rel="nofollow noopener" target="_blank">policies.google.com/technologies/partner-sites</a>.
     </li>
   </ul>
-  <p>
-    <strong>Before any ad is shown, this policy will be updated.</strong> It will then say where
-    ads appear, which cookies Google and its partners use, and how visitors are asked: visitors in
-    the European Economic Area, the United Kingdom and Switzerland will be asked before any
-    advertising cookie is set.
-  </p>
-  <p>Your choices about Google's personalized advertising in general are available now:</p>
+  <h3 id="ad-consent">Your consent</h3>
+  <ul>
+    <li>
+      <strong>European Economic Area, United Kingdom and Switzerland.</strong> No advertising
+      cookie is set and no personal data is used for advertising unless you agree. On your first
+      visit Google's consent message asks you; it has a "Do not consent" button. You can change
+      your choice later with the privacy and cookie settings link the message adds to the page.
+    </li>
+    <li>
+      <strong>Everywhere else.</strong> Advertising cookies are allowed by default. If your
+      browser sends the Global Privacy Control signal, we tell Google that consent for advertising
+      storage, advertising user data and ad personalization is denied.
+    </li>
+  </ul>
+  <p>You can also opt out of personalized advertising at any time:</p>
   <ul>
     <li>Manage Google ad personalization at <a href="https://adssettings.google.com" rel="nofollow noopener" target="_blank">Google Ad Settings</a>.</li>
     <li>Opt out of personalized advertising from participating companies at the <a href="https://optout.aboutads.info" rel="nofollow noopener" target="_blank">Digital Advertising Alliance</a> and the <a href="https://optout.networkadvertising.org" rel="nofollow noopener" target="_blank">Network Advertising Initiative</a>.</li>
@@ -236,7 +242,7 @@ const updated = 'November 19, 2026';
     <li>
       <strong>Service providers.</strong> Companies that help us run the Services process
       information on our behalf: our hosting and content delivery provider, our database
-      provider, our analytics provider, Google for the advertising review described above, and, for accounts, our sign-in provider
+      provider, our analytics provider, Google as our advertising provider, and, for accounts, our sign-in provider
       (WorkOS).
     </li>
     <li>
@@ -253,7 +259,7 @@ const updated = 'November 19, 2026';
     Google acts as an independent controller of the data it collects through its analytics and
     advertising scripts. Depending on where you live, certain ad-related data sharing may
     be considered a "sale" or "sharing" of personal information under laws such as the California
-    Consumer Privacy Act; no such sharing for advertising takes place while no ads are shown. You can exercise the choices described in
+    Consumer Privacy Act. You can exercise the choices described in
     <a href="#advertising">Advertising</a> and <a href="#your-rights">Your rights</a>.
   </p>
 

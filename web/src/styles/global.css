@@ -753,3 +753,21 @@ button.copy, .copy-btn { font: inherit; font-size: 0.8125rem; font-weight: 600; 
   .switch { border: 1px solid ButtonText; }
   .switch::after { background: ButtonText; }
 }
+
+/* ---------- Advertising (components/AdUnit.astro) ----------
+   Space is reserved here so nothing shifts when an ad loads. The display units (top, mid,
+   low) carry no data-ad-format: AdSense fills the box these rules size. A unit Google leaves
+   unfilled, or whose script never ran (hidden attribute, set in BaseLayout), takes no space.
+   The label text is fixed by AdSense policy: exactly "Advertisements", never transformed. */
+.ad-unit { margin: 2rem 0; clear: both; }
+.ad-unit--top { margin: 1rem 0 1.75rem; }
+.ad-unit--multiplex { margin: 2.5rem 0 1rem; }
+.ad-label { margin: 0 0 0.3rem; font-size: 0.6875rem; line-height: 1.2; letter-spacing: 0.03em; color: var(--ink-soft); text-transform: none; }
+.ad-unit ins.adsbygoogle { display: block; width: 100%; }
+.ad-unit--top ins.adsbygoogle { max-width: 970px; height: 100px; }
+@media (min-width: 768px) { .ad-unit--top ins.adsbygoogle { height: 90px; } }
+.ad-unit--mid ins.adsbygoogle, .ad-unit--low ins.adsbygoogle { max-width: 970px; height: 280px; }
+.ad-unit--article { max-width: 78ch; min-height: 300px; }
+.ad-unit--multiplex { min-height: 320px; }
+.ad-unit[hidden], .ad-unit:has(ins.adsbygoogle[data-ad-status="unfilled"]) { display: none; }
+@media print { .ad-unit { display: none; } }

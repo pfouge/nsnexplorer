@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import AdUnit from '../components/AdUnit.astro';
 import { loadSiteData, formatUsd } from '../lib/data';
 import { SITE_URL } from '../consts';
 import CiteThis from '../components/CiteThis.astro';
@@ -133,6 +134,8 @@ const faq = [
     </div>
     </>
   )}
+
+  <AdUnit position="mid" on={rows.length > 0} />
 
   <section class="faq">
     <h2 class="section-title">Agency spending questions</h2>

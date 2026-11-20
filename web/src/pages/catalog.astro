@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import AdUnit from '../components/AdUnit.astro';
 import { SITE_URL } from '../consts';
 import CiteThis from '../components/CiteThis.astro';
 import { loadSiteData } from '../lib/data';
@@ -132,6 +133,8 @@ const faq = [
       </div>
     )}
   </section>
+
+  <AdUnit position="mid" on={departments.length > 0} />
 
   <section class="faq">
     <h2 class="section-title">Federal supply class questions</h2>

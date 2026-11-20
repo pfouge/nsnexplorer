@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import AdUnit from '../components/AdUnit.astro';
 import { fscLabel, listedFscName } from '../lib/seo-copy';
 import HomeSearch from '../components/HomeSearch.astro';
 import SignupForm from '../components/SignupForm.astro';
@@ -186,6 +187,8 @@ const itemList = {
       })
     )}
   </section>
+
+  <AdUnit position="mid" on={true} />
 
   <section class="manifesto">
     <p class="eyebrow">Why we built this</p>

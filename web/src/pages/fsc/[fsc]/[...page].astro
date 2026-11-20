@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../../layouts/BaseLayout.astro';
+import AdUnit from '../../../components/AdUnit.astro';
 import SignupForm from '../../../components/SignupForm.astro';
 import Pager from '../../../components/Pager.astro';
 import CiteThis from '../../../components/CiteThis.astro';
@@ -49,6 +50,8 @@ const total = allCards.length;
 // A class with only a few tracked parts is a near-empty page: reachable from the catalog, but
 // noindex (so out of the sitemap, and without the ad tag).
 const BARE_CLASS_MAX_PARTS = 5;
+// In-page ad units only where the page loads the ad script (same test as the layout's).
+const adsHere = total >= BARE_CLASS_MAX_PARTS;
 const range = pageRange(total, page);
 const baseUrl = `/fsc/${fsc.fsc}/`;
 const materialFamilies = familyCounts(allCards.map((c) => c.material));
@@ -248,6 +251,8 @@ const breadcrumbSchema = {
       </div>
     </section>
   )}
+
+  {hasMarket && market && <AdUnit position="mid" on={adsHere} />}
 
   <section class="products-section" id="products">
     <h2 class="section-title">Products</h2>

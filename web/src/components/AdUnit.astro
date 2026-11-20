@@ -1,0 +1,38 @@
+---
+// One AdSense ad unit, with its label and reserved space. Renders nothing unless in-page units
+// are switched on (AD_UNITS_ON in lib/ads-config.ts), the position has a slot id, and the page
+// loads the ad script: `on` must be the same expression the page passes to BaseLayout's `ads`
+// prop, and adsEnabled() adds the production-build and publisher-id checks. A noindex page never
+// loads the script, so such a page must pass on={false}.
+//
+// Rules (AdSense policy, learned on spotthemoney.com):
+//  - the label reads exactly "Advertisements";
+//  - never place a unit inside a table, or next to a pager, Previous/Next buttons, download
+//    buttons or a menu;
+//  - the space is reserved in CSS (styles/global.css, .ad-unit) so nothing shifts when an ad
+//    loads, and a unit Google leaves unfilled is hidden.
+// The (adsbygoogle).push call for every unit on the page is made once, in BaseLayout.
+import { adsEnabled } from '../lib/ads';
+import { ADSENSE_CLIENT, AD_UNITS_ON, AD_SLOTS } from '../lib/ads-config';
+
+interface Props {
+  /** Which unit. Not named `slot`: Astro reserves that attribute for named slots and would drop the unit. */
+  position: keyof typeof AD_SLOTS;
+  on: boolean;
+}
+const { position: slot, on } = Astro.props;
+const id = AD_SLOTS[slot];
+const show = AD_UNITS_ON && /^\d{6,}$/.test(id) && adsEnabled({ client: ADSENSE_CLIENT, prod: import.meta.env.PROD, ads: on === true, noindex: undefined });
+---
+{show && (
+  <aside class={`ad-unit ad-unit--${slot}`} aria-label="Advertisements">
+    <p class="ad-label">Advertisements</p>
+    {slot === 'article' ? (
+      <ins class="adsbygoogle" style="display:block; text-align:center;" data-ad-layout="in-article" data-ad-format="fluid" data-ad-client={ADSENSE_CLIENT} data-ad-slot={id}></ins>
+    ) : slot === 'multiplex' ? (
+      <ins class="adsbygoogle" style="display:block" data-ad-format="autorelaxed" data-ad-client={ADSENSE_CLIENT} data-ad-slot={id}></ins>
+    ) : (
+      <ins class="adsbygoogle" data-ad-client={ADSENSE_CLIENT} data-ad-slot={id}></ins>
+    )}
+  </aside>
+)}

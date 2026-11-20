@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import AdUnit from '../../components/AdUnit.astro';
 import GuideFooter from '../../components/GuideFooter.astro';
 import { SITE_URL } from '../../consts';
 import { ACCOUNTS_ENABLED } from '../../lib/account';
@@ -95,6 +96,8 @@ const sources = [
       </table>
     </div>
   </section>
+
+  <AdUnit position="article" on={true} />
 
   <section>
     <h2 class="section-title">What the watchlist page shows</h2>

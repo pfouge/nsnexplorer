@@ -18,11 +18,12 @@ const FORBIDDEN = 'pub-' + '7904' + '1739' + '8827' + '1272';
 test('the switch file holds the one publisher id; BaseLayout imports it; units are off', () => {
   assert.ok(ADSENSE_CLIENT_RE.test(ADSENSE_CLIENT));
   assert.notEqual(ADSENSE_CLIENT, 'ca-' + FORBIDDEN);
-  assert.equal(AD_UNITS_ON, false, 'phase 1: no in-page units');
+  assert.equal(typeof AD_UNITS_ON, 'boolean');
   assert.deepEqual(Object.keys(AD_SLOTS), ['top', 'mid', 'low', 'article', 'multiplex']);
-  for (const v of Object.values(AD_SLOTS)) assert.equal(v, '', 'slot ids are filled in phase 2');
+  for (const v of Object.values(AD_SLOTS)) assert.match(v, /^\d{10}$/);
+  assert.equal(new Set(Object.values(AD_SLOTS)).size, 5, 'one slot id per position');
   const layout = src('layouts/BaseLayout.astro');
-  assert.match(layout, /import \{ ADSENSE_CLIENT \} from '\.\.\/lib\/ads-config';/);
+  assert.match(layout, /import \{ ADSENSE_CLIENT, AD_UNITS_ON \} from '\.\.\/lib\/ads-config';/);
   assert.doesNotMatch(layout, /const ADSENSE_CLIENT/);
 });
 
@@ -109,33 +110,38 @@ test('consent regions: 27 EU states plus IS, LI, NO, GB, CH, shared with /api/re
   assert.match(src('pages/api/region.json.ts'), /from '..\/..\/lib\/consent'/);
 });
 
-test('Consent Mode v2 defaults sit above every Google tag: ad signals denied everywhere, all four in the consent regions', () => {
+test('Consent Mode v2 defaults sit above every Google tag: ad signals granted outside the consent regions unless GPC, all four denied inside them', () => {
   const layout = src('layouts/BaseLayout.astro');
   const def = layout.indexOf("gtag('consent', 'default'");
   const def2 = layout.indexOf("gtag('consent', 'default'", def + 1);
   assert.ok(def > 0 && def2 > def);
   assert.equal(layout.match(/gtag\('consent', 'default'/g)?.length, 2);
   for (const marker of ['googletagmanager.com/gtag/js', 'adsbygoogle.js', 'google-adsense-account', "gtag('config'"]) assert.ok(layout.indexOf(marker) > def2, `${marker} comes after the defaults`);
-  // 1: worldwide, no region key, the three advertising signals denied, analytics untouched
+  // 1: worldwide, no region key: the three advertising signals follow Global Privacy Control
   const world = layout.slice(def, layout.indexOf('});', def));
-  for (const k of ['ad_storage', 'ad_user_data', 'ad_personalization']) assert.match(world, new RegExp(`${k}: 'denied'`));
-  assert.doesNotMatch(world, /region|analytics_storage|granted/);
+  for (const k of ['ad_storage', 'ad_user_data', 'ad_personalization']) assert.match(world, new RegExp(`${k}: adConsent`));
+  assert.doesNotMatch(world, /region|analytics_storage/);
+  assert.match(layout, /var adConsent = navigator\.globalPrivacyControl === true \? 'denied' : 'granted';/);
   // 2: the consent regions, all four denied
   const block = layout.slice(def2, layout.indexOf('});', def2));
   for (const k of ['ad_storage', 'ad_user_data', 'ad_personalization', 'analytics_storage']) assert.match(block, new RegExp(`${k}: 'denied'`));
   assert.match(block, /region: CONSENT_REGIONS/);
   assert.match(block, /wait_for_update: 500/);
-  // nothing grants an advertising signal anywhere in the layout
+  // no advertising signal is granted by a literal: only through adConsent (GPC-aware), outside the regions
   assert.doesNotMatch(layout, /ad_(storage|user_data|personalization): 'granted'/);
   // exactly one config call: one page view per page
   assert.equal(layout.match(/gtag\('config'/g)?.length, 1);
 });
 
-test('the privacy page says what is true in phase 1', () => {
+test('the privacy page describes advertising as it runs', () => {
   const p = src('pages/privacy.astro');
-  assert.match(p, /No advertising is shown on the Services today/);
-  assert.match(p, /No advertising cookies are set/);
+  assert.match(p, /show advertising served by Google AdSense/);
+  assert.match(p, /Third-party vendors, including Google, use cookies to serve ads/);
+  assert.match(p, /"Do not consent" button/);
+  assert.match(p, /Global Privacy Control/);
+  assert.match(p, /adssettings\.google\.com/);
   assert.match(p, /policies\.google\.com\/technologies\/partner-sites/);
+  assert.doesNotMatch(p, /No advertising is shown/);
 });
 
 test('footer links About, Contact, Terms and Privacy; the contact page uses the address constant and has no em dash', () => {
@@ -146,4 +152,40 @@ test('footer links About, Contact, Terms and Privacy; the contact page uses the 
   assert.match(contact, /NAO Parts LLC/);
   assert.ok(!contact.includes('—'));
   assert.ok(src('pages/llms.txt.ts').includes('/contact/'));
+});
+
+test('ad units: exact label, one component, never in a table, only on pages that opt in to ads', () => {
+  const unit = src('components/AdUnit.astro');
+  assert.match(unit, /<p class="ad-label">Advertisements<\/p>/);
+  assert.match(unit, /aria-label="Advertisements"/);
+  assert.match(unit, /AD_UNITS_ON && /);
+  assert.match(unit, /adsEnabled\(/);
+  // the label is never restyled into other text
+  const css = src('styles/global.css');
+  assert.match(css, /\.ad-label \{[^}]*text-transform: none/);
+  assert.doesNotMatch(css, /\.ad-label[^{]*::(before|after)/);
+  assert.match(css, /\.ad-unit\[hidden\], \.ad-unit:has\(ins\.adsbygoogle\[data-ad-status="unfilled"\]\) \{ display: none; \}/);
+  const pagesDir = new URL('../pages/', import.meta.url).pathname;
+  const walk = (d: string): string[] => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]));
+  let used = 0;
+  for (const f of walk(pagesDir).filter((x) => x.endsWith('.astro'))) {
+    const t = fs.readFileSync(f, 'utf8');
+    const n = (t.match(/<AdUnit /g) ?? []).length;
+    if (!n) continue;
+    used += n;
+    assert.match(t, /\n  ads=\{/, `${f} places a unit but does not opt in to ads`);
+    assert.ok(n <= 2, `${f}: at most two in-page units (the layout adds two more)`);
+    // no unit between <table> and </table>
+    for (const m of t.matchAll(/<table[\s\S]*?<\/table>/g)) assert.ok(!m[0].includes('<AdUnit'), `${f}: ad unit inside a table`);
+    // not right next to a pager or a download list
+    for (const m of t.matchAll(/<AdUnit [^>]*\/>/g)) {
+      const around = t.slice(Math.max(0, m.index! - 160), m.index! + m[0].length + 160);
+      assert.ok(!/<Pager|download>|aria-label="Free downloads"/.test(around), `${f}: ad unit next to a pager or download button`);
+    }
+  }
+  assert.ok(used >= 15);
+  // `slot` is reserved by Astro (named slots): a unit passed slot="..." inside a page is dropped
+  for (const f of walk(new URL('../', import.meta.url).pathname).filter((x) => x.endsWith('.astro'))) assert.doesNotMatch(fs.readFileSync(f, 'utf8'), /<AdUnit slot=/, f);
+  const layout = src('layouts/BaseLayout.astro');
+  assert.match(layout, /<AdUnit position="top" on=\{adsOn\} \/>\s*<slot \/>\s*<AdUnit position="multiplex" on=\{adsOn\} \/>/);
 });

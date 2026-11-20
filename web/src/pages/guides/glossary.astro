@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import AdUnit from '../../components/AdUnit.astro';
 import GuideFooter from '../../components/GuideFooter.astro';
 import { SITE_URL } from '../../consts';
 
@@ -161,6 +162,8 @@ const sources = [
       ))}
     </section>
   ))}
+
+  <AdUnit position="article" on={true} />
 
   <section>
     <h2 class="section-title">On NSN Explorer</h2>

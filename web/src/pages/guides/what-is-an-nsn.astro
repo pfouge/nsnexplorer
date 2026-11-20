@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import AdUnit from '../../components/AdUnit.astro';
 import GuideFooter from '../../components/GuideFooter.astro';
 import { SITE_URL } from '../../consts';
 
@@ -105,6 +106,8 @@ const sources = [
       is 00-357-7976. DLA's PUB LOG tool, for example, lists its results by NIIN.
     </p>
   </section>
+
+  <AdUnit position="article" on={true} />
 
   <section>
     <h2 class="section-title">Who assigns an NSN</h2>
