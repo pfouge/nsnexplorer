@@ -97,6 +97,12 @@ jobs:
       - name: Check pages load the shell script
         run: node web/scripts/verify-shell-script.mjs web/dist
 
+      # Fails the deploy if the AdSense tag is on a page type that must not carry it (legal,
+      # contact, 404, noindex, account, single-item pages), is missing from the home page, or
+      # ads.txt does not match the publisher id in web/src/lib/ads-config.ts.
+      - name: Check advertising tags
+        run: node web/scripts/verify-no-ads.mjs web/dist
+
       - name: Deploy to Cloudflare Pages
         id: deploy
         uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3

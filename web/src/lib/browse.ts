@@ -199,6 +199,17 @@ export function fsgName(fsg: string): string {
   return FSG_NAMES[fsg] ?? `Group ${fsg}`;
 }
 
+/** Fewer tracked parts than this and a group page has nothing of its own to say. */
+export const BARE_GROUP_MAX_NSNS = 50;
+
+/**
+ * True for a group page that should be noindex (and out of the sitemap, with no ad tag): the
+ * handbook has no title for the group, or it tracks fewer than BARE_GROUP_MAX_NSNS parts.
+ */
+export function isBareGroup(g: { fsg: string; nsnCount: number }): boolean {
+  return !(g.fsg in FSG_NAMES) || g.nsnCount < BARE_GROUP_MAX_NSNS;
+}
+
 /**
  * True when `name` is the ingest-time placeholder for an FSC whose real
  * title we don't have yet (see ingest/dibbs/load.mjs's `'FSC ' || fsc`

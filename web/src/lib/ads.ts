@@ -1,11 +1,11 @@
-// Advertising switch. Pure so it can be unit tested; BaseLayout holds the one constant
-// ADSENSE_CLIENT (empty until this site has an AdSense account to join) and calls this.
+// Advertising gate. Pure so it can be unit tested; the publisher id and the unit flag live
+// in ads-config.ts (the switch file) and BaseLayout calls this for every page.
 
 /** "ca-pub-" followed by 16 digits. Anything else counts as not set. */
 export const ADSENSE_CLIENT_RE = /^ca-pub-\d{16}$/;
 
 export interface AdsInput {
-  /** ADSENSE_CLIENT from BaseLayout. */
+  /** ADSENSE_CLIENT from ads-config.ts. */
   client: string;
   /** import.meta.env.PROD: never in dev or preview-of-dev builds. */
   prod: boolean;
