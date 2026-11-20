@@ -46,6 +46,9 @@ if (page === pages) release(cacheKey);
 // This page's slice, in the default sort (most recently purchased, then demand).
 const cards: ProductCard[] = pageItems(allCards, page);
 const total = allCards.length;
+// A class with only a few tracked parts is a near-empty page: reachable from the catalog, but
+// noindex (so out of the sitemap, and without the ad tag).
+const BARE_CLASS_MAX_PARTS = 5;
 const range = pageRange(total, page);
 const baseUrl = `/fsc/${fsc.fsc}/`;
 const materialFamilies = familyCounts(allCards.map((c) => c.material));
@@ -162,6 +165,7 @@ const breadcrumbSchema = {
 
 <BaseLayout
   ads={total > 0}
+  noindex={total < BARE_CLASS_MAX_PARTS ? 'follow' : undefined}
   title={title}
   description={description}
   pageType="CollectionPage"
