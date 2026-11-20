@@ -184,6 +184,8 @@ test('ad units: exact label, one component, never in a table, only on pages that
     }
   }
   assert.ok(used >= 15);
+  // `slot` is reserved by Astro (named slots): a unit passed slot="..." inside a page is dropped
+  for (const f of walk(new URL('../', import.meta.url).pathname).filter((x) => x.endsWith('.astro'))) assert.doesNotMatch(fs.readFileSync(f, 'utf8'), /<AdUnit slot=/, f);
   const layout = src('layouts/BaseLayout.astro');
-  assert.match(layout, /<AdUnit slot="top" on=\{adsOn\} \/>\s*<slot \/>\s*<AdUnit slot="multiplex" on=\{adsOn\} \/>/);
+  assert.match(layout, /<AdUnit position="top" on=\{adsOn\} \/>\s*<slot \/>\s*<AdUnit position="multiplex" on=\{adsOn\} \/>/);
 });

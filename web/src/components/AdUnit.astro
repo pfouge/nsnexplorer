@@ -16,10 +16,11 @@ import { adsEnabled } from '../lib/ads';
 import { ADSENSE_CLIENT, AD_UNITS_ON, AD_SLOTS } from '../lib/ads-config';
 
 interface Props {
-  slot: keyof typeof AD_SLOTS;
+  /** Which unit. Not named `slot`: Astro reserves that attribute for named slots and would drop the unit. */
+  position: keyof typeof AD_SLOTS;
   on: boolean;
 }
-const { slot, on } = Astro.props;
+const { position: slot, on } = Astro.props;
 const id = AD_SLOTS[slot];
 const show = AD_UNITS_ON && /^\d{6,}$/.test(id) && adsEnabled({ client: ADSENSE_CLIENT, prod: import.meta.env.PROD, ads: on === true, noindex: undefined });
 ---

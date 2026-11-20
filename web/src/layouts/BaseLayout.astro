@@ -288,9 +288,9 @@ const secondary = allLinks.filter((l) => !l.primary);
 
     <main id="main-content" tabindex="-1">
       <div class="container">
-        <AdUnit slot="top" on={adsOn} />
+        <AdUnit position="top" on={adsOn} />
         <slot />
-        <AdUnit slot="multiplex" on={adsOn} />
+        <AdUnit position="multiplex" on={adsOn} />
       </div>
     </main>
 

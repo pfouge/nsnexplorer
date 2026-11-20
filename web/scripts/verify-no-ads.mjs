@@ -83,6 +83,14 @@ for (const f of html) {
   const t = fs.readFileSync(f, 'utf8');
   if (/<footer class="site"/.test(t) && !/<footer[\s\S]*href="\/contact\/"[\s\S]*<\/footer>/.test(t)) fails.push(`${rel(f)}: footer lacks the Contact link`);
 }
+if (client && unitsOn) {
+  // the in-page units really render (they once vanished into a named slot)
+  const expect = { 'methodology/index.html': ['article', 'low'], 'catalog/index.html': ['mid'], 'guides/what-is-an-nsn/index.html': ['article'], 'index.html': ['mid'] };
+  for (const [f, kinds] of Object.entries(expect)) {
+    const t = fs.existsSync(path.join(dist, f)) ? fs.readFileSync(path.join(dist, f), 'utf8') : '';
+    for (const k of kinds) if (!t.includes(`ad-unit--${k}`)) fails.push(`/${f}: expected the ${k} unit`);
+  }
+}
 if (client && unitsOn && unitPages !== tagged) fails.push(`units on ${unitPages} pages but the ad tag on ${tagged}`);
 console.log(`checked ${html.length} html files; ad tag on ${tagged}; ad units on ${unitPages}; ${fails.length} problems`);
 for (const x of fails.slice(0, 40)) console.log('FAIL', x);

@@ -252,7 +252,7 @@ const breadcrumbSchema = {
     </section>
   )}
 
-  {hasMarket && market && <AdUnit slot="mid" on={adsHere} />}
+  {hasMarket && market && <AdUnit position="mid" on={adsHere} />}
 
   <section class="products-section" id="products">
     <h2 class="section-title">Products</h2>
@@ -557,7 +557,7 @@ const breadcrumbSchema = {
   </section>
   )}
 
-  {page === 1 && <AdUnit slot="low" on={adsHere} />}
+  {page === 1 && <AdUnit position="low" on={adsHere} />}
 
   <SignupForm
     hook="shop_alerts"
