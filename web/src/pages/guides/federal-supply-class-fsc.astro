@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import AdUnit from '../../components/AdUnit.astro';
 import GuideFooter from '../../components/GuideFooter.astro';
 import { SITE_URL } from '../../consts';
 
@@ -81,6 +82,8 @@ const sources = [
       purpose clothing.
     </p>
   </section>
+
+  <AdUnit slot="article" on={true} />
 
   <section>
     <h2 class="section-title">Examples</h2>

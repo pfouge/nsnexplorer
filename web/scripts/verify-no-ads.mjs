@@ -21,6 +21,7 @@ const allowed = (p) => p === '/' || /^\/(guides\/|methodology\/|catalog\/|browse
 // Pages that must carry the tag whenever an id is set (Google verifies the site on the home page).
 const mustTag = ['/', '/guides/', '/methodology/', '/catalog/'];
 const taggedPaths = new Set();
+let unitPages = 0;
 const fails = [];
 let tagged = 0;
 for (const f of html) {
@@ -33,7 +34,19 @@ for (const f of html) {
     if (has) { tagged++; taggedPaths.add(p); }
     if (has && !(t.includes(`<meta name="google-adsense-account" content="${client}"`) && t.includes(`adsbygoogle.js?client=${client}`))) fails.push(`${p}: needs both the meta tag and the script`);
     if (has && !(t.indexOf("'consent'") >= 0 && t.indexOf("'consent'") < t.indexOf('google-adsense-account'))) fails.push(`${p}: consent defaults must come before the AdSense tag`);
-    if (!unitsOn && /<ins[^>]*class="[^"]*adsbygoogle/.test(t)) fails.push(`${p}: ad unit present while AD_UNITS_ON is false`);
+    const units = t.match(/<aside class="ad-unit[^>]*>[\s\S]*?<\/aside>/g) ?? [];
+    const insCount = (t.match(/<ins[^>]*class="[^"]*adsbygoogle/g) ?? []).length;
+    if (!unitsOn && insCount) fails.push(`${p}: ad unit present while AD_UNITS_ON is false`);
+    if (insCount !== units.length) fails.push(`${p}: an <ins> outside the AdUnit wrapper`);
+    if (units.length && !has) fails.push(`${p}: ad unit on a page that does not load the ad script`);
+    if (units.length > 4) fails.push(`${p}: ${units.length} ad units (max 4)`);
+    if (units.length) unitPages++;
+    for (const u of units) {
+      if (!/<p class="ad-label"[^>]*>Advertisements<\/p>/.test(u)) fails.push(`${p}: ad label is not exactly "Advertisements"`);
+      if (!u.includes(`data-ad-client="${client}"`) || !/data-ad-slot="\d{10}"/.test(u)) fails.push(`${p}: ad unit without client or slot`);
+    }
+    for (const m of t.matchAll(/<table[\s\S]*?<\/table>/g)) if (m[0].includes('class="ad-unit')) fails.push(`${p}: ad unit inside a table`);
+    if (unitsOn && has && !units.some((u) => u.includes('ad-unit--top'))) fails.push(`${p}: tagged page without the top unit`);
     if (t.includes('pub-' + '7904' + '1739' + '8827' + '1272')) fails.push(`${p}: wrong publisher id`);
     if (has && !allowed(p)) fails.push(`${p}: ad tag on a page type that must not carry ads`);
     if (has && noindex) fails.push(`${p}: ad tag on a noindex page`);
@@ -70,6 +83,7 @@ for (const f of html) {
   const t = fs.readFileSync(f, 'utf8');
   if (/<footer class="site"/.test(t) && !/<footer[\s\S]*href="\/contact\/"[\s\S]*<\/footer>/.test(t)) fails.push(`${rel(f)}: footer lacks the Contact link`);
 }
-console.log(`checked ${html.length} html files; ad tag on ${tagged}; ${fails.length} problems`);
+if (client && unitsOn && unitPages !== tagged) fails.push(`units on ${unitPages} pages but the ad tag on ${tagged}`);
+console.log(`checked ${html.length} html files; ad tag on ${tagged}; ad units on ${unitPages}; ${fails.length} problems`);
 for (const x of fails.slice(0, 40)) console.log('FAIL', x);
 process.exit(fails.length ? 1 : 0);

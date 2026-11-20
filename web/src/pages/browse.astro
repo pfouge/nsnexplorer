@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import AdUnit from '../components/AdUnit.astro';
 import { fscLabel, listedFscName } from '../lib/seo-copy';
 import { loadSiteData } from '../lib/data';
 import { SITE_URL } from '../consts';
@@ -110,6 +111,8 @@ const faq = [
       ))}
     </section>
   )}
+
+  <AdUnit slot="mid" on={rows.length > 0} />
 
   <section class="faq">
     <h2 class="section-title">NSN price history questions</h2>

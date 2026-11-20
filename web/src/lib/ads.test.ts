@@ -18,11 +18,12 @@ const FORBIDDEN = 'pub-' + '7904' + '1739' + '8827' + '1272';
 test('the switch file holds the one publisher id; BaseLayout imports it; units are off', () => {
   assert.ok(ADSENSE_CLIENT_RE.test(ADSENSE_CLIENT));
   assert.notEqual(ADSENSE_CLIENT, 'ca-' + FORBIDDEN);
-  assert.equal(AD_UNITS_ON, false, 'phase 1: no in-page units');
+  assert.equal(typeof AD_UNITS_ON, 'boolean');
   assert.deepEqual(Object.keys(AD_SLOTS), ['top', 'mid', 'low', 'article', 'multiplex']);
-  for (const v of Object.values(AD_SLOTS)) assert.equal(v, '', 'slot ids are filled in phase 2');
+  for (const v of Object.values(AD_SLOTS)) assert.match(v, /^\d{10}$/);
+  assert.equal(new Set(Object.values(AD_SLOTS)).size, 5, 'one slot id per position');
   const layout = src('layouts/BaseLayout.astro');
-  assert.match(layout, /import \{ ADSENSE_CLIENT \} from '\.\.\/lib\/ads-config';/);
+  assert.match(layout, /import \{ ADSENSE_CLIENT, AD_UNITS_ON \} from '\.\.\/lib\/ads-config';/);
   assert.doesNotMatch(layout, /const ADSENSE_CLIENT/);
 });
 
@@ -146,4 +147,38 @@ test('footer links About, Contact, Terms and Privacy; the contact page uses the 
   assert.match(contact, /NAO Parts LLC/);
   assert.ok(!contact.includes('—'));
   assert.ok(src('pages/llms.txt.ts').includes('/contact/'));
+});
+
+test('ad units: exact label, one component, never in a table, only on pages that opt in to ads', () => {
+  const unit = src('components/AdUnit.astro');
+  assert.match(unit, /<p class="ad-label">Advertisements<\/p>/);
+  assert.match(unit, /aria-label="Advertisements"/);
+  assert.match(unit, /AD_UNITS_ON && /);
+  assert.match(unit, /adsEnabled\(/);
+  // the label is never restyled into other text
+  const css = src('styles/global.css');
+  assert.match(css, /\.ad-label \{[^}]*text-transform: none/);
+  assert.doesNotMatch(css, /\.ad-label[^{]*::(before|after)/);
+  assert.match(css, /\.ad-unit\[hidden\], \.ad-unit:has\(ins\.adsbygoogle\[data-ad-status="unfilled"\]\) \{ display: none; \}/);
+  const pagesDir = new URL('../pages/', import.meta.url).pathname;
+  const walk = (d: string): string[] => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]));
+  let used = 0;
+  for (const f of walk(pagesDir).filter((x) => x.endsWith('.astro'))) {
+    const t = fs.readFileSync(f, 'utf8');
+    const n = (t.match(/<AdUnit /g) ?? []).length;
+    if (!n) continue;
+    used += n;
+    assert.match(t, /\n  ads=\{/, `${f} places a unit but does not opt in to ads`);
+    assert.ok(n <= 2, `${f}: at most two in-page units (the layout adds two more)`);
+    // no unit between <table> and </table>
+    for (const m of t.matchAll(/<table[\s\S]*?<\/table>/g)) assert.ok(!m[0].includes('<AdUnit'), `${f}: ad unit inside a table`);
+    // not right next to a pager or a download list
+    for (const m of t.matchAll(/<AdUnit [^>]*\/>/g)) {
+      const around = t.slice(Math.max(0, m.index! - 160), m.index! + m[0].length + 160);
+      assert.ok(!/<Pager|download>|aria-label="Free downloads"/.test(around), `${f}: ad unit next to a pager or download button`);
+    }
+  }
+  assert.ok(used >= 15);
+  const layout = src('layouts/BaseLayout.astro');
+  assert.match(layout, /<AdUnit slot="top" on=\{adsOn\} \/>\s*<slot \/>\s*<AdUnit slot="multiplex" on=\{adsOn\} \/>/);
 });

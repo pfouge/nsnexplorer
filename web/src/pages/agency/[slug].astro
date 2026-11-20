@@ -1,6 +1,7 @@
 ---
 import '../../styles/supplier.css';
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import AdUnit from '../../components/AdUnit.astro';
 import { SITE_NAME, SITE_URL } from '../../consts';
 import CiteThis from '../../components/CiteThis.astro';
 import Follow from '../../components/Follow.astro';
@@ -137,6 +138,8 @@ const breadcrumbSchema = {
     </section>
   )}
 
+  <AdUnit slot="mid" on={sections.length > 0} />
+
   {topRecipients.length > 0 && (
     <section class="sp-sec" id="suppliers">
       <h2>Top suppliers</h2>
@@ -251,6 +254,8 @@ const breadcrumbSchema = {
   </section>
   )}
 
+
+  <AdUnit slot="low" on={sections.length > 0} />
 
   <section class="card" id="data-notes" style="margin-top:1.5rem;">
     <h2>About this data</h2>

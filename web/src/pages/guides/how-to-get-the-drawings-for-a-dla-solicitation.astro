@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import AdUnit from '../../components/AdUnit.astro';
 import GuideFooter from '../../components/GuideFooter.astro';
 import { SITE_URL } from '../../consts';
 import { DATA_CUSTODIAN_EMAIL, DIBBS_HOME_URL, EXPORT_CONTROL_NOTES, SRC, TDMT_URL } from '../../lib/drawings-copy';
@@ -101,6 +102,8 @@ const sources = [
       </li>
     </ul>
   </section>
+
+  <AdUnit slot="article" on={true} />
 
   <section>
     <h2 class="section-title">Steps to get technical data from DLA</h2>

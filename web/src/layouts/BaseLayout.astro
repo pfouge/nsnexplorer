@@ -7,7 +7,8 @@ import FreshnessStrip from '../components/viz/FreshnessStrip.astro';
 import { SITE_NAME } from '../consts';
 import { ACCOUNTS_ENABLED } from '../lib/account';
 import { adsEnabled } from '../lib/ads';
-import { ADSENSE_CLIENT } from '../lib/ads-config';
+import { ADSENSE_CLIENT, AD_UNITS_ON } from '../lib/ads-config';
+import AdUnit from '../components/AdUnit.astro';
 import { CONSENT_COUNTRIES } from '../lib/consent';
 
 interface Props {
@@ -285,7 +286,9 @@ const secondary = allLinks.filter((l) => !l.primary);
 
     <main id="main-content" tabindex="-1">
       <div class="container">
+        <AdUnit slot="top" on={adsOn} />
         <slot />
+        <AdUnit slot="multiplex" on={adsOn} />
       </div>
     </main>
 
@@ -356,5 +359,24 @@ const secondary = allLinks.filter((l) => !l.primary);
       // script for this one and left the shell (search, menu, tabs) out of every page.
       import '../scripts/account.ts';
     </script>
+    {adsOn && AD_UNITS_ON && (
+      <script is:inline>
+        // One push per ad unit on the page. A unit whose ad never arrives (script blocked, or
+        // Google has nothing to show) is hidden so no empty labelled box is left behind.
+        (function () {
+          var units = document.querySelectorAll('.ad-unit');
+          for (var i = 0; i < units.length; i++) {
+            try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) {}
+          }
+          window.addEventListener('load', function () {
+            setTimeout(function () {
+              for (var j = 0; j < units.length; j++) {
+                if (!units[j].querySelector('ins[data-adsbygoogle-status]')) units[j].hidden = true;
+              }
+            }, 3000);
+          });
+        })();
+      </script>
+    )}
   </body>
 </html>
