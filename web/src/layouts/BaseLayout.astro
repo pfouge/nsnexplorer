@@ -109,18 +109,20 @@ const secondary = allLinks.filter((l) => !l.primary);
     <SEO {...seoProps} />
 
     <!-- Google Consent Mode v2 defaults. Must stay above every Google tag. Two default commands:
-         the first, with no region, denies the three advertising signals everywhere (no ads are
-         shown yet and no advertising cookie is set); the second denies all four signals,
-         analytics included, in the EEA, UK and Switzerland (CONSENT_REGIONS). Elsewhere analytics
-         keeps Google's default. The loader below reports "granted" for analytics_storage when a
-         visitor allows analytics, so the one page view it then sends is a normal one. -->
+         the first, with no region, sets the three advertising signals for visitors outside the
+         consent regions: granted, unless the browser sends Global Privacy Control, in which case
+         denied. The second denies all four signals, analytics included, in the EEA, UK and
+         Switzerland (CONSENT_REGIONS) until Google's consent message (AdSense, Privacy and
+         messaging) updates them with the visitor's choice. The loader below reports "granted"
+         for analytics_storage when a visitor allows analytics. -->
     <script is:inline define:vars={{ CONSENT_REGIONS }}>
       window.dataLayer = window.dataLayer || [];
       window.gtag = function () { window.dataLayer.push(arguments); };
+      var adConsent = navigator.globalPrivacyControl === true ? 'denied' : 'granted';
       window.gtag('consent', 'default', {
-        ad_storage: 'denied',
-        ad_user_data: 'denied',
-        ad_personalization: 'denied',
+        ad_storage: adConsent,
+        ad_user_data: adConsent,
+        ad_personalization: adConsent,
       });
       window.gtag('consent', 'default', {
         ad_storage: 'denied',

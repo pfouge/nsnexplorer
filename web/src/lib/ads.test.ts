@@ -110,33 +110,38 @@ test('consent regions: 27 EU states plus IS, LI, NO, GB, CH, shared with /api/re
   assert.match(src('pages/api/region.json.ts'), /from '..\/..\/lib\/consent'/);
 });
 
-test('Consent Mode v2 defaults sit above every Google tag: ad signals denied everywhere, all four in the consent regions', () => {
+test('Consent Mode v2 defaults sit above every Google tag: ad signals granted outside the consent regions unless GPC, all four denied inside them', () => {
   const layout = src('layouts/BaseLayout.astro');
   const def = layout.indexOf("gtag('consent', 'default'");
   const def2 = layout.indexOf("gtag('consent', 'default'", def + 1);
   assert.ok(def > 0 && def2 > def);
   assert.equal(layout.match(/gtag\('consent', 'default'/g)?.length, 2);
   for (const marker of ['googletagmanager.com/gtag/js', 'adsbygoogle.js', 'google-adsense-account', "gtag('config'"]) assert.ok(layout.indexOf(marker) > def2, `${marker} comes after the defaults`);
-  // 1: worldwide, no region key, the three advertising signals denied, analytics untouched
+  // 1: worldwide, no region key: the three advertising signals follow Global Privacy Control
   const world = layout.slice(def, layout.indexOf('});', def));
-  for (const k of ['ad_storage', 'ad_user_data', 'ad_personalization']) assert.match(world, new RegExp(`${k}: 'denied'`));
-  assert.doesNotMatch(world, /region|analytics_storage|granted/);
+  for (const k of ['ad_storage', 'ad_user_data', 'ad_personalization']) assert.match(world, new RegExp(`${k}: adConsent`));
+  assert.doesNotMatch(world, /region|analytics_storage/);
+  assert.match(layout, /var adConsent = navigator\.globalPrivacyControl === true \? 'denied' : 'granted';/);
   // 2: the consent regions, all four denied
   const block = layout.slice(def2, layout.indexOf('});', def2));
   for (const k of ['ad_storage', 'ad_user_data', 'ad_personalization', 'analytics_storage']) assert.match(block, new RegExp(`${k}: 'denied'`));
   assert.match(block, /region: CONSENT_REGIONS/);
   assert.match(block, /wait_for_update: 500/);
-  // nothing grants an advertising signal anywhere in the layout
+  // no advertising signal is granted by a literal: only through adConsent (GPC-aware), outside the regions
   assert.doesNotMatch(layout, /ad_(storage|user_data|personalization): 'granted'/);
   // exactly one config call: one page view per page
   assert.equal(layout.match(/gtag\('config'/g)?.length, 1);
 });
 
-test('the privacy page says what is true in phase 1', () => {
+test('the privacy page describes advertising as it runs', () => {
   const p = src('pages/privacy.astro');
-  assert.match(p, /No advertising is shown on the Services today/);
-  assert.match(p, /No advertising cookies are set/);
+  assert.match(p, /show advertising served by Google AdSense/);
+  assert.match(p, /Third-party vendors, including Google, use cookies to serve ads/);
+  assert.match(p, /"Do not consent" button/);
+  assert.match(p, /Global Privacy Control/);
+  assert.match(p, /adssettings\.google\.com/);
   assert.match(p, /policies\.google\.com\/technologies\/partner-sites/);
+  assert.doesNotMatch(p, /No advertising is shown/);
 });
 
 test('footer links About, Contact, Terms and Privacy; the contact page uses the address constant and has no em dash', () => {
