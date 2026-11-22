@@ -1,12 +1,12 @@
 {
-  "at": "2026-11-21T17:09:09.083Z",
+  "at": "2026-11-22T17:42:14.865Z",
   "counts": {
-    "pub.nsns": 192315,
-    "pub.part_numbers": 677911,
-    "pub.suppliers": 32706,
-    "pub.amsc_observations": 187459,
-    "pub.nsns with item_name": 192016,
-    "pub.nsns with characteristics": 171219,
-    "pub.nsns with amsc observation": 187426
+    "pub.nsns": 192844,
+    "pub.part_numbers": 679505,
+    "pub.suppliers": 32746,
+    "pub.amsc_observations": 187972,
+    "pub.nsns with item_name": 192545,
+    "pub.nsns with characteristics": 171692,
+    "pub.nsns with amsc observation": 187939
   }
 }
