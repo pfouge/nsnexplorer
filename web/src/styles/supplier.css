@@ -107,3 +107,19 @@
 .sp-flag { display: inline-block; margin-left: 6px; font-size: var(--t-small); font-weight: 600; color: var(--ink-soft); background: var(--paper-2); border-radius: 10px; padding: 1px 8px; vertical-align: 1px; }
 .sp-flag.small { color: var(--accent); background: var(--green-tint); }
 .sp-more { font-size: var(--t-body); color: var(--ink-soft); margin-top: 0.5rem; }
+
+/* Parent company (migration 0026): a link in the identity line, then one section of label/value
+   figures, the parent's latest SEC filings and its other supplier codes. */
+.sp-ident .sp-parent { font-weight: var(--w-strong); color: var(--text); text-decoration: underline; text-underline-offset: 2px; }
+.sp-ident .sp-parent .code { margin-left: var(--s1); font-weight: var(--w-regular); color: var(--text-2); font-variant-numeric: tabular-nums; }
+.sp-parent-sec .gloss { margin: 0 0 var(--s3); }
+.sp-parent-sec .sp-sub { font-size: var(--t-body); font-weight: var(--w-strong); margin: var(--s5) 0 var(--s2); }
+.sp-filings { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.sp-filings li { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); gap: var(--s3); padding: var(--s2) 0; border-bottom: 1px solid var(--line); }
+.sp-filings .when { color: var(--text-2); font-size: var(--t-small); line-height: var(--lh-body); font-variant-numeric: tabular-nums; }
+.sp-filings a { text-decoration: underline; text-underline-offset: 2px; }
+.sp-parent-sec td .code { color: var(--text-2); font-size: var(--t-small); margin-left: var(--s1); font-variant-numeric: tabular-nums; }
+.sp-parent-sec .sources { margin: var(--s4) 0 0; color: var(--text-2); font-size: var(--t-small); }
+.sp-parent-sec .sources a { text-decoration: underline; text-underline-offset: 2px; }
+.sp-parent-sec td.wrap { white-space: normal; min-width: 16rem; }
+.sp-parent-sec td:nth-child(2) { white-space: nowrap; }

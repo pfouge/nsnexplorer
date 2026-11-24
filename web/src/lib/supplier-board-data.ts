@@ -43,10 +43,13 @@ async function fetchSupplierBoard(): Promise<BoardData> {
               st.awards_all, st.dollars_all, st.awards_12m, st.dollars_12m, st.awards_prior_12m, st.dollars_prior_12m,
               st.nsns, st.fscs, st.rising_delta,
               st.rank_dollars_12m, st.rank_dollars_all, st.rank_wins_12m, st.rank_wins_all, st.rank_nsns, st.rank_fscs, st.rank_rising,
-              st.awards_90d, st.dollars_90d, st.rank_dollars_90d, st.rank_wins_90d, st.rank_dollars_12m_prev, st.long_term_contracts
+              st.awards_90d, st.dollars_90d, st.rank_dollars_90d, st.rank_wins_90d, st.rank_dollars_12m_prev, st.long_term_contracts,
+              pc.ticker AS parent_ticker, pc.name AS parent_name
        FROM pub.supplier_stats st
        JOIN pub.suppliers su ON su.cage = st.cage
        LEFT JOIN pub.supplier_sam sam ON sam.cage = st.cage
+       LEFT JOIN pub.supplier_parent sp ON sp.cage = st.cage
+       LEFT JOIN pub.public_companies pc ON pc.cik = sp.cik
        WHERE st.rank_dollars_12m <= $1 OR st.rank_dollars_all <= $1 OR st.rank_wins_12m <= $1 OR st.rank_wins_all <= $1
           OR st.rank_nsns <= $1 OR st.rank_fscs <= $1 OR st.rank_rising <= $1
           OR st.rank_dollars_90d <= $1 OR st.rank_wins_90d <= $1
@@ -91,6 +94,7 @@ async function fetchSupplierBoard(): Promise<BoardData> {
     const suppliers: BoardSupplier[] = listed.rows.map((r) => ({
       cage: String(r.cage),
       name: clean(r.name),
+      parent: r.parent_ticker ? { ticker: String(r.parent_ticker), name: String(r.parent_name) } : null,
       city: clean(r.city),
       state: clean(r.state),
       awardsAll: n(r.awards_all),

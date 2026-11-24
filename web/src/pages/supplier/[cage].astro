@@ -54,6 +54,7 @@ import {
   telHref,
 } from '../../lib/supplier-view';
 import { chartable } from '../../lib/viz-supplier';
+import { bigUsd, eightKLabel } from '../../lib/public-parent';
 import { isSmallBusiness, longTermText } from '../../lib/supplier-board';
 
 export const prerender = false;
@@ -87,6 +88,12 @@ const { cage, name, awards, classRows, sam, web, stats, optout, today } = page;
 const displayName = sam?.legalName ?? name;
 const heading = displayName ?? `CAGE ${cage}`;
 const place = supplierPlace(page.city, page.state);
+const parent = page.parent;
+const monthYear = (iso: string | null): string | null => {
+  if (!iso) return null;
+  const d = new Date(`${iso}T00:00:00Z`);
+  return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+};
 const copy = { cage, name: displayName, awards, classes: page.classes, latest: page.latestAward, ceilings: page.ceilings };
 const lede = supplierLede(copy);
 const title = supplierTitle(displayName, cage);
@@ -173,6 +180,7 @@ const sections = [
   { id: 'contact', label: 'Contact', show: hasContact },
   { id: 'registration', label: 'Registration', show: hasRegistration },
   { id: 'performance', label: 'Performance', show: true },
+  { id: 'parent', label: 'Parent company', show: parent !== null },
   { id: 'top-parts', label: 'Top parts', show: topNsns.length > 0 },
   { id: 'agencies', label: 'Agencies', show: agencyRows.length > 0 },
   { id: 'classes', label: 'Supply classes', show: classRows.length > 0 },
@@ -242,6 +250,7 @@ const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Suppl
       {place && <span>{place}</span>}
       {badge && <span class={`badge ${badge.tone}`}>{badge.text}</span>}
       {small && <span class="badge green">Small business</span>}
+      {parent && <a class="sp-parent" href="#parent">Part of {parent.name}{parent.name.toUpperCase() !== parent.ticker && <span class="code">{parent.ticker}</span>}</a>}
       {website && siteName && (
         <a class="site" href={website} target="_blank" rel="nofollow noopener">{siteName} ↗</a>
       )}
@@ -533,6 +542,69 @@ const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Suppl
       </div>
     )}
   </section>
+
+  {parent && (
+    <section class="sp-sec group sp-parent-sec" id="parent" data-group="performance">
+      <h2>Parent company</h2>
+      <p class="gloss">
+        {heading} is part of <strong>{parent.name}</strong>, a publicly traded company (ticker {parent.ticker}).
+        The figures here are for the whole parent company, not this supplier code alone.
+      </p>
+      <div class="stat-strip">
+        <div class="stat">
+          <div class="value">{parent.revenue !== null ? bigUsd(parent.revenue) : '—'}</div>
+          <div class="label">{parent.revenuePeriodEnd ? `Revenue, fiscal year to ${monthYear(parent.revenuePeriodEnd)}` : 'Annual revenue'}</div>
+        </div>
+        <div class="stat">
+          <div class="value">{parent.lobbying !== null ? bigUsd(parent.lobbying) : 'None reported'}</div>
+          <div class="label">Federal lobbying{parent.lobbyingLabel ? ` reported for ${parent.lobbyingLabel}` : ''}</div>
+        </div>
+        <div class="stat">
+          <div class="value">{fmtInt(parent.siblings + 1)}</div>
+          <div class="label">Supplier codes under this parent</div>
+        </div>
+      </div>
+      {parent.events.length > 0 && (
+        <>
+          <h3 class="sp-sub">Latest SEC filings</h3>
+          <ul class="sp-filings">
+            {parent.events.map((e) => (
+              <li>
+                <span class="when">{formatDate(e.filed)}</span>
+                <a href={e.url} target="_blank" rel="nofollow noopener">{eightKLabel(e.item)}</a>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {parent.siblingRows.length > 0 && (
+        <>
+          <h3 class="sp-sub">Other supplier codes under {parent.name}</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th scope="col">Supplier</th><th scope="col">Place</th><th scope="col" class="num">Award dollars, last 12 months</th></tr></thead>
+              <tbody>
+                {parent.siblingRows.map((r) => (
+                  <tr>
+                    <td class="wrap"><a href={`/supplier/${r.cage}/`}>{r.name}</a> <span class="code">{r.cage}</span></td>
+                    <td>{r.place ?? '—'}</td>
+                    <td class="num">{r.dollars12m > 0 ? formatUsd(r.dollars12m) : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+      <p class="sources">
+        Sources: SEC filings and lobbying disclosures, compiled by{' '}
+        {parent.stmUrl ? <a href={parent.stmUrl}>Spot the Money</a> : 'Spot the Money'}
+        {' '}· <a href={parent.secUrl} target="_blank" rel="nofollow noopener">SEC filings ↗</a>
+        {parent.asOf && <> · as of {formatDate(parent.asOf)}</>}.
+        Matched to the parent by the supplier's registered name.
+      </p>
+    </section>
+  )}
 
   {topNsns.length > 0 && (
     <section class="sp-sec group" id="top-parts" data-group="performance">

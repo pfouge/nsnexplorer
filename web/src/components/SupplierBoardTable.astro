@@ -5,6 +5,7 @@
 // shows each supplier's rank trend against about 30 days ago: an arrow and a number in its own column
 // on wide screens, under the rank number on phones (never colour alone; the words are for screen readers).
 import { supplierPath, supplierPlace } from '../lib/entity';
+import PublicMark from './PublicMark.astro';
 import { formatUsd } from '../lib/shared';
 import type { BoardSupplier, ListKey } from '../lib/supplier-board';
 import { LISTS, rankTrend } from '../lib/supplier-board';
@@ -71,7 +72,7 @@ const showTrend = kind === 'dollars-12m';
               </td>
             )}
             <td class="who">
-              {href ? <a href={href}>{label}</a> : label}
+              {href ? <a href={href}>{label}</a> : label}<PublicMark mark={s.parent} />
               {place && <span class="sub">{place}</span>}
             </td>
             <td class="loc">{place ?? ''}</td>
