@@ -60,6 +60,15 @@ jobs:
         run: |
           test -n "$SOURCE_DB_URL" || { echo "secret SUPABASE_DB_URL is not available"; exit 1; }
           bash b/tools/visual-regression/snapshot-db.sh "$GITHUB_WORKSPACE/b"
+      - name: Slice for local layout work
+        if: hashFiles('b/tools/design-audit/WANT_SLICE') != ''
+        run: mkdir -p slice && bash b/tools/design-audit/slice.sh slice/slice.sql.gz
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: hashFiles('b/tools/design-audit/WANT_SLICE') != ''
+        with:
+          name: design-slice
+          path: slice
+          retention-days: 7
       - name: Build both
         run: |
           mkdir -p out
