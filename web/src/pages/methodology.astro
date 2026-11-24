@@ -81,7 +81,7 @@ const faq = [
       Every dot on a price chart and every row in a purchase table is one government purchase at
       one unit price, sourced from either a DIBBS award record or a USAspending award record.
       Each price point stores the underlying source URL, and the build refuses to publish a price
-      point without one — that check runs in the data-load step of the site build, not just as a
+      point without one. That check runs in the data-load step of the site build, not just as a
       database constraint.
     </p>
   </section>
@@ -91,7 +91,7 @@ const faq = [
   <section>
     <h2>Contract action totals — <code class="mono">pub.contract_actions</code></h2>
     <p class="gloss">
-      USAspending publishes agency-wide contract actions with obligation totals — the amount
+      USAspending publishes agency-wide contract actions with obligation totals: the amount
       obligated on a contract action, not a per-unit price. We show these on NSN pages, clearly
       labeled as "contract action totals, not unit prices," and they never appear on a price
       chart, which is unit-price data only.
@@ -168,7 +168,7 @@ const faq = [
       A purchase is flagged as a spike when its unit price is at least 3× the NSN's trailing
       median price at that point in time. On category pages, a row is highlighted when the most
       recent purchase is at least 3× the NSN's historical median. This is a mechanical threshold,
-      not an accusation — it's a starting point for a supplier sanity-checking a quote, or for a
+      not an accusation. It's a starting point for a supplier sanity-checking a quote, or for a
       buyer's, researcher's, or reporter's own follow-up questions, and every flagged purchase
       links to its source record.
     </p>

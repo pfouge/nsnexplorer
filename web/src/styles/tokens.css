@@ -1,0 +1,127 @@
+/* tokens.css — the design system's variables (design/system.md). Loaded before every other stylesheet.
+   The old names (--paper, --ink, --green ...) at the bottom are aliases so older component CSS follows
+   the system. New CSS uses the new names only. */
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/inter-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/inter-600.woff2') format('woff2');
+}
+/* Arial resized to Inter's metrics, so swapping fonts does not move text. */
+@font-face {
+  font-family: 'Inter Fallback';
+  src: local('Arial'), local('Helvetica'), local('Liberation Sans');
+  ascent-override: 90.44%;
+  descent-override: 22.52%;
+  line-gap-override: 0%;
+  size-adjust: 107.12%;
+}
+
+:root {
+  color-scheme: light;
+  /* space: 4 px scale */
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px; --s8: 64px;
+
+  /* type: four sizes, two weights */
+  --font: 'Inter', 'Inter Fallback', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-code: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --t-small: 0.8125rem;  /* 13 */
+  --t-body: 0.9375rem;   /* 15 */
+  --t-head: 1.25rem;     /* 20 */
+  --t-title: 1.75rem;    /* 28 */
+  --lh-small: 1.125rem; --lh-body: 1.375rem; --lh-head: 1.75rem; --lh-title: 2.125rem;
+  --w-regular: 400; --w-strong: 600;
+
+  /* colour: neutrals, one accent, value colours */
+  --bg: #FFFFFF;
+  --surface: #F5F7F9;
+  --line: #E2E6EA;
+  --line-strong: #C9CFD6;
+  --control: #858D97;
+  --text: #14171A;
+  --text-2: #4F5761;
+  --text-3: #636B75;
+  --accent: #1D3F72;
+  --accent-weak: #E9EEF6;
+  --on-accent: #FFFFFF;
+  --pos: #0B7A47;
+  --neg: #B42318;
+  --hover: rgba(20, 23, 26, 0.04);
+  --scrim: rgba(20, 23, 26, 0.45);
+  --shadow: 0 8px 28px rgba(20, 23, 26, 0.14);
+  --logo-needle: #0E7C4D;
+  /* home globe only: US, allies, adversaries (scripts/heroDeploy.ts) */
+  --geo-us: #1D3F72;
+  --geo-ally: #5B7FB0;
+  --geo-foe: #B42318;
+
+  /* layout */
+  --max: 1200px;
+  --gutter: 24px;
+  --header-h: 56px;
+  --radius: 6px;
+  --radius-sm: 4px;
+  --row: 40px;        /* comfortable table row */
+  --row-compact: 32px;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0F1215;
+  --surface: #171B20;
+  --line: #2A3038;
+  --line-strong: #3B434D;
+  --control: #6E7781;
+  --text: #E8EAED;
+  --text-2: #A9B0B8;
+  --text-3: #8A929B;
+  --accent: #8EB3EE;
+  --accent-weak: #1B2737;
+  --on-accent: #0F1215;
+  --pos: #3CC37A;
+  --neg: #F0716A;
+  --hover: rgba(232, 234, 237, 0.05);
+  --scrim: rgba(0, 0, 0, 0.6);
+  --shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+  --logo-needle: #1FB866;
+  --geo-us: #8EB3EE;
+  --geo-ally: #4E6E9A;
+  --geo-foe: #F0716A;
+}
+
+@media (max-width: 639px) {
+  :root { --gutter: 16px; }
+}
+
+/* Aliases: older stylesheets and inline styles keep working and follow the system. */
+:root, [data-theme='dark'] {
+  --paper: var(--bg);
+  --paper-2: var(--surface);
+  --card: var(--bg);
+  --ink: var(--text);
+  --ink-soft: var(--text-2);
+  --green: var(--pos);
+  --green-2: var(--pos);
+  --red: var(--neg);
+  --amber: var(--text-2);
+  --green-tint: var(--accent-weak);
+  --amber-tint: var(--surface);
+  --font-sans: var(--font);
+  --font-display: var(--font);
+  --font-mono: var(--font);
+  --inv-bg: var(--surface);
+  --inv-text: var(--text);
+  --inv-soft: var(--text-2);
+  --inv-softer: var(--text-3);
+  --header-veil: var(--bg);
+  --overcharge: var(--accent-weak);
+}

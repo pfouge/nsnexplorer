@@ -11,6 +11,10 @@ import Follow from '../../components/Follow.astro';
 import BidCalculator from '../../components/BidCalculator.astro';
 import CiteThis from '../../components/CiteThis.astro';
 import StandardDrawings from '../../components/StandardDrawings.astro';
+import GroupTabs from '../../components/GroupTabs.astro';
+import Spark from '../../components/Spark.astro';
+import DensityToggle from '../../components/DensityToggle.astro';
+import AdSlot from '../../components/AdSlot.astro';
 import { SITE_URL } from '../../consts';
 import { buildDiagram } from '../../lib/diagram';
 import { ASSIST_QUICK_SEARCH_URL, collectStandardDocs, extractStandardRefs } from '../../lib/standard-refs';
@@ -259,6 +263,8 @@ const solValueAtLastPrice = (qty: number | null): number | null => valueAtLastPr
 // Competition read: last 10 awards with a supplier (price points, else dated contract actions).
 const compRead = competitionRead({ coded: competition, awards: winAwards.map((a) => ({ cage: a.cage, date: a.date })) });
 const streakName = compRead.streakCage ? (winAwards.find((a) => a.cage === compRead.streakCage && a.name)?.name ?? null) : null;
+const nextClose = openSols.find((s) => s.returnBy !== null)?.returnBy ?? null;
+const sparkPrices = [...points].sort((a, b) => a.awardedOn.localeCompare(b.awardedOn)).slice(-24).map((p) => p.unitPrice);
 const listedSources = new Set(partNumbers.map((pn) => (pn.cage ?? '').trim()).filter((c) => c !== '')).size;
 const readBadgeClass = compRead.tone === 'neutral' ? 'badge' : `badge ${compRead.tone}`;
 
@@ -316,64 +322,85 @@ const datasetSchema = {
     <Follow kind="nsn" entity={nsn.nsn} label={itemLabel} />
   </header>
 
-  {headlineSummary && headlinePoint && (
-    <div class="stat-strip roomy">
+  <div class="stat-strip roomy key-facts" aria-label="Key facts">
+    <div class="stat">
+      <div class="value">{openQtyTotal > 0 ? <a href="#open">{openSols.length.toLocaleString('en-US')} solicitation{openSols.length === 1 ? '' : 's'} · {openQtyTotal.toLocaleString('en-US')} unit{openQtyTotal === 1 ? '' : 's'}</a> : openSols.length > 0 ? <a href="#open">{openSols.length.toLocaleString('en-US')} open</a> : 'None open'}</div>
+      <div class="label">Open now</div>
+      <div class="gloss">{openSols.length > 0 ? (nextClose ? `Next closes ${formatDate(nextClose)}` : 'Close date not on record') : 'Search DIBBS for new RFQs'}</div>
+    </div>
+    {headlineSummary && headlinePoint ? (
       <div class="stat">
-        <div class="value up"><a href={headlinePoint.sourceUrl} target="_blank" rel="noopener noreferrer">{formatUsdPrecise(headlinePoint.unitPrice)}</a></div>
+        <div class="value"><a href={headlinePoint.sourceUrl} target="_blank" rel="noopener noreferrer">{formatUsdPrecise(headlinePoint.unitPrice)}</a></div>
         <div class="label">Most recent price</div>
+        <Spark values={sparkPrices} />
         <div class="gloss">Awarded {formatDate(headlinePoint.awardedOn)}</div>
       </div>
-      {headlineSummary.n >= 2 && (
-        <div class="stat">
-          <div class="value">{formatUsdPrecise(headlineSummary.low)} – {formatUsdPrecise(headlineSummary.high)}</div>
-          <div class="label">Last {headlineSummary.n} awards</div>
-        </div>
-      )}
-      {headlineSummary.n >= 2 && (
-        <div class="stat">
-          <div class="value">{formatUsdPrecise(headlineSummary.average)}</div>
-          <div class="label">Average of last {headlineSummary.n}</div>
-        </div>
-      )}
+    ) : (
+      <div class="stat">
+        <div class="value">None yet</div>
+        <div class="label">Most recent price</div>
+        <div class="gloss">No award price on record</div>
+      </div>
+    )}
+    {headlineSummary && headlinePoint && headlineSummary.n >= 2 && (
+      <div class="stat">
+        <div class="value">{formatUsdPrecise(headlineSummary.low)} – {formatUsdPrecise(headlineSummary.high)}</div>
+        <div class="label">Last {headlineSummary.n} awards</div>
+      </div>
+    )}
+    {headlineSummary && headlinePoint && headlineSummary.n >= 2 && (
+      <div class="stat">
+        <div class="value">{formatUsdPrecise(headlineSummary.average)}</div>
+        <div class="label">Average of last {headlineSummary.n}</div>
+      </div>
+    )}
+    {headlineSummary && headlinePoint && (
       <div class="stat">
         <div class="value">{points.length.toLocaleString('en-US')}</div>
         <div class="label">Prices on record</div>
       </div>
-      {openQtyTotal > 0 && (
-        <div class="stat">
-          <div class="value">{openSols.length.toLocaleString('en-US')} solicitation{openSols.length === 1 ? '' : 's'} · {openQtyTotal.toLocaleString('en-US')} unit{openQtyTotal === 1 ? '' : 's'}</div>
-          <div class="label">Open now</div>
-        </div>
-      )}
-      {openQtyTotal > 0 && openValueAtLastPrice !== null && (
-        <div class="stat">
-          <div class="value">≈ ${Math.round(openValueAtLastPrice).toLocaleString('en-US')}</div>
-          <div class="label">Value at last price</div>
-          <div class="gloss">Open quantity × last unit price</div>
-        </div>
-      )}
+    )}
+    {headlineSummary && headlinePoint && openQtyTotal > 0 && openValueAtLastPrice !== null && (
+      <div class="stat">
+        <div class="value">≈ ${Math.round(openValueAtLastPrice).toLocaleString('en-US')}</div>
+        <div class="label">Value at last price</div>
+        <div class="gloss">Open quantity × last unit price</div>
+      </div>
+    )}
+    <div class="stat">
+      <div class="value"><a href="#competition">{compRead.label}</a></div>
+      <div class="label">Competition</div>
+      <div class="gloss">{listedSources.toLocaleString('en-US')} listed source{listedSources === 1 ? '' : 's'}</div>
     </div>
-  )}
+    <div class="stat">
+      <div class="value">{diagram ? <a href="#dimensioned-drawing">Dimensioned</a> : standardDocs.length > 0 ? <a href="#standard-drawing">Standard document</a> : 'None on record'}</div>
+      <div class="label">Drawing</div>
+      <div class="gloss">{partNumbers.length.toLocaleString('en-US')} part number{partNumbers.length === 1 ? '' : 's'} on file</div>
+    </div>
+  </div>
 
-  <nav class="tabs" aria-label="On this page">
-    <a href="#open">Open bids <span class="tab-count">{openSols.length}</span></a>
-    <a href="#competition">Competition</a>
-    {(diagram || standardDocs.length > 0 || characteristics.length > 0 || partNumbers.length > 0) && <a href="#specs">Specs</a>}
-    <a href="#prices">Prices <span class="tab-count">{points.length.toLocaleString('en-US')}</span></a>
-    <a href="#purchases">Purchases</a>
-    {(allSols.length > 0 || hasDemandCharts) && <a href="#demand">Demand{allSols.length > 0 && <> <span class="tab-count">{allSols.length.toLocaleString('en-US')}</span></>}</a>}
-    <a href="#about">About</a>
-  </nav>
+  <GroupTabs
+    page="nsn"
+    label="Part sections"
+    defaultTab={openSols.length > 0 || points.length === 0 ? 'bid' : 'prices'}
+    tabs={[
+      { id: 'bid', label: 'Bid', count: openSols.length },
+      ...(hasSpecs ? [{ id: 'specs', label: 'Specs' }] : []),
+      { id: 'prices', label: 'Prices', count: points.length },
+      ...(allSols.length > 0 || hasDemandCharts ? [{ id: 'demand', label: 'Demand', count: allSols.length }] : []),
+    ]}
+  />
 
+  <div class="group" data-group="bid">
   <!-- 1. Open for bid — the first question a supplier asks: is there a live RFQ to bid on? -->
   {openSols.length > 0 ? (
     <section class="panel open-panel" id="open">
       <h2 class="section-title" style="margin-top:0;">Open for bid</h2>
       <p class="gloss">
-        {openSols.length} open solicitation{openSols.length === 1 ? '' : 's'} on record right now —
+        {openSols.length} open solicitation{openSols.length === 1 ? '' : 's'} on record right now:
         quantity, close date, and where to submit.
       </p>
-      <div class="table-wrap" style="border:0;">
+      <div class="table-wrap">
         <table>
           <thead>
             <tr>
@@ -469,7 +496,7 @@ const datasetSchema = {
             <>
               {compRead.streak} in a row
               {compRead.streakCage && (
-                <span class="gloss" style="display:block; font-size:0.8125rem; font-weight:400; line-height:1.35;">{supplierPath(compRead.streakCage) ? <a href={supplierPath(compRead.streakCage)!}>{streakName ?? compRead.streakCage}</a> : (streakName ?? compRead.streakCage)}</span>
+                <span class="gloss" style="display:block; font-size:var(--t-small); font-weight:400; line-height:1.35;">{supplierPath(compRead.streakCage) ? <a href={supplierPath(compRead.streakCage)!}>{streakName ?? compRead.streakCage}</a> : (streakName ?? compRead.streakCage)}</span>
               )}
             </>
           )}
@@ -520,7 +547,7 @@ const datasetSchema = {
                     <td>{r.aac ? (r.aacLabel ?? `${r.aac} (${NO_DEFINITION})`) : '—'}</td>
                     <td class="wrap">
                       {r.manager ?? '—'}
-                      {r.retail && <span class="gloss" style="display:block; font-size:0.8125rem; line-height:1.35;">Retail: {r.retail}</span>}
+                      {r.retail && <span class="gloss" style="display:block; font-size:var(--t-small); line-height:1.35;">Retail: {r.retail}</span>}
                     </td>
                     <td class="mono">{r.since ?? '—'}</td>
                   </tr>
@@ -551,7 +578,7 @@ const datasetSchema = {
               <div class="k">Government standard price</div>
               <div class="v">
                 {mgmt.priceLine}
-                <span class="gloss" style="display:block; font-size:0.8125rem; font-weight:400; line-height:1.35;">
+                <span class="gloss" style="display:block; font-size:var(--t-small); font-weight:400; line-height:1.35;">
                   Catalog price, not an award price{mgmt.effectiveLine ? `. Effective ${mgmt.effectiveLine}` : ''}
                 </span>
               </div>
@@ -562,7 +589,7 @@ const datasetSchema = {
               <div class="k">Shelf life</div>
               <div class="v">
                 {mgmt.shelfParts.headline}
-                {mgmt.shelfParts.note && <span class="gloss" style="display:block; font-size:0.8125rem; font-weight:400; line-height:1.35;">{mgmt.shelfParts.note}</span>}
+                {mgmt.shelfParts.note && <span class="gloss" style="display:block; font-size:var(--t-small); font-weight:400; line-height:1.35;">{mgmt.shelfParts.note}</span>}
               </div>
             </div>
           )}
@@ -577,7 +604,7 @@ const datasetSchema = {
               <div class="k">Source of supply</div>
               <div class="v">
                 <span class="badge mono">{mgmt.sosParts.code}</span>
-                {mgmt.sosParts.meaning && <span class="gloss" style="display:block; font-size:0.8125rem; font-weight:400; line-height:1.35;">{mgmt.sosParts.meaning}</span>}
+                {mgmt.sosParts.meaning && <span class="gloss" style="display:block; font-size:var(--t-small); font-weight:400; line-height:1.35;">{mgmt.sosParts.meaning}</span>}
               </div>
             </div>
           )}
@@ -628,6 +655,9 @@ const datasetSchema = {
     )}
   </section>
 
+  </div>
+
+  <div class="group" data-group="specs">
   <!-- 3. What it is / can you make it — drawing, specs, and qualified part numbers together. -->
   {hasSpecs && (
     <section id="specs" style="margin-top:2.5rem;">
@@ -640,8 +670,9 @@ const datasetSchema = {
   )}
 
   {hasCatalog && (
-    <section>
-      <h3 class="section-title">Catalog record</h3>
+    <details class="fold" id="catalog-record">
+      <summary><h3>Catalog record</h3></summary>
+      <section class="fold-body">
       <p class="gloss">
         Identification codes the federal catalog (DLA FLIS) holds for this NSN, each with its plain-language meaning.
       </p>
@@ -653,7 +684,7 @@ const datasetSchema = {
               <div class="v">
                 {c.key === 'assigned' ? c.value : c.key === 'scheduleB' ? <span class="badge mono">{c.value}</span> : <span class="badge">{c.value}</span>}
                 {c.key !== 'assigned' && (
-                  <span class="gloss" style="display:block; font-size:0.8125rem; font-weight:400; line-height:1.35;">{c.meaning ?? NO_DEFINITION}</span>
+                  <span class="gloss" style="display:block; font-size:var(--t-small); font-weight:400; line-height:1.35;">{c.meaning ?? NO_DEFINITION}</span>
                 )}
               </div>
             </div>
@@ -680,7 +711,8 @@ const datasetSchema = {
           </p>
         </details>
       )}
-    </section>
+      </section>
+    </details>
   )}
 
   {standardDocs.length > 0 && (
@@ -696,13 +728,13 @@ const datasetSchema = {
   )}
 
   {diagram && (
-    <section>
+    <section id="dimensioned-drawing">
       <h3 class="section-title">Dimensioned drawing</h3>
       <p class="gloss">
-        Generated from the federal catalog's dimensional data for this NSN — reference only,
+        Generated from the federal catalog's dimensional data for this NSN. Reference only,
         not a manufacturing drawing.
       </p>
-      <div class="card" style="padding:1rem;" set:html={diagram} />
+      <div class="drawing" set:html={diagram} />
     </section>
   )}
 
@@ -710,12 +742,12 @@ const datasetSchema = {
     <section>
       <h3 class="section-title">Specifications</h3>
       <p class="gloss">
-        From the federal catalog (DLA FLIS / PUB LOG) — what your part has to meet. Cited
+        From the federal catalog (DLA FLIS / PUB LOG): what your part has to meet. Cited
         government specification documents can be searched by document number in <a href={ASSIST_QUICK_SEARCH_URL} target="_blank" rel="nofollow noopener">ASSIST Quick
         Search ↗</a>, DoD's public document search. ASSIST is run by the Defense Logistics Agency and may not load from outside the United States.
       </p>
       <div class="table-wrap">
-        <table>
+        <table class="rows-fold" data-rows="8">
           <thead>
             <tr>
               <th>Requirement</th>
@@ -730,13 +762,13 @@ const datasetSchema = {
                   <td>
                     {c.requirement ?? c.mrc ?? '—'}
                     {c.requirement && c.mrc && (
-                      <span class="mono gloss" style="font-size:0.75rem; margin-left:0.4rem;">{c.mrc}</span>
+                      <span class="mono gloss" style="font-size:var(--t-small); margin-left:0.4rem;">{c.mrc}</span>
                     )}
                   </td>
                   <td>
                     {c.reply ?? '—'}
                     {doc && (
-                      <span class="badge mono" style="margin-left:0.5rem; font-size:0.75rem;" title="Specification document — look up in ASSIST">{doc}</span>
+                      <span class="badge mono" style="margin-left:0.5rem; font-size:var(--t-small);" title="Specification document; look it up in ASSIST">{doc}</span>
                     )}
                   </td>
                 </tr>
@@ -752,11 +784,11 @@ const datasetSchema = {
     <section>
       <h3 class="section-title">Manufacturer part numbers</h3>
       <p class="gloss">
-        Commercial part numbers cross-referenced to this NSN in the federal catalog — the parts
+        Commercial part numbers cross-referenced to this NSN in the federal catalog: the parts
         that have been accepted as satisfying this stock number, and who makes them.
       </p>
       <div class="table-wrap">
-        <table>
+        <table class="rows-fold" data-rows="8">
           <thead>
             <tr>
               <th>Part number</th>
@@ -779,8 +811,9 @@ const datasetSchema = {
   )}
 
   {flis.related.length > 0 && (
-    <section>
-      <h3 class="section-title">Related items</h3>
+    <details class="fold" id="related-items">
+      <summary><h3>Related items</h3><span class="n">{flis.related.length.toLocaleString('en-US')}</span></summary>
+      <section class="fold-body">
       <p class="gloss">
         Other stock numbers the federal catalog links to this one, with the standardization status on record.
       </p>
@@ -807,12 +840,14 @@ const datasetSchema = {
       {flis.relatedTotal > flis.related.length && (
         <p class="gloss">Showing {flis.related.length} of {flis.relatedTotal.toLocaleString('en-US')}.</p>
       )}
-    </section>
+      </section>
+    </details>
   )}
 
   {flis.cancellations.length > 0 && (
-    <section>
-      <h3 class="section-title">Earlier stock numbers replaced by this one</h3>
+    <details class="fold" id="replaced-numbers">
+      <summary><h3>Earlier stock numbers replaced by this one</h3><span class="n">{flis.cancellations.length.toLocaleString('en-US')}</span></summary>
+      <section class="fold-body">
       <p class="gloss">
         Older stock numbers the federal catalog cancelled in favour of this NSN, newest first. If you hold stock or an old
         requisition under one of them, this is the number to use now.
@@ -840,14 +875,20 @@ const datasetSchema = {
       {flis.cancellationsTotal > flis.cancellations.length && (
         <p class="gloss">Showing {flis.cancellations.length} of {flis.cancellationsTotal.toLocaleString('en-US')}.</p>
       )}
-    </section>
+      </section>
+    </details>
   )}
 
+  </div>
+
+  <AdSlot position="mid" />
+
+  <div class="group" data-group="prices">
   <!-- 4. What it pays — so you can quote: the price/demand record, reframed as quoting intel. -->
   <section id="prices" style="margin-top:2.5rem;">
     <h2 class="section-title" style="margin-top:0;">What it pays — so you can quote</h2>
     <p class="gloss">
-      The government's own price and demand record for this NSN — what past awards cleared at,
+      The government's own price and demand record for this NSN: what past awards cleared at,
       so you know where to land your quote.
     </p>
     <BidCalculator
@@ -912,19 +953,22 @@ const datasetSchema = {
   )}
 
   <section id="purchases">
-    <h3 class="section-title">Purchase history</h3>
+    <div class="section-head">
+      <h3 class="section-title">Purchase history</h3>
+      <DensityToggle />
+    </div>
     {sortedPoints.length === 0 ? (
       <p class="gloss">No priced purchases on record for this NSN yet.</p>
     ) : (
       <div class="table-wrap">
-        <table>
+        <table class="rows-fold" data-sortable>
           <caption>{sortedPoints.length} purchase{sortedPoints.length === 1 ? '' : 's'} on record</caption>
           <thead>
             <tr>
-              <th>Awarded</th>
-              <th class="num">Qty</th>
-              <th class="num">Unit price</th>
-              <th class="num">Total</th>
+              <th data-sort="date">Awarded</th>
+              <th class="num" data-sort="num">Qty</th>
+              <th class="num" data-sort="num">Unit price</th>
+              <th class="num" data-sort="num">Total</th>
               <th>Supplier</th>
               <th>Agency</th>
               <th>Source</th>
@@ -964,7 +1008,7 @@ const datasetSchema = {
   <section>
     <h3 class="section-title">Related contract actions</h3>
     <p class="gloss">
-      Contract action totals, not unit prices — obligation amounts from USAspending for related
+      Contract action totals, not unit prices: obligation amounts from USAspending for related
       awards, shown for context only. These do not appear on the price chart above.
       {contractActions.some((c) => c.isCeiling) && (
         <> A long-term contract shows the most it can be worth, not money spent. It is not counted in the purchase totals on this page.</>
@@ -974,7 +1018,7 @@ const datasetSchema = {
       <p class="gloss">No related contract actions on record.</p>
     ) : (
       <div class="table-wrap">
-        <table>
+        <table class="rows-fold">
           <thead>
             <tr>
               <th>Action date</th>
@@ -1002,13 +1046,16 @@ const datasetSchema = {
     )}
   </section>
 
+  </div>
+
+  <div class="group" data-group="demand">
   <!-- 5. Demand history — every solicitation on record, open and closed. -->
   {(allSols.length > 0 || hasDemandCharts) && (
     <section id="demand" style="margin-top:2.5rem;">
       <h2 class="section-title" style="margin-top:0;">Demand history</h2>
       {allSols.length > 0 && (
       <p class="gloss">
-        Every solicitation we've indexed for this NSN, open and closed — {allSols.length} on record.
+        Every solicitation we've indexed for this NSN, open and closed: {allSols.length} on record.
         Closed RFQs (expired, cancelled, or awarded) stay here as a record of past demand; they
         never get removed.
       </p>
@@ -1022,11 +1069,11 @@ const datasetSchema = {
       )}
       {allSols.length > 0 && (
       <div class="table-wrap">
-        <table>
+        <table class="rows-fold" data-sortable>
           <thead>
             <tr>
               <th>Solicitation</th>
-              <th>Issued</th>
+              <th data-sort="date">Issued</th>
               <th>Closes / closed</th>
               <th class="num">Qty</th>
               <th>Status</th>
@@ -1056,7 +1103,9 @@ const datasetSchema = {
     </section>
   )}
 
-  <p style="margin:1rem 0 0; display:flex; gap:0.75rem; flex-wrap:wrap;">
+  </div>
+
+  <p class="btns">
     <a class="btn" href={dibbsRfqUrl} target="_blank" rel="nofollow noopener">
       Open RFQs on DIBBS →
     </a>
@@ -1073,15 +1122,17 @@ const datasetSchema = {
     cta="Join the list"
   />
 
-  <section class="card" id="about">
-    <h2>About this data</h2>
+  <details class="fold" id="about">
+    <summary><h2>About this data</h2></summary>
+    <section class="fold-body">
     <ul class="gloss">
-      <li>Unit prices: DLA DIBBS award records — every row links to its government record.</li>
+      <li>Unit prices: DLA DIBBS award records; every row links to its government record.</li>
       <li>AMSC: latest observed value from {nsn.amscSourceUrl ? <a href={nsn.amscSourceUrl} target="_blank" rel="noopener noreferrer">DIBBS solicitation history</a> : 'DIBBS solicitation history'}{nsn.amscObservedOn && <> as of {formatDate(nsn.amscObservedOn)}</>}.</li>
       <li>Contract action totals: USAspending, context only.</li>
       {lastUpdated && <li>Data last refreshed: {new Date(lastUpdated).toISOString().slice(0, 10)}.</li>}
       <li><a href="/methodology/">Full methodology →</a></li>
     </ul>
     <CiteThis title={itemLabel} url={canonicalUrl} asOf={citeAsOf} />
-  </section>
+    </section>
+  </details>
 </BaseLayout>

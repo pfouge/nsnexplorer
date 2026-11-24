@@ -7,7 +7,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import { SITE_NAME, CONTACT_EMAIL } from '../consts';
 import { ACCOUNTS_ENABLED } from '../lib/account';
 
-const updated = 'November 19, 2026';
+const updated = 'November 24, 2026';
 ---
 
 <BaseLayout
@@ -92,6 +92,19 @@ const updated = 'November 19, 2026';
     <li><strong>Essential.</strong> Needed for the Services to function, for example to keep you signed in if you create an account.</li>
     <li><strong>Analytics.</strong> To understand how the Services are used so we can improve them. See <a href="#analytics">Analytics</a>.</li>
     <li><strong>Advertising.</strong> None today: no advertising cookie is set. See <a href="#advertising">Advertising</a>.</li>
+  </ul>
+  <h3 id="browser-storage">Stored in your browser</h3>
+  <p>
+    A few settings are kept in your browser's own storage, on your device only. They are never sent to
+    us and you can clear them at any time by clearing this site's data in your browser:
+  </p>
+  <ul>
+    <li><strong>theme</strong>: light or dark, if you switch themes.</li>
+    <li><strong>analytics</strong> and <strong>analytics-region</strong>: your analytics choice and whether your region needs one. See <a href="#analytics">Analytics</a>.</li>
+    <li><strong>nsn.capabilities</strong>: the supply classes you pick on the home page under "What can you make or source?", so the open bids in them show when you come back.</li>
+    <li><strong>nsn:open-view</strong> and <strong>nsn.hiddenClasses.v1</strong> on <a href="/open/">open demand</a>: whether you view results as cards or a table, and which classes you hid.</li>
+    <li><strong>nsn.tab.*</strong> and <strong>nsn.density</strong> (kept only until you close the tab): the section tab you last chose on each kind of page, and compact or comfortable table rows.</li>
+    <li>If you sign in: <strong>nsn_wl_list</strong>, the watchlist you last opened, and <strong>nsn_follow_intent</strong>, the item to follow after signing in (kept only until you close the tab).</li>
   </ul>
   <p>
     You can control cookies through your browser settings. Blocking some cookies may affect how

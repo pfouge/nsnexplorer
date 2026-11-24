@@ -359,14 +359,18 @@ document.querySelectorAll<HTMLElement>('p.lede:not(.answer):not(:has(~ p.lede)),
   b.type = 'button';
   b.className = 'clamp-more';
   b.textContent = 'More';
-  b.addEventListener('click', () => { el.classList.add('open'); b.remove(); });
+  b.addEventListener('click', () => { el.classList.add('open'); b.remove(); removeEventListener('resize', place); });
+  // The button sits in the space CSS reserves under the folded text (absolutely placed), so adding it moves nothing.
+  const place = () => { b.style.top = `${el.offsetTop + el.offsetHeight + 4}px`; b.style.left = `${el.offsetLeft}px`; };
   el.after(b);
+  place();
+  addEventListener('resize', place, { passive: true });
 });
 
-/* ---------- long result lists: first sixty rows, then "Show all" ---------- */
+/* ---------- long result lists: first twenty rows, then "Show all" ---------- */
 document.querySelectorAll<HTMLElement>('.product-grid').forEach((grid) => {
   const total = grid.children.length;
-  if (total <= 60) { grid.classList.add('expanded'); return; }
+  if (total <= 20) { grid.classList.add('expanded'); return; }
   const wrap = document.createElement('p');
   wrap.className = 'show-all';
   const b = document.createElement('button');

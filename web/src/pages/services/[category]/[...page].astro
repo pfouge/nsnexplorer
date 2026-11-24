@@ -224,17 +224,17 @@ const stateMapModel = showCharts ? stateModel(allNotices) : null;
                     <span class="signal mono">{x.solNumber}</span>
                   )}
                 </div>
-                <p class="gloss" style="margin:0.35rem 0 0; font-size:0.78rem;">
+                <p class="gloss" style="margin:0.35rem 0 0; font-size:var(--t-small);">
                   {x.agency ?? 'Unknown agency'}{x.office ? ` · ${x.office}` : ''}
                 </p>
-                <p class="gloss" style="margin:0.2rem 0 0; font-size:0.78rem;">
+                <p class="gloss" style="margin:0.2rem 0 0; font-size:var(--t-small);">
                   {x.setaside ?? 'No set-aside'}
                   {x.naics && ` · NAICS ${x.naics}`}
                   {x.state && ` · ${x.state}`}
                   {x.postedOn && ` · Posted ${formatDate(x.postedOn)}`}
                 </p>
                 {groupName && (
-                  <p class="gloss" style="margin:0.2rem 0 0; font-size:0.78rem;">
+                  <p class="gloss" style="margin:0.2rem 0 0; font-size:var(--t-small);">
                     <a href={`/group/${x.fsg}/`}>Group {x.fsg}: {groupName}</a>
                   </p>
                 )}

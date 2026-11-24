@@ -8,17 +8,26 @@ import { buildDepartments, fscDisplayName, fsgName } from '../lib/browse';
 import HeadlineTiles from '../components/viz/HeadlineTiles.astro';
 import DemandMap from '../components/viz/DemandMap.astro';
 import { buildDemandTiles, buildTiles } from '../lib/viz-site';
+import CapabilityMatcher from '../components/CapabilityMatcher.astro';
+import AdSlot from '../components/AdSlot.astro';
+import { openByClass } from '../lib/open-by-class';
+// Two layout directions were built and scored; this one leads with the capability matcher
+// (design/home/decision.md).
 
 const data = await loadSiteData();
 const { stats, nsnsByFsc } = data;
 // Only categories with at least one tracked NSN are listed on the home page.
 const deepFscs = data.deepFscs.filter((f) => (nsnsByFsc.get(f.fsc)?.length ?? 0) > 0);
+// Shown with the most-tracked classes first, so the useful ones lead and tiny unlisted codes sink.
+// The structured-data ItemList below keeps its code order (unchanged for search engines).
+const deepByCount = [...deepFscs].sort((a, b) => (nsnsByFsc.get(b.fsc)?.length ?? 0) - (nsnsByFsc.get(a.fsc)?.length ?? 0) || a.fsc.localeCompare(b.fsc));
 
 // Headline numbers and the demand map (charts, lib/viz-site.ts).
 const tiles = buildTiles(data.viz.tiles, data.viz.dailyStats);
 const groupPages = new Set(buildDepartments(data).map((d) => d.fsg));
 const demandTiles = buildDemandTiles(data.viz.groups, fsgName, (fsg) => groupPages.has(fsg));
 
+const openClasses = openByClass(data.openByFsc, 5, data.viz.today);
 const fmtInt = (n: number) => n.toLocaleString('en-US');
 const fmtUsd = (n: number) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
@@ -79,125 +88,137 @@ const itemList = {
   ads={true}
 >
   <section class="hero home">
+    <div class="home-lead">
+      <h1>{h1}</h1>
+      <p class="lede">Find the federal parts demand you can fill.</p>
+      <HomeSearch />
+      <div class="chips wrap-wide" aria-label="Popular">
+        <a class="chip" href="/open/">Open demand <span class="n">{fmtInt(stats.openSolicitationsCount)}</span></a>
+        <a class="chip" href="/services/">Service notices</a>
+        <a class="chip" href="/catalog/">Catalog</a>
+        <a class="chip" href="/browse/">Price history</a>
+        <a class="chip" href="/agencies/">Agencies</a>
+        <a class="chip" href="/suppliers/">New to government parts?</a>
+        <a class="chip" href="/methodology/">How the data works</a>
+      </div>
+    </div>
     <div class="hero-bg" aria-hidden="true"><canvas></canvas></div>
-    <h1>{h1}</h1>
-    <p class="lede">Find the federal parts demand you can fill.</p>
-    <p class="lede">
-      Every open U.S. government solicitation — searchable by NSN or category, linked straight to the
-      bid, with the demand history and price record to quote it right. For suppliers who want to win
-      the work, and anyone sizing up the market. Free.
-    </p>
-    <HomeSearch />
-    <div class="chips wrap-wide" aria-label="Popular">
-      <a class="chip" href="/open/">Open demand <span class="n">{fmtInt(stats.openSolicitationsCount)}</span></a>
-      <a class="chip" href="/services/">Service notices</a>
-      <a class="chip" href="/catalog/">Catalog</a>
-      <a class="chip" href="/browse/">Price history</a>
-      <a class="chip" href="/agencies/">Agencies</a>
-      <a class="chip" href="/suppliers/">New to government parts?</a>
-      <a class="chip" href="/methodology/">How the data works</a>
+    <div class="datastrip home-facts">
+      <div class="cell">
+        <div class="k">Open for bid now</div>
+        <div class="v up"><a href="/open/">{fmtInt(stats.openSolicitationsCount)}</a></div>
+      </div>
+      <div class="cell">
+        <div class="k">Parts indexed</div>
+        <div class="v">{fmtInt(N)}</div>
+      </div>
+      <div class="cell">
+        <div class="k">Categories</div>
+        <div class="v">{fmtInt(data.solicitationsByFsc.size)}</div>
+      </div>
+      <div class="cell">
+        <div class="k">Dollars indexed</div>
+        <div class="v">{fmtUsd(stats.totalDollars + stats.totalObligated)}</div>
+      </div>
     </div>
   </section>
+  <p class="gloss home-what">
+    Every open U.S. government solicitation, searchable by NSN or category, linked straight to the
+    bid, with the demand history and price record to quote it right. For suppliers who want to win
+    the work, and anyone sizing up the market. Free.
+  </p>
+
+  <CapabilityMatcher classes={openClasses} today={data.viz.today} />
 
   <section class="viz-section" aria-labelledby="market-today">
     <h2 class="section-title" id="market-today">Open demand today</h2>
     <HeadlineTiles tiles={tiles} />
-    {demandTiles && <div style="margin-top:1rem"><DemandMap tiles={demandTiles} /></div>}
-  </section>
-
-  <section class="intro">
-    <h2 class="section-title">A free national stock number search built from official records</h2>
-    <p class="gloss">
-      NSN Explorer is a free NSN lookup for suppliers, buyers and researchers. Type any national
-      stock number to see its open DLA solicitations, past purchase prices and the
-      agencies that buy it. Every record comes from a public U.S. government source: DIBBS for
-      solicitations and awards, SAM.gov for contract notices and USAspending for contract actions.
-      The index is rebuilt every day and every figure links back to the official record. No account
-      is needed.
-    </p>
-  </section>
-
-  {stats.openSolicitationsCount > 0 && (
-    <div class="note open-callout">
-      <span>
-        <strong>{fmtInt(stats.openSolicitationsCount)} solicitations are open for bid right now.</strong>{' '}
-        See what's closing soon and where.
-      </span>
-      <a class="btn" href="/open/">View open demand →</a>
-    </div>
-  )}
-
-  <div class="datastrip">
-    <div class="cell">
-      <div class="k">Parts indexed</div>
-      <div class="v">{fmtInt(N)}</div>
-    </div>
-    <div class="cell">
-      <div class="k">Open for bid now</div>
-      <div class="v up">{fmtInt(stats.openSolicitationsCount)}</div>
-    </div>
-    <div class="cell">
-      <div class="k">Categories</div>
-      <div class="v">{fmtInt(data.solicitationsByFsc.size)}</div>
-    </div>
-    <div class="cell">
-      <div class="k">Dollars indexed</div>
-      <div class="v">{fmtUsd(stats.totalDollars + stats.totalObligated)}</div>
-    </div>
-  </div>
-
-  <h2 class="section-title">Browse the catalog</h2>
-  <p class="gloss">
-    Open solicitations across {fmtInt(data.solicitationsByFsc.size)} federal supply classes — each one
-    linked to its official record — plus deepening price history where we've indexed it.
-  </p>
-  <div class="btns" style="margin-bottom:2.75rem">
-    <a class="btn" href="/open/">Browse all {fmtInt(data.solicitationsByFsc.size)} categories →</a>
-    <a class="btn-ghost btn" href="/catalog/">Priced catalog →</a>
-  </div>
-
-  <h3 class="section-title">Full price history so far</h3>
-  <p class="gloss">
-    The federal supply classes where we've indexed every priced purchase we can find, with a link
-    back to the underlying government record for each one.
-  </p>
-  <section class="index-list" aria-label="Priced categories">
-    {deepFscs.length === 0 ? (
-      <div class="index-row soon">
-        <div class="num"></div>
-        <div>
-          <h3>First categories indexing now</h3>
-          <p>O-Rings (FSC 5331) is being backfilled from five fiscal years of federal purchase records.</p>
-        </div>
+    {demandTiles && <div class="home-map"><DemandMap tiles={demandTiles} /></div>}
+    {stats.openSolicitationsCount > 0 && (
+      <div class="open-callout">
+        <span>
+          <strong>{fmtInt(stats.openSolicitationsCount)} solicitations are open for bid right now.</strong>{' '}
+          See what's closing soon and where.
+        </span>
+        <a class="btn" href="/open/">View open demand →</a>
       </div>
-    ) : (
-      deepFscs.map((f) => {
-        const count = nsnsByFsc.get(f.fsc)?.length ?? 0;
-        return (
-          <a class="index-row" href={`/fsc/${f.fsc}/`}>
-            <div class="num">FSC {f.fsc}</div>
-            <div>
-              <h3>{fscDisplayName(f.fsc, f.name)} <span class="tag live">Live</span></h3>
-              <p>{fmtInt(count)} NSNs tracked</p>
-            </div>
-            <div class="go">→</div>
-          </a>
-        );
-      })
     )}
   </section>
 
-  <section class="manifesto">
-    <p class="eyebrow">Why we built this</p>
-    <h2>The demand is public. Finding what you can win never was.</h2>
-    <p>
-      Every open solicitation, award, and price on this site was already published by the U.S.
-      government — scattered across slow systems built for procurement officers, not for the
-      businesses that could fill the orders. NSN Explorer pulls it together: what's open right now,
-      who's buying, how often, and what it has paid — each figure linked to its official record.
-      Find the work, size the market, quote with confidence.
-    </p>
-  </section>
+  <AdSlot position="mid" />
+
+  <div class="home-browse">
+    <section class="home-browse-lead">
+      <div>
+      <h2 class="section-title">Browse the catalog</h2>
+      <p class="gloss">
+        Open solicitations across {fmtInt(data.solicitationsByFsc.size)} federal supply classes, each one
+        linked to its official record, plus deepening price history where we've indexed it.
+      </p>
+      <div class="btns">
+        <a class="btn" href="/open/">Browse all {fmtInt(data.solicitationsByFsc.size)} categories →</a>
+        <a class="btn-ghost btn" href="/catalog/">Priced catalog →</a>
+      </div>
+      </div>
+    </section>
+    <section class="home-history">
+      <h3 class="section-title">Full price history so far</h3>
+      <p class="gloss">
+        The federal supply classes where we've indexed every priced purchase we can find, with a link
+        back to the underlying government record for each one. Most-tracked classes first.
+      </p>
+      <section class="index-list list-fold" aria-label="Priced categories">
+        {deepFscs.length === 0 ? (
+          <div class="index-row soon">
+            <div class="num"></div>
+            <div>
+              <h3>First categories indexing now</h3>
+              <p>O-Rings (FSC 5331) is being backfilled from five fiscal years of federal purchase records.</p>
+            </div>
+          </div>
+        ) : (
+          deepByCount.map((f) => {
+            const count = nsnsByFsc.get(f.fsc)?.length ?? 0;
+            return (
+              <a class="index-row" href={`/fsc/${f.fsc}/`}>
+                <div class="num">FSC {f.fsc}</div>
+                <div>
+                  <h3>{fscDisplayName(f.fsc, f.name)} <span class="tag live">Live</span></h3>
+                  <p>{fmtInt(count)} NSNs tracked</p>
+                </div>
+                <div class="go">→</div>
+              </a>
+            );
+          })
+        )}
+      </section>
+    </section>
+  </div>
+
+  <div class="home-about">
+    <section class="intro">
+      <h2 class="section-title">A free national stock number search built from official records</h2>
+      <p class="gloss">
+        NSN Explorer is a free NSN lookup for suppliers, buyers and researchers. Type any national
+        stock number to see its open DLA solicitations, past purchase prices and the
+        agencies that buy it. Every record comes from a public U.S. government source: DIBBS for
+        solicitations and awards, SAM.gov for contract notices and USAspending for contract actions.
+        The index is rebuilt every day and every figure links back to the official record. No account
+        is needed.
+      </p>
+    </section>
+    <section class="manifesto">
+      <p class="eyebrow">Why we built this</p>
+      <h2>The demand is public. Finding what you can win never was.</h2>
+      <p>
+        Every open solicitation, award, and price on this site was already published by the U.S.
+        government, scattered across slow systems built for procurement officers, not for the
+        businesses that could fill the orders. NSN Explorer pulls it together: what's open right now,
+        who's buying, how often, and what it has paid, each figure linked to its official record.
+        Find the work, size the market, quote with confidence.
+      </p>
+    </section>
+  </div>
 
   <div class="card-grid">
     <SignupForm
@@ -216,15 +237,21 @@ const itemList = {
 
   <section class="faq">
     <h2 class="section-title">NSN lookup questions</h2>
-    {faq.map((f) => (
-      <>
-        <h3>{f.question}</h3>
-        <p class="gloss">{f.answer}</p>
-      </>
-    ))}
+    <div class="faq-grid">
+      {faq.map((f) => (
+        <div>
+          <h3>{f.question}</h3>
+          <p class="gloss">{f.answer}</p>
+        </div>
+      ))}
+    </div>
   </section>
-<script>
-  import '../scripts/heroDeploy';
-</script>
-
 </BaseLayout>
+
+<script>
+  // The globe only shows on wide screens, so phones never download it.
+  const wide = matchMedia('(min-width: 900px)');
+  const loadGlobe = () => { import('../scripts/heroDeploy'); };
+  if (wide.matches) loadGlobe();
+  else wide.addEventListener('change', (e) => { if (e.matches) loadGlobe(); }, { once: true });
+</script>

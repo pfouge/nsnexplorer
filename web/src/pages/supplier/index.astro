@@ -3,6 +3,7 @@
 // pub.supplier_stats ranks through the build's pg pool (lib/supplier-board-data.ts); the supplier
 // pages themselves are on-demand (supplier/[cage].astro). Stance: a public-records page — every
 // sentence states what the award records show, and every list links to the records behind it.
+import GroupTabs from '../../components/GroupTabs.astro';
 import '../../styles/supplier.css';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import CiteThis from '../../components/CiteThis.astro';
@@ -121,19 +122,23 @@ const asOf = h.asOf;
         <li><a class="chip outline" href="/supplier/leaderboard.csv" download>Download all lists (CSV)</a></li>
       </ul>
 
-      <nav class="tabs" aria-label="Rankings">
-        <a href="#dollars">Award dollars</a>
-        <a href="#wins">Wins</a>
-        <a href="#breadth">Breadth</a>
-        <a href="#rising">Rising</a>
-        <a href="#states">By state</a>
-        <a href="#method">How it works</a>
-      </nav>
+      <GroupTabs
+        page="board"
+        label="Rankings"
+        defaultTab="dollars"
+        tabs={[
+          { id: 'dollars', label: 'Award dollars' },
+          { id: 'wins', label: 'Wins' },
+          { id: 'breadth', label: 'Breadth' },
+          { id: 'rising', label: 'Rising' },
+          { id: 'states', label: 'By state' },
+        ]}
+      />
 
       <p class="gloss board-note" id="all-time-note">{allTimeNote(coverageLabel)}</p>
 
       <div class="board">
-        <section class="board-section" id="dollars">
+        <section class="board-section group" id="dollars" data-group="dollars">
           <h2>Award dollars</h2>
           <p class="gloss">
             Suppliers ranked by the total value of the awards recorded for them. Long-term contracts are not money spent, so
@@ -193,7 +198,7 @@ const asOf = h.asOf;
           )}
         </section>
 
-        <section class="board-section" id="wins">
+        <section class="board-section group" id="wins" data-group="wins">
           <h2>Wins</h2>
           <p class="gloss">Suppliers ranked by the number of awards recorded for them, whatever each was worth. Long-term contracts are not counted as wins.</p>
           <div class="viz-seg" data-seg-group="board-wins" role="group" aria-label="Period">
@@ -212,7 +217,7 @@ const asOf = h.asOf;
           </div>
         </section>
 
-        <section class="board-section" id="breadth">
+        <section class="board-section group" id="breadth" data-group="breadth">
           <h2>Breadth</h2>
           <p class="gloss">Suppliers ranked by how many different items they have been awarded: distinct NSNs, or distinct federal supply classes.</p>
           <div class="viz-seg" data-seg-group="board-breadth" role="group" aria-label="Measure">
@@ -227,7 +232,7 @@ const asOf = h.asOf;
           </div>
         </section>
 
-        <section class="board-section" id="rising">
+        <section class="board-section group" id="rising" data-group="rising">
           <h2>Rising</h2>
           <p class="gloss">
             Suppliers whose award dollars grew the most: the last 12 months against the 12 months before. Only suppliers with at
@@ -242,7 +247,7 @@ const asOf = h.asOf;
           )}
         </section>
 
-        <section class="board-section" id="states">
+        <section class="board-section group" id="states" data-group="states">
           <h2>Suppliers by state and territory</h2>
           <p class="gloss">Where the suppliers with awards are located (the city and state in the public CAGE file; besides the 50 states this includes Washington, DC and U.S. territories such as Puerto Rico), and what they were awarded in the last 12 months.</p>
           <div class="table-wrap">

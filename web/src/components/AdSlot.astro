@@ -1,0 +1,13 @@
+---
+// AdSlot.astro — a fixed, labelled ad position in the page's source order (never moved with CSS), so a
+// filled unit cannot shift content. Positions match AD_SLOTS in lib/ads-config.ts. While AD_UNITS_ON is
+// false (phase 1, now) it renders an empty, zero-height marker: the place is designed in, nothing shows.
+// Phase 2 (draft PR #53) renders the unit inside this element with the reserved height below. Google's
+// in-page Auto ads stay off: on spotthemoney.com they filled the redesigned columns and broke the layout.
+// The prop is `position`, not `slot`: Astro reserves `slot` and silently drops the element.
+import { AD_UNITS_ON } from '../lib/ads-config';
+interface Props { position: 'top' | 'mid' | 'low' | 'article' | 'multiplex'; height?: number }
+const { position, height = position === 'multiplex' ? 600 : 280 } = Astro.props;
+const on = AD_UNITS_ON;
+---
+<div class="ad-slot" data-ad-position={position} data-on={on ? '' : undefined} style={on ? `--ad-h:${height}px` : undefined} aria-hidden={on ? undefined : 'true'}><slot /></div>

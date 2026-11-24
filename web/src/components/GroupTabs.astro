@@ -1,0 +1,33 @@
+---
+// GroupTabs.astro — one group of sections at a time, with an "All" tab (scripts/disclosure.ts).
+// Sections below carry data-group="<id>". The inline script runs before those sections are parsed and
+// hides the groups that are not selected, so nothing moves after paint. Without JavaScript the bar stays
+// hidden and every group shows.
+interface Tab { id: string; label: string; count?: number | null }
+interface Props { page: string; tabs: Tab[]; defaultTab?: string; label?: string }
+const { page, tabs, defaultTab = tabs[0]?.id, label = 'Sections' } = Astro.props;
+const ids = tabs.map((t) => t.id);
+---
+<div class="tabs group-tabs" data-group-tabs={page} data-default={defaultTab} aria-label={`${label}: show one group or all`} hidden>
+  {tabs.map((t) => (
+    <button type="button" data-tab={t.id}>{t.label}{t.count != null && <span class="tab-count">{t.count.toLocaleString('en-US')}</span>}</button>
+  ))}
+  <button type="button" data-tab="all">All</button>
+</div>
+<script is:inline define:vars={{ page, defaultTab, ids }}>
+  (() => {
+    let g = defaultTab;
+    try { g = sessionStorage.getItem('nsn.tab.' + page) || defaultTab; } catch {}
+    if (g !== 'all' && !ids.includes(g)) g = defaultTab;
+    const bar = document.querySelector('[data-group-tabs="' + page + '"]');
+    if (bar) {
+      bar.hidden = false;
+      bar.querySelectorAll('[data-tab]').forEach((b) => b.setAttribute('aria-pressed', String(b.getAttribute('data-tab') === g)));
+    }
+    if (g === 'all') return;
+    const s = document.createElement('style');
+    s.id = 'gt-pre-' + page;
+    s.textContent = '[data-group]:not([data-group="' + g + '"]){display:none}';
+    document.head.appendChild(s);
+  })();
+</script>

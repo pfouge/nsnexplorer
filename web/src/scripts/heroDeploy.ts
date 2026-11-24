@@ -1,5 +1,6 @@
-// heroDeploy.ts — "global deployment" hero background: a slowly rotating
-// orthographic globe, offset to the right, built from a geodesic dot
+// heroDeploy.ts: the home page globe, a background graphic behind the
+// hero (wide screens only). A slowly rotating orthographic globe, offset
+// to the right and cropped by the hero, built from a geodesic dot
 // lattice. Deployment missions fly great-circle routes between real US
 // Army/Navy installations: ships crawl ocean-only lanes between Navy
 // ports, flights never overfly the avoid zone (Russia/China), and every
@@ -50,20 +51,20 @@ function init(): void {
   let W = 0, H = 0, DPR = 1;
   let GX = 0, GY = 0, R = 100;          // globe center + radius (px)
   let colors = {
-    trail: '#55565C', accent: '#0E7C4D', sphere: '#F1ECE1',
-    us: '#1D4AAE', ally: '#0A7191', foe: '#BE2F34',
+    trail: '#4F5761', accent: '#0E7C4D', sphere: '#F5F7F9',
+    us: '#1D3F72', ally: '#5B7FB0', foe: '#B42318',
   };
   let dotAlphaBase = 0.5; // light theme needs more ink than dark
 
   const readColors = () => {
     const s = getComputedStyle(document.documentElement);
     colors = {
-      trail: s.getPropertyValue('--ink-soft').trim() || '#55565C',
-      accent: s.getPropertyValue('--green').trim() || '#0E7C4D',
-      sphere: s.getPropertyValue('--paper-2').trim() || '#F1ECE1',
-      us: s.getPropertyValue('--geo-us').trim() || '#1D4AAE',
-      ally: s.getPropertyValue('--geo-ally').trim() || '#0A7191',
-      foe: s.getPropertyValue('--geo-foe').trim() || '#BE2F34',
+      trail: s.getPropertyValue('--text-2').trim() || '#4F5761',
+      accent: s.getPropertyValue('--logo-needle').trim() || '#0E7C4D',
+      sphere: s.getPropertyValue('--surface').trim() || '#F5F7F9',
+      us: s.getPropertyValue('--geo-us').trim() || '#1D3F72',
+      ally: s.getPropertyValue('--geo-ally').trim() || '#5B7FB0',
+      foe: s.getPropertyValue('--geo-foe').trim() || '#B42318',
     };
     dotAlphaBase = document.documentElement.dataset.theme === 'dark' ? 0.36 : 0.5;
   };
@@ -82,10 +83,12 @@ function init(): void {
     canvas.width = W * DPR; canvas.height = H * DPR;
     canvas.style.width = `${W}px`; canvas.style.height = `${H}px`;
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    // Offset right; large enough to feel planetary, cropped by the hero.
-    R = Math.min(H * 0.66, W * 0.30);
-    GX = W * 0.74;
-    GY = H * 0.52;
+    // Offset right; large enough to feel planetary, cropped by the hero at
+    // the top and right (the redesigned hero is shorter, so the radius is
+    // a larger share of its height than before).
+    R = Math.min(H * 0.86, W * 0.30);
+    GX = W * 0.76;
+    GY = H * 0.5;
   };
 
   // Precompute unit vectors for the lattice, grouped by geopolitical

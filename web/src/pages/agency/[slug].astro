@@ -114,7 +114,7 @@ const breadcrumbSchema = {
       <h2>Obligations by fiscal year</h2>
       <p class="gloss">Contract actions by federal fiscal year (1 October to 30 September). Bars are scaled to the largest year.</p>
       <div class="table-wrap">
-        <table>
+        <table class="rows-fold">
           <thead>
             <tr><th>Fiscal year</th><th class="num">Actions</th><th class="num">Obligated</th><th>Relative size</th></tr>
           </thead>
@@ -126,7 +126,7 @@ const breadcrumbSchema = {
                 <td class="num mono">{formatUsd(r.obligated)}</td>
                 <td style="min-width:8rem;width:40%;">
                   <div style="height:0.75rem;background:var(--paper-2);border-radius:3px;overflow:hidden;" aria-hidden="true">
-                    <div style={`height:100%;width:${barWidth(r.obligated, fyMax)}%;background:var(--green-tint);border-right:2px solid var(--green);`}></div>
+                    <div style={`height:100%;width:${barWidth(r.obligated, fyMax)}%;background:var(--accent-weak);border-right:2px solid var(--accent);`}></div>
                   </div>
                 </td>
               </tr>
@@ -142,7 +142,7 @@ const breadcrumbSchema = {
       <h2>Top suppliers</h2>
       <p class="gloss">The {fmtInt(topRecipients.length)} suppliers with the most obligated dollars from this agency. A supplier links to its page when its UEI matches exactly one CAGE with a page here.</p>
       <div class="table-wrap">
-        <table>
+        <table class="rows-fold">
           <thead>
             <tr><th>Supplier</th><th class="num">Actions</th><th class="num">Obligated</th><th class="num">Share of obligations</th></tr>
           </thead>
@@ -169,7 +169,7 @@ const breadcrumbSchema = {
       <h2>What it buys</h2>
       <p class="gloss">The {fmtInt(topClasses.length)} federal supply classes with the most obligated dollars from this agency.</p>
       <div class="table-wrap">
-        <table>
+        <table class="rows-fold">
           <thead>
             <tr><th>Class</th><th>Name</th><th class="num">Actions</th><th class="num">Obligated</th><th class="num">Share of obligations</th></tr>
           </thead>
@@ -194,7 +194,7 @@ const breadcrumbSchema = {
       <h2>Recent contract actions</h2>
       <p class="gloss">The {fmtInt(recent.length)} most recent actions. The amount links to the USAspending record.</p>
       <div class="table-wrap">
-        <table>
+        <table class="rows-fold">
           <thead>
             <tr><th>Date</th><th>Supplier</th><th>Class</th><th>Description</th><th class="num">Obligated</th></tr>
           </thead>
@@ -221,7 +221,7 @@ const breadcrumbSchema = {
     <h2>Purchases</h2>
     <p class="gloss">Prices paid by this agency on indexed price points, {fmtInt(purchases.length)} purchases worth {formatUsd(totalDollars)}.</p>
       <div class="table-wrap">
-        <table>
+        <table class="rows-fold">
           <thead>
             <tr>
               <th>Awarded</th>

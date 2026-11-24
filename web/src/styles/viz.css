@@ -3,42 +3,42 @@
    on both card surfaces), not the page accent, so the dark theme gets
    properly stepped values rather than a flip. */
 :root {
-  --v-main: #0E7C4D;
-  --v-alt: #1D4AAE;
-  --v-warn: #B45309;
-  --v-neutral: #A8A498;
-  --v-flag: #C0392B;
+  --v-main: #1D3F72;
+  --v-alt: #7F93B5;
+  --v-warn: #B42318;
+  --v-neutral: #C2C9D1;
+  --v-flag: #B42318;
   --v-on: #FFFFFF;
-  --v-grid: rgba(17, 17, 20, 0.09);
-  --v-axis: rgba(17, 17, 20, 0.3);
-  --v-band: rgba(17, 17, 20, 0.07);
+  --v-grid: #E2E6EA;
+  --v-axis: #C9CFD6;
+  --v-band: rgba(29, 63, 114, 0.07);
 }
 [data-theme='dark'] {
-  --v-main: #18A65B;
-  --v-alt: #5B8DEF;
-  --v-warn: #C27A1F;
-  --v-neutral: #6F6E68;
-  --v-flag: #E2604F;
-  --v-on: #0E0F10;
-  --v-grid: rgba(242, 240, 234, 0.1);
-  --v-axis: rgba(242, 240, 234, 0.34);
-  --v-band: rgba(242, 240, 234, 0.09);
+  --v-main: #8EB3EE;
+  --v-alt: #56657E;
+  --v-warn: #F0716A;
+  --v-neutral: #3B434D;
+  --v-flag: #F0716A;
+  --v-on: #0F1215;
+  --v-grid: #2A3038;
+  --v-axis: #3B434D;
+  --v-band: rgba(142, 179, 238, 0.1);
 }
 
-.viz { margin: 0 0 1.6rem; min-width: 0; }
+.viz { margin: 0 0 var(--s6); min-width: 0; }
 .viz-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.3rem 0.8rem; margin-bottom: 0.2rem; }
-.viz-title { font-family: var(--font-display); font-size: 1.0625rem; font-weight: 600; letter-spacing: 0; margin: 0; color: var(--ink); }
-.viz-q { color: var(--ink-soft); font-size: 0.9rem; margin: 0 0 0.6rem; max-width: 70ch; }
-.viz-note { color: var(--ink-soft); font-size: 0.84rem; margin: 0.5rem 0 0; max-width: 78ch; }
-.viz-panel { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.1rem; min-width: 0; }
-.viz-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.viz-title { font-family: var(--font); font-size: var(--t-body); line-height: var(--lh-body); font-weight: 600; margin: 0; color: var(--text); }
+.viz-q { color: var(--text-2); font-size: var(--t-small); line-height: var(--lh-small); margin: 0 0 var(--s2); max-width: 70ch; }
+.viz-note { color: var(--text-2); font-size: var(--t-small); line-height: var(--lh-small); margin: var(--s2) 0 0; max-width: 78ch; }
+.viz-panel { background: var(--bg); border: 0; border-top: 1px solid var(--line); border-radius: 0; padding: var(--s3) 0 0; min-width: 0; }
+.viz-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s5) var(--s6); }
 .viz-grid > .viz { margin: 0; }
 .viz-grid > .viz.full { grid-column: 1 / -1; }
 .viz-split { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 1.1rem; align-items: start; }
 @media (max-width: 820px) { .viz-grid, .viz-split { grid-template-columns: 1fr; } }
 
 .viz-svg { display: block; overflow: visible; max-width: 100%; height: auto; }
-.viz-svg text { font-family: var(--font-sans); font-size: 11px; fill: var(--ink-soft); }
+.viz-svg text { font-family: var(--font); font-size: 11px; fill: var(--text-3); }
 .viz-svg text.vt-ink { fill: var(--ink); }
 .viz-svg text.vt-b { font-weight: 600; }
 .viz-svg text.vt-mono { font-family: var(--font-mono); }
@@ -54,7 +54,7 @@
 .vs-ink { stroke: var(--ink); } .vs-grid { stroke: var(--v-grid); } .vs-axis { stroke: var(--v-axis); }
 .vring { stroke: var(--card); stroke-width: 2; }
 
-.viz-legend { display: flex; flex-wrap: wrap; gap: 0.2rem 0.9rem; font-size: 0.8rem; color: var(--ink-soft); margin: 0 0 0.5rem; padding: 0; list-style: none; }
+.viz-legend { display: flex; flex-wrap: wrap; gap: 0.2rem 0.9rem; font-size: var(--t-small); color: var(--ink-soft); margin: 0 0 0.5rem; padding: 0; list-style: none; }
 .viz-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
 .viz-legend i.k-main { background: var(--v-main); } .viz-legend i.k-alt { background: var(--v-alt); }
 .viz-legend i.k-warn { background: var(--v-warn); } .viz-legend i.k-neutral { background: var(--v-neutral); }
@@ -63,33 +63,33 @@
 .viz-legend i.k-ring { background: transparent; border: 2px solid var(--v-alt); border-radius: 50%; }
 
 .viz-seg { display: inline-flex; flex-wrap: wrap; gap: 6px; border: 0; margin: 0 0 0.6rem; }
-.viz-seg button { font: inherit; font-size: 0.875rem; border: 0; border-radius: 15px; height: 30px; background: var(--paper-2); color: var(--ink); padding: 0 12px; cursor: pointer; }
-.viz-seg button[aria-pressed='true'] { background: var(--inv-bg); color: var(--inv-text); }
+.viz-seg button { font: inherit; font-size: var(--t-small); border: 1px solid var(--control); border-radius: var(--radius); height: 28px; background: var(--bg); color: var(--text); padding: 0 var(--s3); cursor: pointer; }
+.viz-seg button[aria-pressed='true'] { background: var(--accent-weak); border-color: var(--accent); color: var(--accent); font-weight: 600; }
 .viz-seg button:focus-visible { outline: 2px solid var(--v-main); outline-offset: -2px; }
 
-#viz-tip { position: fixed; z-index: 60; pointer-events: none; background: var(--inv-bg); color: var(--inv-text); font-size: 0.8rem; line-height: 1.35; padding: 7px 9px; border-radius: 4px; max-width: 260px; opacity: 0; transition: opacity 0.08s; white-space: pre-line; }
+#viz-tip { position: fixed; z-index: 60; pointer-events: none; background: var(--text); color: var(--bg); font-size: var(--t-small); line-height: 1.35; padding: 7px 9px; border-radius: 4px; max-width: 260px; opacity: 0; transition: opacity 0.08s; white-space: pre-line; }
 #viz-tip b { font-weight: 600; display: block; }
 
 .viz-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.75rem; }
-.viz-tile { border: 1px solid var(--line); border-radius: 12px; padding: 0.8rem 0.95rem; background: var(--card); min-width: 0; }
-.viz-tile .k { font-size: 0.8rem; color: var(--ink-soft); }
-.viz-tile .v { font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; letter-spacing: 0; font-variant-numeric: tabular-nums; line-height: 1.2; }
-.viz-tile .d { font-size: 0.8rem; color: var(--ink-soft); }
+.viz-tile { border: 0; border-left: 1px solid var(--line); border-radius: 0; padding: 0 0 0 var(--s4); background: transparent; min-width: 0; }
+.viz-tile .k { font-size: var(--t-small); color: var(--text-2); }
+.viz-tile .v { font-family: var(--font); font-size: var(--t-head); line-height: var(--lh-head); font-weight: 600; }
+.viz-tile .d { font-size: var(--t-small); color: var(--text-2); }
 @media (max-width: 820px) { .viz-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 .viz-table-wrap { overflow-x: auto; }
-table.viz-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; font-variant-numeric: tabular-nums; }
-table.viz-table th { font-size: 0.78rem; font-weight: 400; color: var(--ink-soft); text-align: left; height: auto; padding: 4px 8px; border-bottom: 1px solid var(--line); background: transparent; position: static; white-space: nowrap; }
+table.viz-table { width: 100%; border-collapse: collapse; font-size: var(--t-small); font-variant-numeric: tabular-nums; }
+table.viz-table th { font-size: var(--t-small); font-weight: 400; color: var(--ink-soft); text-align: left; height: auto; padding: 4px 8px; border-bottom: 1px solid var(--line); background: transparent; position: static; white-space: nowrap; }
 table.viz-table td { height: auto; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 table.viz-table .r { text-align: right; }
 table.viz-table tr.inc td { background: color-mix(in srgb, var(--v-main) 12%, transparent); }
 
 .viz-steps { display: grid; gap: 0.5rem; }
 .viz-steps > div { border: 1px solid var(--line); border-radius: 8px; padding: 0.5rem 0.7rem; background: var(--paper); display: flex; justify-content: space-between; align-items: baseline; gap: 0.7rem; }
-.viz-steps .k { font-size: 0.78rem; color: var(--ink-soft); }
-.viz-steps .v { font-family: var(--font-display); font-size: 1.1rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.viz-steps .k { font-size: var(--t-small); color: var(--ink-soft); }
+.viz-steps .v { font-family: var(--font-display); font-size: var(--t-head); font-weight: 600; font-variant-numeric: tabular-nums; }
 
-.viz-pill { font-size: 0.7rem; border: 1px solid var(--line); border-radius: 999px; padding: 0 7px; color: var(--ink-soft); white-space: nowrap; }
+.viz-pill { font-size: var(--t-small); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 0 7px; color: var(--ink-soft); white-space: nowrap; }
 .viz-pill.yes { border-color: color-mix(in srgb, var(--v-main) 45%, transparent); color: var(--v-main); background: color-mix(in srgb, var(--v-main) 10%, transparent); }
 .viz-dots { display: flex; gap: 4px; flex-wrap: wrap; }
 .viz-dots i { width: 12px; height: 12px; border-radius: 50%; background: var(--v-main); }
@@ -98,20 +98,20 @@ table.viz-table tr.inc td { background: color-mix(in srgb, var(--v-main) 12%, tr
 .viz-tape { overflow: hidden; background: var(--inv-bg); color: var(--inv-text); white-space: nowrap; }
 .viz-tape .run { display: inline-block; padding: 0.45rem 0; animation: viz-tape 80s linear infinite; }
 .viz-tape:hover .run, .viz-tape:focus-within .run { animation-play-state: paused; }
-.viz-tape a { color: inherit; margin: 0 1.3rem; font-size: 0.82rem; }
+.viz-tape a { color: inherit; margin: 0 1.3rem; font-size: var(--t-small); }
 .viz-tape em { font-style: normal; font-weight: 600; font-variant-numeric: tabular-nums; }
-.viz-tape .new { color: #6FD6A6; } .viz-tape .soon { color: #F0B45E; } .viz-tape small { color: var(--inv-soft); }
+.viz-tape .new { color: var(--accent); } .viz-tape .soon { color: var(--text); font-weight: 600; } .viz-tape small { color: var(--text-2); }
 @keyframes viz-tape { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 @media (prefers-reduced-motion: reduce) { .viz-tape .run { animation: none; } .viz-tape { overflow-x: auto; } }
 
 .viz-fresh { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.6rem; }
 .viz-fresh > div { border: 1px solid var(--line); border-radius: 8px; padding: 0.55rem 0.7rem; min-width: 0; }
-.viz-fresh .n { font-weight: 600; font-size: 0.82rem; }
-.viz-fresh .a { font-family: var(--font-mono); font-size: 0.74rem; color: var(--ink-soft); margin: 2px 0 6px; }
+.viz-fresh .n { font-weight: 600; font-size: var(--t-small); }
+.viz-fresh .a { font-family: var(--font-mono); font-size: var(--t-small); color: var(--ink-soft); margin: 2px 0 6px; }
 .viz-fresh .m { height: 6px; border-radius: 3px; background: var(--v-band); overflow: hidden; }
 .viz-fresh .m i { display: block; height: 100%; border-radius: 3px; background: var(--v-main); }
 .viz-fresh .late .m i { background: var(--v-warn); }
-.viz-fresh .s { font-size: 0.74rem; color: var(--ink-soft); margin-top: 5px; }
+.viz-fresh .s { font-size: var(--t-small); color: var(--ink-soft); margin-top: 5px; }
 @media (max-width: 820px) { .viz-fresh { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* The table rules in global.css (sticky first column, 48px rows) are for page tables, not the small ones inside charts. */
@@ -122,7 +122,7 @@ table.viz-table th:first-child, table.viz-table td:first-child { position: stati
 .viz-tape { border-bottom: 1px solid var(--line); }
 .viz-tape[hidden], .viz-fresh-wrap[hidden] { display: none; }
 .viz-fresh-wrap { margin: 1.25rem 0 1.5rem; }
-.viz-fresh-h { font-size: 0.875rem; font-weight: 600; color: inherit; margin: 0 0 0.5rem; }
+.viz-fresh-h { font-size: var(--t-body); font-weight: 600; color: inherit; margin: 0 0 0.5rem; }
 .viz-stack { display: grid; gap: 1rem; }
 .viz-stack > .viz { margin: 0; }
 .viz-legend i.k-dot { border-radius: 50%; }
@@ -133,25 +133,25 @@ table.viz-table th:first-child, table.viz-table td:first-child { position: stati
 /* Direct labels sit on top of dots and bands: a card-colored halo keeps them legible in both themes. */
 .viz-svg text.vt-halo { paint-order: stroke; stroke: var(--card); stroke-width: 3px; stroke-linejoin: round; }
 .viz-seg[hidden] { display: none; }
-.viz-sub { font-family: var(--font-display); font-size: 0.95rem; font-weight: 600; margin: 0 0 0.5rem; color: var(--ink); }
-.viz-steps .v.sm { font-size: 0.95rem; }
+.viz-sub { font-family: var(--font-display); font-size: var(--t-body); font-weight: 600; margin: 0 0 0.5rem; color: var(--ink); }
+.viz-steps .v.sm { font-size: var(--t-body); }
 .viz-steps { margin-bottom: 0.2rem; }
 .viz-calc-bar { max-width: 340px; margin-top: 0.8rem; }
 .viz-split > *, .viz-grid > * { min-width: 0; }
 table.viz-table td.sup { white-space: normal; min-width: 8rem; overflow-wrap: anywhere; }
 .viz-win { display: grid; gap: 0.15rem; }
-.viz-win-row { display: grid; grid-template-columns: minmax(0, 11rem) minmax(0, 1fr) auto; gap: 0.5rem 0.9rem; align-items: center; padding: 0.45rem 0; border-bottom: 1px solid var(--line); font-size: 0.84rem; }
+.viz-win-row { display: grid; grid-template-columns: minmax(0, 11rem) minmax(0, 1fr) auto; gap: 0.5rem 0.9rem; align-items: center; padding: 0.45rem 0; border-bottom: 1px solid var(--line); font-size: var(--t-small); }
 .viz-win-row:last-child { border-bottom: 0; }
 .viz-win .nm { font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
-.viz-win .sub { color: var(--ink-soft); font-size: 0.78rem; }
-.viz-dots .more { font-size: 0.78rem; color: var(--ink-soft); align-self: center; margin-left: 2px; }
+.viz-win .sub { color: var(--ink-soft); font-size: var(--t-small); }
+.viz-dots .more { font-size: var(--t-small); color: var(--ink-soft); align-self: center; margin-left: 2px; }
 @media (max-width: 520px) {
   .viz-win-row { grid-template-columns: minmax(0, 1fr) auto; }
   .viz-win-row .viz-dots { grid-column: 1 / -1; grid-row: 2; }
 }
 .viz-compare-form { display: flex; flex-wrap: wrap; gap: 0.7rem 1rem; align-items: flex-end; margin: 1rem 0 1.4rem; }
-.viz-compare-form label { display: grid; gap: 0.2rem; font-size: 0.8rem; color: var(--ink-soft); flex: 1 1 13rem; min-width: 0; }
-.viz-compare-form input { font: inherit; font-family: var(--font-mono); font-size: 0.9rem; padding: 0.5rem 0.65rem; border: 1px solid var(--line); border-radius: 4px; background: var(--card); color: var(--ink); min-width: 0; width: 100%; box-sizing: border-box; }
+.viz-compare-form label { display: grid; gap: 0.2rem; font-size: var(--t-small); color: var(--ink-soft); flex: 1 1 13rem; min-width: 0; }
+.viz-compare-form input { font: inherit; font-family: var(--font-mono); font-size: var(--t-body); padding: 0.5rem 0.65rem; border: 1px solid var(--line); border-radius: 4px; background: var(--card); color: var(--ink); min-width: 0; width: 100%; box-sizing: border-box; }
 .viz-compare-form input:focus { outline: 2px solid var(--v-main); outline-offset: -1px; }
 .viz-svg text.vt-link { fill: var(--ink); text-decoration: underline; }
 
@@ -180,23 +180,28 @@ body.embed-page { background: var(--card); padding: 12px; font-size: 16px; overf
 .embed-page .viz-svg text { font-size: 15px; }
 .embed-page .viz-svg text.vt-lg { font-size: 17px; }
 .embed-page .viz { margin: 0; }
-.embed-page .viz-title { font-size: 1rem; }
-.embed-page .viz-q { font-size: 0.82rem; margin-bottom: 0.4rem; }
-.embed-page .viz-note { font-size: 0.78rem; margin-top: 0.35rem; }
-.embed-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.2rem 1rem; margin: 0.6rem 0 0; font-size: 0.78rem; line-height: 1.4; color: var(--ink-soft); }
+.embed-page .viz-title { font-size: var(--t-body); }
+.embed-page .viz-q { font-size: var(--t-small); margin-bottom: 0.4rem; }
+.embed-page .viz-note { font-size: var(--t-small); margin-top: 0.35rem; }
+.embed-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.2rem 1rem; margin: 0.6rem 0 0; font-size: var(--t-small); line-height: 1.4; color: var(--ink-soft); }
 .embed-foot a { color: var(--ink); text-decoration: underline; }
 
 /* The Embed control under a chart on the full pages. */
-.viz-embed-btn { margin-left: auto; font: inherit; font-size: 0.8125rem; line-height: 1.2; color: var(--ink); background: var(--paper-2); border: 0; border-radius: 14px; height: 28px; padding: 0 12px; cursor: pointer; }
+.viz-embed-btn { margin-left: auto; font: inherit; font-size: var(--t-small); line-height: 1.2; color: var(--ink); background: var(--paper-2); border: 0; border-radius: 14px; height: 28px; padding: 0 12px; cursor: pointer; }
 .viz-embed-btn:hover, .viz-embed-btn[aria-expanded='true'] { background: var(--paper-2); }
 .viz-embed-btn:focus-visible, .viz-embed-copy:focus-visible { outline: 2px solid var(--v-main); outline-offset: 2px; }
 .viz-embed { margin-top: 0.7rem; padding-top: 0.7rem; border-top: 1px solid var(--line); }
 .viz-embed[hidden] { display: none; }
-.viz-embed-top { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; margin-bottom: 0.4rem; font-size: 0.84rem; color: var(--ink-soft); }
-.viz-embed-copy { font: inherit; font-size: 0.78rem; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 4px; padding: 0.2rem 0.7rem; cursor: pointer; }
-.viz-embed pre { margin: 0; padding: 0.7rem 0.8rem; background: var(--paper-2); border: 1px solid var(--line); border-radius: 8px; font-family: var(--font-code); font-size: 0.78rem; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; user-select: all; }
+.viz-embed-top { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; margin-bottom: 0.4rem; font-size: var(--t-small); color: var(--ink-soft); }
+.viz-embed-copy { font: inherit; font-size: var(--t-small); color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 4px; padding: 0.2rem 0.7rem; cursor: pointer; }
+.viz-embed pre { margin: 0; padding: 0.7rem 0.8rem; background: var(--paper-2); border: 1px solid var(--line); border-radius: 8px; font-family: var(--font-code); font-size: var(--t-small); line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; user-select: all; }
 
 /* Forced colors: the selected segment must not rely on its background colour. */
 @media (forced-colors: active) {
   .viz-seg button[aria-pressed='true'] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
 }
+
+/* Freshness cells keep their height while empty (filled after load without moving anything). */
+html:not(.js) .viz-fresh-wrap { display: none; }
+.viz-fresh .n, .viz-fresh .a, .viz-fresh .s { min-height: 1.4em; }
+@media (max-width: 820px) { .viz-fresh .n { min-height: 2.8em; } }

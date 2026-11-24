@@ -10,6 +10,8 @@
 // Contact details (street and mailing address, SAM points of contact, the phone and email the
 // company publishes on its own site) and the AI-written website summary are removed inside the
 // SQL statement when the supplier is in pub.supplier_optouts, so nothing here can leak them.
+import GroupTabs from '../../components/GroupTabs.astro';
+import DensityToggle from '../../components/DensityToggle.astro';
 import '../../styles/supplier.css';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import CiteThis from '../../components/CiteThis.astro';
@@ -258,13 +260,20 @@ const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Suppl
     )}
   </header>
 
-  <nav class="tabs" aria-label="On this page">
-    {sections.map((s) => <a href={`#${s.id}`}>{s.label}</a>)}
-    <a href="#data-notes">About this data</a>
-  </nav>
+  <GroupTabs
+    page="supplier"
+    label="Supplier sections"
+    defaultTab="performance"
+    tabs={[
+      { id: 'performance', label: 'Performance' },
+      ...(parts.count > 0 ? [{ id: 'parts', label: 'Parts and open bids', count: openBids.total }] : []),
+      { id: 'contracts', label: 'Awards and contracts', count: awards },
+      ...(sections.some((x) => ['about', 'contact', 'registration'].includes(x.id)) ? [{ id: 'company', label: 'Company' }] : []),
+    ]}
+  />
 
   {mode !== 'none' && web && (
-    <section class="sp-sec" id="about">
+    <section class="sp-sec group" id="about" data-group="company">
       <h2>About</h2>
       {mode === 'summary' ? (
         <>
@@ -315,7 +324,7 @@ const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Suppl
   )}
 
   {hasContact && (
-    <section class="sp-sec" id="contact">
+    <section class="sp-sec group" id="contact" data-group="company">
       <h2>Contact</h2>
       <dl class="sp-kv">
         {phys && addressLines(phys).length > 0 && (
@@ -377,7 +386,7 @@ const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Suppl
   )}
 
   {hasRegistration && sam && (
-    <section class="sp-sec" id="registration">
+    <section class="sp-sec group" id="registration" data-group="company">
       <h2>Registration</h2>
       <dl class="sp-kv">
         <div>
@@ -448,7 +457,7 @@ const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Suppl
     </section>
   )}
 
-  <section class="sp-sec" id="performance">
+  <section class="sp-sec group" id="performance" data-group="performance">
     <h2>Performance</h2>
     <div class="stat-strip">
       <div class="stat">
@@ -526,11 +535,11 @@ const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Suppl
   </section>
 
   {topNsns.length > 0 && (
-    <section class="sp-sec" id="top-parts">
+    <section class="sp-sec group" id="top-parts" data-group="performance">
       <h2>Top parts</h2>
       <p class="gloss">The NSNs this supplier appears on most often in the indexed awards.</p>
       <div class="table-wrap">
-        <table>
+        <table class="rows-fold">
           <thead>
             <tr><th>NSN</th><th>Item</th><th class="num">Awards</th><th class="num">Award dollars</th><th>Latest award</th></tr>
           </thead>
@@ -551,11 +560,11 @@ const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Suppl
   )}
 
   {agencyRows.length > 0 && (
-    <section class="sp-sec" id="agencies">
+    <section class="sp-sec group" id="agencies" data-group="performance">
       <h2>Agencies</h2>
       <p class="gloss">The agencies named as the buyer on this supplier's indexed awards.</p>
       <div class="table-wrap">
-        <table>
+        <table class="rows-fold">
           <thead>
             <tr><th>Agency</th><th class="num">Awards</th><th class="num">Award dollars</th><th>Latest award</th></tr>
           </thead>
@@ -575,11 +584,11 @@ const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Suppl
   )}
 
   {classRows.length > 0 && (
-    <section class="sp-sec" id="classes">
+    <section class="sp-sec group" id="classes" data-group="performance">
       <h2>Supply classes</h2>
       <p class="gloss">Federal supply classes of the NSNs in this supplier's indexed awards, with the number of awards in each.</p>
       <div class="table-wrap">
-        <table>
+        <table class="rows-fold">
           <thead>
             <tr>
               <th>Class</th>
@@ -610,7 +619,7 @@ const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Suppl
   )}
 
   {parts.count > 0 && (
-    <section class="sp-sec" id="bids">
+    <section class="sp-sec group" id="bids" data-group="parts">
       <h2>Open bids for parts they make</h2>
       <p class="gloss">
         {fmtInt(parts.count)} {parts.count === 1 ? 'part number is' : 'part numbers are'} listed for CAGE {cage} in the federal catalog (FLIS).
@@ -620,7 +629,7 @@ const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Suppl
       </p>
       {openBids.rows.length > 0 && (
         <div class="table-wrap">
-          <table>
+          <table class="rows-fold">
             <caption>
               {openBids.total > openBids.rows.length
                 ? `Showing the ${fmtInt(SUPPLIER_OPEN_ROWS)} closing soonest of ${fmtInt(openBids.total)}`
@@ -704,13 +713,13 @@ const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Suppl
   )}
 
   {usa.count > 0 && (
-    <section class="sp-sec" id="contracts">
+    <section class="sp-sec group" id="contracts" data-group="contracts">
       <h2>USAspending contracts</h2>
       <p class="gloss">
         {fmtInt(usa.count)} federal contract {usa.count === 1 ? 'action is' : 'actions are'} recorded in USAspending for UEI {page.uei}, obligating {formatUsd(usa.total)} in total.
       </p>
       <div class="table-wrap">
-        <table>
+        <table class="rows-fold">
           <caption>
             {usa.count > usa.rows.length ? `Showing the latest ${fmtInt(SUPPLIER_USA_ROWS)} of ${fmtInt(usa.count)}` : `${fmtInt(usa.count)} contract action${usa.count === 1 ? '' : 's'}`}
           </caption>
@@ -734,10 +743,13 @@ const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Suppl
     </section>
   )}
 
-  <section class="sp-sec" id="awards">
-    <h2>All awards</h2>
+  <section class="sp-sec group" id="awards" data-group="contracts">
+    <div class="section-head">
+      <h2>All awards</h2>
+      <DensityToggle />
+    </div>
     <div class="table-wrap">
-      <table>
+      <table class="rows-fold" data-sortable>
         <caption>
           {capped
             ? `Showing the latest ${fmtInt(SUPPLIER_AWARD_ROWS)} of ${fmtInt(awards + page.ceilings)}`
@@ -746,11 +758,11 @@ const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Suppl
         <thead>
           <tr>
             <th>NSN</th>
-            <th>Awarded</th>
+            <th data-sort="date">Awarded</th>
             <th>Item</th>
-            <th class="num">Qty</th>
-            <th class="num">Unit price</th>
-            <th class="num">Total</th>
+            <th class="num" data-sort="num">Qty</th>
+            <th class="num" data-sort="num">Unit price</th>
+            <th class="num" data-sort="num">Total</th>
             <th>Agency</th>
             <th>Source</th>
           </tr>
@@ -783,8 +795,9 @@ const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Suppl
     </p>
   </section>
 
-  <section class="card" id="data-notes" style="margin-top:1.5rem;">
-    <h2>About this data</h2>
+  <details class="fold" id="data-notes">
+    <summary><h2>About this data</h2></summary>
+    <section class="fold-body">
     <ul class="gloss">
       <li>Awards come from DLA DIBBS award records and other indexed award records; each row links to its source.</li>
       <li>The supplier's name and location come from the public CAGE file in DLA's PUB LOG.</li>
@@ -797,7 +810,8 @@ const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Suppl
       <li><a href="/methodology/">Full methodology →</a></li>
     </ul>
     <CiteThis title={heading} url={canonicalUrl} asOf={new Date().toISOString().slice(0, 10)} />
-  </section>
+    </section>
+  </details>
 </BaseLayout>
 
 <script>
