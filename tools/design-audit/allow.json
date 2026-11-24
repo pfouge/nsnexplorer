@@ -1,0 +1,9 @@
+{
+ "/privacy/": {
+  "numbers": [
+   "19"
+  ],
+  "headings_added": true,
+  "_why": "Last updated date moves from November 19 to November 24, 2026: the page now names the new browser storage keys."
+ }
+}

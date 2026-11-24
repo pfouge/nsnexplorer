@@ -230,7 +230,7 @@ const secondary = allLinks.filter((l) => !l.primary);
           </details>
         </nav>
         {ACCOUNTS_ENABLED && (
-          <a class="icon-btn acct-btn" id="acctBtn" href="/watchlist/" aria-label="Watchlist" title="Watchlist" hidden>
+          <a class="icon-btn acct-btn" id="acctBtn" href="/watchlist/" aria-label="Watchlist" title="Watchlist">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z" /></svg>
             <span class="acct-badge" hidden></span>
           </a>
@@ -261,6 +261,11 @@ const secondary = allLinks.filter((l) => !l.primary);
           </div>
         ))}
       </nav>
+      {ACCOUNTS_ENABLED && (
+        <div class="drawer-group">
+          <a href="/watchlist/" aria-current={under('/watchlist/') ? 'page' : undefined}><span>Watchlist<small>What changed on the items you follow</small></span></a>
+        </div>
+      )}
       <div class="drawer-group">
         <button class="drawer-row" type="button" data-theme-toggle role="switch" aria-checked="false">
           <span>Dark theme</span><span class="switch" aria-hidden="true"></span>

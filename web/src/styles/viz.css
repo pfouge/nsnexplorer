@@ -200,3 +200,8 @@ body.embed-page { background: var(--card); padding: 12px; font-size: 16px; overf
 @media (forced-colors: active) {
   .viz-seg button[aria-pressed='true'] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
 }
+
+/* Freshness cells keep their height while empty (filled after load without moving anything). */
+html:not(.js) .viz-fresh-wrap { display: none; }
+.viz-fresh .n, .viz-fresh .a, .viz-fresh .s { min-height: 1.4em; }
+@media (max-width: 820px) { .viz-fresh .n { min-height: 2.8em; } }

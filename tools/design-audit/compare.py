@@ -10,7 +10,7 @@ For every route it fetches the served HTML from both builds and compares:
         internal links present in A but not in B
   WARN  word tokens of body text present in A but missing in B, headings added in B
 Hidden rows must stay in the HTML, so served HTML is the right thing to compare.
---allow takes {"route": {"words": [...], "ids": [...], "links": [...], "headings_added": true}} for
+--allow takes {"route": {"words": [...], "numbers": [...], "ids": [...], "links": [...], "headings_added": true}} for
 reviewed, deliberate changes; everything allowed is still listed in the report.
 Exit code 1 when any FAIL remains.
 """
@@ -132,7 +132,7 @@ def main():
         wa, na = toks(pa.text); wb, nb = toks(pb.text)
         # Text that moved into or out of the chrome still counts as present.
         cwb, cnb = toks(pb.chrome_text)
-        lost_n = list(((na) - (nb + cnb)).elements())
+        lost_n = [x for x in ((na) - (nb + cnb)).elements() if x not in al.get('numbers', [])]
         if lost_n: f.append(f'numbers lost: {lost_n[:20]}')
         lost_w = [x for x in (wa - (wb + cwb)).elements() if not re.search(r'\d', x) and x not in al.get('words', [])]
         if lost_w: w.append(f'words lost ({len(lost_w)}): {lost_w[:30]}')

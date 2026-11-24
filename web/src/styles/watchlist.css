@@ -59,7 +59,7 @@
 .wl-visual .v, .wl-tile .v { font-size: var(--t-head); font-weight: 600; font-variant-numeric: tabular-nums; }
 .wl-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
 .wl-tile { border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--card); padding: 8px 10px; min-width: 0; }
-.wl-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px 20px; }
+.wl-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr)); gap: 10px 20px; }
 .wl-stat { min-width: 0; }
 .wl-stat .v { font-size: var(--t-body); font-weight: 500; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .wl-none { color: var(--ink-soft); font-size: var(--t-body); margin: 0; }
@@ -88,3 +88,6 @@
   .wl-recs li > a { grid-column: 1 / -1; }
   .wl-change-head .btn { margin-left: 0; }
 }
+
+/* Watchlist: the signed-out panel or the list is drawn after a request; its space is held so the footer does not jump. */
+.js [data-watchlist] { min-height: 22rem; }

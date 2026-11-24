@@ -1,6 +1,6 @@
 // scripts/freshness.ts — fills every .viz-fresh strip on the page from
-// /data/freshness.json using the viewer's clock, then unhides the strip's
-// [data-fresh-scope] wrapper. If the fetch fails the strip stays hidden.
+// /data/freshness.json using the viewer's clock. The wrapper is visible from the first paint (empty
+// cells hold the space); if the fetch fails it is hidden.
 import { freshnessView, type FreshnessSource } from '../lib/viz-site.ts';
 
 function fill(cell: HTMLElement, src: FreshnessSource, nowMs: number): boolean {
@@ -26,9 +26,9 @@ async function load(): Promise<void> {
   if (scopes.length === 0) return;
   try {
     const res = await fetch('/data/freshness.json');
-    if (!res.ok) return;
+    if (!res.ok) return hideAll(scopes);
     const raw: unknown = await res.json();
-    if (!Array.isArray(raw)) return;
+    if (!Array.isArray(raw)) return hideAll(scopes);
     const sources = raw as FreshnessSource[];
     const nowMs = Date.now();
     for (const scope of scopes) {
@@ -38,11 +38,17 @@ async function load(): Promise<void> {
         if (src && fill(cell, src, nowMs)) shown += 1;
         else cell.remove();
       });
-      if (shown > 0) scope.hidden = false;
+      scope.hidden = shown === 0;
     }
   } catch {
-    // Strip stays hidden.
+    hideAll(scopes);
   }
+}
+
+// The strip is shown from the first paint with its cells empty, so filling it moves nothing.
+// Only a failed load removes it.
+function hideAll(scopes: NodeListOf<HTMLElement>): void {
+  scopes.forEach((s) => { s.hidden = true; });
 }
 
 void load();

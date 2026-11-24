@@ -81,7 +81,7 @@
 .sp-prov { font-size: var(--t-small); color: var(--ink-soft); max-width: 78ch; margin: 0.25rem 0 0; }
 .sp-prov a { text-decoration: underline; text-underline-offset: 2px; }
 
-.sp-kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px 28px; margin: 0.75rem 0 0; }
+.sp-kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 16px 28px; margin: 0.75rem 0 0; }
 .sp-kv > div { min-width: 0; }
 .sp-kv dt { font-size: var(--t-small); color: var(--ink-soft); line-height: 1.35; }
 .sp-kv dd { margin: 2px 0 0; font-size: var(--t-body); line-height: 1.45; overflow-wrap: anywhere; }
@@ -92,7 +92,7 @@
 .sp-poc li { margin-bottom: 0.4rem; }
 .sp-poc .role { display: block; font-size: var(--t-small); color: var(--ink-soft); }
 
-.sp-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px 32px; align-items: start; }
+.sp-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 24px 32px; align-items: start; }
 .sp-two > * { min-width: 0; }
 .sp-cmp { width: 100%; }
 .sp-cmp td.delta.up { color: var(--green); }
