@@ -129,10 +129,10 @@ const canonicalUrl = `${SITE_URL}/search/`;
 
 <style>
   .name-form { margin: 1rem 0 0.75rem; max-width: 640px; }
-  .name-form label { font-size: 0.8rem; color: var(--ink-soft); margin-bottom: 0.4rem; }
+  .name-form label { font-size: var(--t-small); color: var(--ink-soft); margin-bottom: 0.4rem; }
   .name-row { display: flex; gap: 0.5rem; width: 100%; }
   .name-row input {
-    flex: 1; min-width: 0; font: inherit; font-size: 1rem; padding: 0.65rem 0.8rem; min-height: 44px;
+    flex: 1; min-width: 0; font: inherit; font-size: var(--t-body); padding: 0.65rem 0.8rem; min-height: 44px;
     border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); box-sizing: border-box;
   }
   .name-row .btn { flex: none; min-height: 44px; }
@@ -140,7 +140,7 @@ const canonicalUrl = `${SITE_URL}/search/`;
   .name-note p { margin: 0 0 0.4rem; }
   .name-note p:last-child { margin-bottom: 0; }
   .name-error { color: var(--red); }
-  .name-count { font-size: 1.1rem; margin: 1.25rem 0 0.2rem; overflow-wrap: anywhere; }
+  .name-count { font-size: var(--t-head); margin: 1.25rem 0 0.2rem; overflow-wrap: anywhere; }
   .name-sub { margin: 0 0 0.75rem; }
   .name-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.5rem; max-width: 760px; }
   .name-hit {
@@ -149,9 +149,9 @@ const canonicalUrl = `${SITE_URL}/search/`;
   }
   .name-hit:hover { background: var(--hover); text-decoration: none; }
   .name-title { font-weight: 600; }
-  .name-also { color: var(--green); font-size: 0.9rem; }
-  .name-nsn { font-variant-numeric: tabular-nums; font-size: 0.9rem; }
-  .name-meta { color: var(--ink-soft); font-size: 0.8125rem; }
+  .name-also { color: var(--accent); font-size: var(--t-body); }
+  .name-nsn { font-variant-numeric: tabular-nums; font-size: var(--t-body); }
+  .name-meta { color: var(--ink-soft); font-size: var(--t-small); }
   .name-more { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.9rem; margin: 1rem 0 0; }
   .name-more .gloss { margin: 0; }
 </style>

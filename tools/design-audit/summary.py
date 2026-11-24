@@ -23,4 +23,10 @@ for r in base:
     ov = b.get(r, {}).get('sweep_overflow', [])
     c = cmp.get(r, {})
     st = ('FAIL ' + '; '.join(c['fail'])[:160]) if c.get('fail') else ('warn' if c.get('warn') else 'ok')
-    print(f"| {r} | {row[0]} | {row[1]} | {ans} | {lt} | {cls:.3f} | {len(ov)} | {st} |")
+    ws = [w for w, _ in ov if isinstance(w, int)]
+    rng = []
+    for w in ws:
+        if rng and w - rng[-1][1] == 10: rng[-1][1] = w
+        else: rng.append([w, w])
+    ovs = ','.join(f'{a}-{b}' if a != b else f'{a}' for a, b in rng) or '0'
+    print(f"| {r} | {row[0]} | {row[1]} | {ans} | {lt} | {cls:.3f} | {ovs} | {st} |")

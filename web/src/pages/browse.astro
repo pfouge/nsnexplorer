@@ -3,7 +3,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import { fscLabel, listedFscName } from '../lib/seo-copy';
 import { loadSiteData } from '../lib/data';
 import { SITE_URL } from '../consts';
-import { fscDisplayName } from '../lib/browse';
+import { fscDisplayName, fsgName } from '../lib/browse';
 
 const data = await loadSiteData();
 // Only categories with at least one tracked NSN are listed.
@@ -12,6 +12,14 @@ const rows = data.deepFscs
   .filter((r) => r.count > 0);
 
 const fmtInt = (n: number) => n.toLocaleString('en-US');
+// Grouped by supply group for the page's folds; every class row stays in the HTML.
+const byGroup = new Map<string, typeof rows>();
+for (const r of rows) {
+  const g = r.fsc.fsc.slice(0, 2);
+  if (!byGroup.has(g)) byGroup.set(g, []);
+  byGroup.get(g)!.push(r);
+}
+const groups = [...byGroup.entries()].sort(([a], [b]) => a.localeCompare(b));
 
 const D = rows.length;
 const M = rows.reduce((s, r) => s + r.count, 0);
@@ -97,16 +105,23 @@ const faq = [
   {rows.length === 0 ? (
     <p class="gloss">No categories are fully indexed yet.</p>
   ) : (
-    <section class="index-list" aria-label="Deep categories">
-      {rows.map((r) => (
-        <a class="index-row" href={`/fsc/${r.fsc.fsc}/`}>
-          <div class="num">FSC {r.fsc.fsc}</div>
-          <div>
-            <h3>{fscDisplayName(r.fsc.fsc, r.fsc.name)} <span class="tag live">Live</span></h3>
-            <p>{fmtInt(r.count)} NSNs tracked</p>
+    <section aria-label="Deep categories">
+      {groups.map(([g, list]) => (
+        <details class="fold dept-block" id={`g-${g}`}>
+          <summary><h3>{fsgName(g) ?? `Group ${g}`} <span class="tag">FSG {g}</span></h3><span class="n">{list.length} {list.length === 1 ? 'class' : 'classes'} · {fmtInt(list.reduce((n, r) => n + r.count, 0))} NSNs</span></summary>
+          <div class="index-list fold-body">
+            {list.map((r) => (
+              <a class="index-row" href={`/fsc/${r.fsc.fsc}/`}>
+                <div class="num">FSC {r.fsc.fsc}</div>
+                <div>
+                  <h3>{fscDisplayName(r.fsc.fsc, r.fsc.name)} <span class="tag live">Live</span></h3>
+                  <p>{fmtInt(r.count)} NSNs tracked</p>
+                </div>
+                <div class="go">→</div>
+              </a>
+            ))}
           </div>
-          <div class="go">→</div>
-        </a>
+        </details>
       ))}
     </section>
   )}

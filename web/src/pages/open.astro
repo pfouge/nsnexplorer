@@ -126,11 +126,11 @@ const buildDate = now.toLocaleDateString('en-US', { year: 'numeric', month: 'lon
     <h1>{h1}</h1>
     <p class="lede">What the government is buying right now</p>
     <p class="lede">
-      Every currently-open solicitation we've indexed — real requests for quote a supplier can bid
+      Every currently-open solicitation we've indexed: real requests for quote a supplier can bid
       on today, each linked to its official DIBBS record. This isn't a marketplace and we don't
-      broker anything: it's a live index of public buying activity, organized so you can find the
+      broker anything. It's a live index of public buying activity, organized so you can find the
       demand you can fill before it closes. Every solicitation we index stays on record after it
-      closes, too — nothing gets deleted — so this index is also building a live, growing history
+      closes, too (nothing gets deleted), so this index is also building a live, growing history
       of federal demand you can look back through.
     </p>
     <SaveSearch />
@@ -164,7 +164,7 @@ const buildDate = now.toLocaleDateString('en-US', { year: 'numeric', month: 'lon
 
   {data.stats.openSolicitationsCount === 0 ? (
     <div class="note">
-      <b>No open solicitations indexed yet.</b> The crawler runs continuously against DIBBS —
+      <b>No open solicitations indexed yet.</b> The crawler runs continuously against DIBBS;
       check back soon, or <a href="/catalog/">browse the priced catalog</a> in the meantime.
     </div>
   ) : (
@@ -172,11 +172,11 @@ const buildDate = now.toLocaleDateString('en-US', { year: 'numeric', month: 'lon
       <section id="closing">
         <h2 class="section-title">Closing soon</h2>
         <p class="gloss">
-          The <span id="hc-closing-count">{closingSoon.length}</span> open solicitations closing soonest, across every category —
+          The <span id="hc-closing-count">{closingSoon.length}</span> open solicitations closing soonest, across every category;
           every row links to its official DIBBS record.
         </p>
         <div class="table-wrap">
-          <table>
+          <table class="rows-fold" data-rows="8">
             <thead>
               <tr>
                 <th>Solicitation</th>
@@ -234,7 +234,7 @@ const buildDate = now.toLocaleDateString('en-US', { year: 'numeric', month: 'lon
       <section id="categories">
         <h2 class="section-title">Browse open demand by category</h2>
         <p class="gloss">
-          Open solicitations grouped by department and Federal Supply Class — pick a category to
+          Open solicitations grouped by department and Federal Supply Class. Pick a category to
           filter, sort, and find the parts you can bid on.
         </p>
         {departments.length > 1 && (
@@ -268,9 +268,9 @@ const buildDate = now.toLocaleDateString('en-US', { year: 'numeric', month: 'lon
           <p class="gloss">No categories have open demand indexed yet.</p>
         ) : (
           departments.map((dept) => (
-            <div class="dept-block" id={`g-${dept.fsg}`} data-fscs={dept.fscs.map((f) => f.fsc).join(' ')}>
-              <h3>{dept.name} <span class="tag">FSG {dept.fsg}</span></h3>
-              <div class="dept-grid">
+            <details class="fold dept-block" id={`g-${dept.fsg}`} data-fscs={dept.fscs.map((f) => f.fsc).join(' ')}>
+              <summary><h3>{dept.name} <span class="tag">FSG {dept.fsg}</span></h3><span class="n">{fmtInt(dept.fscs.reduce((n, f) => n + (data.openByFsc.get(f.fsc)?.solicitations.length ?? 0), 0))} open · {dept.fscs.length} {dept.fscs.length === 1 ? 'class' : 'classes'}</span></summary>
+              <div class="dept-grid fold-body">
                 {dept.fscs.map((fsc) => {
                   const count = data.openByFsc.get(fsc.fsc)?.solicitations.length ?? 0;
                   const cls = fscDisplayName(fsc.fsc, fsc.name);
@@ -286,7 +286,7 @@ const buildDate = now.toLocaleDateString('en-US', { year: 'numeric', month: 'lon
                   );
                 })}
               </div>
-            </div>
+            </details>
           ))
         )}
       </section>
@@ -322,15 +322,15 @@ const buildDate = now.toLocaleDateString('en-US', { year: 'numeric', month: 'lon
   .dept-item { position: relative; }
   .dept-item .dept-card.card { height: 100%; box-sizing: border-box; }
   #categories[data-hc-edit] .dept-item .dept-card.card { padding-bottom: 3.1rem; }
-  .hc-choose { min-height: 32px; padding: 0.2rem 0.7rem; font-size: 0.8125rem; margin-left: 0.25rem; }
-  .dept-item .hc-hide { position: absolute; right: 0.6rem; bottom: 0.5rem; min-height: 32px; padding: 0.2rem 0.7rem; font-size: 0.8125rem; }
+  .hc-choose { min-height: 32px; padding: 0.2rem 0.7rem; font-size: var(--t-small); margin-left: 0.25rem; }
+  .dept-item .hc-hide { position: absolute; right: 0.6rem; bottom: 0.5rem; min-height: 32px; padding: 0.2rem 0.7rem; font-size: var(--t-small); }
   .hc-bar { margin: 0.5rem 0; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 0.4rem; }
-  .hc-bar .hc-note { display: block; font-size: 0.8125rem; }
+  .hc-bar .hc-note { display: block; font-size: var(--t-small); }
   .hc-link { font: inherit; color: var(--ink); background: none; border: 0; padding: 4px 2px; text-decoration: underline; cursor: pointer; }
   .hc-manage ul { list-style: none; margin: 0 0 0.75rem; padding: 0; display: grid; gap: 6px; }
   .hc-manage li { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; min-width: 0; }
   .hc-manage li span { min-width: 0; overflow-wrap: anywhere; }
-  .hc-manage li .btn { min-height: 32px; padding: 0.2rem 0.7rem; font-size: 0.8125rem; flex: none; }
+  .hc-manage li .btn { min-height: 32px; padding: 0.2rem 0.7rem; font-size: var(--t-small); flex: none; }
   @media (max-width: 640px) { .dept-item .hc-hide { right: var(--gutter); } }
 </style>
 

@@ -36,7 +36,7 @@ const base = citationBase(title, url, asOf);
 <style>
   .cite {
     margin: 1.5rem 0 0;
-    font-size: 0.875rem;
+    font-size: var(--t-body);
   }
   .cite > summary {
     display: inline-flex;
@@ -73,7 +73,7 @@ const base = citationBase(title, url, asOf);
     padding: 0.75rem 0.9rem;
     background: var(--paper-2);
     border-radius: 8px;
-    font-size: 0.875rem;
+    font-size: var(--t-body);
     color: var(--ink);
   }
   .cite-row {
@@ -89,7 +89,7 @@ const base = citationBase(title, url, asOf);
   }
   .cite-label {
     flex: 0 0 100%;
-    font-size: 0.75rem;
+    font-size: var(--t-small);
     font-weight: 600;
     letter-spacing: 0.02em;
     text-transform: uppercase;

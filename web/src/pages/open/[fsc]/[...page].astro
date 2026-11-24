@@ -338,7 +338,7 @@ const breadcrumbSchema = {
           </div>
         </aside>
         {coverageLabel && (
-          <p class="gloss" style="margin:0.6rem 0 0.75rem; font-size:0.78rem;">
+          <p class="gloss" style="margin:0.6rem 0 0.75rem; font-size:var(--t-small);">
             Past due: return date passed 30–180 days ago and no matching award in our DIBBS award records since {coverageLabel}. Check DIBBS before quoting.
           </p>
         )}
@@ -428,7 +428,7 @@ const breadcrumbSchema = {
                       </span>
                     )}
                   </div>
-                  <p class="gloss" data-col="sols" style="margin:0.35rem 0 0; font-size:0.78rem;" title={`${fmtInt(c.openCount)} open, ${fmtInt(c.closedCount)} closed`}>
+                  <p class="gloss" data-col="sols" style="margin:0.35rem 0 0; font-size:var(--t-small);" title={`${fmtInt(c.openCount)} open, ${fmtInt(c.closedCount)} closed`}>
                     <span class="card-only">
                       {fmtInt(c.solicitationCount)} solicitation{c.solicitationCount === 1 ? '' : 's'}
                       {' '}({fmtInt(c.openCount)} open · {fmtInt(c.closedCount)} closed)

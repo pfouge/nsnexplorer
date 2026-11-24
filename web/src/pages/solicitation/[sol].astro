@@ -144,7 +144,7 @@ const primaryLabel = isOpen
     <div class="stat">
       <div class="value">
         {sol.quantity !== null ? sol.quantity.toLocaleString('en-US') : '—'}
-        {sol.unitOfIssue && <span class="gloss" style="font-size:0.9rem;"> {sol.unitOfIssue}</span>}
+        {sol.unitOfIssue && <span class="gloss" style="font-size:var(--t-body);"> {sol.unitOfIssue}</span>}
       </div>
       <div class="label">Quantity</div>
     </div>
@@ -218,7 +218,7 @@ const primaryLabel = isOpen
     <section id="award-on-record">
       <h2 class="section-title">Award on record for this purchase request</h2>
       <div class="table-wrap">
-        <table>
+        <table class="rows-fold">
           <thead>
             <tr>
               <th>Awarded</th>
@@ -261,7 +261,7 @@ const primaryLabel = isOpen
         </p>
       )}
       <div class="table-wrap">
-        <table>
+        <table class="rows-fold">
           <thead>
             <tr>
               <th>Awarded</th>
@@ -313,7 +313,7 @@ const primaryLabel = isOpen
         <p><span class="badge amber">Same supplier on the last {repeat.streak} awards on record</span></p>
       )}
       <div class="table-wrap">
-        <table>
+        <table class="rows-fold">
           <thead>
             <tr>
               <th>Supplier</th>
@@ -348,7 +348,7 @@ const primaryLabel = isOpen
     <section id="awards">
       <h2 class="section-title">Awards on this solicitation</h2>
       <div class="table-wrap">
-        <table>
+        <table class="rows-fold">
           <caption>{awards.length} award{awards.length === 1 ? '' : 's'} on record that cite {sol.solNumber}</caption>
           <thead>
             <tr>
@@ -397,7 +397,7 @@ const primaryLabel = isOpen
   .twin-note {
     margin: 0.5rem 0 0;
     max-width: 100%;
-    font-size: 0.92rem;
+    font-size: var(--t-body);
     overflow-wrap: anywhere;
   }
   .twin-note a {

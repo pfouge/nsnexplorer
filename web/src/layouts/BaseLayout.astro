@@ -99,6 +99,7 @@ const secondary = allLinks.filter((l) => !l.primary);
       // Set theme before first paint. Light is the default for everyone; dark
       // only when the visitor chose it with the header toggle (stored locally).
       (() => {
+        document.documentElement.classList.add('js'); // folds hide rows only when a script can open them
         let dark = false;
         try { dark = localStorage.getItem('theme') === 'dark'; } catch {}
         if (dark) document.documentElement.dataset.theme = 'dark';

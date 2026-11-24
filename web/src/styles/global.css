@@ -342,9 +342,12 @@ span.code { color: var(--text); }
 .table-wrap td:first-child > a:hover, a.code:hover { text-decoration: underline; }
 
 /* Long tables open on a few rows; the rest stay in the page (scripts/rows.ts adds the "Show all" button). */
-.rows-fold:not(.open) tbody tr:nth-child(n + 6) { display: none; }
-.rows-fold[data-show='8']:not(.open) tbody tr:nth-child(n + 6) { display: table-row; }
-.rows-fold[data-show='8']:not(.open) tbody tr:nth-child(n + 9) { display: none; }
+.js .rows-fold:not(.open) tbody tr:nth-child(n + 6) { display: none; }
+.js .rows-fold[data-rows='8']:not(.open) tbody tr:nth-child(n + 6) { display: table-row; }
+.js .rows-fold[data-rows='8']:not(.open) tbody tr:nth-child(n + 9) { display: none; }
+.js .rows-fold[data-rows='10']:not(.open) tbody tr:nth-child(n + 6) { display: table-row; }
+.js .rows-fold[data-rows='10']:not(.open) tbody tr:nth-child(n + 11) { display: none; }
+.js .list-fold:not(.open) > :nth-child(n + 11) { display: none; }
 .rows-more { display: flex; align-items: center; gap: var(--s3); margin: var(--s2) 0 0; }
 .rows-more button { font: inherit; font-weight: var(--w-strong); color: var(--accent); background: none; border: 0; padding: var(--s2) 0; cursor: pointer; }
 .rows-more button:hover { text-decoration: underline; }
@@ -482,8 +485,8 @@ footer.site .disclaimer { color: var(--text-2); max-width: 78ch; }
   .product-body > .gloss { grid-column: 2; grid-row: 1 / span 2; }
   .product-signals { grid-column: 3; grid-row: 1 / span 2; justify-content: flex-end; margin: 0; }
 }
-/* Long lists open with the first sixty rows; "Show all" (scripts/shell.ts) reveals the rest. */
-.product-grid:not(.expanded) > .product-card:nth-child(n + 61) { display: none; }
+/* Long lists open with the first twenty rows; "Show all" (scripts/shell.ts) reveals the rest. */
+.js .product-grid:not(.expanded) > .product-card:nth-child(n + 21) { display: none; }
 .show-all { display: flex; justify-content: center; margin: var(--s4) 0 0; }
 
 .open-totals { margin: var(--s2) 0; font-size: var(--t-small); max-width: none; }
@@ -651,3 +654,11 @@ button.linkish { font: inherit; color: var(--accent); background: none; border: 
 .faq-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 var(--s6); }
 .faq-grid h3 { margin-top: var(--s4); }
 @media (max-width: 899px) { .faq-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* Directory folds (open demand, catalog, browse): one closed row per supply group. */
+details.fold.dept-block { margin-top: 0; scroll-margin-top: calc(var(--header-h) + 56px); }
+details.fold.dept-block > summary h3 .tag { margin-left: var(--s2); }
+details.fold.dept-block > summary .n { margin-left: auto; padding-left: var(--s3); white-space: nowrap; }
+details.fold.dept-block > summary::after { margin-left: var(--s3); }
+details.fold.dept-block .dept-grid { border-top: 0; }
+details.fold > summary h3 { font-weight: var(--w-strong); }

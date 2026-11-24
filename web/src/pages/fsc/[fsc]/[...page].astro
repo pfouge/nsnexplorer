@@ -1,4 +1,6 @@
 ---
+import GroupTabs from '../../../components/GroupTabs.astro';
+import AdSlot from '../../../components/AdSlot.astro';
 import BaseLayout from '../../../layouts/BaseLayout.astro';
 import SignupForm from '../../../components/SignupForm.astro';
 import Pager from '../../../components/Pager.astro';
@@ -191,12 +193,7 @@ const breadcrumbSchema = {
     <Follow kind="fsc" entity={fsc.fsc} label={fscDisplayName} />
   </header>
 
-  <nav class="tabs" aria-label="On this page">
-    <a href="#overview">Overview</a>
-    {hasMarket && market && <a href="#market-view">Market</a>}
-    <a href="#products">Products</a>
-    <a href="#awards">Contract awards</a>
-  </nav>
+
 
   <div class:list={['stat-strip', { roomy: pulseStats >= 3 }]} id="overview">
     <div class="stat">
@@ -236,8 +233,18 @@ const breadcrumbSchema = {
     )}
   </div>
 
+  <GroupTabs
+    page="fsc"
+    label="Class sections"
+    tabs={[
+      { id: 'products', label: 'Products', count: total },
+      ...(hasMarket && market ? [{ id: 'market', label: 'Market' }] : []),
+      ...(page === 1 ? [{ id: 'awards', label: 'Contract awards', count: fscActionCount }] : []),
+    ]}
+  />
+
   {hasMarket && market && (
-    <section class="viz-section" aria-labelledby="market-view">
+    <section class="viz-section group" data-group="market" aria-labelledby="market-view">
       <h2 class="section-title" id="market-view">Market view</h2>
       <div class="viz-grid">
         {market.competition && <CompetitionMix rows={market.competition} full={!market.repeat} />}
@@ -249,7 +256,7 @@ const breadcrumbSchema = {
     </section>
   )}
 
-  <section class="products-section" id="products">
+  <section class="products-section group" data-group="products" id="products">
     <h2 class="section-title">Products</h2>
     {total === 0 ? (
       <p class="gloss">No products indexed for this category yet.</p>
@@ -484,8 +491,10 @@ const breadcrumbSchema = {
     }
   </script>
 
+  <AdSlot position="mid" />
+
   {page === 1 && (
-  <section id="awards">
+  <section id="awards" class="group" data-group="awards">
     <h2 class="section-title">Contract awards in this category</h2>
     <p class="gloss">
       {fscPurchaseCount.toLocaleString('en-US')} award {fscPurchaseCount === 1 ? 'record' : 'records'} totaling{' '}

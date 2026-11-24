@@ -363,10 +363,10 @@ document.querySelectorAll<HTMLElement>('p.lede:not(.answer):not(:has(~ p.lede)),
   el.after(b);
 });
 
-/* ---------- long result lists: first sixty rows, then "Show all" ---------- */
+/* ---------- long result lists: first twenty rows, then "Show all" ---------- */
 document.querySelectorAll<HTMLElement>('.product-grid').forEach((grid) => {
   const total = grid.children.length;
-  if (total <= 60) { grid.classList.add('expanded'); return; }
+  if (total <= 20) { grid.classList.add('expanded'); return; }
   const wrap = document.createElement('p');
   wrap.className = 'show-all';
   const b = document.createElement('button');

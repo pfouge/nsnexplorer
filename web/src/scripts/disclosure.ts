@@ -55,7 +55,7 @@ document.querySelectorAll<HTMLElement>('[data-group-tabs]').forEach((bar) => {
 /* ---------- 2. row folds ---------- */
 document.querySelectorAll<HTMLTableElement>('table.rows-fold').forEach((t) => {
   const rows = t.tBodies[0]?.rows.length ?? 0;
-  const first = Number(t.dataset.show || 5);
+  const first = Number(t.dataset.rows || 5);
   if (rows <= first) { t.classList.add('open'); return; }
   const bar = document.createElement('div');
   bar.className = 'rows-more';
@@ -72,6 +72,26 @@ document.querySelectorAll<HTMLTableElement>('table.rows-fold').forEach((t) => {
   });
   bar.append(b);
   (t.closest('.table-wrap') ?? t).after(bar);
+});
+
+/* ---------- 2b. list folds: <div class="list-fold"> shows its first ten children ---------- */
+document.querySelectorAll<HTMLElement>('.list-fold').forEach((list) => {
+  const n = list.children.length;
+  if (n <= 10) { list.classList.add('open'); return; }
+  const bar = document.createElement('div');
+  bar.className = 'rows-more';
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.textContent = `Show all ${n.toLocaleString('en-US')}`;
+  b.setAttribute('aria-expanded', 'false');
+  b.addEventListener('click', () => {
+    const open = !list.classList.contains('open');
+    list.classList.toggle('open', open);
+    b.setAttribute('aria-expanded', String(open));
+    b.textContent = open ? 'Show the first 10' : `Show all ${n.toLocaleString('en-US')}`;
+  });
+  bar.append(b);
+  list.after(bar);
 });
 
 /* ---------- 3. sortable tables ---------- */
@@ -138,6 +158,8 @@ export function reveal(el: Element | null): boolean {
     const btn = (t.closest('.table-wrap') ?? t).nextElementSibling?.querySelector<HTMLButtonElement>('.rows-more button, button');
     if (btn) btn.click(); else t.classList.add('open');
   }
+  const lf = el.closest('.list-fold:not(.open)');
+  if (lf) (lf.nextElementSibling?.querySelector('button') as HTMLButtonElement | null)?.click();
   const fold = el.closest('.product-grid:not(.expanded)');
   if (fold) fold.classList.add('expanded');
   return true;

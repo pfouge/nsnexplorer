@@ -500,7 +500,7 @@ const datasetSchema = {
             <>
               {compRead.streak} in a row
               {compRead.streakCage && (
-                <span class="gloss" style="display:block; font-size:0.8125rem; font-weight:400; line-height:1.35;">{supplierPath(compRead.streakCage) ? <a href={supplierPath(compRead.streakCage)!}>{streakName ?? compRead.streakCage}</a> : (streakName ?? compRead.streakCage)}</span>
+                <span class="gloss" style="display:block; font-size:var(--t-small); font-weight:400; line-height:1.35;">{supplierPath(compRead.streakCage) ? <a href={supplierPath(compRead.streakCage)!}>{streakName ?? compRead.streakCage}</a> : (streakName ?? compRead.streakCage)}</span>
               )}
             </>
           )}
@@ -551,7 +551,7 @@ const datasetSchema = {
                     <td>{r.aac ? (r.aacLabel ?? `${r.aac} (${NO_DEFINITION})`) : '—'}</td>
                     <td class="wrap">
                       {r.manager ?? '—'}
-                      {r.retail && <span class="gloss" style="display:block; font-size:0.8125rem; line-height:1.35;">Retail: {r.retail}</span>}
+                      {r.retail && <span class="gloss" style="display:block; font-size:var(--t-small); line-height:1.35;">Retail: {r.retail}</span>}
                     </td>
                     <td class="mono">{r.since ?? '—'}</td>
                   </tr>
@@ -582,7 +582,7 @@ const datasetSchema = {
               <div class="k">Government standard price</div>
               <div class="v">
                 {mgmt.priceLine}
-                <span class="gloss" style="display:block; font-size:0.8125rem; font-weight:400; line-height:1.35;">
+                <span class="gloss" style="display:block; font-size:var(--t-small); font-weight:400; line-height:1.35;">
                   Catalog price, not an award price{mgmt.effectiveLine ? `. Effective ${mgmt.effectiveLine}` : ''}
                 </span>
               </div>
@@ -593,7 +593,7 @@ const datasetSchema = {
               <div class="k">Shelf life</div>
               <div class="v">
                 {mgmt.shelfParts.headline}
-                {mgmt.shelfParts.note && <span class="gloss" style="display:block; font-size:0.8125rem; font-weight:400; line-height:1.35;">{mgmt.shelfParts.note}</span>}
+                {mgmt.shelfParts.note && <span class="gloss" style="display:block; font-size:var(--t-small); font-weight:400; line-height:1.35;">{mgmt.shelfParts.note}</span>}
               </div>
             </div>
           )}
@@ -608,7 +608,7 @@ const datasetSchema = {
               <div class="k">Source of supply</div>
               <div class="v">
                 <span class="badge mono">{mgmt.sosParts.code}</span>
-                {mgmt.sosParts.meaning && <span class="gloss" style="display:block; font-size:0.8125rem; font-weight:400; line-height:1.35;">{mgmt.sosParts.meaning}</span>}
+                {mgmt.sosParts.meaning && <span class="gloss" style="display:block; font-size:var(--t-small); font-weight:400; line-height:1.35;">{mgmt.sosParts.meaning}</span>}
               </div>
             </div>
           )}
@@ -688,7 +688,7 @@ const datasetSchema = {
               <div class="v">
                 {c.key === 'assigned' ? c.value : c.key === 'scheduleB' ? <span class="badge mono">{c.value}</span> : <span class="badge">{c.value}</span>}
                 {c.key !== 'assigned' && (
-                  <span class="gloss" style="display:block; font-size:0.8125rem; font-weight:400; line-height:1.35;">{c.meaning ?? NO_DEFINITION}</span>
+                  <span class="gloss" style="display:block; font-size:var(--t-small); font-weight:400; line-height:1.35;">{c.meaning ?? NO_DEFINITION}</span>
                 )}
               </div>
             </div>
@@ -751,7 +751,7 @@ const datasetSchema = {
         Search ↗</a>, DoD's public document search. ASSIST is run by the Defense Logistics Agency and may not load from outside the United States.
       </p>
       <div class="table-wrap">
-        <table class="rows-fold" data-show="8">
+        <table class="rows-fold" data-rows="8">
           <thead>
             <tr>
               <th>Requirement</th>
@@ -766,13 +766,13 @@ const datasetSchema = {
                   <td>
                     {c.requirement ?? c.mrc ?? '—'}
                     {c.requirement && c.mrc && (
-                      <span class="mono gloss" style="font-size:0.75rem; margin-left:0.4rem;">{c.mrc}</span>
+                      <span class="mono gloss" style="font-size:var(--t-small); margin-left:0.4rem;">{c.mrc}</span>
                     )}
                   </td>
                   <td>
                     {c.reply ?? '—'}
                     {doc && (
-                      <span class="badge mono" style="margin-left:0.5rem; font-size:0.75rem;" title="Specification document — look up in ASSIST">{doc}</span>
+                      <span class="badge mono" style="margin-left:0.5rem; font-size:var(--t-small);" title="Specification document — look up in ASSIST">{doc}</span>
                     )}
                   </td>
                 </tr>
@@ -792,7 +792,7 @@ const datasetSchema = {
         that have been accepted as satisfying this stock number, and who makes them.
       </p>
       <div class="table-wrap">
-        <table class="rows-fold" data-show="8">
+        <table class="rows-fold" data-rows="8">
           <thead>
             <tr>
               <th>Part number</th>
