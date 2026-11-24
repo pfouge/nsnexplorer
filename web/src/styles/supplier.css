@@ -121,5 +121,6 @@
 .sp-parent-sec td .code { color: var(--text-2); font-size: var(--t-small); margin-left: var(--s1); font-variant-numeric: tabular-nums; }
 .sp-parent-sec .sources { margin: var(--s4) 0 0; color: var(--text-2); font-size: var(--t-small); }
 .sp-parent-sec .sources a { text-decoration: underline; text-underline-offset: 2px; }
-.sp-parent-sec td.wrap { white-space: normal; min-width: 16rem; }
+.sp-parent-sec td.sp-name { white-space: normal; overflow-wrap: anywhere; width: 60%; min-width: 14rem; }
+.sp-parent-sec td.sp-name a { white-space: normal; }
 .sp-parent-sec td:nth-child(2) { white-space: nowrap; }

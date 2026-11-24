@@ -586,7 +586,7 @@ const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Suppl
               <tbody>
                 {parent.siblingRows.map((r) => (
                   <tr>
-                    <td class="wrap"><a href={`/supplier/${r.cage}/`}>{r.name}</a> <span class="code">{r.cage}</span></td>
+                    <td class="sp-name"><a href={`/supplier/${r.cage}/`}>{r.name}</a> <span class="code">{r.cage}</span></td>
                     <td>{r.place ?? '—'}</td>
                     <td class="num">{r.dollars12m > 0 ? formatUsd(r.dollars12m) : '—'}</td>
                   </tr>
