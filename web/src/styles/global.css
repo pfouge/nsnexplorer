@@ -95,7 +95,12 @@ nav.site .menu a { font-weight: var(--w-regular); }
   .search-pill { flex: none; width: 40px; height: 40px; padding: 0; justify-content: center; border: 0; }
   .search-pill span, .search-pill kbd { display: none; }
   .search-pill svg { width: 22px; height: 22px; color: var(--text); }
-  .brand .logo { height: 26px; }
+  .brand .logo { height: 28px; }
+  header.site .theme-toggle { display: none; } /* the drawer has the theme switch */
+}
+@media (max-width: 419px) {
+  header.site .container { gap: var(--s1); }
+  .brand .logo { height: 24px; }
 }
 @media (max-width: 899px) { .search-pill kbd { display: none; } }
 
@@ -147,6 +152,7 @@ html:has(dialog.sheet[open]) { overflow: hidden; }
 .search-body .chips { padding: 0 var(--gutter); margin: var(--s1) 0 0; }
 
 main { padding-block: var(--s5) var(--s8); }
+main > .container { position: relative; }
 @media (max-width: 639px) { main { padding-block: var(--s4) var(--s7); } }
 
 /* ---- Buttons ---- */
@@ -199,7 +205,9 @@ main { padding-block: var(--s5) var(--s8); }
 
 /* Long introductions fold to three lines; "More" opens them (scripts/shell.ts). The full text stays in the page. */
 p.lede:not(.answer):not(:has(~ p.lede)):not(.open), section.intro > p.gloss:not(.open) { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
-.clamp-more { display: inline-block; margin: calc(var(--s2) * -1) 0 var(--s3); padding: var(--s1) 0; border: 0; background: none; color: var(--accent); font: inherit; font-weight: var(--w-strong); cursor: pointer; }
+/* The "More" button sits in space reserved before scripts run, so adding it moves nothing. */
+.js p.lede:not(.answer):not(:has(~ p.lede)):not(.open), .js section.intro > p.gloss:not(.open) { margin-bottom: 36px; }
+.clamp-more { position: absolute; height: 28px; margin: 0; padding: 0; border: 0; background: none; color: var(--accent); font: inherit; font-weight: var(--w-strong); cursor: pointer; }
 .clamp-more::after { content: " ›"; }
 
 /* ---- Key facts: label above value, no boxes ---- */
@@ -348,8 +356,13 @@ span.code { color: var(--text); }
 .js .rows-fold[data-rows='10']:not(.open) tbody tr:nth-child(n + 6) { display: table-row; }
 .js .rows-fold[data-rows='10']:not(.open) tbody tr:nth-child(n + 11) { display: none; }
 .js .list-fold:not(.open) > :nth-child(n + 11) { display: none; }
-.rows-more { display: flex; align-items: center; gap: var(--s3); margin: var(--s2) 0 0; }
+.rows-more { display: flex; align-items: center; gap: var(--s3); height: 40px; margin: 0; }
 .rows-more button { font: inherit; font-weight: var(--w-strong); color: var(--accent); background: none; border: 0; padding: var(--s2) 0; cursor: pointer; }
+/* Space for the "Show all" control is kept before scripts run, so it appears without moving the page. */
+.js .table-wrap:has(> table.rows-fold:not([data-ready]):not([data-rows]) tbody tr:nth-child(6)),
+.js .table-wrap:has(> table.rows-fold[data-rows='8']:not([data-ready]) tbody tr:nth-child(9)),
+.js .table-wrap:has(> table.rows-fold[data-rows='10']:not([data-ready]) tbody tr:nth-child(11)),
+.js .list-fold:not([data-ready]):has(> :nth-child(11)) { margin-bottom: 40px; }
 .rows-more button:hover { text-decoration: underline; }
 .table-tools { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); margin-top: var(--s3); font-size: var(--t-small); color: var(--text-2); }
 .density { display: inline-flex; gap: 0; border: 1px solid var(--control); border-radius: var(--radius); overflow: hidden; }

@@ -359,8 +359,12 @@ document.querySelectorAll<HTMLElement>('p.lede:not(.answer):not(:has(~ p.lede)),
   b.type = 'button';
   b.className = 'clamp-more';
   b.textContent = 'More';
-  b.addEventListener('click', () => { el.classList.add('open'); b.remove(); });
+  b.addEventListener('click', () => { el.classList.add('open'); b.remove(); removeEventListener('resize', place); });
+  // The button sits in the space CSS reserves under the folded text (absolutely placed), so adding it moves nothing.
+  const place = () => { b.style.top = `${el.offsetTop + el.offsetHeight + 4}px`; b.style.left = `${el.offsetLeft}px`; };
   el.after(b);
+  place();
+  addEventListener('resize', place, { passive: true });
 });
 
 /* ---------- long result lists: first twenty rows, then "Show all" ---------- */
