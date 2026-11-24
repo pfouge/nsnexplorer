@@ -718,3 +718,6 @@ details.fold > summary h3 { font-weight: var(--w-strong); }
 html:not(.js) .follow-btn, html:not(.js) .save-search, html:not(.js) .acct-btn { display: none; }
 /* Sentence links inside wrapping table cells are underlined too (they outrank the plain "td a" rule). */
 td.wrap a:not(.btn):not(.chip):not(.code) { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; text-decoration-color: color-mix(in srgb, currentColor 45%, transparent); }
+
+/* Public parent mark after a supplier name (components/PublicMark.astro). */
+.pub-mark { display: inline-block; margin-left: var(--s1); padding: 0 var(--s1); border: 1px solid var(--line-strong); border-radius: 3px; font-size: 11px; line-height: 16px; font-weight: var(--w-strong); color: var(--text-2); letter-spacing: 0.02em; vertical-align: 1px; white-space: nowrap; font-variant-numeric: tabular-nums; }

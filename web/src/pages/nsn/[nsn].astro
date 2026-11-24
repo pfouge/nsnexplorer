@@ -36,6 +36,8 @@ import {
   parseCharacteristics,
 } from '../../lib/shared';
 import { loadNsnPage, openSql } from '../../lib/nsn-page';
+import { collectCages, loadParentMarks, type ParentMark } from '../../lib/public-parent';
+import PublicMark from '../../components/PublicMark.astro';
 import { databaseUrlFrom } from '../../lib/runtime-env';
 import { nsnCopyInputFrom } from '../../lib/nsn-copy';
 import { nsnDescription, nsnSummary, nsnTitle } from '../../lib/seo-copy';
@@ -74,8 +76,10 @@ if (!databaseUrl) {
 }
 const sql = openSql(databaseUrl);
 let page;
+let marks = new Map<string, ParentMark>();
 try {
   page = await loadNsnPage(sql, nsnCode);
+  if (page) marks = await loadParentMarks(sql, collectCages(page));
 } finally {
   await sql.end({ timeout: 1 }).catch(() => {});
 }
@@ -801,7 +805,7 @@ const datasetSchema = {
               <tr>
                 <td class="mono">{pn.partNumber}</td>
                 <td class="mono">{pn.cage ?? '—'}</td>
-                <td>{pn.supplierName ?? '—'}</td>
+                <td>{pn.supplierName ?? '—'}{pn.cage && <PublicMark mark={marks.get(pn.cage.trim())} />}</td>
               </tr>
             ))}
           </tbody>
@@ -987,7 +991,7 @@ const datasetSchema = {
                 </td>
                 <td class="num mono">{p.totalValue !== null ? formatUsd(p.totalValue) : '—'}</td>
                 <td>
-                  {supplierPath(p.cage) ? <a href={supplierPath(p.cage)!}>{p.supplierName ?? 'Unknown'}</a> : (p.supplierName ?? 'Unknown')} {p.cage && <span class="cage">({p.cage})</span>}
+                  {supplierPath(p.cage) ? <a href={supplierPath(p.cage)!}>{p.supplierName ?? 'Unknown'}</a> : (p.supplierName ?? 'Unknown')} {p.cage && <span class="cage">({p.cage})</span>}{p.cage && <PublicMark mark={marks.get(p.cage)} />}
                 </td>
                 <td>
                   {p.agencyId !== null && agencySlugById.has(p.agencyId) ? (

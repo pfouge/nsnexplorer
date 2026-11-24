@@ -13,6 +13,8 @@ import { BOARD_SIZE } from './supplier-view.ts';
 export { BOARD_SIZE };
 
 export interface BoardSupplier {
+  /** Publicly traded parent (migration 0026), shown as a ticker mark. */
+  parent?: { ticker: string; name: string } | null;
   cage: string;
   name: string | null;
   city: string | null;

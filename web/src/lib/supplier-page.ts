@@ -17,6 +17,7 @@
 import type postgres from 'postgres';
 import { assertSourceUrl, slugify } from './shared.ts';
 import { CEILING_PRICE_POINT_SQL, NOT_CEILING_PRICE_POINT_SQL } from './contract-ceiling.ts';
+import { PARENT_SQL, mapParent, type PublicParent } from './public-parent.ts';
 
 type Sql = ReturnType<typeof postgres>;
 
@@ -253,6 +254,8 @@ export interface SupplierPageData {
   sam: SupplierSam | null;
   web: SupplierWeb | null;
   stats: SupplierStats | null;
+  /** Publicly traded parent company, when the CAGE matches a reviewed rule (migration 0026). */
+  parent: PublicParent | null;
   /** Flags from pub.supplier_optouts; both false when the supplier has no row. */
   optout: { hideContact: boolean; hideWeb: boolean };
   /** The last 24 calendar months ending with the current one, oldest first, zero-filled. */
@@ -398,6 +401,7 @@ SELECT st.*,
                ELSE to_jsonb(w) END
      FROM pub.supplier_web w WHERE w.cage = $1) AS web,
   (SELECT to_jsonb(x) FROM pub.supplier_stats x WHERE x.cage = $1) AS stats,
+  ${PARENT_SQL} AS parent,
   (SELECT COALESCE(jsonb_agg(to_jsonb(m) ORDER BY m.month), '[]'::jsonb)
      FROM (SELECT to_char(pp.awarded_on, 'YYYY-MM') AS month,
                   count(*)::int AS awards,
@@ -711,6 +715,7 @@ export async function loadSupplierPage(sql: Sql, cage: string, opts: Partial<Par
     sam: mapSam(st.sam as JsonRow | null),
     web: mapWeb(st.web as JsonRow | null),
     stats: mapStats(st.stats as JsonRow | null),
+    parent: mapParent(st.parent as JsonRow | null),
     optout: { hideContact: st.hide_contact === true, hideWeb: st.hide_web === true },
     months: fillMonths(today, st.month_rows as JsonRow[]),
     topNsns: (st.top_nsns as JsonRow[]).map((r) => ({

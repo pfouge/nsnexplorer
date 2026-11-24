@@ -1,0 +1,12 @@
+---
+// A small ticker mark after a supplier's name when the supplier belongs to a publicly traded
+// parent (lib/public-parent.ts). Screen readers hear "part of <parent>, public company".
+import type { ParentMark } from '../lib/public-parent';
+interface Props { mark: ParentMark | undefined | null }
+const { mark } = Astro.props;
+---
+{mark && (
+  <span class="pub-mark" title={`Part of ${mark.name}, a publicly traded company`}>
+    <span class="sr-only">part of {mark.name}, public company </span><span aria-hidden="true">{mark.ticker}</span>
+  </span>
+)}

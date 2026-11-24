@@ -18,6 +18,8 @@ import { toDashedNsn, formatDate, formatUsd, formatUsdPrecise, parseCharacterist
 import { databaseUrlFrom } from '../../lib/runtime-env';
 import { openSql } from '../../lib/nsn-page';
 import { loadSolicitationPage } from '../../lib/solicitation-page';
+import { collectCages, loadParentMarks, type ParentMark } from '../../lib/public-parent';
+import PublicMark from '../../components/PublicMark.astro';
 import { countdownBadge, daysUntilClose, isSolNumber, solicitationPath, statusBadge, supplierPath } from '../../lib/entity';
 import { priceSummary, repeatWinner, valueAtLastPrice, winners } from '../../lib/sol-history';
 import { CEILING_LABEL, ceilingAmountText } from '../../lib/contract-ceiling';
@@ -41,8 +43,10 @@ if (!databaseUrl) {
 }
 const sql = openSql(databaseUrl);
 let page;
+let marks = new Map<string, ParentMark>();
 try {
   page = await loadSolicitationPage(sql, solParam);
+  if (page) marks = await loadParentMarks(sql, collectCages(page));
 } finally {
   await sql.end({ timeout: 1 }).catch(() => {});
 }
@@ -238,7 +242,7 @@ const primaryLabel = isOpen
                     {m.deliveryOrder && <span class="cage"> (order {m.deliveryOrder})</span>}
                   </td>
                   <td>
-                    {href ? <a href={href}>{m.supplierName ?? `CAGE ${m.cage}`}</a> : (m.supplierName ?? m.cage ?? 'Unknown')}
+                    {href ? <a href={href}>{m.supplierName ?? `CAGE ${m.cage}`}</a> : (m.supplierName ?? m.cage ?? 'Unknown')}{m.cage && <PublicMark mark={marks.get(m.cage)} />}
                     {m.cage && m.supplierName && <span class="cage"> ({m.cage})</span>}
                   </td>
                   <td class="num price">{m.total === null ? '—' : m.isCeiling ? <>{ceilingAmountText(formatUsd(m.total))} <span class="badge">{CEILING_LABEL}</span></> : formatUsd(m.total)}</td>
@@ -281,7 +285,7 @@ const primaryLabel = isOpen
                   <td class="num price"><a href={p.sourceUrl} target="_blank" rel="nofollow noopener">{formatUsdPrecise(p.unitPrice)}</a></td>
                   <td class="num mono">{p.quantity !== null ? p.quantity.toLocaleString('en-US') : '—'}</td>
                   <td>
-                    {href ? <a href={href}>{p.supplierName ?? `CAGE ${p.cage}`}</a> : (p.supplierName ?? 'Unknown')}
+                    {href ? <a href={href}>{p.supplierName ?? `CAGE ${p.cage}`}</a> : (p.supplierName ?? 'Unknown')}{p.cage && <PublicMark mark={marks.get(p.cage)} />}
                     {p.cage && p.supplierName && <span class="cage"> ({p.cage})</span>}
                   </td>
                   <td class="mono">{solHref ? <a href={solHref}>{p.solNumber}</a> : (p.solNumber ?? '—')}</td>
@@ -329,7 +333,7 @@ const primaryLabel = isOpen
               return (
                 <tr>
                   <td>
-                    {href ? <a href={href}>{w.supplierName ?? `CAGE ${w.cage}`}</a> : (w.supplierName ?? w.cage)}
+                    {href ? <a href={href}>{w.supplierName ?? `CAGE ${w.cage}`}</a> : (w.supplierName ?? w.cage)}{w.cage && <PublicMark mark={marks.get(w.cage)} />}
                     {w.supplierName && <span class="cage"> ({w.cage})</span>}
                   </td>
                   <td class="num mono">{w.wins}</td>
@@ -365,7 +369,7 @@ const primaryLabel = isOpen
                 <tr>
                   <td class="mono">{formatDate(a.awardedOn)}</td>
                   <td>
-                    {href ? <a href={href}>{a.supplierName ?? `CAGE ${a.cage}`}</a> : (a.supplierName ?? 'Unknown')}
+                    {href ? <a href={href}>{a.supplierName ?? `CAGE ${a.cage}`}</a> : (a.supplierName ?? 'Unknown')}{a.cage && <PublicMark mark={marks.get(a.cage)} />}
                     {a.cage && a.supplierName && <span class="cage"> ({a.cage})</span>}
                   </td>
                   <td class="num price">{a.isCeiling ? <>{a.ceilingAmount !== null ? <>{ceilingAmountText(formatUsd(a.ceilingAmount))} </> : null}<span class="badge">{CEILING_LABEL}</span></> : formatUsdPrecise(a.unitPrice)}</td>
