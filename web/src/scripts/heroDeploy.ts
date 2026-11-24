@@ -83,9 +83,9 @@ function init(): void {
     canvas.width = W * DPR; canvas.height = H * DPR;
     canvas.style.width = `${W}px`; canvas.style.height = `${H}px`;
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    // Centred in its own square box; 0.44 leaves room for flight arcs
+    // Centred in its own square box; 0.45 leaves room for flight arcs
     // (altitude bump up to about 11% of the radius) inside the canvas.
-    R = Math.min(W, H) * 0.44;
+    R = Math.min(W, H) * 0.45;
     GX = W / 2;
     GY = H / 2;
   };
