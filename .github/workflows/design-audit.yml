@@ -1,0 +1,107 @@
+name: Design audit
+
+# Measures every page type on a frozen copy of the production data and checks that nothing was lost.
+# Push a branch named da/** : the branch is built and measured; main is built and measured as the
+# baseline; tools/design-audit/compare.py checks the branch against main page by page (titles, headings,
+# JSON-LD, canonical, table rows, ids, numbers, links) and baseline against itself (noise floor).
+# Read-only against the production database (one pg_dump, no migrations there). Never deploys or writes
+# to the repository. Results: the "design-audit" artifact (measure json, screenshots, compare report).
+on:
+  push:
+    branches: ['da/**']
+  workflow_dispatch:
+
+concurrency:
+  group: design-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: nsn
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      SOURCE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      TARGET_DB_URL: postgresql://postgres:postgres@127.0.0.1:5432/nsn
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/nsn
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          path: b
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: main
+          path: a
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - name: Tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-common > /dev/null
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y > /dev/null
+          sudo apt-get install -y -qq postgresql-client-17 > /dev/null
+          pip install -q playwright
+          mkdir -p "$RUNNER_TEMP/axe" && (cd "$RUNNER_TEMP/axe" && npm i --no-save --silent axe-core@4.10.2 > /dev/null)
+          python -m playwright install --with-deps chromium > /dev/null
+          (cd b && npm ci --no-audit --no-fund > /dev/null)
+      - name: Freeze a copy of the data (read-only on the source)
+        run: |
+          test -n "$SOURCE_DB_URL" || { echo "secret SUPABASE_DB_URL is not available"; exit 1; }
+          bash b/tools/visual-regression/snapshot-db.sh "$GITHUB_WORKSPACE/b"
+      - name: Build both
+        run: |
+          mkdir -p out
+          SAME=$([ "$(git -C a rev-parse HEAD^{tree})" = "$(git -C b rev-parse HEAD^{tree})" ] && echo 1 || echo 0)
+          echo "SAME=$SAME" >> "$GITHUB_ENV"
+          for d in a b; do
+            if [ "$d" = a ] && [ "$SAME" = 1 ]; then continue; fi
+            (cd $d && npm ci --no-audit --no-fund > /dev/null && npm run build --workspace=web > "$GITHUB_WORKSPACE/out/build-$d.log" 2>&1) || { tail -40 out/build-$d.log; exit 1; }
+            echo "built $d: $(find $d/web/dist -name '*.html' | wc -l) html"
+          done
+          bash b/tools/design-audit/page-counts.sh b/web/dist > out/page-counts.csv; cat out/page-counts.csv
+      - name: Serve
+        run: |
+          up(){ (cd "$1/web" && setsid nohup npx wrangler pages dev dist --port "$2" --ip 127.0.0.1 --compatibility-date=2025-04-01 \
+               --compatibility-flag=nodejs_compat --binding "DATABASE_URL=$DATABASE_URL" </dev/null > "$GITHUB_WORKSPACE/out/serve-$3.log" 2>&1 &)
+               for i in $(seq 1 90); do curl -sf -o /dev/null "127.0.0.1:$2/about/" && return 0; sleep 2; done; tail -30 out/serve-$3.log; return 1; }
+          up b 8102 b
+          if [ "$SAME" = 1 ]; then echo "A=http://127.0.0.1:8102" >> "$GITHUB_ENV"; else up a 8101 a; echo "A=http://127.0.0.1:8101" >> "$GITHUB_ENV"; fi
+      - name: Routes
+        run: |
+          (cd b && node tools/visual-regression/make-routes.mjs http://127.0.0.1:8102 tools/visual-regression/routes.base.txt "$GITHUB_WORKSPACE/out/routes0.txt")
+          (cd b && node tools/design-audit/extra-routes.mjs http://127.0.0.1:8102 "$GITHUB_WORKSPACE/out/routes0.txt" "$GITHUB_WORKSPACE/out/routes.txt")
+          if [ -f b/tools/design-audit/routes.pin.txt ]; then cat b/tools/design-audit/routes.pin.txt >> out/routes.txt; sort -u -o out/routes.txt out/routes.txt; fi
+          cat out/routes.txt
+      - name: Measure
+        run: |
+          python b/tools/design-audit/measure.py http://127.0.0.1:8102 out/routes.txt out/b --axe "$RUNNER_TEMP/axe/node_modules/axe-core/axe.min.js" > out/measure-b.log 2>&1 || tail -30 out/measure-b.log
+          if [ "$SAME" != 1 ]; then python b/tools/design-audit/measure.py "$A" out/routes.txt out/a > out/measure-a.log 2>&1 || tail -30 out/measure-a.log; fi
+      - name: Compare
+        run: |
+          python b/tools/design-audit/compare.py "$A" "$A" out/routes.txt out/noise.json > out/noise.log; tail -3 out/noise.log
+          ALLOW=""; [ -f b/tools/design-audit/allow.json ] && ALLOW="--allow b/tools/design-audit/allow.json"
+          set +e
+          python b/tools/design-audit/compare.py "$A" http://127.0.0.1:8102 out/routes.txt out/compare.json $ALLOW > out/compare.log; RC=$?
+          set -e
+          cat out/compare.log
+          python b/tools/design-audit/summary.py out > out/summary.md; cat out/summary.md
+          exit $RC
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: design-audit
+          path: out
+          retention-days: 14
