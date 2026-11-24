@@ -102,7 +102,7 @@ export function bigUsd(v: number): string {
 /** "Map of CAGE -> parent" for supplier lists (one query, any number of codes). */
 export const PARENTS_FOR_CAGES_SQL = `SELECT sp.cage, pc.ticker, pc.name
   FROM pub.supplier_parent sp JOIN pub.public_companies pc ON pc.cik = sp.cik
-  WHERE sp.cage = ANY($1::text[])`;
+  WHERE sp.cage = ANY(string_to_array($1::text, ','))`;
 
 export interface ParentMark { ticker: string; name: string }
 
@@ -127,7 +127,9 @@ export async function loadParentMarks(
   const out = new Map<string, ParentMark>();
   if (list.length === 0) return out;
   try {
-    const rows = (await sql.unsafe(PARENTS_FOR_CAGES_SQL, [list])) as Array<{ cage: string; ticker: string; name: string }>;
+    // One comma-joined text parameter: the page clients run with fetch_types off, so array
+    // parameters are not serialised.
+    const rows = (await sql.unsafe(PARENTS_FOR_CAGES_SQL, [list.join(',')])) as Array<{ cage: string; ticker: string; name: string }>;
     for (const r of rows) out.set(String(r.cage).trim(), { ticker: r.ticker, name: r.name });
   } catch {
     /* tables missing or a transient error: no marks */
