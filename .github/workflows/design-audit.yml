@@ -92,9 +92,12 @@ jobs:
         run: |
           python b/tools/design-audit/compare.py "$A" "$A" out/routes.txt out/noise.json > out/noise.log; tail -3 out/noise.log
           ALLOW=""; [ -f b/tools/design-audit/allow.json ] && ALLOW="--allow b/tools/design-audit/allow.json"
-          python b/tools/design-audit/compare.py "$A" http://127.0.0.1:8102 out/routes.txt out/compare.json $ALLOW > out/compare.log; echo "exit $?" >> out/compare.log
+          set +e
+          python b/tools/design-audit/compare.py "$A" http://127.0.0.1:8102 out/routes.txt out/compare.json $ALLOW > out/compare.log; RC=$?
+          set -e
           cat out/compare.log
           python b/tools/design-audit/summary.py out > out/summary.md; cat out/summary.md
+          exit $RC
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
