@@ -250,7 +250,7 @@ const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Suppl
       {place && <span>{place}</span>}
       {badge && <span class={`badge ${badge.tone}`}>{badge.text}</span>}
       {small && <span class="badge green">Small business</span>}
-      {parent && <a class="sp-parent" href="#parent">Part of {parent.name} <span class="code">{parent.ticker}</span></a>}
+      {parent && <a class="sp-parent" href="#parent">Part of {parent.name}{parent.name.toUpperCase() !== parent.ticker && <span class="code">{parent.ticker}</span>}</a>}
       {website && siteName && (
         <a class="site" href={website} target="_blank" rel="nofollow noopener">{siteName} ↗</a>
       )}
@@ -586,7 +586,7 @@ const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Suppl
               <tbody>
                 {parent.siblingRows.map((r) => (
                   <tr>
-                    <td><a href={`/supplier/${r.cage}/`}>{r.name}</a> <span class="code">{r.cage}</span></td>
+                    <td class="wrap"><a href={`/supplier/${r.cage}/`}>{r.name}</a> <span class="code">{r.cage}</span></td>
                     <td>{r.place ?? '—'}</td>
                     <td class="num">{r.dollars12m > 0 ? formatUsd(r.dollars12m) : '—'}</td>
                   </tr>
