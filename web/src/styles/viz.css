@@ -100,7 +100,7 @@ table.viz-table tr.inc td { background: color-mix(in srgb, var(--v-main) 12%, tr
 .viz-tape:hover .run, .viz-tape:focus-within .run { animation-play-state: paused; }
 .viz-tape a { color: inherit; margin: 0 1.3rem; font-size: var(--t-small); }
 .viz-tape em { font-style: normal; font-weight: 600; font-variant-numeric: tabular-nums; }
-.viz-tape .new { color: #6FD6A6; } .viz-tape .soon { color: #F0B45E; } .viz-tape small { color: var(--inv-soft); }
+.viz-tape .new { color: var(--accent); } .viz-tape .soon { color: var(--text); font-weight: 600; } .viz-tape small { color: var(--text-2); }
 @keyframes viz-tape { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 @media (prefers-reduced-motion: reduce) { .viz-tape .run { animation: none; } .viz-tape { overflow-x: auto; } }
 

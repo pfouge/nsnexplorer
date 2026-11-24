@@ -29,7 +29,10 @@ export function esc(v: unknown): string {
 }
 
 /** Builds one SVG/HTML element as a string; attribute values are escaped. */
+const SHAPES = new Set(['rect', 'circle', 'path', 'g', 'line', 'polygon', 'polyline', 'ellipse']);
 export function el(tag: string, attrs: Attrs = {}, children: string | string[] = ''): string {
+  // A labelled mark needs a role for its label to be allowed (axe aria-prohibited-attr): it is an image.
+  if (SHAPES.has(tag) && attrs['aria-label'] && !attrs.role) attrs = { ...attrs, role: 'img' };
   const a = Object.entries(attrs)
     .filter(([, v]) => v !== null && v !== undefined && v !== false)
     .map(([k, v]) => ` ${k}="${esc(typeof v === 'number' ? round(v, 2) : v)}"`)
@@ -45,12 +48,16 @@ export function text(x: number, y: number, str: unknown, attrs: Attrs = {}): str
 
 /** Root <svg>; width is 100% of its container, height follows the viewBox. */
 export function svg(w: number, h: number, label: string, children: string | string[], opts: { latestAtEnd?: boolean } = {}): string {
+  // A chart with links or focusable marks inside is a labelled group, not a single image
+  // (an image cannot contain interactive content: axe nested-interactive).
+  const body = Array.isArray(children) ? children.join('') : children;
+  const interactive = /<a\s|tabindex="0"/.test(body);
   // viz-wide charts keep a readable minimum width on phones and scroll
   // sideways inside their frame (see .viz-body in viz.css).
-  return el('svg', { viewBox: `0 0 ${w} ${h}`, width: '100%', role: 'img', 'aria-label': label, class: w > 700 ? 'viz-svg viz-wide' : 'viz-svg',
+  return el('svg', { viewBox: `0 0 ${w} ${h}`, width: '100%', role: interactive ? 'group' : 'img', 'aria-label': label, class: w > 700 ? 'viz-svg viz-wide' : 'viz-svg',
     // Time series put the newest data at the right; on a phone the frame
     // scrolls there first (scripts/viz.ts).
-    'data-latest': opts.latestAtEnd ? 'end' : null }, children);
+    'data-latest': opts.latestAtEnd ? 'end' : null }, body);
 }
 
 export function round(n: number, dp = 1): number {

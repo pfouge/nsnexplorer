@@ -15,11 +15,11 @@ body {
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; text-underline-offset: 2px; }
 /* Links inside running text are underlined, so colour is never the only sign of a link (WCAG 1.4.1). */
-:where(p, li, dd, figcaption, caption, .gloss, .note) a:where(:not(.btn, .chip, .code, .index-row, .dept-card, .result, .clamp-more)) {
+:where(p, li, dd, figcaption, caption, .gloss, .note, td.wrap) a:where(:not(.btn, .chip, .code, .index-row, .dept-card, .result, .clamp-more)) {
   text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px;
   text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
 }
-:where(p, li, dd, figcaption, caption, .gloss, .note) a:where(:not(.btn, .chip, .code, .index-row, .dept-card, .result, .clamp-more)):hover { text-decoration-color: currentColor; }
+:where(p, li, dd, figcaption, caption, .gloss, .note, td.wrap) a:where(:not(.btn, .chip, .code, .index-row, .dept-card, .result, .clamp-more)):hover { text-decoration-color: currentColor; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 button { font-family: inherit; }
 [hidden] { display: none !important; }
