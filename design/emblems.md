@@ -58,7 +58,7 @@ one-colour set but is allowed), show all marks in approved colours, or leave tha
 
 ## Drafts
 
-Permission requests for Peter to send are in `design/emblems/requests/`. Nothing has been sent.
+Permission requests for Peter to send are kept privately (claude.ai project doc `claude/emblem-permission-requests-2026-11-24.md` and the private docs repo), not in this public repository. Nothing has been sent.
 
 ## Not verified
 
