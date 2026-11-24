@@ -735,7 +735,7 @@ const datasetSchema = {
     <section id="dimensioned-drawing">
       <h3 class="section-title">Dimensioned drawing</h3>
       <p class="gloss">
-        Generated from the federal catalog's dimensional data for this NSN — reference only,
+        Generated from the federal catalog's dimensional data for this NSN. Reference only,
         not a manufacturing drawing.
       </p>
       <div class="drawing" set:html={diagram} />
@@ -746,7 +746,7 @@ const datasetSchema = {
     <section>
       <h3 class="section-title">Specifications</h3>
       <p class="gloss">
-        From the federal catalog (DLA FLIS / PUB LOG) — what your part has to meet. Cited
+        From the federal catalog (DLA FLIS / PUB LOG): what your part has to meet. Cited
         government specification documents can be searched by document number in <a href={ASSIST_QUICK_SEARCH_URL} target="_blank" rel="nofollow noopener">ASSIST Quick
         Search ↗</a>, DoD's public document search. ASSIST is run by the Defense Logistics Agency and may not load from outside the United States.
       </p>
@@ -772,7 +772,7 @@ const datasetSchema = {
                   <td>
                     {c.reply ?? '—'}
                     {doc && (
-                      <span class="badge mono" style="margin-left:0.5rem; font-size:var(--t-small);" title="Specification document — look up in ASSIST">{doc}</span>
+                      <span class="badge mono" style="margin-left:0.5rem; font-size:var(--t-small);" title="Specification document; look it up in ASSIST">{doc}</span>
                     )}
                   </td>
                 </tr>
@@ -788,7 +788,7 @@ const datasetSchema = {
     <section>
       <h3 class="section-title">Manufacturer part numbers</h3>
       <p class="gloss">
-        Commercial part numbers cross-referenced to this NSN in the federal catalog — the parts
+        Commercial part numbers cross-referenced to this NSN in the federal catalog: the parts
         that have been accepted as satisfying this stock number, and who makes them.
       </p>
       <div class="table-wrap">
@@ -892,7 +892,7 @@ const datasetSchema = {
   <section id="prices" style="margin-top:2.5rem;">
     <h2 class="section-title" style="margin-top:0;">What it pays — so you can quote</h2>
     <p class="gloss">
-      The government's own price and demand record for this NSN — what past awards cleared at,
+      The government's own price and demand record for this NSN: what past awards cleared at,
       so you know where to land your quote.
     </p>
     <BidCalculator
@@ -1009,7 +1009,7 @@ const datasetSchema = {
   <section>
     <h3 class="section-title">Related contract actions</h3>
     <p class="gloss">
-      Contract action totals, not unit prices — obligation amounts from USAspending for related
+      Contract action totals, not unit prices: obligation amounts from USAspending for related
       awards, shown for context only. These do not appear on the price chart above.
       {contractActions.some((c) => c.isCeiling) && (
         <> A long-term contract shows the most it can be worth, not money spent. It is not counted in the purchase totals on this page.</>
@@ -1056,7 +1056,7 @@ const datasetSchema = {
       <h2 class="section-title" style="margin-top:0;">Demand history</h2>
       {allSols.length > 0 && (
       <p class="gloss">
-        Every solicitation we've indexed for this NSN, open and closed — {allSols.length} on record.
+        Every solicitation we've indexed for this NSN, open and closed: {allSols.length} on record.
         Closed RFQs (expired, cancelled, or awarded) stay here as a record of past demand; they
         never get removed.
       </p>
@@ -1127,7 +1127,7 @@ const datasetSchema = {
     <summary><h2>About this data</h2></summary>
     <section class="fold-body">
     <ul class="gloss">
-      <li>Unit prices: DLA DIBBS award records — every row links to its government record.</li>
+      <li>Unit prices: DLA DIBBS award records; every row links to its government record.</li>
       <li>AMSC: latest observed value from {nsn.amscSourceUrl ? <a href={nsn.amscSourceUrl} target="_blank" rel="noopener noreferrer">DIBBS solicitation history</a> : 'DIBBS solicitation history'}{nsn.amscObservedOn && <> as of {formatDate(nsn.amscObservedOn)}</>}.</li>
       <li>Contract action totals: USAspending, context only.</li>
       {lastUpdated && <li>Data last refreshed: {new Date(lastUpdated).toISOString().slice(0, 10)}.</li>}

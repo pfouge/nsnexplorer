@@ -379,18 +379,20 @@ const primaryLabel = isOpen
     </section>
   )}
 
-  <section class="card" style="margin-top:2rem;">
-    <h2>About this data / source</h2>
+  <details class="fold" id="about-data" style="margin-top:2rem;">
+    <summary><h2>About this data / source</h2></summary>
+    <section class="fold-body">
     <ul class="gloss">
       <li>
         Solicitation record: <a href={sol.sourceUrl} target="_blank" rel="nofollow noopener">{sourceName}</a>.
       </li>
-      <li>Status and close date reflect the last time our crawler observed this record — always confirm current status on {sourceName} before bidding.</li>
+      <li>Status and close date reflect the last time our crawler observed this record; always confirm current status on {sourceName} before bidding.</li>
       {awards.length > 0 && <li>Awards listed here are indexed award records that cite this solicitation number; each links to its supplier page.</li>}
       <li><a href="/methodology/">Full methodology →</a></li>
     </ul>
     <CiteThis title={`${itemLabel}, solicitation ${sol.solNumber}`} url={canonicalUrl} asOf={new Date().toISOString().slice(0, 10)} />
-  </section>
+    </section>
+  </details>
 </BaseLayout>
 
 <style>
