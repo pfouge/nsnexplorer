@@ -83,10 +83,12 @@ function init(): void {
     canvas.width = W * DPR; canvas.height = H * DPR;
     canvas.style.width = `${W}px`; canvas.style.height = `${H}px`;
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    // Offset right; large enough to feel planetary, cropped by the hero.
-    R = Math.min(H * 0.66, W * 0.30);
-    GX = W * 0.74;
-    GY = H * 0.52;
+    // Offset right; large enough to feel planetary, cropped by the hero at
+    // the top and right (the redesigned hero is shorter, so the radius is
+    // a larger share of its height than before).
+    R = Math.min(H * 0.86, W * 0.30);
+    GX = W * 0.76;
+    GY = H * 0.5;
   };
 
   // Precompute unit vectors for the lattice, grouped by geopolitical
