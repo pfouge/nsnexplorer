@@ -1,6 +1,6 @@
-// heroDeploy.ts: the home page globe. A slowly rotating
-// orthographic globe in its own square box at the top right of the hero
-// (wide screens only), built from a geodesic dot
+// heroDeploy.ts: the home page globe, a background graphic behind the
+// hero (wide screens only). A slowly rotating orthographic globe, offset
+// to the right and cropped by the hero, built from a geodesic dot
 // lattice. Deployment missions fly great-circle routes between real US
 // Army/Navy installations: ships crawl ocean-only lanes between Navy
 // ports, flights never overfly the avoid zone (Russia/China), and every
@@ -83,11 +83,10 @@ function init(): void {
     canvas.width = W * DPR; canvas.height = H * DPR;
     canvas.style.width = `${W}px`; canvas.style.height = `${H}px`;
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    // Centred in its own square box; 0.45 leaves room for flight arcs
-    // (altitude bump up to about 11% of the radius) inside the canvas.
-    R = Math.min(W, H) * 0.45;
-    GX = W / 2;
-    GY = H / 2;
+    // Offset right; large enough to feel planetary, cropped by the hero.
+    R = Math.min(H * 0.66, W * 0.30);
+    GX = W * 0.74;
+    GY = H * 0.52;
   };
 
   // Precompute unit vectors for the lattice, grouped by geopolitical
