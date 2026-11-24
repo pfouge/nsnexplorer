@@ -30,3 +30,14 @@ for r in base:
         else: rng.append([w, w])
     ovs = ','.join(f'{a}-{b}' if a != b else f'{a}' for a, b in rng) or '0'
     print(f"| {r} | {row[0]} | {row[1]} | {ans} | {lt} | {cls:.3f} | {ovs} | {st} |")
+
+print()
+print('## Accessibility (axe WCAG 2 A/AA at 1280; keyboard focus ring over 25 Tab stops)')
+for r in base:
+    a = b.get(r, {}).get('a11y')
+    if not a: continue
+    if 'error' in a: print(f'- {r}: error {a["error"]}'); continue
+    v = a.get('axe', []); nr = a.get('no_ring', [])
+    if v or nr:
+        print(f'- {r}: ' + '; '.join(f"{x['id']} ({x['impact']}, {x['n']}) e.g. {x['ex'][:2]}" for x in v) + (f' | no focus ring: {nr[:4]}' if nr else ''))
+print('(routes not listed: no violations)')

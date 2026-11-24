@@ -14,6 +14,12 @@ body {
 
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; text-underline-offset: 2px; }
+/* Links inside running text are underlined, so colour is never the only sign of a link (WCAG 1.4.1). */
+:where(p, li, dd, figcaption, caption, .gloss, .note) a:where(:not(.btn, .chip, .code, .index-row, .dept-card, .result, .clamp-more)) {
+  text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px;
+  text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+}
+:where(p, li, dd, figcaption, caption, .gloss, .note) a:where(:not(.btn, .chip, .code, .index-row, .dept-card, .result, .clamp-more)):hover { text-decoration-color: currentColor; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 button { font-family: inherit; }
 [hidden] { display: none !important; }
@@ -266,7 +272,7 @@ a.index-row:hover { text-decoration: none; background: var(--hover); }
 .index-row h3 { margin: 0; }
 .index-row p { margin: 0; color: var(--text-2); font-size: var(--t-small); }
 .index-row .go { color: var(--text-3); }
-.index-row.soon { opacity: 0.6; }
+.index-row.soon h3, .index-row.soon p { color: var(--text-2); }
 
 /* ---- Bid calculator ---- */
 .bid-calc .calc-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s4) var(--s5); margin: var(--s4) 0 var(--s2); }
