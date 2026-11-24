@@ -321,68 +321,62 @@ const datasetSchema = {
     <Follow kind="nsn" entity={nsn.nsn} label={itemLabel} />
   </header>
 
-  <dl class="kv" aria-label="Key facts">
-    <div>
-      <dt>Open for bid now</dt>
-      <dd>{openSols.length > 0 ? <a href="#open">{openSols.length.toLocaleString('en-US')} open</a> : 'None open'}</dd>
-      <span class="note">{openSols.length > 0 ? (nextClose ? `Next closes ${formatDate(nextClose)}` : 'Close date not on record') : 'Search DIBBS for new RFQs'}</span>
+  <div class="stat-strip roomy key-facts" aria-label="Key facts">
+    <div class="stat">
+      <div class="value">{openQtyTotal > 0 ? <a href="#open">{openSols.length.toLocaleString('en-US')} solicitation{openSols.length === 1 ? '' : 's'} · {openQtyTotal.toLocaleString('en-US')} unit{openQtyTotal === 1 ? '' : 's'}</a> : openSols.length > 0 ? <a href="#open">{openSols.length.toLocaleString('en-US')} open</a> : 'None open'}</div>
+      <div class="label">Open now</div>
+      <div class="gloss">{openSols.length > 0 ? (nextClose ? `Next closes ${formatDate(nextClose)}` : 'Close date not on record') : 'Search DIBBS for new RFQs'}</div>
     </div>
-    <div>
-      <dt>Last award price</dt>
-      <dd>{headlinePoint ? formatUsdPrecise(headlinePoint.unitPrice) : 'None yet'}</dd>
-      <Spark values={sparkPrices} />
-      {headlinePoint && <span class="note">{formatDate(headlinePoint.awardedOn)}</span>}
-    </div>
-    <div>
-      <dt>Competition</dt>
-      <dd><a href="#competition">{compRead.label}</a></dd>
-      <span class="note">{listedSources.toLocaleString('en-US')} listed source{listedSources === 1 ? '' : 's'}</span>
-    </div>
-    <div>
-      <dt>Drawing</dt>
-      <dd>{diagram ? <a href="#dimensioned-drawing">Dimensioned</a> : standardDocs.length > 0 ? <a href="#standard-drawing">Standard document</a> : 'None on record'}</dd>
-      <span class="note">{partNumbers.length.toLocaleString('en-US')} part number{partNumbers.length === 1 ? '' : 's'} on file</span>
-    </div>
-  </dl>
-
-  {headlineSummary && headlinePoint && (
-    <div class="stat-strip roomy">
+    {headlineSummary && headlinePoint ? (
       <div class="stat">
-        <div class="value up"><a href={headlinePoint.sourceUrl} target="_blank" rel="noopener noreferrer">{formatUsdPrecise(headlinePoint.unitPrice)}</a></div>
+        <div class="value"><a href={headlinePoint.sourceUrl} target="_blank" rel="noopener noreferrer">{formatUsdPrecise(headlinePoint.unitPrice)}</a></div>
         <div class="label">Most recent price</div>
+        <Spark values={sparkPrices} />
         <div class="gloss">Awarded {formatDate(headlinePoint.awardedOn)}</div>
       </div>
-      {headlineSummary.n >= 2 && (
-        <div class="stat">
-          <div class="value">{formatUsdPrecise(headlineSummary.low)} – {formatUsdPrecise(headlineSummary.high)}</div>
-          <div class="label">Last {headlineSummary.n} awards</div>
-        </div>
-      )}
-      {headlineSummary.n >= 2 && (
-        <div class="stat">
-          <div class="value">{formatUsdPrecise(headlineSummary.average)}</div>
-          <div class="label">Average of last {headlineSummary.n}</div>
-        </div>
-      )}
+    ) : (
+      <div class="stat">
+        <div class="value">None yet</div>
+        <div class="label">Most recent price</div>
+        <div class="gloss">No award price on record</div>
+      </div>
+    )}
+    {headlineSummary && headlinePoint && headlineSummary.n >= 2 && (
+      <div class="stat">
+        <div class="value">{formatUsdPrecise(headlineSummary.low)} – {formatUsdPrecise(headlineSummary.high)}</div>
+        <div class="label">Last {headlineSummary.n} awards</div>
+      </div>
+    )}
+    {headlineSummary && headlinePoint && headlineSummary.n >= 2 && (
+      <div class="stat">
+        <div class="value">{formatUsdPrecise(headlineSummary.average)}</div>
+        <div class="label">Average of last {headlineSummary.n}</div>
+      </div>
+    )}
+    {headlineSummary && headlinePoint && (
       <div class="stat">
         <div class="value">{points.length.toLocaleString('en-US')}</div>
         <div class="label">Prices on record</div>
       </div>
-      {openQtyTotal > 0 && (
-        <div class="stat">
-          <div class="value">{openSols.length.toLocaleString('en-US')} solicitation{openSols.length === 1 ? '' : 's'} · {openQtyTotal.toLocaleString('en-US')} unit{openQtyTotal === 1 ? '' : 's'}</div>
-          <div class="label">Open now</div>
-        </div>
-      )}
-      {openQtyTotal > 0 && openValueAtLastPrice !== null && (
-        <div class="stat">
-          <div class="value">≈ ${Math.round(openValueAtLastPrice).toLocaleString('en-US')}</div>
-          <div class="label">Value at last price</div>
-          <div class="gloss">Open quantity × last unit price</div>
-        </div>
-      )}
+    )}
+    {headlineSummary && headlinePoint && openQtyTotal > 0 && openValueAtLastPrice !== null && (
+      <div class="stat">
+        <div class="value">≈ ${Math.round(openValueAtLastPrice).toLocaleString('en-US')}</div>
+        <div class="label">Value at last price</div>
+        <div class="gloss">Open quantity × last unit price</div>
+      </div>
+    )}
+    <div class="stat">
+      <div class="value"><a href="#competition">{compRead.label}</a></div>
+      <div class="label">Competition</div>
+      <div class="gloss">{listedSources.toLocaleString('en-US')} listed source{listedSources === 1 ? '' : 's'}</div>
     </div>
-  )}
+    <div class="stat">
+      <div class="value">{diagram ? <a href="#dimensioned-drawing">Dimensioned</a> : standardDocs.length > 0 ? <a href="#standard-drawing">Standard document</a> : 'None on record'}</div>
+      <div class="label">Drawing</div>
+      <div class="gloss">{partNumbers.length.toLocaleString('en-US')} part number{partNumbers.length === 1 ? '' : 's'} on file</div>
+    </div>
+  </div>
 
   <GroupTabs
     page="nsn"

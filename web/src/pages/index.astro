@@ -26,7 +26,7 @@ const tiles = buildTiles(data.viz.tiles, data.viz.dailyStats);
 const groupPages = new Set(buildDepartments(data).map((d) => d.fsg));
 const demandTiles = buildDemandTiles(data.viz.groups, fsgName, (fsg) => groupPages.has(fsg));
 
-const openClasses = openByClass(data.openByFsc, 5);
+const openClasses = openByClass(data.openByFsc, 5, data.viz.today);
 const fmtInt = (n: number) => n.toLocaleString('en-US');
 const fmtUsd = (n: number) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);

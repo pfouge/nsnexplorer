@@ -21,3 +21,8 @@ test('drops service codes and empty classes, sorts by count', () => {
   ]);
   assert.deepEqual(openByClass(m).map((c) => c.fsc), ['5330', '5310']);
 });
+
+test('counts what closes within seven days of today', () => {
+  const m = new Map([['5310', { fsc: '5310', name: null, solicitations: [sol('A', '2026-11-24', 1), sol('B', '2026-12-01', 1), sol('C', '2026-12-02', 1), sol('D', '2026-11-20', 1)] }]]);
+  assert.equal(openByClass(m, 5, '2026-11-24')[0].closing7, 2);
+});

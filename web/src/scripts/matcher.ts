@@ -2,7 +2,7 @@
 // Picks are kept in localStorage under nsn.capabilities (a list of four-digit class codes) and named
 // on the privacy page. Data: /data/open-by-class.json, fetched on first use.
 interface OpenItem { sol: string; nsn: string | null; name: string | null; qty: number | null; unit: string | null; closes: string | null; setaside: string | null }
-interface OpenClass { fsc: string; name: string | null; count: number; qty: number; nextClose: string | null; items: OpenItem[] }
+interface OpenClass { fsc: string; name: string | null; count: number; qty: number; nextClose: string | null; closing7: number; items: OpenItem[] }
 
 const KEY = 'nsn.capabilities';
 const root = document.querySelector<HTMLElement>('[data-matcher]');
@@ -33,7 +33,6 @@ if (root) {
   };
   const fmt = (n: number) => n.toLocaleString('en-US');
   const day = (iso: string | null) => iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }) : '—';
-  const left = (iso: string | null) => iso ? Math.round((Date.parse(`${iso}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86400000) : null;
   const dashed = (n: string) => `${n.slice(0, 4)}-${n.slice(4, 6)}-${n.slice(6, 9)}-${n.slice(9)}`;
 
   const render = async () => {
@@ -49,14 +48,13 @@ if (root) {
     mine.hidden = false;
     mineText.textContent = `Your classes: ${picks.join(', ')}. `;
     title.textContent = 'Open for bid in your classes';
-    const rows = picks.map((f) => byFsc.get(f) ?? { fsc: f, name: null, count: 0, qty: 0, nextClose: null, items: [] });
+    const rows = picks.map((f) => byFsc.get(f) ?? { fsc: f, name: null, count: 0, qty: 0, nextClose: null, closing7: 0, items: [] });
     classBody.replaceChildren(...rows.map((c) => {
-      const l = left(c.nextClose);
       return el('tr', {},
         el('td', {}, el('a', { href: `/open/${c.fsc}/`, textContent: c.fsc }), ' ', el('span', { className: 'cls-name', textContent: c.name ?? '' })),
         el('td', { className: 'num', textContent: c.count ? fmt(c.count) : 'None open' }),
+        el('td', { className: 'num', textContent: c.count ? fmt(c.closing7) : '' }),
         el('td', { className: 'num', textContent: c.count ? fmt(c.qty) : '' }),
-        el('td', {}, c.count ? day(c.nextClose) : '', ...(l !== null && l >= 0 && c.count ? [el('span', { className: 'soft', textContent: ` · ${l} d` })] : [])),
       );
     }));
     const items = rows.flatMap((c) => c.items.map((i) => ({ ...i, fsc: c.fsc })))

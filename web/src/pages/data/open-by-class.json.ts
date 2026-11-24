@@ -9,7 +9,7 @@ export const prerender = true;
 
 export const GET: APIRoute = async () => {
   const data = await loadSiteData();
-  return new Response(JSON.stringify(openByClass(data.openByFsc, 5)), {
+  return new Response(JSON.stringify(openByClass(data.openByFsc, 5, data.viz.today)), {
     headers: { 'Content-Type': 'application/json; charset=utf-8' },
   });
 };

@@ -10,17 +10,8 @@ import { fscDisplayName } from '../lib/browse';
 interface Props { classes: OpenClass[]; today: string }
 const { classes, today } = Astro.props;
 const top = classes.slice(0, 8);
-const chips = classes.slice(0, 14);
+const chips = classes.slice(0, 10);
 const fmt = (n: number) => n.toLocaleString('en-US');
-const day = (iso: string | null) => {
-  if (!iso) return '—';
-  const d = new Date(`${iso}T00:00:00Z`);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
-};
-const daysLeft = (iso: string | null) => {
-  if (!iso) return null;
-  return Math.round((Date.parse(`${iso}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86400000);
-};
 ---
 <section class="matcher" id="matcher" aria-labelledby="matcher-h" data-matcher data-today={today}>
   <div class="matcher-pick">
@@ -48,15 +39,15 @@ const daysLeft = (iso: string | null) => {
     <div class="table-wrap">
       <table class="matcher-table">
         <thead>
-          <tr><th>Class</th><th class="num">Open</th><th class="num">Units</th><th>Next closes</th></tr>
+          <tr><th>Class</th><th class="num">Open</th><th class="num">Closing in 7 days</th><th class="num">Units</th></tr>
         </thead>
         <tbody data-matcher-classes>
           {top.map((c) => (
             <tr>
               <td><a href={`/open/${c.fsc}/`}>{c.fsc}</a> <span class="cls-name">{fscDisplayName(c.fsc, c.name)}</span></td>
               <td class="num">{fmt(c.count)}</td>
+              <td class="num">{fmt(c.closing7)}</td>
               <td class="num">{fmt(c.qty)}</td>
-              <td>{day(c.nextClose)}{daysLeft(c.nextClose) !== null && daysLeft(c.nextClose)! >= 0 && <span class="soft"> · {daysLeft(c.nextClose)} d</span>}</td>
             </tr>
           ))}
         </tbody>
