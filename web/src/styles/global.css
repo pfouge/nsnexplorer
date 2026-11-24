@@ -695,3 +695,5 @@ details.fold > summary h3 { font-weight: var(--w-strong); }
 /* Account controls are shown from the first paint when scripts run (so they never push the page down),
    and left out when they cannot work. account.ts hides them if the server says accounts are off. */
 html:not(.js) .follow-btn, html:not(.js) .save-search, html:not(.js) .acct-btn { display: none; }
+/* Sentence links inside wrapping table cells are underlined too (they outrank the plain "td a" rule). */
+td.wrap a:not(.btn):not(.chip):not(.code) { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; text-decoration-color: color-mix(in srgb, currentColor 45%, transparent); }
