@@ -236,3 +236,26 @@ jobs:
     secrets: inherit
     with:
       commit_report: false
+
+  # spotthemoney.com reads DLA awards from this database at build time (its company and stock pages,
+  # "Military parts orders"). Once today's DIBBS load is in, ask it to rebuild. Needs the secret
+  # STM_DISPATCH_TOKEN: a fine-grained token on pfouge/spotthemoney with Actions read and write.
+  # Without it, or if the call fails, this job only warns: spotthemoney still rebuilds on its own daily run.
+  notify-spotthemoney:
+    needs: [dibbs, dibbs-retry, dibbs-retry-2]
+    if: >-
+      always() && (needs.dibbs.result == 'success'
+      || needs.dibbs-retry.result == 'success'
+      || needs.dibbs-retry-2.result == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: dispatch spotthemoney deploy
+        env:
+          TOKEN: ${{ secrets.STM_DISPATCH_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then echo "::warning::STM_DISPATCH_TOKEN not set; spotthemoney not notified"; exit 0; fi
+          code=$(curl -sS -o /tmp/r.txt -w '%{http_code}' -X POST \
+            -H "Authorization: Bearer $TOKEN" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/pfouge/spotthemoney/actions/workflows/deploy.yml/dispatches -d '{"ref":"main"}')
+          if [ "$code" = 204 ]; then echo "spotthemoney deploy dispatched"; else echo "::warning::spotthemoney dispatch answered $code: $(head -c 300 /tmp/r.txt)"; fi
