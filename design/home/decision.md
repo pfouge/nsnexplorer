@@ -21,3 +21,5 @@ the branch `design/home-b` if wanted again.
 Checked in the browser on A: picking a chip stores `nsn.capabilities`, the table switches to "Open for bid in
 your classes" with the closing-in-7-days count, the soonest-closing list fills, the class finder suggests
 "5330 Packing and Gasket Materials" for "gask", and Clear restores the busiest-classes table.
+
+Peter confirmed A over B on 2026-11-24.

@@ -18,6 +18,9 @@ const data = await loadSiteData();
 const { stats, nsnsByFsc } = data;
 // Only categories with at least one tracked NSN are listed on the home page.
 const deepFscs = data.deepFscs.filter((f) => (nsnsByFsc.get(f.fsc)?.length ?? 0) > 0);
+// Shown with the most-tracked classes first, so the useful ones lead and tiny unlisted codes sink.
+// The structured-data ItemList below keeps its code order (unchanged for search engines).
+const deepByCount = [...deepFscs].sort((a, b) => (nsnsByFsc.get(b.fsc)?.length ?? 0) - (nsnsByFsc.get(a.fsc)?.length ?? 0) || a.fsc.localeCompare(b.fsc));
 
 // Headline numbers and the demand map (charts, lib/viz-site.ts).
 const tiles = buildTiles(data.viz.tiles, data.viz.dailyStats);
@@ -144,7 +147,8 @@ const itemList = {
   <AdSlot position="mid" />
 
   <div class="home-browse">
-    <section>
+    <section class="home-browse-lead">
+      <div>
       <h2 class="section-title">Browse the catalog</h2>
       <p class="gloss">
         Open solicitations across {fmtInt(data.solicitationsByFsc.size)} federal supply classes, each one
@@ -154,12 +158,13 @@ const itemList = {
         <a class="btn" href="/open/">Browse all {fmtInt(data.solicitationsByFsc.size)} categories →</a>
         <a class="btn-ghost btn" href="/catalog/">Priced catalog →</a>
       </div>
+      </div>
     </section>
-    <section>
+    <section class="home-history">
       <h3 class="section-title">Full price history so far</h3>
       <p class="gloss">
         The federal supply classes where we've indexed every priced purchase we can find, with a link
-        back to the underlying government record for each one.
+        back to the underlying government record for each one. Most-tracked classes first.
       </p>
       <section class="index-list list-fold" aria-label="Priced categories">
         {deepFscs.length === 0 ? (
@@ -171,7 +176,7 @@ const itemList = {
             </div>
           </div>
         ) : (
-          deepFscs.map((f) => {
+          deepByCount.map((f) => {
             const count = nsnsByFsc.get(f.fsc)?.length ?? 0;
             return (
               <a class="index-row" href={`/fsc/${f.fsc}/`}>

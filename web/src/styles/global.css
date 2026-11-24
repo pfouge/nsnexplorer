@@ -665,8 +665,15 @@ button.linkish { font: inherit; color: var(--accent); background: none; border: 
 @media (max-width: 639px) { .home-facts .cell:last-child { grid-column: span 2; } }
 .home-what { margin: var(--s3) 0 0; }
 .home-map { margin-top: var(--s4); }
-.home-browse, .home-about { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 var(--s6); align-items: start; }
-@media (max-width: 899px) { .home-browse, .home-about { grid-template-columns: minmax(0, 1fr); } }
+.home-about { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 var(--s6); align-items: start; }
+@media (max-width: 899px) { .home-about { grid-template-columns: minmax(0, 1fr); } }
+/* Browse: one full-width row (text left, buttons right), then the price-history list in two columns. */
+.home-browse-lead > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--s2) var(--s6); align-items: end; }
+.home-browse-lead > div > h2 { grid-column: 1; }
+.home-browse-lead > div > .gloss { grid-column: 1; margin: 0; }
+.home-browse-lead > div > .btns { grid-column: 2; grid-row: 1 / span 2; margin: 0; align-self: end; }
+@media (max-width: 899px) { .home-browse-lead > div { grid-template-columns: minmax(0, 1fr); } .home-browse-lead > div > .btns { grid-column: 1; grid-row: auto; margin-top: var(--s3); } }
+@media (min-width: 900px) { .home-history .index-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--s6); } }
 .home-about .manifesto { margin: var(--s6) 0 0; }
 .faq-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 var(--s6); }
 .faq-grid h3 { margin-top: var(--s4); }

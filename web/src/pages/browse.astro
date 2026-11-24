@@ -20,6 +20,8 @@ for (const r of rows) {
   byGroup.get(g)!.push(r);
 }
 const groups = [...byGroup.entries()].sort(([a], [b]) => a.localeCompare(b));
+// Inside each group, the most-tracked classes come first.
+for (const [, list] of groups) list.sort((a, b) => b.count - a.count || a.fsc.fsc.localeCompare(b.fsc.fsc));
 
 const D = rows.length;
 const M = rows.reduce((s, r) => s + r.count, 0);
