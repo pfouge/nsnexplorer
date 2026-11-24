@@ -1,0 +1,9 @@
+---
+// Spark.astro — the sparkline under a key figure. Decorative: the figure above carries the number.
+import { sparkPath } from '../lib/spark';
+interface Props { values: number[] }
+const s = sparkPath(Astro.props.values);
+---
+{s && (
+  <svg class="spark" width={s.w} height={s.h} viewBox={`0 0 ${s.w} ${s.h}`} aria-hidden="true" focusable="false"><path d={s.d} /><circle cx={s.x.toFixed(1)} cy={s.y.toFixed(1)} r="2" /></svg>
+)}

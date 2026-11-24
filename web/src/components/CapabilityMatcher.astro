@@ -1,0 +1,77 @@
+---
+// CapabilityMatcher.astro — "What can you make or source?" on the home page. A supplier picks the
+// supply classes it can fill; the panel shows the open solicitations in those classes, soonest first.
+// The picks stay in this browser only (localStorage nsn.capabilities, named on the privacy page).
+// Server-rendered state: the busiest classes right now, so the panel is real content without
+// JavaScript and for search engines. scripts/matcher.ts takes over in the browser.
+import type { OpenClass } from '../lib/open-by-class';
+import { fscDisplayName } from '../lib/browse';
+
+interface Props { classes: OpenClass[]; today: string }
+const { classes, today } = Astro.props;
+const top = classes.slice(0, 8);
+const chips = classes.slice(0, 14);
+const fmt = (n: number) => n.toLocaleString('en-US');
+const day = (iso: string | null) => {
+  if (!iso) return '—';
+  const d = new Date(`${iso}T00:00:00Z`);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+};
+const daysLeft = (iso: string | null) => {
+  if (!iso) return null;
+  return Math.round((Date.parse(`${iso}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86400000);
+};
+---
+<section class="matcher" id="matcher" aria-labelledby="matcher-h" data-matcher data-today={today}>
+  <div class="matcher-pick">
+    <h2 id="matcher-h">What can you make or source?</h2>
+    <p class="gloss">Pick the supply classes your shop can fill. We show what is open for bid in them, closing soonest first. Your picks stay in this browser.</p>
+    <label for="matcher-find">Find a class by name or code</label>
+    <div class="matcher-find">
+      <input id="matcher-find" type="text" inputmode="search" autocomplete="off" placeholder="e.g. bolts, 5306, gaskets" data-matcher-find aria-controls="matcher-suggest" />
+      <div class="matcher-suggest" id="matcher-suggest" role="listbox" aria-label="Matching classes" hidden data-matcher-suggest></div>
+    </div>
+    <p class="matcher-label">Busiest classes right now</p>
+    <div class="chips wrap-wide" data-matcher-chips>
+      {chips.map((c) => (
+        <button type="button" class="chip" data-fsc={c.fsc} aria-pressed="false">{c.fsc} {fscDisplayName(c.fsc, c.name)} <span class="n">{fmt(c.count)}</span></button>
+      ))}
+    </div>
+    <p class="matcher-mine" data-matcher-mine hidden>
+      <span data-matcher-mine-text></span>
+      <button type="button" class="linkish" data-matcher-clear>Clear</button>
+    </p>
+  </div>
+
+  <div class="matcher-results" aria-live="polite">
+    <h3 data-matcher-title>Open for bid in the busiest classes</h3>
+    <div class="table-wrap">
+      <table class="matcher-table">
+        <thead>
+          <tr><th>Class</th><th class="num">Open</th><th class="num">Units</th><th>Next closes</th></tr>
+        </thead>
+        <tbody data-matcher-classes>
+          {top.map((c) => (
+            <tr>
+              <td><a href={`/open/${c.fsc}/`}>{c.fsc}</a> <span class="cls-name">{fscDisplayName(c.fsc, c.name)}</span></td>
+              <td class="num">{fmt(c.count)}</td>
+              <td class="num">{fmt(c.qty)}</td>
+              <td>{day(c.nextClose)}{daysLeft(c.nextClose) !== null && daysLeft(c.nextClose)! >= 0 && <span class="soft"> · {daysLeft(c.nextClose)} d</span>}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <div data-matcher-soonest hidden>
+      <h3>Closing soonest in your classes</h3>
+      <div class="table-wrap">
+        <table class="matcher-table">
+          <thead><tr><th>Solicitation</th><th>Item</th><th class="num">Qty</th><th>Closes</th></tr></thead>
+          <tbody data-matcher-items></tbody>
+        </table>
+      </div>
+    </div>
+    <p class="matcher-more"><a href="/open/">All open demand by class</a></p>
+  </div>
+</section>
+<script src="../scripts/matcher.ts"></script>

@@ -1,8 +1,12 @@
 ---
+import '../styles/tokens.css';
 import '../styles/global.css';
 import '../styles/viz.css';
 import SEO from '../components/SEO.astro';
 import Logo from '../components/Logo.astro';
+import Flag from '../components/Flag.astro';
+import AdSlot from '../components/AdSlot.astro';
+import { INSTITUTIONS, NOT_ENDORSED } from '../lib/institutions';
 import FreshnessStrip from '../components/viz/FreshnessStrip.astro';
 import { SITE_NAME } from '../consts';
 import { ACCOUNTS_ENABLED } from '../lib/account';
@@ -88,7 +92,9 @@ const secondary = allLinks.filter((l) => !l.primary);
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="generator" content={Astro.generator} />
-    <meta name="theme-color" content="#FAF8F3" />
+    <meta name="theme-color" content="#FFFFFF" />
+    <link rel="preload" href="/fonts/inter-400.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/inter-600.woff2" as="font" type="font/woff2" crossorigin />
     <script is:inline>
       // Set theme before first paint. Light is the default for everyone; dark
       // only when the visitor chose it with the header toggle (stored locally).
@@ -97,7 +103,7 @@ const secondary = allLinks.filter((l) => !l.primary);
         try { dark = localStorage.getItem('theme') === 'dark'; } catch {}
         if (dark) document.documentElement.dataset.theme = 'dark';
         const m = document.querySelector('meta[name="theme-color"]');
-        if (m) m.setAttribute('content', dark ? '#0E0F10' : '#FAF8F3');
+        if (m) m.setAttribute('content', dark ? '#0F1215' : '#FFFFFF');
       })();
     </script>
     <link rel="icon" href="/favicon.ico" sizes="48x48" />
@@ -205,7 +211,8 @@ const secondary = allLinks.filter((l) => !l.primary);
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
         </button>
         <a class="brand" href="/" aria-label={`${SITE_NAME} home`}>
-          <Logo height={28} />
+          <Logo height={31} />
+          <Flag height={16} />
         </a>
         <button class="search-pill" type="button" data-open="site-search" aria-haspopup="dialog" aria-label="Search">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></svg>
@@ -236,7 +243,7 @@ const secondary = allLinks.filter((l) => !l.primary);
 
     <dialog class="sheet" id="site-drawer" aria-label="Menu">
       <div class="sheet-head">
-        <a class="brand" href="/" aria-label={`${SITE_NAME} home`}><Logo height={26} /></a>
+        <a class="brand" href="/" aria-label={`${SITE_NAME} home`}><Logo height={31} /><Flag height={16} /></a>
         <button class="icon-btn" type="button" data-close aria-label="Close menu">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
         </button>
@@ -285,7 +292,9 @@ const secondary = allLinks.filter((l) => !l.primary);
 
     <main id="main-content" tabindex="-1">
       <div class="container">
+        <AdSlot position="top" />
         <slot />
+        <AdSlot position="multiplex" />
       </div>
     </main>
 
@@ -304,6 +313,18 @@ const secondary = allLinks.filter((l) => !l.primary);
           lag actual events.
         </p>
         <FreshnessStrip heading="Data freshness" />
+        <section class="institutions" aria-labelledby="institutions-h">
+          <p class="inst-line" id="institutions-h"><strong>Proudly helping American suppliers serve the people who serve.</strong> Public buying data from:</p>
+          <ul>
+            {INSTITUTIONS.map((i) => (
+              <li>
+                <span class="emblem" aria-hidden="true">{i.emblem && i.approval && <img src={i.emblem} alt="" width="20" height="20" loading="lazy" decoding="async" />}</span>
+                <span>{i.name}</span>
+              </li>
+            ))}
+          </ul>
+          <p class="not-endorsed">{NOT_ENDORSED}</p>
+        </section>
         <nav aria-label="Footer">
           <a href="/open/">Open Demand</a>
           <a href="/services/">Services</a>
@@ -341,7 +362,7 @@ const secondary = allLinks.filter((l) => !l.primary);
           if (dark) root.dataset.theme = 'dark';
           else delete root.dataset.theme;
           try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch {}
-          document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#0E0F10' : '#FAF8F3');
+          document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#0F1215' : '#FFFFFF');
           sync();
         }));
       })();
@@ -351,6 +372,7 @@ const secondary = allLinks.filter((l) => !l.primary);
       import '../scripts/tape.ts';
       import '../scripts/freshness.ts';
       import '../scripts/shell.ts';
+      import '../scripts/disclosure.ts';
       // Always bundled; it does nothing while ACCOUNTS_ENABLED is false. A <script> inside
       // {condition && ...} is not supported by Astro's script bundling: it swapped the page's
       // script for this one and left the shell (search, menu, tabs) out of every page.

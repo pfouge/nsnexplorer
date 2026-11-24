@@ -11,6 +11,9 @@ import Follow from '../../components/Follow.astro';
 import BidCalculator from '../../components/BidCalculator.astro';
 import CiteThis from '../../components/CiteThis.astro';
 import StandardDrawings from '../../components/StandardDrawings.astro';
+import GroupTabs from '../../components/GroupTabs.astro';
+import Spark from '../../components/Spark.astro';
+import AdSlot from '../../components/AdSlot.astro';
 import { SITE_URL } from '../../consts';
 import { buildDiagram } from '../../lib/diagram';
 import { ASSIST_QUICK_SEARCH_URL, collectStandardDocs, extractStandardRefs } from '../../lib/standard-refs';
@@ -259,6 +262,8 @@ const solValueAtLastPrice = (qty: number | null): number | null => valueAtLastPr
 // Competition read: last 10 awards with a supplier (price points, else dated contract actions).
 const compRead = competitionRead({ coded: competition, awards: winAwards.map((a) => ({ cage: a.cage, date: a.date })) });
 const streakName = compRead.streakCage ? (winAwards.find((a) => a.cage === compRead.streakCage && a.name)?.name ?? null) : null;
+const nextClose = openSols.find((s) => s.returnBy !== null)?.returnBy ?? null;
+const sparkPrices = [...points].sort((a, b) => a.awardedOn.localeCompare(b.awardedOn)).slice(-24).map((p) => p.unitPrice);
 const listedSources = new Set(partNumbers.map((pn) => (pn.cage ?? '').trim()).filter((c) => c !== '')).size;
 const readBadgeClass = compRead.tone === 'neutral' ? 'badge' : `badge ${compRead.tone}`;
 
@@ -316,6 +321,30 @@ const datasetSchema = {
     <Follow kind="nsn" entity={nsn.nsn} label={itemLabel} />
   </header>
 
+  <dl class="kv" aria-label="Key facts">
+    <div>
+      <dt>Open for bid now</dt>
+      <dd>{openSols.length > 0 ? <a href="#open">{openSols.length.toLocaleString('en-US')} open</a> : 'None open'}</dd>
+      <span class="note">{openSols.length > 0 ? (nextClose ? `Next closes ${formatDate(nextClose)}` : 'Close date not on record') : 'Search DIBBS for new RFQs'}</span>
+    </div>
+    <div>
+      <dt>Last award price</dt>
+      <dd>{headlinePoint ? formatUsdPrecise(headlinePoint.unitPrice) : 'None yet'}</dd>
+      <Spark values={sparkPrices} />
+      {headlinePoint && <span class="note">{formatDate(headlinePoint.awardedOn)}</span>}
+    </div>
+    <div>
+      <dt>Competition</dt>
+      <dd><a href="#competition">{compRead.label}</a></dd>
+      <span class="note">{listedSources.toLocaleString('en-US')} listed source{listedSources === 1 ? '' : 's'}</span>
+    </div>
+    <div>
+      <dt>Drawing</dt>
+      <dd>{diagram ? <a href="#dimensioned-drawing">Dimensioned</a> : standardDocs.length > 0 ? <a href="#standard-drawing">Standard document</a> : 'None on record'}</dd>
+      <span class="note">{partNumbers.length.toLocaleString('en-US')} part number{partNumbers.length === 1 ? '' : 's'} on file</span>
+    </div>
+  </dl>
+
   {headlineSummary && headlinePoint && (
     <div class="stat-strip roomy">
       <div class="stat">
@@ -355,25 +384,27 @@ const datasetSchema = {
     </div>
   )}
 
-  <nav class="tabs" aria-label="On this page">
-    <a href="#open">Open bids <span class="tab-count">{openSols.length}</span></a>
-    <a href="#competition">Competition</a>
-    {(diagram || standardDocs.length > 0 || characteristics.length > 0 || partNumbers.length > 0) && <a href="#specs">Specs</a>}
-    <a href="#prices">Prices <span class="tab-count">{points.length.toLocaleString('en-US')}</span></a>
-    <a href="#purchases">Purchases</a>
-    {(allSols.length > 0 || hasDemandCharts) && <a href="#demand">Demand{allSols.length > 0 && <> <span class="tab-count">{allSols.length.toLocaleString('en-US')}</span></>}</a>}
-    <a href="#about">About</a>
-  </nav>
+  <GroupTabs
+    page="nsn"
+    label="Part sections"
+    tabs={[
+      { id: 'bid', label: 'Bid', count: openSols.length },
+      ...(hasSpecs ? [{ id: 'specs', label: 'Specs' }] : []),
+      { id: 'prices', label: 'Prices', count: points.length },
+      ...(allSols.length > 0 || hasDemandCharts ? [{ id: 'demand', label: 'Demand', count: allSols.length }] : []),
+    ]}
+  />
 
+  <div class="group" data-group="bid">
   <!-- 1. Open for bid — the first question a supplier asks: is there a live RFQ to bid on? -->
   {openSols.length > 0 ? (
     <section class="panel open-panel" id="open">
       <h2 class="section-title" style="margin-top:0;">Open for bid</h2>
       <p class="gloss">
-        {openSols.length} open solicitation{openSols.length === 1 ? '' : 's'} on record right now —
+        {openSols.length} open solicitation{openSols.length === 1 ? '' : 's'} on record right now:
         quantity, close date, and where to submit.
       </p>
-      <div class="table-wrap" style="border:0;">
+      <div class="table-wrap">
         <table>
           <thead>
             <tr>
@@ -628,6 +659,9 @@ const datasetSchema = {
     )}
   </section>
 
+  </div>
+
+  <div class="group" data-group="specs">
   <!-- 3. What it is / can you make it — drawing, specs, and qualified part numbers together. -->
   {hasSpecs && (
     <section id="specs" style="margin-top:2.5rem;">
@@ -640,8 +674,9 @@ const datasetSchema = {
   )}
 
   {hasCatalog && (
-    <section>
-      <h3 class="section-title">Catalog record</h3>
+    <details class="fold" id="catalog-record">
+      <summary><h3>Catalog record</h3></summary>
+      <section class="fold-body">
       <p class="gloss">
         Identification codes the federal catalog (DLA FLIS) holds for this NSN, each with its plain-language meaning.
       </p>
@@ -680,7 +715,8 @@ const datasetSchema = {
           </p>
         </details>
       )}
-    </section>
+      </section>
+    </details>
   )}
 
   {standardDocs.length > 0 && (
@@ -696,13 +732,13 @@ const datasetSchema = {
   )}
 
   {diagram && (
-    <section>
+    <section id="dimensioned-drawing">
       <h3 class="section-title">Dimensioned drawing</h3>
       <p class="gloss">
         Generated from the federal catalog's dimensional data for this NSN — reference only,
         not a manufacturing drawing.
       </p>
-      <div class="card" style="padding:1rem;" set:html={diagram} />
+      <div class="drawing" set:html={diagram} />
     </section>
   )}
 
@@ -715,7 +751,7 @@ const datasetSchema = {
         Search ↗</a>, DoD's public document search. ASSIST is run by the Defense Logistics Agency and may not load from outside the United States.
       </p>
       <div class="table-wrap">
-        <table>
+        <table class="rows-fold" data-show="8">
           <thead>
             <tr>
               <th>Requirement</th>
@@ -756,7 +792,7 @@ const datasetSchema = {
         that have been accepted as satisfying this stock number, and who makes them.
       </p>
       <div class="table-wrap">
-        <table>
+        <table class="rows-fold" data-show="8">
           <thead>
             <tr>
               <th>Part number</th>
@@ -779,8 +815,9 @@ const datasetSchema = {
   )}
 
   {flis.related.length > 0 && (
-    <section>
-      <h3 class="section-title">Related items</h3>
+    <details class="fold" id="related-items">
+      <summary><h3>Related items</h3><span class="n">{flis.related.length.toLocaleString('en-US')}</span></summary>
+      <section class="fold-body">
       <p class="gloss">
         Other stock numbers the federal catalog links to this one, with the standardization status on record.
       </p>
@@ -807,12 +844,14 @@ const datasetSchema = {
       {flis.relatedTotal > flis.related.length && (
         <p class="gloss">Showing {flis.related.length} of {flis.relatedTotal.toLocaleString('en-US')}.</p>
       )}
-    </section>
+      </section>
+    </details>
   )}
 
   {flis.cancellations.length > 0 && (
-    <section>
-      <h3 class="section-title">Earlier stock numbers replaced by this one</h3>
+    <details class="fold" id="replaced-numbers">
+      <summary><h3>Earlier stock numbers replaced by this one</h3><span class="n">{flis.cancellations.length.toLocaleString('en-US')}</span></summary>
+      <section class="fold-body">
       <p class="gloss">
         Older stock numbers the federal catalog cancelled in favour of this NSN, newest first. If you hold stock or an old
         requisition under one of them, this is the number to use now.
@@ -840,9 +879,15 @@ const datasetSchema = {
       {flis.cancellationsTotal > flis.cancellations.length && (
         <p class="gloss">Showing {flis.cancellations.length} of {flis.cancellationsTotal.toLocaleString('en-US')}.</p>
       )}
-    </section>
+      </section>
+    </details>
   )}
 
+  </div>
+
+  <AdSlot position="mid" />
+
+  <div class="group" data-group="prices">
   <!-- 4. What it pays — so you can quote: the price/demand record, reframed as quoting intel. -->
   <section id="prices" style="margin-top:2.5rem;">
     <h2 class="section-title" style="margin-top:0;">What it pays — so you can quote</h2>
@@ -917,14 +962,14 @@ const datasetSchema = {
       <p class="gloss">No priced purchases on record for this NSN yet.</p>
     ) : (
       <div class="table-wrap">
-        <table>
+        <table class="rows-fold" data-sortable>
           <caption>{sortedPoints.length} purchase{sortedPoints.length === 1 ? '' : 's'} on record</caption>
           <thead>
             <tr>
-              <th>Awarded</th>
-              <th class="num">Qty</th>
-              <th class="num">Unit price</th>
-              <th class="num">Total</th>
+              <th data-sort="date">Awarded</th>
+              <th class="num" data-sort="num">Qty</th>
+              <th class="num" data-sort="num">Unit price</th>
+              <th class="num" data-sort="num">Total</th>
               <th>Supplier</th>
               <th>Agency</th>
               <th>Source</th>
@@ -974,7 +1019,7 @@ const datasetSchema = {
       <p class="gloss">No related contract actions on record.</p>
     ) : (
       <div class="table-wrap">
-        <table>
+        <table class="rows-fold">
           <thead>
             <tr>
               <th>Action date</th>
@@ -1002,6 +1047,9 @@ const datasetSchema = {
     )}
   </section>
 
+  </div>
+
+  <div class="group" data-group="demand">
   <!-- 5. Demand history — every solicitation on record, open and closed. -->
   {(allSols.length > 0 || hasDemandCharts) && (
     <section id="demand" style="margin-top:2.5rem;">
@@ -1022,11 +1070,11 @@ const datasetSchema = {
       )}
       {allSols.length > 0 && (
       <div class="table-wrap">
-        <table>
+        <table class="rows-fold" data-sortable>
           <thead>
             <tr>
               <th>Solicitation</th>
-              <th>Issued</th>
+              <th data-sort="date">Issued</th>
               <th>Closes / closed</th>
               <th class="num">Qty</th>
               <th>Status</th>
@@ -1056,7 +1104,9 @@ const datasetSchema = {
     </section>
   )}
 
-  <p style="margin:1rem 0 0; display:flex; gap:0.75rem; flex-wrap:wrap;">
+  </div>
+
+  <p class="btns">
     <a class="btn" href={dibbsRfqUrl} target="_blank" rel="nofollow noopener">
       Open RFQs on DIBBS →
     </a>
@@ -1073,8 +1123,9 @@ const datasetSchema = {
     cta="Join the list"
   />
 
-  <section class="card" id="about">
-    <h2>About this data</h2>
+  <details class="fold" id="about">
+    <summary><h2>About this data</h2></summary>
+    <section class="fold-body">
     <ul class="gloss">
       <li>Unit prices: DLA DIBBS award records — every row links to its government record.</li>
       <li>AMSC: latest observed value from {nsn.amscSourceUrl ? <a href={nsn.amscSourceUrl} target="_blank" rel="noopener noreferrer">DIBBS solicitation history</a> : 'DIBBS solicitation history'}{nsn.amscObservedOn && <> as of {formatDate(nsn.amscObservedOn)}</>}.</li>
@@ -1083,5 +1134,6 @@ const datasetSchema = {
       <li><a href="/methodology/">Full methodology →</a></li>
     </ul>
     <CiteThis title={itemLabel} url={canonicalUrl} asOf={citeAsOf} />
-  </section>
+    </section>
+  </details>
 </BaseLayout>
