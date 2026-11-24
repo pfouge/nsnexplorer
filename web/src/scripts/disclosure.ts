@@ -26,14 +26,12 @@ document.querySelectorAll<HTMLElement>('[data-group-tabs]').forEach((bar) => {
   const buttons = [...bar.querySelectorAll<HTMLButtonElement>('[data-tab]')];
   if (!groups.length || !buttons.length) return;
   bar.hidden = false;
-  bar.setAttribute('role', 'tablist');
+  bar.setAttribute('role', 'group'); // a filter over the page's sections ("All" shows them all), so pressed buttons, not ARIA tabs
   const show = (g: string, remember = true) => {
     if (!buttons.some((b) => b.dataset.tab === g)) g = buttons[0].dataset.tab!;
     buttons.forEach((b) => {
       const on = b.dataset.tab === g;
-      b.setAttribute('role', 'tab');
-      b.setAttribute('aria-selected', String(on));
-      b.tabIndex = on ? 0 : -1;
+      b.setAttribute('aria-pressed', String(on));
     });
     groups.forEach((s) => { s.hidden = !(g === 'all' || s.dataset.group === g); });
     if (remember) ss.set(key, g);
@@ -43,8 +41,7 @@ document.querySelectorAll<HTMLElement>('[data-group-tabs]').forEach((bar) => {
     b.addEventListener('keydown', (e) => {
       const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
       if (!d) return;
-      const n = buttons[(i + d + buttons.length) % buttons.length];
-      n.focus(); show(n.dataset.tab!);
+      buttons[(i + d + buttons.length) % buttons.length].focus();
     });
   });
   show(ss.get(key) ?? bar.dataset.default ?? buttons[0].dataset.tab!, false);

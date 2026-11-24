@@ -11,6 +11,7 @@
 // company publishes on its own site) and the AI-written website summary are removed inside the
 // SQL statement when the supplier is in pub.supplier_optouts, so nothing here can leak them.
 import GroupTabs from '../../components/GroupTabs.astro';
+import DensityToggle from '../../components/DensityToggle.astro';
 import '../../styles/supplier.css';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import CiteThis from '../../components/CiteThis.astro';
@@ -743,7 +744,10 @@ const removalMail = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Suppl
   )}
 
   <section class="sp-sec group" id="awards" data-group="contracts">
-    <h2>All awards</h2>
+    <div class="section-head">
+      <h2>All awards</h2>
+      <DensityToggle />
+    </div>
     <div class="table-wrap">
       <table class="rows-fold" data-sortable>
         <caption>

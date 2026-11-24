@@ -13,6 +13,7 @@ import CiteThis from '../../components/CiteThis.astro';
 import StandardDrawings from '../../components/StandardDrawings.astro';
 import GroupTabs from '../../components/GroupTabs.astro';
 import Spark from '../../components/Spark.astro';
+import DensityToggle from '../../components/DensityToggle.astro';
 import AdSlot from '../../components/AdSlot.astro';
 import { SITE_URL } from '../../consts';
 import { buildDiagram } from '../../lib/diagram';
@@ -952,7 +953,10 @@ const datasetSchema = {
   )}
 
   <section id="purchases">
-    <h3 class="section-title">Purchase history</h3>
+    <div class="section-head">
+      <h3 class="section-title">Purchase history</h3>
+      <DensityToggle />
+    </div>
     {sortedPoints.length === 0 ? (
       <p class="gloss">No priced purchases on record for this NSN yet.</p>
     ) : (

@@ -189,7 +189,7 @@ main > .container { position: relative; }
 .tabs::-webkit-scrollbar { display: none; }
 .tabs a, .tabs button { flex: none; padding: var(--s3) 0 10px; font: inherit; font-weight: var(--w-strong); color: var(--text-2); border: 0; border-bottom: 2px solid transparent; background: none; white-space: nowrap; cursor: pointer; }
 .tabs a:hover, .tabs button:hover { text-decoration: none; color: var(--text); }
-.tabs a[aria-current], .tabs button[aria-selected='true'] { color: var(--accent); border-bottom-color: var(--accent); }
+.tabs a[aria-current], .tabs button[aria-pressed='true'] { color: var(--accent); border-bottom-color: var(--accent); }
 .tab-count { margin-left: var(--s1); font-size: var(--t-small); font-weight: var(--w-regular); color: var(--text-3); }
 
 /* ---- Page head ---- */
@@ -617,7 +617,7 @@ article p, article li { max-width: 72ch; }
   .search-box input:focus, .signup-form input[type='email']:focus, .search-head input:focus, .price-dot:focus { outline: 2px solid Highlight; outline-offset: 2px; }
   .search-head input:focus { outline-offset: -2px; }
   .chip[aria-current], .chip[aria-pressed='true'], .chip.on, .follow-btn[aria-pressed='true'], .save-search[aria-pressed='true'], .density button[aria-pressed='true'] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
-  nav.site a[aria-current='page'], .tabs a[aria-current], .tabs button[aria-selected='true'] { forced-color-adjust: none; border-bottom: 2px solid Highlight; }
+  nav.site a[aria-current='page'], .tabs a[aria-current], .tabs button[aria-pressed='true'] { forced-color-adjust: none; border-bottom: 2px solid Highlight; }
   .switch { border: 1px solid ButtonText; }
   .switch::after { background: ButtonText; }
 }
@@ -672,3 +672,10 @@ details.fold.dept-block > summary .n { margin-left: auto; padding-left: var(--s3
 details.fold.dept-block > summary::after { margin-left: var(--s3); }
 details.fold.dept-block .dept-grid { border-top: 0; }
 details.fold > summary h3 { font-weight: var(--w-strong); }
+
+/* A section heading with a control at its right (density toggle). */
+.section-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s3); flex-wrap: wrap; }
+.section-head > h2, .section-head > h3 { margin-bottom: 0; }
+.section-head .density { align-self: center; }
+.section-head:has(> .section-title) { margin-top: var(--s6); }
+.section-head > .section-title { margin-top: 0; }
