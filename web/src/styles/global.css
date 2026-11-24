@@ -62,7 +62,8 @@ header.site .container { display: flex; align-items: center; gap: var(--s3); hei
 .brand:hover { text-decoration: none; }
 .logo { display: block; flex: none; --logo-accent: var(--logo-needle); }
 .brand .logo { height: 28px; width: auto; color: var(--text); }
-.flag { display: block; flex: none; width: 19px; height: 10px; border-radius: 1px; box-shadow: 0 0 0 0.5px var(--line-strong); }
+/* The flag matches the wordmark's capital height: the letters are 19.2 of the logo's 36.95 units (52%). */
+.flag { display: block; flex: none; width: 27.6px; height: 14.55px; border-radius: 1px; box-shadow: 0 0 0 0.5px var(--line-strong); }
 
 .icon-btn { display: inline-grid; place-items: center; flex: none; width: 40px; height: 40px; border: 0; border-radius: var(--radius); background: transparent; color: var(--text); cursor: pointer; }
 .icon-btn:hover { background: var(--hover); }
@@ -107,6 +108,7 @@ nav.site .menu a { font-weight: var(--w-regular); }
 @media (max-width: 419px) {
   header.site .container { gap: var(--s1); }
   .brand .logo { height: 24px; }
+  .brand .flag { width: 23.7px; height: 12.47px; }
 }
 @media (max-width: 359px) { header.site .acct-btn { display: none; } /* the drawer links to the watchlist */ }
 @media (max-width: 899px) { .search-pill kbd { display: none; } }
