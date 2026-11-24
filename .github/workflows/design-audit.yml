@@ -54,6 +54,7 @@ jobs:
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y > /dev/null
           sudo apt-get install -y -qq postgresql-client-17 > /dev/null
           pip install -q playwright
+          mkdir -p "$RUNNER_TEMP/axe" && (cd "$RUNNER_TEMP/axe" && npm i --no-save --silent axe-core@4.10.2 > /dev/null)
           python -m playwright install --with-deps chromium > /dev/null
           (cd b && npm ci --no-audit --no-fund > /dev/null)
       - name: Freeze a copy of the data (read-only on the source)
@@ -86,7 +87,7 @@ jobs:
           cat out/routes.txt
       - name: Measure
         run: |
-          python b/tools/design-audit/measure.py http://127.0.0.1:8102 out/routes.txt out/b > out/measure-b.log 2>&1 || tail -30 out/measure-b.log
+          python b/tools/design-audit/measure.py http://127.0.0.1:8102 out/routes.txt out/b --axe "$RUNNER_TEMP/axe/node_modules/axe-core/axe.min.js" > out/measure-b.log 2>&1 || tail -30 out/measure-b.log
           if [ "$SAME" != 1 ]; then python b/tools/design-audit/measure.py "$A" out/routes.txt out/a > out/measure-a.log 2>&1 || tail -30 out/measure-a.log; fi
       - name: Compare
         run: |

@@ -15,6 +15,7 @@ from playwright.sync_api import sync_playwright
 
 BASE, ROUTES_FILE, OUT = sys.argv[1].rstrip('/'), sys.argv[2], sys.argv[3]
 SHOTS = '--no-shots' not in sys.argv
+AXE = sys.argv[sys.argv.index('--axe') + 1] if '--axe' in sys.argv else None  # path to axe.min.js
 ROUTES = [l.strip() for l in open(ROUTES_FILE) if l.strip() and not l.startswith('#')]
 SIZES = [(390, 844), (768, 1024), (1280, 800)]
 SWEEP = list(range(320, 1441, 10)) if not os.environ.get("DA_SWEEP_STEP") else list(range(320, 1441, int(os.environ["DA_SWEEP_STEP"])))
@@ -106,6 +107,30 @@ def main():
                 res.setdefault(r, {})[str(w)] = m
                 page.close()
                 print(w, r, m.get('screens'), 'error' if 'error' in m else '', flush=True)
+            ctx.close()
+        # Accessibility: axe-core (WCAG 2 A and AA rules) and a keyboard pass (Tab through the first 25
+        # stops; every focused element must show a focus ring).
+        if AXE:
+            ctx = b.new_context(viewport={'width': 1280, 'height': 800}, reduced_motion='reduce')
+            ctx.route(re.compile(r'^https?://(?!127\.0\.0\.1|localhost)'), lambda route: route.abort())
+            ctx.route('**/api/region.json', lambda route: route.fulfill(json={'consent': False}))
+            for r in ROUTES:
+                page = ctx.new_page()
+                try:
+                    page.goto(BASE + r, wait_until='load', timeout=90000)
+                    page.add_script_tag(path=AXE)
+                    v = page.evaluate("async () => (await axe.run(document, { runOnly: ['wcag2a', 'wcag2aa'] })).violations.map(v => ({ id: v.id, impact: v.impact, n: v.nodes.length, ex: v.nodes.slice(0, 3).map(n => n.target.join(' ')) }))")
+                    keys = []
+                    for _ in range(25):
+                        page.keyboard.press('Tab')
+                        keys.append(page.evaluate('''() => { const e = document.activeElement; if (!e || e === document.body) return null;
+                          const s = getComputedStyle(e); const ring = (s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) > 0) || s.boxShadow !== 'none';
+                          return { el: e.tagName.toLowerCase() + (e.className && typeof e.className === 'string' ? '.' + e.className.split(' ')[0] : ''), text: (e.textContent || e.getAttribute('aria-label') || '').trim().slice(0, 30), ring }; }'''))
+                    res.setdefault(r, {})['a11y'] = {'axe': v, 'no_ring': [k for k in keys if k and not k['ring']]}
+                except Exception as e:
+                    res.setdefault(r, {})['a11y'] = {'error': str(e)[:200]}
+                page.close()
+                print('a11y', r, len(res[r]['a11y'].get('axe', [])), 'violations', flush=True)
             ctx.close()
         # Sideways-scroll sweep: resize the same page through every width.
         ctx = b.new_context(viewport={'width': 1440, 'height': 900}, reduced_motion='reduce')
