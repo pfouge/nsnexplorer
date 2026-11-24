@@ -11,10 +11,8 @@ import { buildDemandTiles, buildTiles } from '../lib/viz-site';
 import CapabilityMatcher from '../components/CapabilityMatcher.astro';
 import AdSlot from '../components/AdSlot.astro';
 import { openByClass } from '../lib/open-by-class';
-
-// Two layout directions were built and scored (design/home/). 'A' leads with the capability matcher;
-// 'B' leads with the market overview. The chosen one is kept; see design/home/decision.md.
-const DIRECTION: 'A' | 'B' = 'A';
+// Two layout directions were built and scored; this one leads with the capability matcher
+// (design/home/decision.md).
 
 const data = await loadSiteData();
 const { stats, nsnsByFsc } = data;
@@ -86,7 +84,7 @@ const itemList = {
   faq={faq}
   ads={true}
 >
-  <section class:list={['hero', 'home', `home-${DIRECTION}`]}>
+  <section class="hero home">
     <div class="home-lead">
       <h1>{h1}</h1>
       <p class="lede">Find the federal parts demand you can fill.</p>
@@ -126,7 +124,7 @@ const itemList = {
     the work, and anyone sizing up the market. Free.
   </p>
 
-  {DIRECTION === 'A' && <CapabilityMatcher classes={openClasses} today={data.viz.today} />}
+  <CapabilityMatcher classes={openClasses} today={data.viz.today} />
 
   <section class="viz-section" aria-labelledby="market-today">
     <h2 class="section-title" id="market-today">Open demand today</h2>
@@ -142,8 +140,6 @@ const itemList = {
       </div>
     )}
   </section>
-
-  {DIRECTION === 'B' && <CapabilityMatcher classes={openClasses} today={data.viz.today} />}
 
   <AdSlot position="mid" />
 

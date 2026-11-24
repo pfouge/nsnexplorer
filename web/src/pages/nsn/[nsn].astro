@@ -381,6 +381,7 @@ const datasetSchema = {
   <GroupTabs
     page="nsn"
     label="Part sections"
+    defaultTab={openSols.length > 0 || points.length === 0 ? 'bid' : 'prices'}
     tabs={[
       { id: 'bid', label: 'Bid', count: openSols.length },
       ...(hasSpecs ? [{ id: 'specs', label: 'Specs' }] : []),

@@ -194,7 +194,6 @@ main > .container { position: relative; }
 
 /* ---- Page head ---- */
 .hero { position: relative; padding-block: 0 var(--s2); }
-.hero > :not(.hero-bg) { position: relative; z-index: 1; }
 .hero h1 { max-width: 36ch; }
 .hero h1 .badge { vertical-align: middle; margin-left: var(--s2); }
 .hero .lede { margin-top: var(--s1); }
@@ -207,7 +206,7 @@ main > .container { position: relative; }
 p.lede:not(.answer):not(:has(~ p.lede)):not(.open), section.intro > p.gloss:not(.open) { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
 /* The "More" button sits in space reserved before scripts run, so adding it moves nothing. */
 .js p.lede:not(.answer):not(:has(~ p.lede)):not(.open), .js section.intro > p.gloss:not(.open) { margin-bottom: 36px; }
-.clamp-more { position: absolute; height: 28px; margin: 0; padding: 0; border: 0; background: none; color: var(--accent); font: inherit; font-weight: var(--w-strong); cursor: pointer; }
+button.clamp-more.clamp-more { position: absolute; height: 28px; margin: 0; padding: 0; border: 0; background: none; color: var(--accent); font: inherit; font-weight: var(--w-strong); cursor: pointer; }
 .clamp-more::after { content: " ›"; }
 
 /* ---- Key facts: label above value, no boxes ---- */
@@ -656,9 +655,7 @@ button.linkish { font: inherit; color: var(--accent); background: none; border: 
 /* ---- Home layout ---- */
 .hero.home { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s5); padding-block: var(--s5) 0; }
 .hero.home .home-facts { margin: 0; }
-.hero.home.home-B { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); align-items: end; }
-.hero.home.home-B .home-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 0; padding-bottom: 0; }
-@media (max-width: 899px) { .hero.home.home-B { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 639px) { .home-facts .cell:last-child { grid-column: span 2; } }
 .home-what { margin: var(--s3) 0 0; }
 .home-map { margin-top: var(--s4); }
 .home-browse, .home-about { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 var(--s6); align-items: start; }
