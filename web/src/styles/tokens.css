@@ -59,6 +59,10 @@
   --scrim: rgba(20, 23, 26, 0.45);
   --shadow: 0 8px 28px rgba(20, 23, 26, 0.14);
   --logo-needle: #0E7C4D;
+  /* home globe only: US, allies, adversaries (scripts/heroDeploy.ts) */
+  --geo-us: #1D3F72;
+  --geo-ally: #5B7FB0;
+  --geo-foe: #B42318;
 
   /* layout */
   --max: 1200px;
@@ -89,6 +93,9 @@
   --scrim: rgba(0, 0, 0, 0.6);
   --shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
   --logo-needle: #1FB866;
+  --geo-us: #8EB3EE;
+  --geo-ally: #4E6E9A;
+  --geo-foe: #F0716A;
 }
 
 @media (max-width: 639px) {

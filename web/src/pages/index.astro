@@ -102,6 +102,7 @@ const itemList = {
         <a class="chip" href="/methodology/">How the data works</a>
       </div>
     </div>
+    <div class="hero-bg" aria-hidden="true"><canvas></canvas></div>
     <div class="datastrip home-facts">
       <div class="cell">
         <div class="k">Open for bid now</div>
@@ -246,3 +247,11 @@ const itemList = {
     </div>
   </section>
 </BaseLayout>
+
+<script>
+  // The globe only shows on wide screens, so phones never download it.
+  const wide = matchMedia('(min-width: 900px)');
+  const loadGlobe = () => { import('../scripts/heroDeploy'); };
+  if (wide.matches) loadGlobe();
+  else wide.addEventListener('change', (e) => { if (e.matches) loadGlobe(); }, { once: true });
+</script>

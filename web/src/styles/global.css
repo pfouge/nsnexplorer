@@ -662,6 +662,14 @@ button.linkish { font: inherit; color: var(--accent); background: none; border: 
 /* ---- Home layout ---- */
 .hero.home { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s5); padding-block: var(--s5) 0; }
 .hero.home .home-facts { margin: 0; }
+/* The globe: its own square box at the top right on wide screens, sized by the column so nothing moves when it starts drawing. Hidden on phones and without scripts. */
+@media (min-width: 900px) {
+  .hero.home { grid-template-columns: minmax(0, 1fr) clamp(260px, 28vw, 360px); column-gap: var(--s6); }
+  .hero.home .home-lead { grid-column: 1; grid-row: 1; }
+  .hero.home .home-facts { grid-column: 1 / -1; }
+  .js .hero.home .hero-bg { display: block; grid-column: 2; grid-row: 1; align-self: center; aspect-ratio: 1; pointer-events: none; -webkit-mask-image: radial-gradient(closest-side, #000 92%, transparent); mask-image: radial-gradient(closest-side, #000 92%, transparent); }
+  .hero.home .hero-bg canvas { display: block; width: 100%; height: 100%; }
+}
 @media (max-width: 639px) { .home-facts .cell:last-child { grid-column: span 2; } }
 .home-what { margin: var(--s3) 0 0; }
 .home-map { margin-top: var(--s4); }
