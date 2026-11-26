@@ -679,7 +679,10 @@ button.linkish { font: inherit; color: var(--accent); background: none; border: 
 @media (max-width: 639px) { .home-facts .cell:last-child { grid-column: span 2; } }
 .home-what { margin: var(--s3) 0 0; }
 .home-map { margin-top: var(--s4); }
-.home-about { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 var(--s6); align-items: start; }
+/* Same column gap as the sign-up cards below (card-grid), so the right edges line up, and the same gap under it. */
+.home-about { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 var(--s4); align-items: start; margin-bottom: var(--s4); }
+/* On wide screens the intro sits beside the taller "Why we built this" panel, so it shows in full (no More). */
+@media (min-width: 900px) { .home-about section.intro > p.gloss { display: block; -webkit-line-clamp: unset; overflow: visible; } .js .home-about section.intro > p.gloss { margin-bottom: 0; } }
 @media (max-width: 899px) { .home-about { grid-template-columns: minmax(0, 1fr); } }
 /* Browse: one full-width row (text left, buttons right), then the price-history list in two columns. */
 .home-browse-lead > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--s2) var(--s6); align-items: end; }
