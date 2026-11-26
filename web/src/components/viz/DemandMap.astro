@@ -25,9 +25,12 @@ const marks = rects.map(({ item: t, x, y, w, h }) => {
     `${closing} close within 7 days`
   );
   const { lines, count } = tileLabels(t, w, h);
-  const tcls = seqTextClass(t.bin);
+  // Shade still ranks the share closing this week (five steps), but within the dark end of the scale
+  // (sequential steps 3 to 4), so every label takes the same on-colour: 4.7:1 light, 5.1:1 dark at worst.
+  const opacity = SEQ_OPACITY[3] + ((SEQ_OPACITY[4] - SEQ_OPACITY[3]) * t.bin) / 4;
+  const tcls = seqTextClass(3);
   const inner = [
-    el('rect', { x: x + 1, y: y + 1, width: Math.max(0, w - 2), height: Math.max(0, h - 2), rx: 3, class: 'vf-main', 'fill-opacity': String(SEQ_OPACITY[t.bin]) }),
+    el('rect', { x: x + 1, y: y + 1, width: Math.max(0, w - 2), height: Math.max(0, h - 2), rx: 3, class: 'vf-main', 'fill-opacity': opacity.toFixed(3) }),
     // A line estimated wider than its tile is squeezed to fit rather than cut.
     ...lines.map((ln, i) => text(x + 7, y + 17 + i * 14, ln, { class: tcls === 'vt-on' ? 'vt-on' : 'vt-ink vt-b', ...(labelWidth(ln) > labelRoom(w) ? { textLength: labelRoom(w), lengthAdjust: 'spacingAndGlyphs' } : {}) })),
     count ? text(x + 7, y + 18 + lines.length * 14, count, { class: `${tcls} vt-sub` }) : '',
